@@ -210,7 +210,7 @@ export default function AuthPage() {
                                       className="h-4 w-4 text-[#0077B5] focus:ring-[#0077B5]"
                                     />
                                   </FormControl>
-                                  <FormLabel className="text-sm text-[#333333] cursor-pointer">
+                                  <FormLabel className="text-sm text-[#333333] cursor-pointer leading-none">
                                     Remember me
                                   </FormLabel>
                                 </FormItem>
@@ -357,19 +357,19 @@ export default function AuthPage() {
                             control={registerForm.control}
                             name="termsAgreement"
                             render={({ field }) => (
-                              <FormItem className="flex items-start space-x-3">
+                              <FormItem className="flex items-center space-x-3">
                                 <FormControl>
                                   <Checkbox
                                     checked={field.value}
                                     onCheckedChange={field.onChange}
-                                    className="h-4 w-4 mt-1 text-[#0077B5] focus:ring-[#0077B5]"
+                                    className="h-4 w-4 text-[#0077B5] focus:ring-[#0077B5]"
                                   />
                                 </FormControl>
-                                <div className="space-y-1">
-                                  <FormLabel className="text-sm text-[#333333] cursor-pointer">
+                                <div>
+                                  <FormLabel className="text-sm text-[#333333] cursor-pointer leading-tight">
                                     I agree to the <a href="#" className="text-[#0077B5] hover:text-opacity-90">Terms of Service</a> and <a href="#" className="text-[#0077B5] hover:text-opacity-90">Privacy Policy</a>
                                   </FormLabel>
-                                  <FormMessage className="text-[#E34240]" />
+                                  <FormMessage className="text-[#E34240] block" />
                                 </div>
                               </FormItem>
                             )}
