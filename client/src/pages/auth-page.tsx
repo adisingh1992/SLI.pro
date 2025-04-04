@@ -246,15 +246,14 @@ export default function AuthPage() {
                             control={registerForm.control}
                             name="firstName"
                             render={({ field }) => (
-                              <FormItem className="relative">
-                                <FormLabel className="absolute left-4 top-3 text-gray-500 pointer-events-none transform transition-transform text-sm -translate-y-6">
+                              <FormItem>
+                                <FormLabel className="text-gray-700 text-sm font-medium mb-1 block">
                                   First name
                                 </FormLabel>
                                 <FormControl>
                                   <Input
                                     {...field}
-                                    className="px-4 py-6 pt-7 border border-gray-300 rounded-md focus:ring-2 focus:ring-[#0077B5]"
-                                    placeholder=" "
+                                    className="px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-[#0077B5]"
                                   />
                                 </FormControl>
                                 <FormMessage className="text-[#E34240]" />
@@ -266,15 +265,14 @@ export default function AuthPage() {
                             control={registerForm.control}
                             name="lastName"
                             render={({ field }) => (
-                              <FormItem className="relative">
-                                <FormLabel className="absolute left-4 top-3 text-gray-500 pointer-events-none transform transition-transform text-sm -translate-y-6">
+                              <FormItem>
+                                <FormLabel className="text-gray-700 text-sm font-medium mb-1 block">
                                   Last name
                                 </FormLabel>
                                 <FormControl>
                                   <Input
                                     {...field}
-                                    className="px-4 py-6 pt-7 border border-gray-300 rounded-md focus:ring-2 focus:ring-[#0077B5]"
-                                    placeholder=" "
+                                    className="px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-[#0077B5]"
                                   />
                                 </FormControl>
                                 <FormMessage className="text-[#E34240]" />
@@ -287,16 +285,15 @@ export default function AuthPage() {
                           control={registerForm.control}
                           name="username"
                           render={({ field }) => (
-                            <FormItem className="relative">
-                              <FormLabel className="absolute left-4 top-3 text-gray-500 pointer-events-none transform transition-transform text-sm -translate-y-6">
+                            <FormItem>
+                              <FormLabel className="text-gray-700 text-sm font-medium mb-1 block">
                                 Email address
                               </FormLabel>
                               <FormControl>
                                 <Input
                                   {...field}
-                                  className="px-4 py-6 pt-7 border border-gray-300 rounded-md focus:ring-2 focus:ring-[#0077B5]"
+                                  className="px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-[#0077B5]"
                                   type="email"
-                                  placeholder=" "
                                 />
                               </FormControl>
                               <FormMessage className="text-[#E34240]" />
@@ -308,16 +305,15 @@ export default function AuthPage() {
                           control={registerForm.control}
                           name="password"
                           render={({ field }) => (
-                            <FormItem className="relative">
-                              <FormLabel className="absolute left-4 top-3 text-gray-500 pointer-events-none transform transition-transform text-sm -translate-y-6">
+                            <FormItem>
+                              <FormLabel className="text-gray-700 text-sm font-medium mb-1 block">
                                 Password
                               </FormLabel>
                               <FormControl>
                                 <Input
                                   {...field}
-                                  className="px-4 py-6 pt-7 border border-gray-300 rounded-md focus:ring-2 focus:ring-[#0077B5]"
+                                  className="px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-[#0077B5]"
                                   type="password"
-                                  placeholder=" "
                                 />
                               </FormControl>
                               <div className="mt-1 text-sm text-gray-500">
@@ -332,16 +328,15 @@ export default function AuthPage() {
                           control={registerForm.control}
                           name="confirmPassword"
                           render={({ field }) => (
-                            <FormItem className="relative">
-                              <FormLabel className="absolute left-4 top-3 text-gray-500 pointer-events-none transform transition-transform text-sm -translate-y-6">
+                            <FormItem>
+                              <FormLabel className="text-gray-700 text-sm font-medium mb-1 block">
                                 Confirm password
                               </FormLabel>
                               <FormControl>
                                 <Input
                                   {...field}
-                                  className="px-4 py-6 pt-7 border border-gray-300 rounded-md focus:ring-2 focus:ring-[#0077B5]"
+                                  className="px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-[#0077B5]"
                                   type="password"
-                                  placeholder=" "
                                 />
                               </FormControl>
                               <FormMessage className="text-[#E34240]" />
