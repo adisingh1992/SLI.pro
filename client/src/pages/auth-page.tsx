@@ -110,15 +110,15 @@ export default function AuthPage() {
             </div>
             <div className="flex items-center">
               <Button 
-                variant="ghost" 
-                className="text-[#0077B5]"
+                variant="link" 
+                className="text-[#0077B5] hover:text-[#005885] font-medium px-4 py-2"
                 onClick={() => setActiveTab("login")}
               >
                 Log In
               </Button>
               <Button 
-                variant="default" 
-                className="ml-4 bg-[#0077B5] hover:bg-opacity-90"
+                variant="outline" 
+                className="ml-3 text-[#0077B5] border-[#0077B5] hover:bg-[#0077B5] hover:bg-opacity-10 font-medium"
                 onClick={() => setActiveTab("signup")}
               >
                 Sign Up
@@ -134,11 +134,17 @@ export default function AuthPage() {
           {/* Left Column - Authentication Forms */}
           <div className="slide-in h-full flex flex-col">
             <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full h-full flex flex-col">
-              <TabsList className="mb-8 w-full border-b border-gray-200 flex space-x-8">
-                <TabsTrigger value="login" className="py-4 px-1 data-[state=active]:border-b-2 data-[state=active]:border-[#0077B5] data-[state=active]:text-[#0077B5] font-medium text-gray-500 hover:text-gray-700">
+              <TabsList className="mb-8 w-full border-b border-gray-200 bg-transparent p-0 flex">
+                <TabsTrigger 
+                  value="login" 
+                  className="relative py-4 px-6 data-[state=active]:bg-transparent data-[state=active]:text-[#0077B5] font-medium text-gray-600 hover:text-[#0077B5] rounded-none border-b-2 border-transparent data-[state=active]:border-[#0077B5] transition-all"
+                >
                   Log In
                 </TabsTrigger>
-                <TabsTrigger value="signup" className="py-4 px-1 data-[state=active]:border-b-2 data-[state=active]:border-[#0077B5] data-[state=active]:text-[#0077B5] font-medium text-gray-500 hover:text-gray-700">
+                <TabsTrigger 
+                  value="signup" 
+                  className="relative py-4 px-6 data-[state=active]:bg-transparent data-[state=active]:text-[#0077B5] font-medium text-gray-600 hover:text-[#0077B5] rounded-none border-b-2 border-transparent data-[state=active]:border-[#0077B5] transition-all"
+                >
                   Sign Up
                 </TabsTrigger>
               </TabsList>
