@@ -217,7 +217,7 @@ export default function AuthPage() {
                                       className="h-4 w-4 text-[#0077B5] focus:ring-[#0077B5]"
                                     />
                                   </FormControl>
-                                  <FormLabel className="text-sm text-[#333333] cursor-pointer leading-none flex items-center">
+                                  <FormLabel className="text-sm text-[#333333] cursor-pointer leading-none">
                                     Remember me
                                   </FormLabel>
                                 </FormItem>
@@ -385,7 +385,7 @@ export default function AuthPage() {
                                   />
                                 </FormControl>
                                 <div>
-                                  <FormLabel className="text-sm text-[#333333] cursor-pointer leading-tight flex items-center">
+                                  <FormLabel className="text-sm text-[#333333] cursor-pointer leading-tight">
                                     I agree to the <a href="#" className="text-[#0077B5] hover:text-opacity-90">Terms of Service</a> and <a href="#" className="text-[#0077B5] hover:text-opacity-90">Privacy Policy</a>
                                   </FormLabel>
                                   <FormMessage className="text-[#E34240] block" />
