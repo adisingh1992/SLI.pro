@@ -6,6 +6,7 @@ import {
   languages, type Language, type InsertLanguage,
   profiles, type Profile, type InsertProfile,
   questionnaires, type Questionnaire, type InsertQuestionnaire,
+  documents, type Document, type InsertDocument,
   type UpdateUser, type UpdateProfile, type UserProfile
 } from "@shared/schema";
 import session from "express-session";
@@ -46,6 +47,12 @@ export interface IStorage {
   createLanguage(language: InsertLanguage): Promise<Language>;
   deleteLanguage(id: number): Promise<void>;
   
+  // Document operations
+  getDocuments(userId: number): Promise<Document[]>;
+  getDocument(id: number): Promise<Document | undefined>;
+  createDocument(document: InsertDocument): Promise<Document>;
+  deleteDocument(id: number): Promise<void>;
+  
   // Profile operations
   getProfile(userId: number): Promise<Profile | undefined>;
   createProfile(profile: InsertProfile): Promise<Profile>;
@@ -71,6 +78,7 @@ export class MemStorage implements IStorage {
   private languages: Map<number, Language>;
   private profiles: Map<number, Profile>;
   private questionnaires: Map<number, Questionnaire>;
+  private documents: Map<number, Document>;
   
   private userId: number;
   private experienceId: number;
@@ -79,6 +87,7 @@ export class MemStorage implements IStorage {
   private languageId: number;
   private profileId: number;
   private questionnaireId: number;
+  private documentId: number;
   
   sessionStore: session.SessionStore;
 
@@ -90,6 +99,7 @@ export class MemStorage implements IStorage {
     this.languages = new Map();
     this.profiles = new Map();
     this.questionnaires = new Map();
+    this.documents = new Map();
     
     this.userId = 1;
     this.experienceId = 1;
@@ -98,6 +108,7 @@ export class MemStorage implements IStorage {
     this.languageId = 1;
     this.profileId = 1;
     this.questionnaireId = 1;
+    this.documentId = 1;
     
     this.sessionStore = new MemoryStore({
       checkPeriod: 86400000,
@@ -292,6 +303,32 @@ export class MemStorage implements IStorage {
     return updatedQuestionnaire;
   }
 
+  // Document methods
+  async getDocuments(userId: number): Promise<Document[]> {
+    return Array.from(this.documents.values()).filter(
+      (document) => document.userId === userId
+    );
+  }
+  
+  async getDocument(id: number): Promise<Document | undefined> {
+    return this.documents.get(id);
+  }
+  
+  async createDocument(document: InsertDocument): Promise<Document> {
+    const id = this.documentId++;
+    const newDocument: Document = { 
+      ...document, 
+      id,
+      uploadedAt: new Date()
+    };
+    this.documents.set(id, newDocument);
+    return newDocument;
+  }
+  
+  async deleteDocument(id: number): Promise<void> {
+    this.documents.delete(id);
+  }
+  
   // User profile operations
   async getUserProfile(userId: number): Promise<UserProfile | undefined> {
     const user = await this.getUser(userId);
@@ -303,6 +340,7 @@ export class MemStorage implements IStorage {
     const languages = await this.getLanguages(userId);
     const profile = await this.getProfile(userId);
     const questionnaire = await this.getQuestionnaire(userId);
+    const documents = await this.getDocuments(userId);
     
     return {
       ...user,
@@ -311,7 +349,8 @@ export class MemStorage implements IStorage {
       skills,
       languages,
       profile,
-      questionnaire
+      questionnaire,
+      documents
     };
   }
 }

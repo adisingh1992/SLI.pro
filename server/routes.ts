@@ -10,6 +10,7 @@ import {
   insertLanguageSchema,
   updateProfileSchema,
   insertQuestionnaireSchema,
+  insertDocumentSchema,
 } from "@shared/schema";
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -407,6 +408,76 @@ export async function registerRoutes(app: Express): Promise<Server> {
         ...userProfile,
         questionnaire
       });
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  // Document routes
+  app.get("/api/documents", isAuthenticated, async (req, res, next) => {
+    try {
+      const documents = await storage.getDocuments(req.user.id);
+      res.json(documents);
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  app.get("/api/documents/:id", isAuthenticated, async (req, res, next) => {
+    try {
+      const documentId = parseInt(req.params.id);
+      const document = await storage.getDocument(documentId);
+      
+      if (!document) {
+        return res.status(404).json({ message: "Document not found" });
+      }
+      
+      if (document.userId !== req.user.id) {
+        return res.status(403).json({ message: "Unauthorized" });
+      }
+      
+      res.json(document);
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  app.post("/api/documents", isAuthenticated, async (req, res, next) => {
+    try {
+      const validationResult = insertDocumentSchema.safeParse({
+        ...req.body,
+        userId: req.user.id,
+      });
+      
+      if (!validationResult.success) {
+        return res.status(400).json({
+          message: "Validation error",
+          errors: validationResult.error.errors,
+        });
+      }
+
+      const document = await storage.createDocument(validationResult.data);
+      res.status(201).json(document);
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  app.delete("/api/documents/:id", isAuthenticated, async (req, res, next) => {
+    try {
+      const documentId = parseInt(req.params.id);
+      const document = await storage.getDocument(documentId);
+      
+      if (!document) {
+        return res.status(404).json({ message: "Document not found" });
+      }
+      
+      if (document.userId !== req.user.id) {
+        return res.status(403).json({ message: "Unauthorized" });
+      }
+      
+      await storage.deleteDocument(documentId);
+      res.sendStatus(204);
     } catch (error) {
       next(error);
     }

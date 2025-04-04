@@ -112,6 +112,22 @@ export type Skill = typeof skills.$inferSelect;
 export type Language = typeof languages.$inferSelect;
 export type Profile = typeof profiles.$inferSelect;
 
+// Documents schema for storing PDF files
+export const documents = pgTable("documents", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().references(() => users.id),
+  name: text("name").notNull(),
+  type: text("type").notNull(), // document type: "resume", "linkedin", "certificate", etc.
+  fileName: text("file_name").notNull(),
+  fileData: text("file_data").notNull(), // Base64 encoded PDF data
+  uploadedAt: timestamp("uploaded_at").defaultNow().notNull()
+});
+
+export const insertDocumentSchema = createInsertSchema(documents).omit({
+  id: true,
+  uploadedAt: true,
+});
+
 // Extended user schema with profile data
 export const questionnaires = pgTable("questionnaires", {
   id: serial("id").primaryKey(),
@@ -135,6 +151,9 @@ export const insertQuestionnaireSchema = createInsertSchema(questionnaires).omit
 export type InsertQuestionnaire = z.infer<typeof insertQuestionnaireSchema>;
 export type Questionnaire = typeof questionnaires.$inferSelect;
 
+export type InsertDocument = z.infer<typeof insertDocumentSchema>;
+export type Document = typeof documents.$inferSelect;
+
 export type UserProfile = User & {
   experiences?: Experience[];
   education?: Education[];
@@ -142,4 +161,5 @@ export type UserProfile = User & {
   languages?: Language[];
   profile?: Profile;
   questionnaire?: Questionnaire;
+  documents?: Document[];
 };
