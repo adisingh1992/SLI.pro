@@ -329,7 +329,7 @@ export default function QuestionnairePage() {
             </div>
 
             <Form {...form}>
-              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+              <div className="space-y-6">
                 {renderStepContent()}
                 
                 <div className="flex justify-between mt-8">
@@ -345,7 +345,8 @@ export default function QuestionnairePage() {
                   
                   {isLastStep ? (
                     <Button 
-                      type="submit" 
+                      type="button"
+                      onClick={form.handleSubmit(onSubmit)}
                       className="w-[120px] bg-[#0077B5] hover:bg-[#006097]"
                       disabled={questionnaireMutation.isPending}
                     >
@@ -364,7 +365,7 @@ export default function QuestionnairePage() {
                     </Button>
                   )}
                 </div>
-              </form>
+              </div>
             </Form>
           </CardContent>
         </Card>
