@@ -346,12 +346,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       // Check if user already has a questionnaire
       const existingQuestionnaire = await storage.getQuestionnaire(req.user.id);
-      if (existingQuestionnaire) {
-        return res.status(400).json({ 
-          message: "Questionnaire already exists. Use PUT to update it." 
-        });
-      }
-
+      
       const validationResult = insertQuestionnaireSchema.safeParse({
         ...req.body,
         userId: req.user.id,
@@ -364,8 +359,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      const questionnaire = await storage.createQuestionnaire(validationResult.data);
-      res.status(201).json(questionnaire);
+      let questionnaire;
+      if (existingQuestionnaire) {
+        // Update existing questionnaire
+        questionnaire = await storage.updateQuestionnaire(req.user.id, validationResult.data);
+        res.json(questionnaire);
+      } else {
+        // Create new questionnaire
+        questionnaire = await storage.createQuestionnaire(validationResult.data);
+        res.status(201).json(questionnaire);
+      }
     } catch (error) {
       next(error);
     }
