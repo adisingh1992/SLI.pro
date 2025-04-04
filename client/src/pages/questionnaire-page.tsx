@@ -132,7 +132,11 @@ export default function QuestionnairePage() {
                   </FormDescription>
                   <FormControl>
                     <Textarea
-                      {...field}
+                      value={field.value}
+                      onChange={field.onChange}
+                      onBlur={field.onBlur}
+                      ref={field.ref}
+                      name={field.name}
                       className="min-h-[120px] resize-y"
                       placeholder="Share your professional background and experience..."
                     />
@@ -154,7 +158,11 @@ export default function QuestionnairePage() {
                   </FormDescription>
                   <FormControl>
                     <Textarea
-                      {...field}
+                      value={field.value}
+                      onChange={field.onChange}
+                      onBlur={field.onBlur}
+                      ref={field.ref}
+                      name={field.name}
                       className="min-h-[120px] resize-y"
                       placeholder="Describe your career goals..."
                     />
@@ -181,7 +189,11 @@ export default function QuestionnairePage() {
                   </FormDescription>
                   <FormControl>
                     <Textarea
-                      {...field}
+                      value={field.value}
+                      onChange={field.onChange}
+                      onBlur={field.onBlur}
+                      ref={field.ref}
+                      name={field.name}
                       className="min-h-[120px] resize-y"
                       placeholder="Describe your professional aspirations..."
                     />
@@ -203,7 +215,11 @@ export default function QuestionnairePage() {
                   </FormDescription>
                   <FormControl>
                     <Textarea
-                      {...field}
+                      value={field.value}
+                      onChange={field.onChange}
+                      onBlur={field.onBlur}
+                      ref={field.ref}
+                      name={field.name}
                       className="min-h-[120px] resize-y"
                       placeholder="Describe the challenges you're facing..."
                     />
@@ -230,7 +246,11 @@ export default function QuestionnairePage() {
                   </FormDescription>
                   <FormControl>
                     <Textarea
-                      {...field}
+                      value={field.value}
+                      onChange={field.onChange}
+                      onBlur={field.onBlur}
+                      ref={field.ref}
+                      name={field.name}
                       className="min-h-[120px] resize-y"
                       placeholder="Share your professional interests..."
                     />
@@ -252,7 +272,11 @@ export default function QuestionnairePage() {
                   </FormDescription>
                   <FormControl>
                     <Textarea
-                      {...field}
+                      value={field.value}
+                      onChange={field.onChange}
+                      onBlur={field.onBlur}
+                      ref={field.ref}
+                      name={field.name}
                       className="min-h-[120px] resize-y"
                       placeholder="Describe your timeframe..."
                     />
