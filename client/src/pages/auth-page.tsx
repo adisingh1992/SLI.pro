@@ -155,6 +155,13 @@ export default function AuthPage() {
                   <CardContent className="p-6 md:p-8 h-full">
                     <div className="flex flex-col h-full">
                       <h2 className="text-2xl font-medium text-[#333333] mb-6">Log in to your SLIPro account</h2>
+                      {loginMutation.error && (
+                        <div className="mb-6 p-3 bg-red-50 border border-red-200 rounded-md">
+                          <p className="text-[#E34240] text-sm">
+                            {loginMutation.error.message === "401: " ? "Invalid email or password. Please try again." : (loginMutation.error.message || "An error occurred during login. Please try again.")}
+                          </p>
+                        </div>
+                      )}
                       <Form {...loginForm}>
                         <form onSubmit={loginForm.handleSubmit(onLoginSubmit)} className="space-y-6 flex-grow flex flex-col">
                           <FormField
@@ -248,6 +255,13 @@ export default function AuthPage() {
                   <CardContent className="p-6 md:p-8 h-full">
                     <div className="flex flex-col h-full">
                       <h2 className="text-2xl font-medium text-[#333333] mb-6">Create your SLIPro account</h2>
+                      {registerMutation.error && !registerMutation.error.message.includes("Username already exists") && (
+                        <div className="mb-6 p-3 bg-red-50 border border-red-200 rounded-md">
+                          <p className="text-[#E34240] text-sm">
+                            {registerMutation.error.message || "An error occurred during registration. Please try again."}
+                          </p>
+                        </div>
+                      )}
                       <Form {...registerForm}>
                         <form onSubmit={registerForm.handleSubmit(onRegisterSubmit)} className="space-y-6 flex-grow flex flex-col">
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -306,6 +320,11 @@ export default function AuthPage() {
                                   />
                                 </FormControl>
                                 <FormMessage className="text-[#E34240]" />
+                                {registerMutation.error && registerMutation.error.message.includes("Username already exists") && (
+                                  <div className="text-[#E34240] text-sm mt-1">
+                                    This email address is already registered. Please try logging in or use a different email.
+                                  </div>
+                                )}
                               </FormItem>
                             )}
                           />
