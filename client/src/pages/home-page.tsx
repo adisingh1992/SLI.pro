@@ -91,7 +91,7 @@ export default function HomePage() {
               <Button 
                 variant="outline" 
                 className="border-[#0077B5] text-[#0077B5]"
-                onClick={() => navigate("/profile")}
+                onClick={() => navigate("/profile/create")}
               >
                 Edit Profile
               </Button>
