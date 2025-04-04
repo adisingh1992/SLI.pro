@@ -56,24 +56,25 @@ export default function ProfilePage() {
         <div className="bg-white shadow-card rounded-lg overflow-hidden">
           {/* Profile Header */}
           <div className="relative">
-            <div className="h-32 bg-[#0077B5]"></div>
-            <div className="px-6 pb-4">
-              <div className="relative -mt-16 flex items-end">
-                <UserAvatar 
-                  firstName={userProfile.firstName}
-                  lastName={userProfile.lastName}
-                  size="large"
-                />
-                <div className="ml-4 pb-4">
-                  <h1 className="text-2xl font-bold text-[#333333]">
-                    {userProfile.firstName} {userProfile.lastName}
-                  </h1>
-                  <p className="text-gray-600">{userProfile.headline || "No headline set"}</p>
+            <div className="bg-gradient-to-r from-[#0077B5] to-[#70B5F9] p-6">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center">
+                  <UserAvatar 
+                    firstName={userProfile.firstName}
+                    lastName={userProfile.lastName}
+                    size="large"
+                  />
+                  <div className="ml-4">
+                    <h1 className="text-2xl font-bold text-white">
+                      {userProfile.firstName} {userProfile.lastName}
+                    </h1>
+                    <p className="text-white text-opacity-90">{userProfile.headline || "No headline set"}</p>
+                  </div>
                 </div>
-                <div className="absolute top-0 right-0 mt-2">
+                <div>
                   <Button
                     onClick={() => navigate("/profile/create")}
-                    className="px-4 py-2 bg-[#0077B5] text-white hover:bg-opacity-90 flex items-center"
+                    className="px-4 py-2 bg-white text-[#0077B5] hover:bg-opacity-90 flex items-center"
                   >
                     <Edit className="h-4 w-4 mr-1" />
                     Edit Profile
