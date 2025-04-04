@@ -7,7 +7,7 @@ import HomePage from "@/pages/home-page";
 import AuthPage from "@/pages/auth-page";
 import ProfilePage from "@/pages/profile-page";
 import ProfileCreationPage from "@/pages/profile-creation-page";
-import QuestionnairePage from "@/pages/questionnaire-page";
+import QuestionnairePage from "@/pages/questionnaire-page-new";
 import { AuthProvider } from "@/hooks/use-auth";
 import { ProtectedRoute } from "@/lib/protected-route";
 
