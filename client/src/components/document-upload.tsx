@@ -151,11 +151,11 @@ const DocumentUpload = () => {
       return;
     }
     
-    // Check file size (5MB limit)
-    if (file.size > 5 * 1024 * 1024) {
+    // Check file size (2MB limit to ensure it works with the server limit)
+    if (file.size > 2 * 1024 * 1024) {
       toast({
         title: "Error",
-        description: "File size should be less than 5MB",
+        description: "File size should be less than 2MB",
         variant: "destructive",
       });
       return;
@@ -174,20 +174,48 @@ const DocumentUpload = () => {
         fileName: file.name,
         fileData: base64,
       });
-    } catch (error) {
+      
+      // Show success message
       toast({
-        title: "Error",
-        description: "Failed to process file for upload",
+        title: "Success!",
+        description: "Document uploaded successfully",
+        variant: "default",
+      });
+    } catch (error) {
+      console.error("Document upload error:", error);
+      toast({
+        title: "Upload Failed",
+        description: error instanceof Error ? error.message : "Failed to process file for upload. The server may have rejected the file due to size limits.",
         variant: "destructive",
       });
     } finally {
       setIsUploading(false);
+      // Reset form after upload (regardless of success/failure)
+      setName("");
+      setType(DOCUMENT_TYPES[0].id);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
     }
   };
   
   const handleDelete = async (id: number) => {
     if (window.confirm("Are you sure you want to delete this document?")) {
-      await deleteDocumentMutation.mutateAsync(id);
+      try {
+        await deleteDocumentMutation.mutateAsync(id);
+        
+        toast({
+          title: "Success",
+          description: "Document deleted successfully",
+          variant: "default",
+        });
+      } catch (error) {
+        toast({
+          title: "Error",
+          description: "Failed to delete document",
+          variant: "destructive",
+        });
+      }
     }
   };
   
@@ -287,7 +315,7 @@ const DocumentUpload = () => {
                 ref={fileInputRef}
                 className="cursor-pointer"
               />
-              <p className="text-xs text-gray-500">Max file size: 5MB</p>
+              <p className="text-xs text-gray-500">Max file size: 2MB</p>
             </div>
             
             <Button 
