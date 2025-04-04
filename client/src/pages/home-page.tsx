@@ -86,10 +86,14 @@ export default function HomePage() {
             <div className="bg-[#F5F5F5] rounded-lg p-6">
               <h2 className="text-lg font-medium text-[#333333] mb-3">Profile Settings</h2>
               <p className="text-gray-600 mb-4">
-                Update your account settings and preferences.
+                Update your profile information and preferences.
               </p>
-              <Button variant="outline" className="border-[#0077B5] text-[#0077B5]">
-                Account Settings
+              <Button 
+                variant="outline" 
+                className="border-[#0077B5] text-[#0077B5]"
+                onClick={() => navigate("/profile")}
+              >
+                Edit Profile
               </Button>
             </div>
           </div>
