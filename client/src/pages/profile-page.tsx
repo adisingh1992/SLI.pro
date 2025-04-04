@@ -73,7 +73,7 @@ export default function ProfilePage() {
                 <div className="absolute top-0 right-0 mt-2">
                   <Button
                     onClick={() => navigate("/profile/create")}
-                    className="px-4 py-2 text-[#0077B5] border border-[#0077B5] bg-transparent hover:bg-[#0077B5] hover:bg-opacity-10 flex items-center"
+                    className="px-4 py-2 bg-[#0077B5] text-white hover:bg-opacity-90 flex items-center"
                   >
                     <Edit className="h-4 w-4 mr-1" />
                     Edit Profile
