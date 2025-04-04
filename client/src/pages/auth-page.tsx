@@ -105,7 +105,7 @@ export default function AuthPage() {
                 <svg className="h-8 w-auto text-[#0077B5]" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                   <path d="M12 12C14.21 12 16 10.21 16 8C16 5.79 14.21 4 12 4C9.79 4 8 5.79 8 8C8 10.21 9.79 12 12 12ZM12 14C9.33 14 4 15.34 4 18V20H20V18C20 15.34 14.67 14 12 14Z" fill="currentColor"/>
                 </svg>
-                <span className="ml-2 text-xl font-semibold text-[#0077B5]">ProfilePro</span>
+                <span className="ml-2 text-xl font-semibold text-[#0077B5]">SLIPro</span>
               </div>
             </div>
             <div className="flex items-center">
@@ -147,7 +147,7 @@ export default function AuthPage() {
               <TabsContent value="login" className="mt-0">
                 <Card className="border-none shadow-card">
                   <CardContent className="p-6 md:p-8">
-                    <h2 className="text-2xl font-medium text-[#333333] mb-6">Log in to your account</h2>
+                    <h2 className="text-2xl font-medium text-[#333333] mb-6">Log in to your SLIPro account</h2>
                     <Form {...loginForm}>
                       <form onSubmit={loginForm.handleSubmit(onLoginSubmit)} className="space-y-6">
                         <FormField
@@ -240,7 +240,7 @@ export default function AuthPage() {
               <TabsContent value="signup" className="mt-0">
                 <Card className="border-none shadow-card">
                   <CardContent className="p-6 md:p-8">
-                    <h2 className="text-2xl font-medium text-[#333333] mb-6">Create your account</h2>
+                    <h2 className="text-2xl font-medium text-[#333333] mb-6">Create your SLIPro account</h2>
                     <Form {...registerForm}>
                       <form onSubmit={registerForm.handleSubmit(onRegisterSubmit)} className="space-y-6">
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -395,7 +395,7 @@ export default function AuthPage() {
 
           {/* Right Column - Hero Section */}
           <div className="p-8 bg-[#0077B5] rounded-lg text-white hidden md:block">
-            <h1 className="text-3xl font-bold mb-4">Manage Your Professional Profile</h1>
+            <h1 className="text-3xl font-bold mb-4">Manage Your Professional Profile with SLIPro</h1>
             <p className="mb-6">Create a compelling professional profile that showcases your skills, experience, and achievements. Stand out to recruiters and expand your professional network.</p>
             <ul className="space-y-3">
               <li className="flex items-center">
