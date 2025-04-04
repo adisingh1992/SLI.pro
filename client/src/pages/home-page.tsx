@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { UserProfile } from "@shared/schema";
 import { useToast } from "@/hooks/use-toast";
 import { useLocation } from "wouter";
-import { Loader2 } from "lucide-react";
+import { Loader2, FileQuestion, ArrowRight, CheckCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useEffect } from "react";
 import NavBar from "@/components/nav-bar";
@@ -69,7 +69,7 @@ export default function HomePage() {
             From here you can view and manage your professional profile on SLIPro.
           </p>
           
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
             <div className="bg-[#F5F5F5] rounded-lg p-6">
               <h2 className="text-lg font-medium text-[#333333] mb-3">Your Profile</h2>
               <p className="text-gray-600 mb-4">
@@ -95,6 +95,36 @@ export default function HomePage() {
               >
                 Edit Profile
               </Button>
+            </div>
+          </div>
+          
+          {/* Career Development Questionnaire Section */}
+          <div className={userProfile?.questionnaire ? "bg-[#f0f7ff] border border-blue-200 rounded-lg p-6" : "bg-[#fff7f0] border border-orange-200 rounded-lg p-6"}>
+            <div className="flex items-start">
+              <div className={userProfile?.questionnaire ? "p-3 rounded-full bg-blue-100 text-[#0077B5] mr-4" : "p-3 rounded-full bg-orange-100 text-orange-500 mr-4"}>
+                {userProfile?.questionnaire ? (
+                  <CheckCircle className="h-6 w-6" />
+                ) : (
+                  <FileQuestion className="h-6 w-6" />
+                )}
+              </div>
+              <div className="flex-1">
+                <h2 className="text-lg font-medium text-[#333333] mb-2">
+                  {userProfile?.questionnaire ? 'Career Development Questionnaire Completed' : 'Complete Your Career Development Questionnaire'}
+                </h2>
+                <p className="text-gray-600 mb-4">
+                  {userProfile?.questionnaire 
+                    ? 'Thank you for completing the career questionnaire. This information helps us understand your professional goals and aspirations better.'
+                    : 'Take a few minutes to complete our career development questionnaire. This will help us understand your professional goals and provide better guidance.'}
+                </p>
+                <Button 
+                  className={userProfile?.questionnaire ? "flex items-center bg-[#0077B5] hover:bg-opacity-90" : "flex items-center bg-orange-500 hover:bg-opacity-90"}
+                  onClick={() => navigate("/questionnaire")}
+                >
+                  {userProfile?.questionnaire ? 'Review Questionnaire' : 'Start Questionnaire'}
+                  <ArrowRight className="ml-2 h-4 w-4" />
+                </Button>
+              </div>
             </div>
           </div>
         </div>

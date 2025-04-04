@@ -9,6 +9,7 @@ import {
   insertSkillSchema,
   insertLanguageSchema,
   updateProfileSchema,
+  insertQuestionnaireSchema,
 } from "@shared/schema";
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -323,6 +324,86 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       await storage.deleteLanguage(languageId);
       res.sendStatus(204);
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  // Questionnaire routes
+  app.get("/api/questionnaire", isAuthenticated, async (req, res, next) => {
+    try {
+      const questionnaire = await storage.getQuestionnaire(req.user.id);
+      if (!questionnaire) {
+        return res.status(404).json({ message: "Questionnaire not found" });
+      }
+      res.json(questionnaire);
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  app.post("/api/questionnaire", isAuthenticated, async (req, res, next) => {
+    try {
+      // Check if user already has a questionnaire
+      const existingQuestionnaire = await storage.getQuestionnaire(req.user.id);
+      if (existingQuestionnaire) {
+        return res.status(400).json({ 
+          message: "Questionnaire already exists. Use PUT to update it." 
+        });
+      }
+
+      const validationResult = insertQuestionnaireSchema.safeParse({
+        ...req.body,
+        userId: req.user.id,
+      });
+      
+      if (!validationResult.success) {
+        return res.status(400).json({
+          message: "Validation error",
+          errors: validationResult.error.errors,
+        });
+      }
+
+      const questionnaire = await storage.createQuestionnaire(validationResult.data);
+      res.status(201).json(questionnaire);
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  app.put("/api/questionnaire", isAuthenticated, async (req, res, next) => {
+    try {
+      // Check if user has a questionnaire to update
+      const existingQuestionnaire = await storage.getQuestionnaire(req.user.id);
+      if (!existingQuestionnaire) {
+        return res.status(404).json({ message: "Questionnaire not found" });
+      }
+      
+      const validationResult = insertQuestionnaireSchema.partial().safeParse(req.body);
+      if (!validationResult.success) {
+        return res.status(400).json({
+          message: "Validation error",
+          errors: validationResult.error.errors,
+        });
+      }
+      
+      const updatedQuestionnaire = await storage.updateQuestionnaire(req.user.id, validationResult.data);
+      res.json(updatedQuestionnaire);
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  // Combined profile route for client - get user profile data including questionnaire
+  app.get("/api/user/profile", isAuthenticated, async (req, res, next) => {
+    try {
+      const userProfile = await storage.getUserProfile(req.user.id);
+      const questionnaire = await storage.getQuestionnaire(req.user.id);
+      
+      res.json({
+        ...userProfile,
+        questionnaire
+      });
     } catch (error) {
       next(error);
     }

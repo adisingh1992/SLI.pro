@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { UserProfile } from "@shared/schema";
 import { useToast } from "@/hooks/use-toast";
 import { useLocation } from "wouter";
-import { Loader2, Edit, MapPin } from "lucide-react";
+import { Loader2, Edit, MapPin, Clipboard, BookText, Target, AlertTriangle, Heart, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import NavBar from "@/components/nav-bar";
 import UserAvatar from "@/components/user-avatar";
@@ -135,6 +135,97 @@ export default function ProfilePage() {
                     )}
                   </div>
                 </div>
+
+                {/* Career Questionnaire Results */}
+                {userProfile.questionnaire && (
+                  <div className="mb-8 bg-[#f8fafc] p-6 rounded-lg border border-gray-100">
+                    <div className="flex justify-between items-center mb-4">
+                      <h2 className="text-xl font-medium text-[#333333]">Career Development Summary</h2>
+                      <Button
+                        onClick={() => navigate("/questionnaire")}
+                        variant="outline"
+                        className="px-3 py-1 h-auto text-sm border-[#0077B5] text-[#0077B5] hover:bg-[#0077B5] hover:text-white"
+                      >
+                        <Edit className="h-3 w-3 mr-1" />
+                        Edit
+                      </Button>
+                    </div>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {userProfile.questionnaire.background && (
+                        <div className="border-l-2 border-[#0077B5] pl-4 py-1">
+                          <h3 className="font-medium text-[#333333] flex items-center">
+                            <Clipboard className="h-4 w-4 mr-2 text-[#0077B5]" />
+                            Professional Background
+                          </h3>
+                          <p className="mt-1 text-gray-700 text-sm line-clamp-3">
+                            {userProfile.questionnaire.background}
+                          </p>
+                        </div>
+                      )}
+                      
+                      {userProfile.questionnaire.goals && (
+                        <div className="border-l-2 border-[#0077B5] pl-4 py-1">
+                          <h3 className="font-medium text-[#333333] flex items-center">
+                            <Target className="h-4 w-4 mr-2 text-[#0077B5]" />
+                            Career Goals
+                          </h3>
+                          <p className="mt-1 text-gray-700 text-sm line-clamp-3">
+                            {userProfile.questionnaire.goals}
+                          </p>
+                        </div>
+                      )}
+                      
+                      {userProfile.questionnaire.aspirations && (
+                        <div className="border-l-2 border-[#0077B5] pl-4 py-1">
+                          <h3 className="font-medium text-[#333333] flex items-center">
+                            <BookText className="h-4 w-4 mr-2 text-[#0077B5]" />
+                            Professional Aspirations
+                          </h3>
+                          <p className="mt-1 text-gray-700 text-sm line-clamp-3">
+                            {userProfile.questionnaire.aspirations}
+                          </p>
+                        </div>
+                      )}
+                      
+                      {userProfile.questionnaire.challenges && (
+                        <div className="border-l-2 border-[#0077B5] pl-4 py-1">
+                          <h3 className="font-medium text-[#333333] flex items-center">
+                            <AlertTriangle className="h-4 w-4 mr-2 text-[#0077B5]" />
+                            Current Challenges
+                          </h3>
+                          <p className="mt-1 text-gray-700 text-sm line-clamp-3">
+                            {userProfile.questionnaire.challenges}
+                          </p>
+                        </div>
+                      )}
+                      
+                      {userProfile.questionnaire.interests && (
+                        <div className="border-l-2 border-[#0077B5] pl-4 py-1">
+                          <h3 className="font-medium text-[#333333] flex items-center">
+                            <Heart className="h-4 w-4 mr-2 text-[#0077B5]" />
+                            Professional Interests
+                          </h3>
+                          <p className="mt-1 text-gray-700 text-sm line-clamp-3">
+                            {userProfile.questionnaire.interests}
+                          </p>
+                        </div>
+                      )}
+                      
+                      {userProfile.questionnaire.timeframe && (
+                        <div className="border-l-2 border-[#0077B5] pl-4 py-1">
+                          <h3 className="font-medium text-[#333333] flex items-center">
+                            <Clock className="h-4 w-4 mr-2 text-[#0077B5]" />
+                            Development Timeframe
+                          </h3>
+                          <p className="mt-1 text-gray-700 text-sm line-clamp-3">
+                            {userProfile.questionnaire.timeframe}
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
               </div>
               
               {/* Sidebar */}

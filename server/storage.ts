@@ -5,6 +5,7 @@ import {
   skills, type Skill, type InsertSkill,
   languages, type Language, type InsertLanguage,
   profiles, type Profile, type InsertProfile,
+  questionnaires, type Questionnaire, type InsertQuestionnaire,
   type UpdateUser, type UpdateProfile, type UserProfile
 } from "@shared/schema";
 import session from "express-session";
@@ -50,6 +51,11 @@ export interface IStorage {
   createProfile(profile: InsertProfile): Promise<Profile>;
   updateProfile(userId: number, profile: UpdateProfile): Promise<Profile | undefined>;
   
+  // Questionnaire operations
+  getQuestionnaire(userId: number): Promise<Questionnaire | undefined>;
+  createQuestionnaire(questionnaire: InsertQuestionnaire): Promise<Questionnaire>;
+  updateQuestionnaire(userId: number, questionnaire: Partial<InsertQuestionnaire>): Promise<Questionnaire | undefined>;
+  
   // User profile operations
   getUserProfile(userId: number): Promise<UserProfile | undefined>;
 
@@ -64,6 +70,7 @@ export class MemStorage implements IStorage {
   private skills: Map<number, Skill>;
   private languages: Map<number, Language>;
   private profiles: Map<number, Profile>;
+  private questionnaires: Map<number, Questionnaire>;
   
   private userId: number;
   private experienceId: number;
@@ -71,6 +78,7 @@ export class MemStorage implements IStorage {
   private skillId: number;
   private languageId: number;
   private profileId: number;
+  private questionnaireId: number;
   
   sessionStore: session.SessionStore;
 
@@ -81,6 +89,7 @@ export class MemStorage implements IStorage {
     this.skills = new Map();
     this.languages = new Map();
     this.profiles = new Map();
+    this.questionnaires = new Map();
     
     this.userId = 1;
     this.experienceId = 1;
@@ -88,6 +97,7 @@ export class MemStorage implements IStorage {
     this.skillId = 1;
     this.languageId = 1;
     this.profileId = 1;
+    this.questionnaireId = 1;
     
     this.sessionStore = new MemoryStore({
       checkPeriod: 86400000,
@@ -250,6 +260,38 @@ export class MemStorage implements IStorage {
     return updatedProfile;
   }
   
+  // Questionnaire methods
+  async getQuestionnaire(userId: number): Promise<Questionnaire | undefined> {
+    return Array.from(this.questionnaires.values()).find(
+      (questionnaire) => questionnaire.userId === userId
+    );
+  }
+  
+  async createQuestionnaire(questionnaire: InsertQuestionnaire): Promise<Questionnaire> {
+    const id = this.questionnaireId++;
+    const newQuestionnaire: Questionnaire = { 
+      ...questionnaire, 
+      id,
+      createdAt: new Date(),
+      updatedAt: new Date()
+    };
+    this.questionnaires.set(id, newQuestionnaire);
+    return newQuestionnaire;
+  }
+  
+  async updateQuestionnaire(userId: number, questionnaireData: Partial<InsertQuestionnaire>): Promise<Questionnaire | undefined> {
+    const questionnaire = await this.getQuestionnaire(userId);
+    if (!questionnaire) return undefined;
+    
+    const updatedQuestionnaire = { 
+      ...questionnaire, 
+      ...questionnaireData,
+      updatedAt: new Date()
+    };
+    this.questionnaires.set(questionnaire.id, updatedQuestionnaire);
+    return updatedQuestionnaire;
+  }
+
   // User profile operations
   async getUserProfile(userId: number): Promise<UserProfile | undefined> {
     const user = await this.getUser(userId);
@@ -260,6 +302,7 @@ export class MemStorage implements IStorage {
     const skills = await this.getSkills(userId);
     const languages = await this.getLanguages(userId);
     const profile = await this.getProfile(userId);
+    const questionnaire = await this.getQuestionnaire(userId);
     
     return {
       ...user,
@@ -267,7 +310,8 @@ export class MemStorage implements IStorage {
       education: educations,
       skills,
       languages,
-      profile
+      profile,
+      questionnaire
     };
   }
 }

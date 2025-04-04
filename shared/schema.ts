@@ -113,10 +113,33 @@ export type Language = typeof languages.$inferSelect;
 export type Profile = typeof profiles.$inferSelect;
 
 // Extended user schema with profile data
+export const questionnaires = pgTable("questionnaires", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().references(() => users.id),
+  background: text("background"),
+  goals: text("goals"),
+  aspirations: text("aspirations"),
+  challenges: text("challenges"),
+  interests: text("interests"),
+  timeframe: text("timeframe"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const insertQuestionnaireSchema = createInsertSchema(questionnaires).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertQuestionnaire = z.infer<typeof insertQuestionnaireSchema>;
+export type Questionnaire = typeof questionnaires.$inferSelect;
+
 export type UserProfile = User & {
   experiences?: Experience[];
   education?: Education[];
   skills?: Skill[];
   languages?: Language[];
   profile?: Profile;
+  questionnaire?: Questionnaire;
 };
