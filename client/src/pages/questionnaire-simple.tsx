@@ -230,7 +230,7 @@ export default function QuestionnairePage() {
         description: "Your account setup is now complete. Thank you for providing your career insights!",
       });
       queryClient.invalidateQueries({ queryKey: ["/api/user/profile"] });
-      navigate("/");
+      navigate("/profile");
     },
     onError: () => {
       toast({
