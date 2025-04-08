@@ -46,6 +46,27 @@ export default function QuestionnairePage() {
   const [crimeJusticeChecked, setCrimeJusticeChecked] = useState(false);
   const [digitalTransformationAIChecked, setDigitalTransformationAIChecked] = useState(false);
   const [educationLearningChecked, setEducationLearningChecked] = useState(false);
+  
+  // Content Creation Format preferences
+  const [sharingNewsChecked, setSharingNewsChecked] = useState(false);
+  const [writingExperiencesChecked, setWritingExperiencesChecked] = useState(false);
+  const [analyzingTrendsChecked, setAnalyzingTrendsChecked] = useState(false);
+  const [commentingPostsChecked, setCommentingPostsChecked] = useState(false);
+  const [howToContentChecked, setHowToContentChecked] = useState(false);
+  const [eventTakeawaysChecked, setEventTakeawaysChecked] = useState(false);
+  const [personalAnecdoteChecked, setPersonalAnecdoteChecked] = useState(false);
+  const [digitalCommunitiesChecked, setDigitalCommunitiesChecked] = useState(false);
+  const [otherContentFormatChecked, setOtherContentFormatChecked] = useState(false);
+  const [otherContentFormat, setOtherContentFormat] = useState("");
+  
+  // Posting Barriers
+  const [unsureWhatToSayChecked, setUnsureWhatToSayChecked] = useState(false);
+  const [fearOfJudgmentChecked, setFearOfJudgmentChecked] = useState(false);
+  const [timeManagementChecked, setTimeManagementChecked] = useState(false);
+  const [dontKnowHowToStartChecked, setDontKnowHowToStartChecked] = useState(false);
+  const [unclearProfessionalVoiceChecked, setUnclearProfessionalVoiceChecked] = useState(false);
+  const [otherBarrierChecked, setOtherBarrierChecked] = useState(false);
+  const [otherBarrier, setOtherBarrier] = useState("");
   const [emergingMarketsChecked, setEmergingMarketsChecked] = useState(false);
   const [entertainmentArtsChecked, setEntertainmentArtsChecked] = useState(false);
   const [financialInnovationChecked, setFinancialInnovationChecked] = useState(false);
@@ -521,6 +542,31 @@ export default function QuestionnairePage() {
       if (travelTourismChecked) crossCuttingInterests.push('Travel & Tourism');
       if (urbanDevelopmentChecked) crossCuttingInterests.push('Urban Development & Infrastructure');
       if (usPoliticsChecked) crossCuttingInterests.push('U.S. Politics & Policy');
+      
+      // Prepare content creation format preferences data
+      const contentFormatPreferences = [];
+      if (sharingNewsChecked) contentFormatPreferences.push('Sharing industry news with your perspective');
+      if (writingExperiencesChecked) contentFormatPreferences.push('Writing about your learned experiences');
+      if (analyzingTrendsChecked) contentFormatPreferences.push('Analyzing trends');
+      if (commentingPostsChecked) contentFormatPreferences.push('Commenting on others\' posts');
+      if (howToContentChecked) contentFormatPreferences.push('Creating how-to content');
+      if (eventTakeawaysChecked) contentFormatPreferences.push('Sharing event takeaways');
+      if (personalAnecdoteChecked) contentFormatPreferences.push('Personal anecdote');
+      if (digitalCommunitiesChecked) contentFormatPreferences.push('Digital communities');
+      if (otherContentFormatChecked && otherContentFormat.trim() !== '') {
+        contentFormatPreferences.push(`Other: ${otherContentFormat.trim()}`);
+      }
+      
+      // Prepare posting barriers data
+      const postingBarriers = [];
+      if (unsureWhatToSayChecked) postingBarriers.push('Unsure what to say');
+      if (fearOfJudgmentChecked) postingBarriers.push('Fear of judgment');
+      if (timeManagementChecked) postingBarriers.push('Time management');
+      if (dontKnowHowToStartChecked) postingBarriers.push('Don\'t know how to start');
+      if (unclearProfessionalVoiceChecked) postingBarriers.push('Unclear on professional voice');
+      if (otherBarrierChecked && otherBarrier.trim() !== '') {
+        postingBarriers.push(`Other: ${otherBarrier.trim()}`);
+      }
 
       // Update aspirations field to include selected branding challenges and published content
       let brandingDetails = aspirations.trim() !== '' 
@@ -551,6 +597,12 @@ export default function QuestionnairePage() {
       // Add professional areas for thought leadership to aspirations field
       brandingDetails += `\n\nProfessional areas for thought leadership: ${professionalAreas.trim() !== '' ? professionalAreas : 'Not specified'}`;
       
+      // Add content format preferences to aspirations field
+      brandingDetails += `\n\nContent creation format preferences: ${contentFormatPreferences.length > 0 ? contentFormatPreferences.join(', ') : 'None'}`;
+      
+      // Add posting barriers to aspirations field
+      brandingDetails += `\n\nPosting barriers: ${postingBarriers.length > 0 ? postingBarriers.join(', ') : 'None'}`;
+      
       const formData = {
         background, // LinkedIn URL
         goals: socialMediaDetails, // Social media details
@@ -559,6 +611,25 @@ export default function QuestionnairePage() {
         interests: "",
         timeframe: "",
         // Include these fields for potential future enhancement
+        contentFormatPreferences: {
+          sharingNews: sharingNewsChecked,
+          writingExperiences: writingExperiencesChecked,
+          analyzingTrends: analyzingTrendsChecked,
+          commentingPosts: commentingPostsChecked,
+          howToContent: howToContentChecked,
+          eventTakeaways: eventTakeawaysChecked,
+          personalAnecdote: personalAnecdoteChecked,
+          digitalCommunities: digitalCommunitiesChecked,
+          other: otherContentFormatChecked ? otherContentFormat : null
+        },
+        postingBarriers: {
+          unsureWhatToSay: unsureWhatToSayChecked,
+          fearOfJudgment: fearOfJudgmentChecked,
+          timeManagement: timeManagementChecked,
+          dontKnowHowToStart: dontKnowHowToStartChecked,
+          unclearProfessionalVoice: unclearProfessionalVoiceChecked,
+          other: otherBarrierChecked ? otherBarrier : null
+        },
         socialMedia: {
           twitter: twitterChecked,
           medium: mediumChecked,
@@ -1679,6 +1750,183 @@ export default function QuestionnairePage() {
                   className="min-h-[120px] resize-y w-full"
                   placeholder="Describe your professional focus areas..."
                 />
+              </div>
+              
+              <hr className="my-6" />
+              
+              {/* Content Creation Format Preferences */}
+              <div className="mb-6">
+                <Label className="text-gray-700 font-medium block mb-3">
+                  As you think about content creation, are there any formats that feel more natural to you? (Select all that apply)
+                </Label>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <div className="flex items-center space-x-2">
+                    <Checkbox 
+                      id="sharing-news" 
+                      checked={sharingNewsChecked}
+                      onCheckedChange={(checked) => setSharingNewsChecked(checked === true)}
+                    />
+                    <Label htmlFor="sharing-news" className="text-gray-700">Sharing industry news with your perspective</Label>
+                  </div>
+                  
+                  <div className="flex items-center space-x-2">
+                    <Checkbox 
+                      id="writing-experiences" 
+                      checked={writingExperiencesChecked}
+                      onCheckedChange={(checked) => setWritingExperiencesChecked(checked === true)}
+                    />
+                    <Label htmlFor="writing-experiences" className="text-gray-700">Writing about your learned experiences</Label>
+                  </div>
+                  
+                  <div className="flex items-center space-x-2">
+                    <Checkbox 
+                      id="analyzing-trends" 
+                      checked={analyzingTrendsChecked}
+                      onCheckedChange={(checked) => setAnalyzingTrendsChecked(checked === true)}
+                    />
+                    <Label htmlFor="analyzing-trends" className="text-gray-700">Analyzing trends</Label>
+                  </div>
+                  
+                  <div className="flex items-center space-x-2">
+                    <Checkbox 
+                      id="commenting-posts" 
+                      checked={commentingPostsChecked}
+                      onCheckedChange={(checked) => setCommentingPostsChecked(checked === true)}
+                    />
+                    <Label htmlFor="commenting-posts" className="text-gray-700">Commenting on others' posts</Label>
+                  </div>
+                  
+                  <div className="flex items-center space-x-2">
+                    <Checkbox 
+                      id="how-to-content" 
+                      checked={howToContentChecked}
+                      onCheckedChange={(checked) => setHowToContentChecked(checked === true)}
+                    />
+                    <Label htmlFor="how-to-content" className="text-gray-700">Creating how-to content</Label>
+                  </div>
+                  
+                  <div className="flex items-center space-x-2">
+                    <Checkbox 
+                      id="event-takeaways" 
+                      checked={eventTakeawaysChecked}
+                      onCheckedChange={(checked) => setEventTakeawaysChecked(checked === true)}
+                    />
+                    <Label htmlFor="event-takeaways" className="text-gray-700">Sharing event takeaways</Label>
+                  </div>
+                  
+                  <div className="flex items-center space-x-2">
+                    <Checkbox 
+                      id="personal-anecdote" 
+                      checked={personalAnecdoteChecked}
+                      onCheckedChange={(checked) => setPersonalAnecdoteChecked(checked === true)}
+                    />
+                    <Label htmlFor="personal-anecdote" className="text-gray-700">Personal anecdote</Label>
+                  </div>
+                  
+                  <div className="flex items-center space-x-2">
+                    <Checkbox 
+                      id="digital-communities" 
+                      checked={digitalCommunitiesChecked}
+                      onCheckedChange={(checked) => setDigitalCommunitiesChecked(checked === true)}
+                    />
+                    <Label htmlFor="digital-communities" className="text-gray-700">Digital communities</Label>
+                  </div>
+                  
+                  <div className="flex items-center space-x-2">
+                    <Checkbox 
+                      id="other-content-format" 
+                      checked={otherContentFormatChecked}
+                      onCheckedChange={(checked) => setOtherContentFormatChecked(checked === true)}
+                    />
+                    <Label htmlFor="other-content-format" className="text-gray-700">Other</Label>
+                  </div>
+                  
+                  {otherContentFormatChecked && (
+                    <div className="ml-6 mt-2 md:col-span-2">
+                      <Input
+                        value={otherContentFormat}
+                        onChange={(e) => setOtherContentFormat(e.target.value)}
+                        placeholder="Please specify other content format"
+                        className="w-full"
+                      />
+                    </div>
+                  )}
+                </div>
+              </div>
+              
+              <hr className="my-6" />
+              
+              {/* Posting Barriers */}
+              <div className="mb-6">
+                <Label className="text-gray-700 font-medium block mb-3">
+                  What holds you back from posting more frequently? (Select all that apply)
+                </Label>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <div className="flex items-center space-x-2">
+                    <Checkbox 
+                      id="unsure-what-to-say" 
+                      checked={unsureWhatToSayChecked}
+                      onCheckedChange={(checked) => setUnsureWhatToSayChecked(checked === true)}
+                    />
+                    <Label htmlFor="unsure-what-to-say" className="text-gray-700">Unsure what to say</Label>
+                  </div>
+                  
+                  <div className="flex items-center space-x-2">
+                    <Checkbox 
+                      id="fear-of-judgment" 
+                      checked={fearOfJudgmentChecked}
+                      onCheckedChange={(checked) => setFearOfJudgmentChecked(checked === true)}
+                    />
+                    <Label htmlFor="fear-of-judgment" className="text-gray-700">Fear of judgment</Label>
+                  </div>
+                  
+                  <div className="flex items-center space-x-2">
+                    <Checkbox 
+                      id="time-management" 
+                      checked={timeManagementChecked}
+                      onCheckedChange={(checked) => setTimeManagementChecked(checked === true)}
+                    />
+                    <Label htmlFor="time-management" className="text-gray-700">Time management</Label>
+                  </div>
+                  
+                  <div className="flex items-center space-x-2">
+                    <Checkbox 
+                      id="dont-know-how-to-start" 
+                      checked={dontKnowHowToStartChecked}
+                      onCheckedChange={(checked) => setDontKnowHowToStartChecked(checked === true)}
+                    />
+                    <Label htmlFor="dont-know-how-to-start" className="text-gray-700">Don't know how to start</Label>
+                  </div>
+                  
+                  <div className="flex items-center space-x-2">
+                    <Checkbox 
+                      id="unclear-professional-voice" 
+                      checked={unclearProfessionalVoiceChecked}
+                      onCheckedChange={(checked) => setUnclearProfessionalVoiceChecked(checked === true)}
+                    />
+                    <Label htmlFor="unclear-professional-voice" className="text-gray-700">Unclear on professional voice</Label>
+                  </div>
+                  
+                  <div className="flex items-center space-x-2">
+                    <Checkbox 
+                      id="other-barrier" 
+                      checked={otherBarrierChecked}
+                      onCheckedChange={(checked) => setOtherBarrierChecked(checked === true)}
+                    />
+                    <Label htmlFor="other-barrier" className="text-gray-700">Other</Label>
+                  </div>
+                  
+                  {otherBarrierChecked && (
+                    <div className="ml-6 mt-2 md:col-span-2">
+                      <Input
+                        value={otherBarrier}
+                        onChange={(e) => setOtherBarrier(e.target.value)}
+                        placeholder="Please specify other barriers"
+                        className="w-full"
+                      />
+                    </div>
+                  )}
+                </div>
               </div>
               
               <hr className="my-6" />
