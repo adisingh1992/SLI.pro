@@ -204,6 +204,10 @@ export default function QuestionnairePage() {
   const [otherAssessmentChecked, setOtherAssessmentChecked] = useState(false);
   const [otherAssessment, setOtherAssessment] = useState("");
   
+  // Files and additional information for Step 4
+  const [files, setFiles] = useState<File[]>([]);
+  const [additionalInfo, setAdditionalInfo] = useState("");
+  
   // Fetch user profile data
   const { data: userProfile, isLoading: profileLoading } = useQuery<UserProfile>({
     queryKey: ["/api/user/profile"],
@@ -464,8 +468,69 @@ export default function QuestionnairePage() {
     }
   };
 
-  const handleSubmit = () => {
+  // Helper function to convert a file to base64
+  const fileToBase64 = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = () => {
+        if (!reader.result) {
+          reject(new Error("Failed to read file"));
+          return;
+        }
+        
+        // Extract the base64 data part from the data URL
+        const base64String = reader.result.toString();
+        const base64Data = base64String.split(',')[1];
+        resolve(base64Data);
+      };
+      reader.onerror = (error) => reject(error);
+    });
+  };
+  
+  // Function to upload assessment files
+  const uploadAssessmentFiles = async () => {
+    if (files.length === 0) return;
+    
+    try {
+      for (const file of files) {
+        const fileData = await fileToBase64(file);
+        
+        // Determine file type
+        const fileType = file.name.toLowerCase().endsWith(".pdf") ? "assessment-pdf" : 
+                         file.name.toLowerCase().match(/\.(jpg|jpeg|png)$/) ? "assessment-image" : 
+                         "assessment-doc";
+        
+        await apiRequest("POST", "/api/documents", {
+          name: `Assessment: ${file.name}`,
+          type: fileType,
+          fileName: file.name,
+          fileData: fileData
+        });
+      }
+      
+      toast({
+        title: "Files Uploaded",
+        description: `Successfully uploaded ${files.length} file${files.length > 1 ? 's' : ''}.`,
+      });
+      
+    } catch (error) {
+      console.error("Error uploading files:", error);
+      toast({
+        title: "Upload Error",
+        description: "There was a problem uploading one or more files. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleSubmit = async () => {
     if (validateCurrentStep()) {
+      // First upload any assessment files
+      if (files.length > 0) {
+        await uploadAssessmentFiles();
+      }
+      
       // Prepare social media data
       const socialMediaOptions = [];
       if (twitterChecked) socialMediaOptions.push('Twitter/X');
@@ -620,6 +685,11 @@ export default function QuestionnairePage() {
       
       // Add posting barriers to aspirations field
       brandingDetails += `\n\nPosting barriers: ${postingBarriers.length > 0 ? postingBarriers.join(', ') : 'None'}`;
+      
+      // Add additional info to aspirations field if provided
+      if (additionalInfo.trim() !== '') {
+        brandingDetails += `\n\nAdditional professional journey information: ${additionalInfo}`;
+      }
       
       const formData = {
         background, // LinkedIn URL
@@ -801,11 +871,12 @@ export default function QuestionnairePage() {
             enneagram: enneagramChecked,
             threeSixty: threeSixtyChecked,
             other: otherAssessmentChecked ? otherAssessment : null
-          }
+          },
+          additionalInfo: additionalInfo
         }
       };
       
-      questionnaireMutation.mutate(formData);
+      await questionnaireMutation.mutateAsync(formData);
     } else {
       toast({
         title: "Please complete all required fields",
@@ -2415,6 +2486,73 @@ export default function QuestionnairePage() {
                     </div>
                   )}
                 </div>
+              </div>
+              
+              <hr className="my-6" />
+              
+              <div className="mb-6">
+                <Label className="text-gray-700 font-medium block mb-3">
+                  Please upload the personality / strength assessments you have taken
+                </Label>
+                <p className="text-sm text-gray-500 mb-3">
+                  You can upload up to 10 files. PDF, PNG, JPEG, and DOC/DOCX formats are supported.
+                </p>
+                
+                <div className="mt-4 border-2 border-dashed border-gray-300 p-6 rounded-md">
+                  <Input
+                    id="file-upload"
+                    type="file"
+                    multiple
+                    accept=".pdf,.doc,.docx,.png,.jpg,.jpeg"
+                    onChange={(e) => {
+                      if (e.target.files) {
+                        const fileList = Array.from(e.target.files);
+                        if (fileList.length > 10) {
+                          toast({
+                            title: "Too many files",
+                            description: "You can upload a maximum of 10 files.",
+                            variant: "destructive",
+                          });
+                          return;
+                        }
+                        setFiles(fileList);
+                      }
+                    }}
+                    className="cursor-pointer"
+                  />
+                  <p className="text-xs text-gray-500 mt-2">Max file size: 5MB per file</p>
+                  
+                  {files.length > 0 && (
+                    <div className="mt-4">
+                      <h4 className="font-medium mb-2">Selected Files ({files.length}):</h4>
+                      <ul className="list-disc pl-5 space-y-1">
+                        {files.map((file, index) => (
+                          <li key={index} className="text-sm">
+                            {file.name} ({(file.size / 1024 / 1024).toFixed(2)} MB)
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                </div>
+              </div>
+              
+              <hr className="my-6" />
+              
+              <div className="mb-6">
+                <Label htmlFor="additionalInfo" className="text-gray-700 font-medium block mb-3">
+                  Is there anything else you want to share about your professional journey and brand?
+                </Label>
+                <p className="text-sm text-gray-500 mb-3">
+                  Please provide any additional information that might be relevant
+                </p>
+                <Textarea
+                  id="additionalInfo"
+                  value={additionalInfo}
+                  onChange={(e) => setAdditionalInfo(e.target.value)}
+                  className="min-h-[150px] resize-y w-full"
+                  placeholder="Share any additional thoughts, experiences, or information about your professional journey that you'd like us to know..."
+                />
               </div>
             </div>
           </div>
