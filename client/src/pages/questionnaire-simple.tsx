@@ -94,9 +94,6 @@ export default function QuestionnairePage() {
   // Content creation comfort rating (scale 1-5)
   const [contentCreationComfort, setContentCreationComfort] = useState<number | null>(null);
   
-  // Brand optimization goals
-  const [brandOptimizationGoals, setBrandOptimizationGoals] = useState("");
-  
   // Fetch user profile data
   const { data: userProfile, isLoading: profileLoading } = useQuery<UserProfile>({
     queryKey: ["/api/user/profile"],
@@ -279,17 +276,6 @@ export default function QuestionnairePage() {
         else if (comfortText.includes("5")) setContentCreationComfort(5);
       }
       
-      // Try to parse brand optimization goals from aspirations field
-      if (q.aspirations && q.aspirations.includes("Brand optimization goals:")) {
-        const goalsText = q.aspirations.split("Brand optimization goals:")[1].trim();
-        // If there's another section after this one, only get the text up to that section
-        if (goalsText.includes("\n\n")) {
-          setBrandOptimizationGoals(goalsText.split("\n\n")[0].trim());
-        } else {
-          setBrandOptimizationGoals(goalsText);
-        }
-      }
-      
       // Set other questionnaire fields
       setChallenges(q.challenges || "");
       setInterests(q.interests || "");
@@ -436,9 +422,6 @@ export default function QuestionnairePage() {
       // Add content creation comfort to aspirations field
       brandingDetails += `\n\nContent creation comfort: ${contentCreationComfort !== null ? contentCreationComfort : 'Not specified'}`;
       
-      // Add brand optimization goals to aspirations field
-      brandingDetails += `\n\nBrand optimization goals: ${brandOptimizationGoals.trim() !== '' ? brandOptimizationGoals : 'Not specified'}`;
-      
       const formData = {
         background, // LinkedIn URL
         goals: socialMediaDetails, // Social media details
@@ -504,8 +487,7 @@ export default function QuestionnairePage() {
           reactedDaily: reactedDailyChecked
         },
         brandPositioning: brandPositioningRating,
-        contentCreationComfort: contentCreationComfort,
-        brandOptimizationGoals: brandOptimizationGoals
+        contentCreationComfort: contentCreationComfort
       };
       
       questionnaireMutation.mutate(formData);
@@ -1157,21 +1139,7 @@ export default function QuestionnairePage() {
               </div>
             </div>
             
-            <div className="mb-6">
-              <Label htmlFor="brandOptimizationGoals" className="text-gray-700 font-medium block mb-2">
-                Professional Brand Optimization Goals
-              </Label>
-              <p className="text-sm text-gray-500 mb-3">
-                What do you hope to gain from optimizing your professional brand?
-              </p>
-              <Textarea
-                id="brandOptimizationGoals"
-                value={brandOptimizationGoals}
-                onChange={(e) => setBrandOptimizationGoals(e.target.value)}
-                className="min-h-[120px] resize-y w-full"
-                placeholder="Describe your goals for your professional brand..."
-              />
-            </div>
+
           </div>
         );
       case 3:
