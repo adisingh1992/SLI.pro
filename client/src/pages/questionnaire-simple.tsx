@@ -501,6 +501,27 @@ export default function QuestionnairePage() {
       if (reactedFewTimesWeekChecked) linkedInActivity.push('Reacted to Posts (likes, etc.) - A few times a week');
       if (reactedDailyChecked) linkedInActivity.push('Reacted to Posts (likes, etc.) - Daily');
       
+      // Prepare cross-cutting & societal interests data
+      const crossCuttingInterests = [];
+      if (climateChecked) crossCuttingInterests.push('Climate Change & Sustainability');
+      if (consumerBehaviorChecked) crossCuttingInterests.push('Consumer Behavior & Culture');
+      if (crimeJusticeChecked) crossCuttingInterests.push('Crime & Justice');
+      if (digitalTransformationAIChecked) crossCuttingInterests.push('Digital Transformation/AI');
+      if (educationLearningChecked) crossCuttingInterests.push('Education & Learning');
+      if (emergingMarketsChecked) crossCuttingInterests.push('Emerging Markets');
+      if (entertainmentArtsChecked) crossCuttingInterests.push('Entertainment & Arts');
+      if (financialInnovationChecked) crossCuttingInterests.push('Financial Innovation & Markets');
+      if (futureOfWorkChecked) crossCuttingInterests.push('Future of Work');
+      if (globalEconomyChecked) crossCuttingInterests.push('Global Markets & Economy');
+      if (geopoliticsChecked) crossCuttingInterests.push('Global Politics & Geopolitics');
+      if (healthWellnessChecked) crossCuttingInterests.push('Health & Wellness');
+      if (healthcareInnovationChecked) crossCuttingInterests.push('Healthcare Innovation');
+      if (socialImpactDEIChecked) crossCuttingInterests.push('Social Impact & DEI');
+      if (sportsRecreationChecked) crossCuttingInterests.push('Sports & Recreation');
+      if (travelTourismChecked) crossCuttingInterests.push('Travel & Tourism');
+      if (urbanDevelopmentChecked) crossCuttingInterests.push('Urban Development & Infrastructure');
+      if (usPoliticsChecked) crossCuttingInterests.push('U.S. Politics & Policy');
+
       // Update aspirations field to include selected branding challenges and published content
       let brandingDetails = aspirations.trim() !== '' 
         ? `${aspirations}\n\nBranding challenges: ${brandingChallenges.join(', ')}` 
@@ -523,6 +544,12 @@ export default function QuestionnairePage() {
       
       // Add brand optimization goals to aspirations field
       brandingDetails += `\n\nBrand optimization goals: ${brandOptimizationGoals.trim() !== '' ? brandOptimizationGoals : 'Not specified'}`;
+      
+      // Add cross-cutting & societal interests to aspirations field
+      brandingDetails += `\n\nCross-cutting & societal interests: ${crossCuttingInterests.length > 0 ? crossCuttingInterests.join(', ') : 'None'}`;
+      
+      // Add professional areas for thought leadership to aspirations field
+      brandingDetails += `\n\nProfessional areas for thought leadership: ${professionalAreas.trim() !== '' ? professionalAreas : 'Not specified'}`;
       
       const formData = {
         background, // LinkedIn URL
@@ -603,6 +630,29 @@ export default function QuestionnairePage() {
           socialImpact: socialImpactChecked,
           technology: technologyChecked
         },
+        crossCuttingInterests: {
+          climate: climateChecked,
+          consumerBehavior: consumerBehaviorChecked,
+          crimeJustice: crimeJusticeChecked,
+          digitalTransformationAI: digitalTransformationAIChecked,
+          educationLearning: educationLearningChecked,
+          emergingMarkets: emergingMarketsChecked,
+          entertainmentArts: entertainmentArtsChecked,
+          financialInnovation: financialInnovationChecked,
+          futureOfWork: futureOfWorkChecked,
+          globalEconomy: globalEconomyChecked,
+          geopolitics: geopoliticsChecked,
+          healthWellness: healthWellnessChecked,
+          healthcareInnovation: healthcareInnovationChecked,
+          socialImpactDEI: socialImpactDEIChecked,
+          sportsRecreation: sportsRecreationChecked,
+          travelTourism: travelTourismChecked,
+          urbanDevelopment: urbanDevelopmentChecked,
+          usPolitics: usPoliticsChecked
+        },
+        
+        professionalAreasForThoughtLeadership: professionalAreas,
+        
         technologySubcategories: technologyChecked ? {
           // AI/ML
           aiConsumer: aiConsumerChecked,
@@ -1438,6 +1488,197 @@ export default function QuestionnairePage() {
                     <Label htmlFor="technology" className="text-gray-700">Technology & Digital Media</Label>
                   </div>
                 </div>
+              </div>
+              
+              <hr className="my-6" />
+              
+              {/* Cross-Cutting & Societal Interests Section */}
+              <div className="mb-6">
+                <Label className="text-gray-700 font-medium block mb-3">
+                  Cross-Cutting & Societal Interests
+                </Label>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <div className="flex items-center space-x-2">
+                    <Checkbox 
+                      id="climate" 
+                      checked={climateChecked}
+                      onCheckedChange={(checked) => setClimateChecked(checked === true)}
+                    />
+                    <Label htmlFor="climate" className="text-gray-700">Climate Change & Sustainability</Label>
+                  </div>
+                  
+                  <div className="flex items-center space-x-2">
+                    <Checkbox 
+                      id="consumer-behavior" 
+                      checked={consumerBehaviorChecked}
+                      onCheckedChange={(checked) => setConsumerBehaviorChecked(checked === true)}
+                    />
+                    <Label htmlFor="consumer-behavior" className="text-gray-700">Consumer Behavior & Culture</Label>
+                  </div>
+                  
+                  <div className="flex items-center space-x-2">
+                    <Checkbox 
+                      id="crime-justice" 
+                      checked={crimeJusticeChecked}
+                      onCheckedChange={(checked) => setCrimeJusticeChecked(checked === true)}
+                    />
+                    <Label htmlFor="crime-justice" className="text-gray-700">Crime & Justice</Label>
+                  </div>
+                  
+                  <div className="flex items-center space-x-2">
+                    <Checkbox 
+                      id="digital-transformation-ai" 
+                      checked={digitalTransformationAIChecked}
+                      onCheckedChange={(checked) => setDigitalTransformationAIChecked(checked === true)}
+                    />
+                    <Label htmlFor="digital-transformation-ai" className="text-gray-700">Digital Transformation/AI</Label>
+                  </div>
+                  
+                  <div className="flex items-center space-x-2">
+                    <Checkbox 
+                      id="education-learning" 
+                      checked={educationLearningChecked}
+                      onCheckedChange={(checked) => setEducationLearningChecked(checked === true)}
+                    />
+                    <Label htmlFor="education-learning" className="text-gray-700">Education & Learning</Label>
+                  </div>
+                  
+                  <div className="flex items-center space-x-2">
+                    <Checkbox 
+                      id="emerging-markets" 
+                      checked={emergingMarketsChecked}
+                      onCheckedChange={(checked) => setEmergingMarketsChecked(checked === true)}
+                    />
+                    <Label htmlFor="emerging-markets" className="text-gray-700">Emerging Markets</Label>
+                  </div>
+                  
+                  <div className="flex items-center space-x-2">
+                    <Checkbox 
+                      id="entertainment-arts" 
+                      checked={entertainmentArtsChecked}
+                      onCheckedChange={(checked) => setEntertainmentArtsChecked(checked === true)}
+                    />
+                    <Label htmlFor="entertainment-arts" className="text-gray-700">Entertainment & Arts</Label>
+                  </div>
+                  
+                  <div className="flex items-center space-x-2">
+                    <Checkbox 
+                      id="financial-innovation" 
+                      checked={financialInnovationChecked}
+                      onCheckedChange={(checked) => setFinancialInnovationChecked(checked === true)}
+                    />
+                    <Label htmlFor="financial-innovation" className="text-gray-700">Financial Innovation & Markets</Label>
+                  </div>
+                  
+                  <div className="flex items-center space-x-2">
+                    <Checkbox 
+                      id="future-of-work" 
+                      checked={futureOfWorkChecked}
+                      onCheckedChange={(checked) => setFutureOfWorkChecked(checked === true)}
+                    />
+                    <Label htmlFor="future-of-work" className="text-gray-700">Future of Work</Label>
+                  </div>
+                  
+                  <div className="flex items-center space-x-2">
+                    <Checkbox 
+                      id="global-economy" 
+                      checked={globalEconomyChecked}
+                      onCheckedChange={(checked) => setGlobalEconomyChecked(checked === true)}
+                    />
+                    <Label htmlFor="global-economy" className="text-gray-700">Global Markets & Economy</Label>
+                  </div>
+                  
+                  <div className="flex items-center space-x-2">
+                    <Checkbox 
+                      id="geopolitics" 
+                      checked={geopoliticsChecked}
+                      onCheckedChange={(checked) => setGeopoliticsChecked(checked === true)}
+                    />
+                    <Label htmlFor="geopolitics" className="text-gray-700">Global Politics & Geopolitics</Label>
+                  </div>
+                  
+                  <div className="flex items-center space-x-2">
+                    <Checkbox 
+                      id="health-wellness" 
+                      checked={healthWellnessChecked}
+                      onCheckedChange={(checked) => setHealthWellnessChecked(checked === true)}
+                    />
+                    <Label htmlFor="health-wellness" className="text-gray-700">Health & Wellness</Label>
+                  </div>
+                  
+                  <div className="flex items-center space-x-2">
+                    <Checkbox 
+                      id="healthcare-innovation" 
+                      checked={healthcareInnovationChecked}
+                      onCheckedChange={(checked) => setHealthcareInnovationChecked(checked === true)}
+                    />
+                    <Label htmlFor="healthcare-innovation" className="text-gray-700">Healthcare Innovation</Label>
+                  </div>
+                  
+                  <div className="flex items-center space-x-2">
+                    <Checkbox 
+                      id="social-impact-dei" 
+                      checked={socialImpactDEIChecked}
+                      onCheckedChange={(checked) => setSocialImpactDEIChecked(checked === true)}
+                    />
+                    <Label htmlFor="social-impact-dei" className="text-gray-700">Social Impact & DEI</Label>
+                  </div>
+                  
+                  <div className="flex items-center space-x-2">
+                    <Checkbox 
+                      id="sports-recreation" 
+                      checked={sportsRecreationChecked}
+                      onCheckedChange={(checked) => setSportsRecreationChecked(checked === true)}
+                    />
+                    <Label htmlFor="sports-recreation" className="text-gray-700">Sports & Recreation</Label>
+                  </div>
+                  
+                  <div className="flex items-center space-x-2">
+                    <Checkbox 
+                      id="travel-tourism" 
+                      checked={travelTourismChecked}
+                      onCheckedChange={(checked) => setTravelTourismChecked(checked === true)}
+                    />
+                    <Label htmlFor="travel-tourism" className="text-gray-700">Travel & Tourism</Label>
+                  </div>
+                  
+                  <div className="flex items-center space-x-2">
+                    <Checkbox 
+                      id="urban-development" 
+                      checked={urbanDevelopmentChecked}
+                      onCheckedChange={(checked) => setUrbanDevelopmentChecked(checked === true)}
+                    />
+                    <Label htmlFor="urban-development" className="text-gray-700">Urban Development & Infrastructure</Label>
+                  </div>
+                  
+                  <div className="flex items-center space-x-2">
+                    <Checkbox 
+                      id="us-politics" 
+                      checked={usPoliticsChecked}
+                      onCheckedChange={(checked) => setUsPoliticsChecked(checked === true)}
+                    />
+                    <Label htmlFor="us-politics" className="text-gray-700">U.S. Politics & Policy</Label>
+                  </div>
+                </div>
+              </div>
+              
+              <hr className="my-6" />
+              
+              {/* Thought Leadership Areas */}
+              <div className="mb-6">
+                <Label htmlFor="professionalAreas" className="text-gray-700 font-medium block mb-2">
+                  In what professional areas do you seek to become a thought leader?
+                </Label>
+                <p className="text-sm text-gray-500 mb-3">
+                  Consider both your current expertise and areas where you aspire to build credibility. Professional areas might include any business topics, functions, market segments, verticals, etc. An example might be: AI/ML applications in healthcare delivery, ESG integration in private equity
+                </p>
+                <Textarea
+                  id="professionalAreas"
+                  value={professionalAreas}
+                  onChange={(e) => setProfessionalAreas(e.target.value)}
+                  className="min-h-[120px] resize-y w-full"
+                  placeholder="Describe your professional focus areas..."
+                />
               </div>
               
               <hr className="my-6" />
