@@ -40,6 +40,29 @@ export default function QuestionnairePage() {
   const [socialImpactChecked, setSocialImpactChecked] = useState(false);
   const [technologyChecked, setTechnologyChecked] = useState(false);
   
+  // Cross-Cutting & Societal Interests checkboxes state
+  const [climateChecked, setClimateChecked] = useState(false);
+  const [consumerBehaviorChecked, setConsumerBehaviorChecked] = useState(false);
+  const [crimeJusticeChecked, setCrimeJusticeChecked] = useState(false);
+  const [digitalTransformationAIChecked, setDigitalTransformationAIChecked] = useState(false);
+  const [educationLearningChecked, setEducationLearningChecked] = useState(false);
+  const [emergingMarketsChecked, setEmergingMarketsChecked] = useState(false);
+  const [entertainmentArtsChecked, setEntertainmentArtsChecked] = useState(false);
+  const [financialInnovationChecked, setFinancialInnovationChecked] = useState(false);
+  const [futureOfWorkChecked, setFutureOfWorkChecked] = useState(false);
+  const [globalEconomyChecked, setGlobalEconomyChecked] = useState(false);
+  const [geopoliticsChecked, setGeopoliticsChecked] = useState(false);
+  const [healthWellnessChecked, setHealthWellnessChecked] = useState(false);
+  const [healthcareInnovationChecked, setHealthcareInnovationChecked] = useState(false);
+  const [socialImpactDEIChecked, setSocialImpactDEIChecked] = useState(false);
+  const [sportsRecreationChecked, setSportsRecreationChecked] = useState(false);
+  const [travelTourismChecked, setTravelTourismChecked] = useState(false);
+  const [urbanDevelopmentChecked, setUrbanDevelopmentChecked] = useState(false);
+  const [usPoliticsChecked, setUsPoliticsChecked] = useState(false);
+  
+  // Professional areas for thought leadership
+  const [professionalAreas, setProfessionalAreas] = useState("");
+  
   // Technology & Digital Media subcategories state
   const [aiConsumerChecked, setAiConsumerChecked] = useState(false);
   const [aiComputerVisionChecked, setAiComputerVisionChecked] = useState(false);
@@ -71,7 +94,7 @@ export default function QuestionnairePage() {
   const [quantumComputingChecked, setQuantumComputingChecked] = useState(false);
   const [emergingRoboticsChecked, setEmergingRoboticsChecked] = useState(false);
   const [businessAppsChecked, setBusinessAppsChecked] = useState(false);
-  const [digitalTransformationChecked, setDigitalTransformationChecked] = useState(false);
+  const [enterpriseDigitalTransformationChecked, setEnterpriseDigitalTransformationChecked] = useState(false);
   const [integrationApisChecked, setIntegrationApisChecked] = useState(false);
   const [saasEnterpriseChecked, setSaasEnterpriseChecked] = useState(false);
   
@@ -624,7 +647,7 @@ export default function QuestionnairePage() {
           
           // Enterprise Technology
           businessApps: businessAppsChecked,
-          digitalTransformation: digitalTransformationChecked,
+          digitalTransformation: enterpriseDigitalTransformationChecked,
           integrationApis: integrationApisChecked,
           saasEnterprise: saasEnterpriseChecked
         } : null
@@ -1702,8 +1725,8 @@ export default function QuestionnairePage() {
                       <div className="flex items-center space-x-2">
                         <Checkbox 
                           id="digital-transformation" 
-                          checked={digitalTransformationChecked}
-                          onCheckedChange={(checked) => setDigitalTransformationChecked(checked === true)}
+                          checked={enterpriseDigitalTransformationChecked}
+                          onCheckedChange={(checked) => setEnterpriseDigitalTransformationChecked(checked === true)}
                         />
                         <Label htmlFor="digital-transformation" className="text-gray-700">Digital Transformation</Label>
                       </div>
