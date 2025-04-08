@@ -717,6 +717,8 @@ export default function QuestionnairePage() {
               </div>
             </div>
             
+            <hr className="my-6" />
+            
             <div className="mb-6">
               <Label htmlFor="publishedContent" className="text-gray-700 font-medium block mb-2">
                 Published Digital Content
@@ -792,6 +794,8 @@ export default function QuestionnairePage() {
                 )}
               </div>
             </div>
+            
+            <hr className="my-6" />
             
             <div className="mb-6">
               <Label htmlFor="profileUpdateTime" className="text-gray-700 font-medium block mb-2">
@@ -886,6 +890,8 @@ export default function QuestionnairePage() {
                 )}
               </div>
             </div>
+            
+            <hr className="my-6" />
             
             <div className="mb-6">
               <Label htmlFor="linkedInActivity" className="text-gray-700 font-medium block mb-2">
@@ -1073,6 +1079,8 @@ export default function QuestionnairePage() {
               </div>
             </div>
             
+            <hr className="my-6" />
+            
             <div className="mb-6">
               <Label htmlFor="brandPositioning" className="text-gray-700 font-medium block mb-2">
                 Digital Professional Brand Positioning
@@ -1115,6 +1123,8 @@ export default function QuestionnairePage() {
               </div>
             </div>
             
+            <hr className="my-6" />
+            
             <div className="mb-6">
               <Label htmlFor="contentComfort" className="text-gray-700 font-medium block mb-2">
                 Content Creation Comfort
@@ -1156,6 +1166,8 @@ export default function QuestionnairePage() {
                 </RadioGroup>
               </div>
             </div>
+            
+            <hr className="my-6" />
             
             <div className="mb-6">
               <Label htmlFor="brandOptimizationGoals" className="text-gray-700 font-medium block mb-2">
