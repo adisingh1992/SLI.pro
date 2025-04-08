@@ -6,6 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { toast } from "@/hooks/use-toast";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { UserProfile } from "@shared/schema";
@@ -86,6 +87,15 @@ export default function QuestionnairePage() {
   const [reactedFewTimesMonthChecked, setReactedFewTimesMonthChecked] = useState(false);
   const [reactedFewTimesWeekChecked, setReactedFewTimesWeekChecked] = useState(false);
   const [reactedDailyChecked, setReactedDailyChecked] = useState(false);
+  
+  // Brand positioning rating (scale 1-5)
+  const [brandPositioningRating, setBrandPositioningRating] = useState<number | null>(null);
+  
+  // Content creation comfort rating (scale 1-5)
+  const [contentCreationComfort, setContentCreationComfort] = useState<number | null>(null);
+  
+  // Brand optimization goals
+  const [brandOptimizationGoals, setBrandOptimizationGoals] = useState("");
   
   // Fetch user profile data
   const { data: userProfile, isLoading: profileLoading } = useQuery<UserProfile>({
@@ -225,7 +235,7 @@ export default function QuestionnairePage() {
       
       // Try to parse LinkedIn activity data from aspirations field
       if (q.aspirations && q.aspirations.includes("LinkedIn activity:")) {
-        const activityText = q.aspirations.split("LinkedIn activity:")[1].trim();
+        const activityText = q.aspirations.split("LinkedIn activity:")[1].trim().split('\n')[0];
         
         // Check each activity option and set state accordingly
         setReadNewsfeedChecked(activityText.includes("Read your Newsfeed"));
@@ -247,6 +257,37 @@ export default function QuestionnairePage() {
         setReactedFewTimesMonthChecked(activityText.includes("Reacted to Posts (likes, etc.) - A few times a month"));
         setReactedFewTimesWeekChecked(activityText.includes("Reacted to Posts (likes, etc.) - A few times a week"));
         setReactedDailyChecked(activityText.includes("Reacted to Posts (likes, etc.) - Daily"));
+      }
+      
+      // Try to parse brand positioning rating from aspirations field
+      if (q.aspirations && q.aspirations.includes("Brand positioning rating:")) {
+        const ratingText = q.aspirations.split("Brand positioning rating:")[1].trim().split('\n')[0];
+        if (ratingText.includes("1")) setBrandPositioningRating(1);
+        else if (ratingText.includes("2")) setBrandPositioningRating(2);
+        else if (ratingText.includes("3")) setBrandPositioningRating(3);
+        else if (ratingText.includes("4")) setBrandPositioningRating(4);
+        else if (ratingText.includes("5")) setBrandPositioningRating(5);
+      }
+      
+      // Try to parse content creation comfort from aspirations field
+      if (q.aspirations && q.aspirations.includes("Content creation comfort:")) {
+        const comfortText = q.aspirations.split("Content creation comfort:")[1].trim().split('\n')[0];
+        if (comfortText.includes("1")) setContentCreationComfort(1);
+        else if (comfortText.includes("2")) setContentCreationComfort(2);
+        else if (comfortText.includes("3")) setContentCreationComfort(3);
+        else if (comfortText.includes("4")) setContentCreationComfort(4);
+        else if (comfortText.includes("5")) setContentCreationComfort(5);
+      }
+      
+      // Try to parse brand optimization goals from aspirations field
+      if (q.aspirations && q.aspirations.includes("Brand optimization goals:")) {
+        const goalsText = q.aspirations.split("Brand optimization goals:")[1].trim();
+        // If there's another section after this one, only get the text up to that section
+        if (goalsText.includes("\n\n")) {
+          setBrandOptimizationGoals(goalsText.split("\n\n")[0].trim());
+        } else {
+          setBrandOptimizationGoals(goalsText);
+        }
       }
       
       // Set other questionnaire fields
@@ -389,6 +430,15 @@ export default function QuestionnairePage() {
       // Add LinkedIn activity to aspirations field
       brandingDetails += `\n\nLinkedIn activity: ${linkedInActivity.length > 0 ? linkedInActivity.join(', ') : 'Not specified'}`;
       
+      // Add brand positioning rating to aspirations field
+      brandingDetails += `\n\nBrand positioning rating: ${brandPositioningRating !== null ? brandPositioningRating : 'Not specified'}`;
+      
+      // Add content creation comfort to aspirations field
+      brandingDetails += `\n\nContent creation comfort: ${contentCreationComfort !== null ? contentCreationComfort : 'Not specified'}`;
+      
+      // Add brand optimization goals to aspirations field
+      brandingDetails += `\n\nBrand optimization goals: ${brandOptimizationGoals.trim() !== '' ? brandOptimizationGoals : 'Not specified'}`;
+      
       const formData = {
         background, // LinkedIn URL
         goals: socialMediaDetails, // Social media details
@@ -452,7 +502,10 @@ export default function QuestionnairePage() {
           reactedFewTimesMonth: reactedFewTimesMonthChecked,
           reactedFewTimesWeek: reactedFewTimesWeekChecked,
           reactedDaily: reactedDailyChecked
-        }
+        },
+        brandPositioning: brandPositioningRating,
+        contentCreationComfort: contentCreationComfort,
+        brandOptimizationGoals: brandOptimizationGoals
       };
       
       questionnaireMutation.mutate(formData);
@@ -1018,6 +1071,106 @@ export default function QuestionnairePage() {
                   <Label htmlFor="reactedDaily" className="cursor-pointer">Reacted to Posts (likes, etc.) - Daily</Label>
                 </div>
               </div>
+            </div>
+            
+            <div className="mb-6">
+              <Label htmlFor="brandPositioning" className="text-gray-700 font-medium block mb-2">
+                Digital Professional Brand Positioning
+              </Label>
+              <p className="text-sm text-gray-500 mb-3">
+                On a scale of 1-5, how well do you feel your current digital professional brand positions you for your target roles?
+              </p>
+              
+              <div className="space-y-3 mt-4">
+                <RadioGroup 
+                  value={brandPositioningRating?.toString() || ""} 
+                  onValueChange={(value) => setBrandPositioningRating(parseInt(value))}
+                  className="flex flex-col space-y-3"
+                >
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="1" id="bp-1" />
+                    <Label htmlFor="bp-1" className="cursor-pointer">1 - Needs Significant Work</Label>
+                  </div>
+                  
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="2" id="bp-2" />
+                    <Label htmlFor="bp-2" className="cursor-pointer">2</Label>
+                  </div>
+                  
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="3" id="bp-3" />
+                    <Label htmlFor="bp-3" className="cursor-pointer">3</Label>
+                  </div>
+                  
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="4" id="bp-4" />
+                    <Label htmlFor="bp-4" className="cursor-pointer">4</Label>
+                  </div>
+                  
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="5" id="bp-5" />
+                    <Label htmlFor="bp-5" className="cursor-pointer">5 - Strongly Positioned</Label>
+                  </div>
+                </RadioGroup>
+              </div>
+            </div>
+            
+            <div className="mb-6">
+              <Label htmlFor="contentComfort" className="text-gray-700 font-medium block mb-2">
+                Content Creation Comfort
+              </Label>
+              <p className="text-sm text-gray-500 mb-3">
+                How comfortable are you with creating professional content?
+              </p>
+              
+              <div className="space-y-3 mt-4">
+                <RadioGroup 
+                  value={contentCreationComfort?.toString() || ""} 
+                  onValueChange={(value) => setContentCreationComfort(parseInt(value))}
+                  className="flex flex-col space-y-3"
+                >
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="1" id="cc-1" />
+                    <Label htmlFor="cc-1" className="cursor-pointer">1 - Not at all comfortable</Label>
+                  </div>
+                  
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="2" id="cc-2" />
+                    <Label htmlFor="cc-2" className="cursor-pointer">2</Label>
+                  </div>
+                  
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="3" id="cc-3" />
+                    <Label htmlFor="cc-3" className="cursor-pointer">3</Label>
+                  </div>
+                  
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="4" id="cc-4" />
+                    <Label htmlFor="cc-4" className="cursor-pointer">4</Label>
+                  </div>
+                  
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="5" id="cc-5" />
+                    <Label htmlFor="cc-5" className="cursor-pointer">5 - Very comfortable</Label>
+                  </div>
+                </RadioGroup>
+              </div>
+            </div>
+            
+            <div className="mb-6">
+              <Label htmlFor="brandOptimizationGoals" className="text-gray-700 font-medium block mb-2">
+                Professional Brand Optimization Goals
+              </Label>
+              <p className="text-sm text-gray-500 mb-3">
+                What do you hope to gain from optimizing your professional brand?
+              </p>
+              <Textarea
+                id="brandOptimizationGoals"
+                value={brandOptimizationGoals}
+                onChange={(e) => setBrandOptimizationGoals(e.target.value)}
+                className="min-h-[120px] resize-y w-full"
+                placeholder="Describe your goals for your professional brand..."
+              />
             </div>
           </div>
         );
