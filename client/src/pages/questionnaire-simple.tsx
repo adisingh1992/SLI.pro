@@ -4,6 +4,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
+import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "@/hooks/use-toast";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { UserProfile } from "@shared/schema";
@@ -18,12 +20,19 @@ export default function QuestionnairePage() {
   const totalSteps = 3;
   
   // Define separate state variables for each field
-  const [background, setBackground] = useState("");
-  const [goals, setGoals] = useState("");
+  const [background, setBackground] = useState(""); // LinkedIn URL
+  const [goals, setGoals] = useState(""); // Other social media details
   const [aspirations, setAspirations] = useState("");
   const [challenges, setChallenges] = useState("");
   const [interests, setInterests] = useState("");
   const [timeframe, setTimeframe] = useState("");
+  
+  // Social media checkboxes state
+  const [twitterChecked, setTwitterChecked] = useState(false);
+  const [mediumChecked, setMediumChecked] = useState(false);
+  const [blogChecked, setBlogChecked] = useState(false);
+  const [otherChecked, setOtherChecked] = useState(false);
+  const [otherSocialMedia, setOtherSocialMedia] = useState("");
   
   // Fetch user profile data
   const { data: userProfile, isLoading: profileLoading } = useQuery<UserProfile>({
@@ -62,8 +71,32 @@ export default function QuestionnairePage() {
   React.useEffect(() => {
     if (userProfile?.questionnaire) {
       const q = userProfile.questionnaire;
+      
+      // Set LinkedIn URL (which is saved in 'background' field)
       setBackground(q.background || "");
+      
+      // Set social media details (which is saved in 'goals' field)
       setGoals(q.goals || "");
+      
+      // Try to parse social media selections from goals field if it contains our format
+      if (q.goals && q.goals.includes("Selected platforms:")) {
+        const platformsText = q.goals.split("Selected platforms:")[1].trim();
+        setTwitterChecked(platformsText.includes("Twitter/X"));
+        setMediumChecked(platformsText.includes("Medium"));
+        setBlogChecked(platformsText.includes("Personal blog/Website"));
+        
+        // Check for "Other:" entries
+        if (platformsText.includes("Other:")) {
+          setOtherChecked(true);
+          // Try to extract the other value
+          const otherMatch = platformsText.match(/Other: (.*?)(?:,|$)/);
+          if (otherMatch && otherMatch[1]) {
+            setOtherSocialMedia(otherMatch[1].trim());
+          }
+        }
+      }
+      
+      // Set other questionnaire fields
       setAspirations(q.aspirations || "");
       setChallenges(q.challenges || "");
       setInterests(q.interests || "");
@@ -74,7 +107,8 @@ export default function QuestionnairePage() {
   // Validate current step fields
   const validateCurrentStep = () => {
     if (currentStep === 1) {
-      return background.trim() !== "" && goals.trim() !== "";
+      // First step: LinkedIn URL is required
+      return background.trim() !== "";
     } else if (currentStep === 2) {
       return aspirations.trim() !== "" && challenges.trim() !== "";
     } else if (currentStep === 3) {
@@ -103,20 +137,41 @@ export default function QuestionnairePage() {
 
   const handleSubmit = () => {
     if (validateCurrentStep()) {
+      // Prepare social media data
+      const socialMediaOptions = [];
+      if (twitterChecked) socialMediaOptions.push('Twitter/X');
+      if (mediumChecked) socialMediaOptions.push('Medium');
+      if (blogChecked) socialMediaOptions.push('Personal blog/Website');
+      if (otherChecked && otherSocialMedia.trim() !== '') {
+        socialMediaOptions.push(`Other: ${otherSocialMedia.trim()}`);
+      }
+      
+      // Update goals field to include selected social media options
+      const socialMediaDetails = goals.trim() !== '' 
+        ? `${goals}\n\nSelected platforms: ${socialMediaOptions.join(', ')}` 
+        : `Selected platforms: ${socialMediaOptions.join(', ')}`;
+      
       const formData = {
-        background,
-        goals,
+        background, // LinkedIn URL
+        goals: socialMediaDetails, // Social media details
         aspirations,
         challenges,
         interests,
-        timeframe
+        timeframe,
+        // Include these fields for potential future enhancement
+        socialMedia: {
+          twitter: twitterChecked,
+          medium: mediumChecked,
+          blog: blogChecked,
+          other: otherChecked ? otherSocialMedia : null
+        }
       };
       
       questionnaireMutation.mutate(formData);
     } else {
       toast({
-        title: "Please complete all fields",
-        description: "All fields are required before submitting the questionnaire.",
+        title: "Please complete all required fields",
+        description: "LinkedIn URL is required to complete your profile.",
         variant: "destructive",
       });
     }
@@ -130,33 +185,83 @@ export default function QuestionnairePage() {
           <div className="space-y-6">
             <div className="mb-6">
               <Label htmlFor="background" className="text-gray-700 font-medium block mb-2">
-                Professional Background
+                LinkedIn URL
               </Label>
               <p className="text-sm text-gray-500 mb-3">
-                Tell us about your professional journey so far. What roles have you held and in which industries?
+                Please provide the URL to your LinkedIn profile
               </p>
-              <Textarea
+              <Input
                 id="background"
                 value={background}
                 onChange={(e) => setBackground(e.target.value)}
-                className="min-h-[120px] resize-y w-full"
-                placeholder="Share your professional background and experience..."
+                className="w-full"
+                placeholder="https://www.linkedin.com/in/yourprofile"
               />
             </div>
             
             <div className="mb-6">
               <Label htmlFor="goals" className="text-gray-700 font-medium block mb-2">
-                Career Goals
+                Other Professional Social Media Presence
               </Label>
               <p className="text-sm text-gray-500 mb-3">
-                What are your short-term and long-term career objectives?
+                Select the platforms where you have a professional presence
               </p>
+              
+              <div className="space-y-4 mt-4">
+                <div className="flex items-center space-x-2">
+                  <Checkbox 
+                    id="twitter" 
+                    checked={twitterChecked}
+                    onCheckedChange={(checked) => setTwitterChecked(checked === true)}
+                  />
+                  <Label htmlFor="twitter" className="cursor-pointer">Twitter/X</Label>
+                </div>
+                
+                <div className="flex items-center space-x-2">
+                  <Checkbox 
+                    id="medium" 
+                    checked={mediumChecked}
+                    onCheckedChange={(checked) => setMediumChecked(checked === true)}
+                  />
+                  <Label htmlFor="medium" className="cursor-pointer">Medium</Label>
+                </div>
+                
+                <div className="flex items-center space-x-2">
+                  <Checkbox 
+                    id="blog" 
+                    checked={blogChecked}
+                    onCheckedChange={(checked) => setBlogChecked(checked === true)}
+                  />
+                  <Label htmlFor="blog" className="cursor-pointer">Personal blog/Website</Label>
+                </div>
+                
+                <div className="flex items-center space-x-2">
+                  <Checkbox 
+                    id="other" 
+                    checked={otherChecked}
+                    onCheckedChange={(checked) => setOtherChecked(checked === true)}
+                  />
+                  <Label htmlFor="other" className="cursor-pointer">Other</Label>
+                </div>
+                
+                {otherChecked && (
+                  <div className="ml-6 mt-2">
+                    <Input
+                      value={otherSocialMedia}
+                      onChange={(e) => setOtherSocialMedia(e.target.value)}
+                      placeholder="Please specify other social media platforms"
+                      className="w-full"
+                    />
+                  </div>
+                )}
+              </div>
+              
               <Textarea
                 id="goals"
                 value={goals}
                 onChange={(e) => setGoals(e.target.value)}
-                className="min-h-[120px] resize-y w-full"
-                placeholder="Describe your career goals..."
+                className="min-h-[80px] resize-y w-full mt-4"
+                placeholder="Add any additional details about your social media presence..."
               />
             </div>
           </div>
@@ -284,7 +389,7 @@ export default function QuestionnairePage() {
                     </div>
                     <span className="text-xs text-gray-500">
                       {index === 0
-                        ? "Background"
+                        ? "Digital Presence"
                         : index === 1
                         ? "Aspirations"
                         : "Interests"}
