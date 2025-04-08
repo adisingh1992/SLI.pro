@@ -55,6 +55,38 @@ export default function QuestionnairePage() {
   const [otherPublishedContentChecked, setOtherPublishedContentChecked] = useState(false);
   const [otherPublishedContent, setOtherPublishedContent] = useState("");
   
+  // LinkedIn profile update timing state
+  const [lastWeekChecked, setLastWeekChecked] = useState(false);
+  const [lastMonthChecked, setLastMonthChecked] = useState(false);
+  const [businessSchoolChecked, setBusinessSchoolChecked] = useState(false);
+  const [careerCoachChecked, setCareerCoachChecked] = useState(false);
+  const [jobChangeChecked, setJobChangeChecked] = useState(false);
+  const [cantRememberChecked, setCantRememberChecked] = useState(false);
+  const [neverUpdatedChecked, setNeverUpdatedChecked] = useState(false);
+  const [otherUpdateTimeChecked, setOtherUpdateTimeChecked] = useState(false);
+  const [otherUpdateTime, setOtherUpdateTime] = useState("");
+  
+  // LinkedIn activity state
+  const [readNewsfeedChecked, setReadNewsfeedChecked] = useState(false);
+  const [acceptedConnectionsChecked, setAcceptedConnectionsChecked] = useState(false);
+  const [notActiveChecked, setNotActiveChecked] = useState(false);
+  const [postedNeverChecked, setPostedNeverChecked] = useState(false);
+  const [posted12TimesChecked, setPosted12TimesChecked] = useState(false);
+  const [posted35TimesChecked, setPosted35TimesChecked] = useState(false);
+  const [posted6PlusTimesChecked, setPosted6PlusTimesChecked] = useState(false);
+  const [sharedNeverChecked, setSharedNeverChecked] = useState(false);
+  const [shared12TimesChecked, setShared12TimesChecked] = useState(false);
+  const [shared35TimesChecked, setShared35TimesChecked] = useState(false);
+  const [shared6PlusTimesChecked, setShared6PlusTimesChecked] = useState(false);
+  const [commentedNeverChecked, setCommentedNeverChecked] = useState(false);
+  const [commented12TimesPerMonthChecked, setCommented12TimesPerMonthChecked] = useState(false);
+  const [commented12TimesPerWeekChecked, setCommented12TimesPerWeekChecked] = useState(false);
+  const [commented3PlusTimesPerWeekChecked, setCommented3PlusTimesPerWeekChecked] = useState(false);
+  const [reactedNeverChecked, setReactedNeverChecked] = useState(false);
+  const [reactedFewTimesMonthChecked, setReactedFewTimesMonthChecked] = useState(false);
+  const [reactedFewTimesWeekChecked, setReactedFewTimesWeekChecked] = useState(false);
+  const [reactedDailyChecked, setReactedDailyChecked] = useState(false);
+  
   // Fetch user profile data
   const { data: userProfile, isLoading: profileLoading } = useQuery<UserProfile>({
     queryKey: ["/api/user/profile"],
@@ -147,7 +179,7 @@ export default function QuestionnairePage() {
       
       // Try to parse published content data from aspirations field
       if (q.aspirations && q.aspirations.includes("Published content:")) {
-        const publishedContentText = q.aspirations.split("Published content:")[1].trim();
+        const publishedContentText = q.aspirations.split("Published content:")[1].trim().split('\n')[0];
         
         // Check each published content type and set state accordingly
         setLinkedInPostsChecked(publishedContentText.includes("LinkedIn posts"));
@@ -165,6 +197,56 @@ export default function QuestionnairePage() {
             setOtherPublishedContent(otherMatch[1].trim());
           }
         }
+      }
+      
+      // Try to parse LinkedIn profile update timing data from aspirations field
+      if (q.aspirations && q.aspirations.includes("LinkedIn profile update timing:")) {
+        const updateTimingText = q.aspirations.split("LinkedIn profile update timing:")[1].trim().split('\n')[0];
+        
+        // Check each update timing option and set state accordingly
+        setLastWeekChecked(updateTimingText.includes("Within the last week"));
+        setLastMonthChecked(updateTimingText.includes("Within the last month"));
+        setBusinessSchoolChecked(updateTimingText.includes("For / during business school"));
+        setCareerCoachChecked(updateTimingText.includes("After I spoke with a career coach"));
+        setJobChangeChecked(updateTimingText.includes("When I last changed jobs"));
+        setCantRememberChecked(updateTimingText.includes("I can't remember"));
+        setNeverUpdatedChecked(updateTimingText.includes("I've never really updated it beyond creating the profile"));
+        
+        // Check for "Other:" entries in update timing
+        if (updateTimingText.includes("Other:")) {
+          setOtherUpdateTimeChecked(true);
+          // Try to extract the other value
+          const otherMatch = updateTimingText.match(/Other: (.*?)(?:,|$)/);
+          if (otherMatch && otherMatch[1]) {
+            setOtherUpdateTime(otherMatch[1].trim());
+          }
+        }
+      }
+      
+      // Try to parse LinkedIn activity data from aspirations field
+      if (q.aspirations && q.aspirations.includes("LinkedIn activity:")) {
+        const activityText = q.aspirations.split("LinkedIn activity:")[1].trim();
+        
+        // Check each activity option and set state accordingly
+        setReadNewsfeedChecked(activityText.includes("Read your Newsfeed"));
+        setAcceptedConnectionsChecked(activityText.includes("Accepted Connections"));
+        setNotActiveChecked(activityText.includes("Not Active in the Last Month"));
+        setPostedNeverChecked(activityText.includes("Posted Original Content - Never"));
+        setPosted12TimesChecked(activityText.includes("Posted Original Content - 1-2 times"));
+        setPosted35TimesChecked(activityText.includes("Posted Original Content - 3-5 times"));
+        setPosted6PlusTimesChecked(activityText.includes("Posted Original Content - 6+ times"));
+        setSharedNeverChecked(activityText.includes("Shared Others' Posts - Never"));
+        setShared12TimesChecked(activityText.includes("Shared Others' Posts - 1-2 times"));
+        setShared35TimesChecked(activityText.includes("Shared Others' Posts - 3-5 times"));
+        setShared6PlusTimesChecked(activityText.includes("Shared Others' Posts - 6+ times"));
+        setCommentedNeverChecked(activityText.includes("Commented on Posts - Never"));
+        setCommented12TimesPerMonthChecked(activityText.includes("Commented on Posts - 1-2 times per month"));
+        setCommented12TimesPerWeekChecked(activityText.includes("Commented on Posts - 1-2 times per week"));
+        setCommented3PlusTimesPerWeekChecked(activityText.includes("Commented on Posts - 3+ times per week"));
+        setReactedNeverChecked(activityText.includes("Reacted to Posts (likes, etc.) - Never"));
+        setReactedFewTimesMonthChecked(activityText.includes("Reacted to Posts (likes, etc.) - A few times a month"));
+        setReactedFewTimesWeekChecked(activityText.includes("Reacted to Posts (likes, etc.) - A few times a week"));
+        setReactedDailyChecked(activityText.includes("Reacted to Posts (likes, etc.) - Daily"));
       }
       
       // Set other questionnaire fields
@@ -258,6 +340,41 @@ export default function QuestionnairePage() {
         publishedContent.push(`Other: ${otherPublishedContent.trim()}`);
       }
       
+      // Prepare LinkedIn profile update timing data
+      const profileUpdateTiming = [];
+      if (lastWeekChecked) profileUpdateTiming.push('Within the last week');
+      if (lastMonthChecked) profileUpdateTiming.push('Within the last month');
+      if (businessSchoolChecked) profileUpdateTiming.push('For / during business school (if applicable)');
+      if (careerCoachChecked) profileUpdateTiming.push('After I spoke with a career coach');
+      if (jobChangeChecked) profileUpdateTiming.push('When I last changed jobs');
+      if (cantRememberChecked) profileUpdateTiming.push('I can\'t remember');
+      if (neverUpdatedChecked) profileUpdateTiming.push('I\'ve never really updated it beyond creating the profile');
+      if (otherUpdateTimeChecked && otherUpdateTime.trim() !== '') {
+        profileUpdateTiming.push(`Other: ${otherUpdateTime.trim()}`);
+      }
+      
+      // Prepare LinkedIn activity data
+      const linkedInActivity = [];
+      if (readNewsfeedChecked) linkedInActivity.push('Read your Newsfeed');
+      if (acceptedConnectionsChecked) linkedInActivity.push('Accepted Connections');
+      if (notActiveChecked) linkedInActivity.push('Not Active in the Last Month');
+      if (postedNeverChecked) linkedInActivity.push('Posted Original Content - Never');
+      if (posted12TimesChecked) linkedInActivity.push('Posted Original Content - 1-2 times');
+      if (posted35TimesChecked) linkedInActivity.push('Posted Original Content - 3-5 times');
+      if (posted6PlusTimesChecked) linkedInActivity.push('Posted Original Content - 6+ times');
+      if (sharedNeverChecked) linkedInActivity.push('Shared Others\' Posts - Never');
+      if (shared12TimesChecked) linkedInActivity.push('Shared Others\' Posts - 1-2 times');
+      if (shared35TimesChecked) linkedInActivity.push('Shared Others\' Posts - 3-5 times');
+      if (shared6PlusTimesChecked) linkedInActivity.push('Shared Others\' Posts - 6+ times');
+      if (commentedNeverChecked) linkedInActivity.push('Commented on Posts - Never');
+      if (commented12TimesPerMonthChecked) linkedInActivity.push('Commented on Posts - 1-2 times per month');
+      if (commented12TimesPerWeekChecked) linkedInActivity.push('Commented on Posts - 1-2 times per week');
+      if (commented3PlusTimesPerWeekChecked) linkedInActivity.push('Commented on Posts - 3+ times per week');
+      if (reactedNeverChecked) linkedInActivity.push('Reacted to Posts (likes, etc.) - Never');
+      if (reactedFewTimesMonthChecked) linkedInActivity.push('Reacted to Posts (likes, etc.) - A few times a month');
+      if (reactedFewTimesWeekChecked) linkedInActivity.push('Reacted to Posts (likes, etc.) - A few times a week');
+      if (reactedDailyChecked) linkedInActivity.push('Reacted to Posts (likes, etc.) - Daily');
+      
       // Update aspirations field to include selected branding challenges and published content
       let brandingDetails = aspirations.trim() !== '' 
         ? `${aspirations}\n\nBranding challenges: ${brandingChallenges.join(', ')}` 
@@ -266,10 +383,16 @@ export default function QuestionnairePage() {
       // Add published content to aspirations field
       brandingDetails += `\n\nPublished content: ${publishedContent.length > 0 ? publishedContent.join(', ') : 'None'}`;
       
+      // Add LinkedIn profile update timing to aspirations field
+      brandingDetails += `\n\nLinkedIn profile update timing: ${profileUpdateTiming.length > 0 ? profileUpdateTiming.join(', ') : 'Not specified'}`;
+      
+      // Add LinkedIn activity to aspirations field
+      brandingDetails += `\n\nLinkedIn activity: ${linkedInActivity.length > 0 ? linkedInActivity.join(', ') : 'Not specified'}`;
+      
       const formData = {
         background, // LinkedIn URL
         goals: socialMediaDetails, // Social media details
-        aspirations: brandingDetails, // Branding challenges and published content
+        aspirations: brandingDetails, // Branding challenges and all other data
         challenges: "", // No longer using this field
         interests,
         timeframe,
@@ -298,6 +421,37 @@ export default function QuestionnairePage() {
           academicPapers: academicPapersChecked,
           neverPublished: neverPublishedChecked,
           other: otherPublishedContentChecked ? otherPublishedContent : null
+        },
+        linkedInProfileUpdate: {
+          lastWeek: lastWeekChecked,
+          lastMonth: lastMonthChecked,
+          businessSchool: businessSchoolChecked,
+          careerCoach: careerCoachChecked,
+          jobChange: jobChangeChecked,
+          cantRemember: cantRememberChecked,
+          neverUpdated: neverUpdatedChecked,
+          other: otherUpdateTimeChecked ? otherUpdateTime : null
+        },
+        linkedInActivity: {
+          readNewsfeed: readNewsfeedChecked,
+          acceptedConnections: acceptedConnectionsChecked,
+          notActive: notActiveChecked,
+          postedNever: postedNeverChecked,
+          posted12Times: posted12TimesChecked,
+          posted35Times: posted35TimesChecked,
+          posted6PlusTimes: posted6PlusTimesChecked,
+          sharedNever: sharedNeverChecked,
+          shared12Times: shared12TimesChecked,
+          shared35Times: shared35TimesChecked,
+          shared6PlusTimes: shared6PlusTimesChecked,
+          commentedNever: commentedNeverChecked,
+          commented12TimesPerMonth: commented12TimesPerMonthChecked,
+          commented12TimesPerWeek: commented12TimesPerWeekChecked,
+          commented3PlusTimesPerWeek: commented3PlusTimesPerWeekChecked,
+          reactedNever: reactedNeverChecked,
+          reactedFewTimesMonth: reactedFewTimesMonthChecked,
+          reactedFewTimesWeek: reactedFewTimesWeekChecked,
+          reactedDaily: reactedDailyChecked
         }
       };
       
@@ -583,6 +737,286 @@ export default function QuestionnairePage() {
                     />
                   </div>
                 )}
+              </div>
+            </div>
+            
+            <div className="mb-6">
+              <Label htmlFor="profileUpdateTime" className="text-gray-700 font-medium block mb-2">
+                LinkedIn Profile Updates
+              </Label>
+              <p className="text-sm text-gray-500 mb-3">
+                When was the most recent time you updated your LinkedIn profile?
+              </p>
+              
+              <div className="space-y-3 mt-4">
+                <div className="flex items-center space-x-2">
+                  <Checkbox 
+                    id="lastWeek" 
+                    checked={lastWeekChecked}
+                    onCheckedChange={(checked) => setLastWeekChecked(checked === true)}
+                  />
+                  <Label htmlFor="lastWeek" className="cursor-pointer">Within the last week</Label>
+                </div>
+                
+                <div className="flex items-center space-x-2">
+                  <Checkbox 
+                    id="lastMonth" 
+                    checked={lastMonthChecked}
+                    onCheckedChange={(checked) => setLastMonthChecked(checked === true)}
+                  />
+                  <Label htmlFor="lastMonth" className="cursor-pointer">Within the last month</Label>
+                </div>
+                
+                <div className="flex items-center space-x-2">
+                  <Checkbox 
+                    id="businessSchool" 
+                    checked={businessSchoolChecked}
+                    onCheckedChange={(checked) => setBusinessSchoolChecked(checked === true)}
+                  />
+                  <Label htmlFor="businessSchool" className="cursor-pointer">For / during business school (if applicable)</Label>
+                </div>
+                
+                <div className="flex items-center space-x-2">
+                  <Checkbox 
+                    id="careerCoach" 
+                    checked={careerCoachChecked}
+                    onCheckedChange={(checked) => setCareerCoachChecked(checked === true)}
+                  />
+                  <Label htmlFor="careerCoach" className="cursor-pointer">After I spoke with a career coach</Label>
+                </div>
+                
+                <div className="flex items-center space-x-2">
+                  <Checkbox 
+                    id="jobChange" 
+                    checked={jobChangeChecked}
+                    onCheckedChange={(checked) => setJobChangeChecked(checked === true)}
+                  />
+                  <Label htmlFor="jobChange" className="cursor-pointer">When I last changed jobs</Label>
+                </div>
+                
+                <div className="flex items-center space-x-2">
+                  <Checkbox 
+                    id="cantRemember" 
+                    checked={cantRememberChecked}
+                    onCheckedChange={(checked) => setCantRememberChecked(checked === true)}
+                  />
+                  <Label htmlFor="cantRemember" className="cursor-pointer">I can't remember</Label>
+                </div>
+                
+                <div className="flex items-center space-x-2">
+                  <Checkbox 
+                    id="neverUpdated" 
+                    checked={neverUpdatedChecked}
+                    onCheckedChange={(checked) => setNeverUpdatedChecked(checked === true)}
+                  />
+                  <Label htmlFor="neverUpdated" className="cursor-pointer">I've never really updated it beyond creating the profile</Label>
+                </div>
+                
+                <div className="flex items-center space-x-2">
+                  <Checkbox 
+                    id="otherUpdateTime" 
+                    checked={otherUpdateTimeChecked}
+                    onCheckedChange={(checked) => setOtherUpdateTimeChecked(checked === true)}
+                  />
+                  <Label htmlFor="otherUpdateTime" className="cursor-pointer">Other</Label>
+                </div>
+                
+                {otherUpdateTimeChecked && (
+                  <div className="ml-6 mt-2">
+                    <Input
+                      value={otherUpdateTime}
+                      onChange={(e) => setOtherUpdateTime(e.target.value)}
+                      placeholder="Please specify when you last updated your profile"
+                      className="w-full"
+                    />
+                  </div>
+                )}
+              </div>
+            </div>
+            
+            <div className="mb-6">
+              <Label htmlFor="linkedInActivity" className="text-gray-700 font-medium block mb-2">
+                LinkedIn Activity
+              </Label>
+              <p className="text-sm text-gray-500 mb-3">
+                In the last month, how active have you been on LinkedIn? (check all that apply)
+              </p>
+              
+              <div className="space-y-3 mt-4">
+                <div className="flex items-center space-x-2">
+                  <Checkbox 
+                    id="readNewsfeed" 
+                    checked={readNewsfeedChecked}
+                    onCheckedChange={(checked) => setReadNewsfeedChecked(checked === true)}
+                  />
+                  <Label htmlFor="readNewsfeed" className="cursor-pointer">Read your Newsfeed</Label>
+                </div>
+                
+                <div className="flex items-center space-x-2">
+                  <Checkbox 
+                    id="acceptedConnections" 
+                    checked={acceptedConnectionsChecked}
+                    onCheckedChange={(checked) => setAcceptedConnectionsChecked(checked === true)}
+                  />
+                  <Label htmlFor="acceptedConnections" className="cursor-pointer">Accepted Connections</Label>
+                </div>
+                
+                <div className="flex items-center space-x-2">
+                  <Checkbox 
+                    id="notActive" 
+                    checked={notActiveChecked}
+                    onCheckedChange={(checked) => setNotActiveChecked(checked === true)}
+                  />
+                  <Label htmlFor="notActive" className="cursor-pointer">Not Active in the Last Month</Label>
+                </div>
+                
+                <p className="text-sm font-medium text-gray-600 mt-5 mb-2">Original Content</p>
+                <div className="flex items-center space-x-2">
+                  <Checkbox 
+                    id="postedNever" 
+                    checked={postedNeverChecked}
+                    onCheckedChange={(checked) => setPostedNeverChecked(checked === true)}
+                  />
+                  <Label htmlFor="postedNever" className="cursor-pointer">Posted Original Content - Never</Label>
+                </div>
+                
+                <div className="flex items-center space-x-2">
+                  <Checkbox 
+                    id="posted12Times" 
+                    checked={posted12TimesChecked}
+                    onCheckedChange={(checked) => setPosted12TimesChecked(checked === true)}
+                  />
+                  <Label htmlFor="posted12Times" className="cursor-pointer">Posted Original Content - 1-2 times</Label>
+                </div>
+                
+                <div className="flex items-center space-x-2">
+                  <Checkbox 
+                    id="posted35Times" 
+                    checked={posted35TimesChecked}
+                    onCheckedChange={(checked) => setPosted35TimesChecked(checked === true)}
+                  />
+                  <Label htmlFor="posted35Times" className="cursor-pointer">Posted Original Content - 3-5 times</Label>
+                </div>
+                
+                <div className="flex items-center space-x-2">
+                  <Checkbox 
+                    id="posted6PlusTimes" 
+                    checked={posted6PlusTimesChecked}
+                    onCheckedChange={(checked) => setPosted6PlusTimesChecked(checked === true)}
+                  />
+                  <Label htmlFor="posted6PlusTimes" className="cursor-pointer">Posted Original Content - 6+ times</Label>
+                </div>
+                
+                <p className="text-sm font-medium text-gray-600 mt-5 mb-2">Sharing Content</p>
+                <div className="flex items-center space-x-2">
+                  <Checkbox 
+                    id="sharedNever" 
+                    checked={sharedNeverChecked}
+                    onCheckedChange={(checked) => setSharedNeverChecked(checked === true)}
+                  />
+                  <Label htmlFor="sharedNever" className="cursor-pointer">Shared Others' Posts - Never</Label>
+                </div>
+                
+                <div className="flex items-center space-x-2">
+                  <Checkbox 
+                    id="shared12Times" 
+                    checked={shared12TimesChecked}
+                    onCheckedChange={(checked) => setShared12TimesChecked(checked === true)}
+                  />
+                  <Label htmlFor="shared12Times" className="cursor-pointer">Shared Others' Posts - 1-2 times</Label>
+                </div>
+                
+                <div className="flex items-center space-x-2">
+                  <Checkbox 
+                    id="shared35Times" 
+                    checked={shared35TimesChecked}
+                    onCheckedChange={(checked) => setShared35TimesChecked(checked === true)}
+                  />
+                  <Label htmlFor="shared35Times" className="cursor-pointer">Shared Others' Posts - 3-5 times</Label>
+                </div>
+                
+                <div className="flex items-center space-x-2">
+                  <Checkbox 
+                    id="shared6PlusTimes" 
+                    checked={shared6PlusTimesChecked}
+                    onCheckedChange={(checked) => setShared6PlusTimesChecked(checked === true)}
+                  />
+                  <Label htmlFor="shared6PlusTimes" className="cursor-pointer">Shared Others' Posts - 6+ times</Label>
+                </div>
+                
+                <p className="text-sm font-medium text-gray-600 mt-5 mb-2">Commenting</p>
+                <div className="flex items-center space-x-2">
+                  <Checkbox 
+                    id="commentedNever" 
+                    checked={commentedNeverChecked}
+                    onCheckedChange={(checked) => setCommentedNeverChecked(checked === true)}
+                  />
+                  <Label htmlFor="commentedNever" className="cursor-pointer">Commented on Posts - Never</Label>
+                </div>
+                
+                <div className="flex items-center space-x-2">
+                  <Checkbox 
+                    id="commented12TimesPerMonth" 
+                    checked={commented12TimesPerMonthChecked}
+                    onCheckedChange={(checked) => setCommented12TimesPerMonthChecked(checked === true)}
+                  />
+                  <Label htmlFor="commented12TimesPerMonth" className="cursor-pointer">Commented on Posts - 1-2 times per month</Label>
+                </div>
+                
+                <div className="flex items-center space-x-2">
+                  <Checkbox 
+                    id="commented12TimesPerWeek" 
+                    checked={commented12TimesPerWeekChecked}
+                    onCheckedChange={(checked) => setCommented12TimesPerWeekChecked(checked === true)}
+                  />
+                  <Label htmlFor="commented12TimesPerWeek" className="cursor-pointer">Commented on Posts - 1-2 times per week</Label>
+                </div>
+                
+                <div className="flex items-center space-x-2">
+                  <Checkbox 
+                    id="commented3PlusTimesPerWeek" 
+                    checked={commented3PlusTimesPerWeekChecked}
+                    onCheckedChange={(checked) => setCommented3PlusTimesPerWeekChecked(checked === true)}
+                  />
+                  <Label htmlFor="commented3PlusTimesPerWeek" className="cursor-pointer">Commented on Posts - 3+ times per week</Label>
+                </div>
+                
+                <p className="text-sm font-medium text-gray-600 mt-5 mb-2">Reactions</p>
+                <div className="flex items-center space-x-2">
+                  <Checkbox 
+                    id="reactedNever" 
+                    checked={reactedNeverChecked}
+                    onCheckedChange={(checked) => setReactedNeverChecked(checked === true)}
+                  />
+                  <Label htmlFor="reactedNever" className="cursor-pointer">Reacted to Posts (likes, etc.) - Never</Label>
+                </div>
+                
+                <div className="flex items-center space-x-2">
+                  <Checkbox 
+                    id="reactedFewTimesMonth" 
+                    checked={reactedFewTimesMonthChecked}
+                    onCheckedChange={(checked) => setReactedFewTimesMonthChecked(checked === true)}
+                  />
+                  <Label htmlFor="reactedFewTimesMonth" className="cursor-pointer">Reacted to Posts (likes, etc.) - A few times a month</Label>
+                </div>
+                
+                <div className="flex items-center space-x-2">
+                  <Checkbox 
+                    id="reactedFewTimesWeek" 
+                    checked={reactedFewTimesWeekChecked}
+                    onCheckedChange={(checked) => setReactedFewTimesWeekChecked(checked === true)}
+                  />
+                  <Label htmlFor="reactedFewTimesWeek" className="cursor-pointer">Reacted to Posts (likes, etc.) - A few times a week</Label>
+                </div>
+                
+                <div className="flex items-center space-x-2">
+                  <Checkbox 
+                    id="reactedDaily" 
+                    checked={reactedDailyChecked}
+                    onCheckedChange={(checked) => setReactedDailyChecked(checked === true)}
+                  />
+                  <Label htmlFor="reactedDaily" className="cursor-pointer">Reacted to Posts (likes, etc.) - Daily</Label>
+                </div>
               </div>
             </div>
           </div>
