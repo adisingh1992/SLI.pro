@@ -149,7 +149,7 @@ export default function QuestionnairePage() {
       // First step: LinkedIn URL is required
       return background.trim() !== "";
     } else if (currentStep === 2) {
-      // At least one branding challenge must be selected or the content strategy field must be filled
+      // At least one branding challenge must be selected
       const hasBrandingChallengeSelected = 
         consistentNarrativeChecked || 
         valuePropositionChecked || 
@@ -161,7 +161,7 @@ export default function QuestionnairePage() {
         industryEventsChecked || 
         (otherBrandingChecked && otherBrandingChallenge.trim() !== "");
       
-      return hasBrandingChallengeSelected || challenges.trim() !== "";
+      return hasBrandingChallengeSelected;
     } else if (currentStep === 3) {
       return interests.trim() !== "" && timeframe.trim() !== "";
     }
@@ -225,7 +225,7 @@ export default function QuestionnairePage() {
         background, // LinkedIn URL
         goals: socialMediaDetails, // Social media details
         aspirations: brandingDetails, // Branding challenges
-        challenges, // Content strategy
+        challenges: "", // No longer using this field
         interests,
         timeframe,
         // Include these fields for potential future enhancement
@@ -255,7 +255,7 @@ export default function QuestionnairePage() {
         description: currentStep === 1 
           ? "LinkedIn URL is required to complete your profile." 
           : currentStep === 2 
-          ? "Please select at least one branding challenge or describe your content strategy." 
+          ? "Please select at least one branding challenge." 
           : "Please complete all required fields before proceeding.",
         variant: "destructive",
       });
@@ -455,30 +455,6 @@ export default function QuestionnairePage() {
                   </div>
                 )}
               </div>
-              
-              <Textarea
-                id="aspirations"
-                value={aspirations}
-                onChange={(e) => setAspirations(e.target.value)}
-                className="min-h-[80px] resize-y w-full mt-6"
-                placeholder="Add any additional details about your branding challenges..."
-              />
-            </div>
-            
-            <div className="mb-6">
-              <Label htmlFor="challenges" className="text-gray-700 font-medium block mb-2">
-                Current Content Strategy
-              </Label>
-              <p className="text-sm text-gray-500 mb-3">
-                Describe your current approach to content creation and professional branding, if any.
-              </p>
-              <Textarea
-                id="challenges"
-                value={challenges}
-                onChange={(e) => setChallenges(e.target.value)}
-                className="min-h-[120px] resize-y w-full"
-                placeholder="Describe your current content strategy or branding approach..."
-              />
             </div>
           </div>
         );
