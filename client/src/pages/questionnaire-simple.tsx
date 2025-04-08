@@ -18,7 +18,7 @@ export default function QuestionnairePage() {
   const { user } = useAuth();
   const [, navigate] = useLocation();
   const [currentStep, setCurrentStep] = useState(1);
-  const totalSteps = 3;
+  const totalSteps = 4;
   
   // Define separate state variables for each field
   const [background, setBackground] = useState(""); // LinkedIn URL
@@ -188,6 +188,21 @@ export default function QuestionnairePage() {
   
   // Professional brand optimization goals
   const [brandOptimizationGoals, setBrandOptimizationGoals] = useState("");
+  
+  // Professional Goals - Step 4
+  const [careerGoals, setCareerGoals] = useState(""); // For 2-5 year career goals
+  
+  // LinkedIn connections in target industry
+  const [industryConnectionsPercentage, setIndustryConnectionsPercentage] = useState<string | undefined>(undefined);
+  
+  // Personality assessments
+  const [mbtiChecked, setMbtiChecked] = useState(false);
+  const [strengthsFinderChecked, setStrengthsFinderChecked] = useState(false);
+  const [viaChecked, setViaChecked] = useState(false);
+  const [enneagramChecked, setEnneagramChecked] = useState(false);
+  const [threeSixtyChecked, setThreeSixtyChecked] = useState(false);
+  const [otherAssessmentChecked, setOtherAssessmentChecked] = useState(false);
+  const [otherAssessment, setOtherAssessment] = useState("");
   
   // Fetch user profile data
   const { data: userProfile, isLoading: profileLoading } = useQuery<UserProfile>({
@@ -424,6 +439,9 @@ export default function QuestionnairePage() {
       
       // No timeframe required anymore
       return hasIndustryInterestSelected;
+    } else if (currentStep === 4) {
+      // For step 4, require career goals and industry connections percentage
+      return careerGoals.trim() !== "" && industryConnectionsPercentage !== undefined;
     }
     return false;
   };
@@ -771,7 +789,20 @@ export default function QuestionnairePage() {
           digitalTransformation: enterpriseDigitalTransformationChecked,
           integrationApis: integrationApisChecked,
           saasEnterprise: saasEnterpriseChecked
-        } : null
+        } : null,
+        // Step 4: Professional Goals
+        professionalGoals: {
+          careerGoals: careerGoals,
+          industryConnectionsPercentage: industryConnectionsPercentage,
+          personalityAssessments: {
+            mbti: mbtiChecked,
+            strengthsFinder: strengthsFinderChecked,
+            via: viaChecked,
+            enneagram: enneagramChecked,
+            threeSixty: threeSixtyChecked,
+            other: otherAssessmentChecked ? otherAssessment : null
+          }
+        }
       };
       
       questionnaireMutation.mutate(formData);
@@ -784,6 +815,8 @@ export default function QuestionnairePage() {
           ? "Please select at least one branding challenge." 
           : currentStep === 3
           ? "Please select at least one industry interest."
+          : currentStep === 4
+          ? "Please fill in your career goals and select a percentage of connections in your target industry."
           : "Please complete all required fields before proceeding.",
         variant: "destructive",
       });
@@ -2244,6 +2277,148 @@ export default function QuestionnairePage() {
             </div>
           </div>
         );
+      case 4:
+        return (
+          <div className="space-y-6">
+            <div className="mb-6">
+              <h2 className="text-xl font-semibold text-gray-800 mb-3">Professional Goals</h2>
+              
+              <div className="mb-8">
+                <Label htmlFor="careerGoals" className="text-gray-700 font-medium block mb-2">
+                  Beyond your immediate next job, what are your career goals within the next 2-5 years?
+                </Label>
+                <p className="text-sm text-gray-500 mb-3">
+                  What roles, industries, or impact do you want to have?
+                </p>
+                <Textarea
+                  id="careerGoals"
+                  value={careerGoals}
+                  onChange={(e) => setCareerGoals(e.target.value)}
+                  className="min-h-[120px] resize-y w-full"
+                  placeholder="Describe your career goals..."
+                />
+              </div>
+              
+              <hr className="my-6" />
+              
+              <div className="mb-8">
+                <Label className="text-gray-700 font-medium block mb-3">
+                  What percentage of your LinkedIn connections are in your target industry?
+                </Label>
+                
+                <div className="space-y-3 mt-4">
+                  <div className="flex items-center space-x-2">
+                    <RadioGroup
+                      value={industryConnectionsPercentage}
+                      onValueChange={setIndustryConnectionsPercentage}
+                      className="space-y-3"
+                    >
+                      <div className="flex items-center space-x-2">
+                        <RadioGroupItem value="0-10%" id="connections-very-few" />
+                        <Label htmlFor="connections-very-few" className="cursor-pointer">Very Few (0-10%)</Label>
+                      </div>
+                      
+                      <div className="flex items-center space-x-2">
+                        <RadioGroupItem value="10-25%" id="connections-some" />
+                        <Label htmlFor="connections-some" className="cursor-pointer">Some (10-25%)</Label>
+                      </div>
+                      
+                      <div className="flex items-center space-x-2">
+                        <RadioGroupItem value="25-50%" id="connections-half" />
+                        <Label htmlFor="connections-half" className="cursor-pointer">About Half (25-50%)</Label>
+                      </div>
+                      
+                      <div className="flex items-center space-x-2">
+                        <RadioGroupItem value="50%+" id="connections-majority" />
+                        <Label htmlFor="connections-majority" className="cursor-pointer">Majority (50%+)</Label>
+                      </div>
+                      
+                      <div className="flex items-center space-x-2">
+                        <RadioGroupItem value="not-sure" id="connections-not-sure" />
+                        <Label htmlFor="connections-not-sure" className="cursor-pointer">Not Sure / Still Exploring Target Industry</Label>
+                      </div>
+                    </RadioGroup>
+                  </div>
+                </div>
+              </div>
+              
+              <hr className="my-6" />
+              
+              <div className="mb-6">
+                <Label className="text-gray-700 font-medium block mb-3">
+                  What personality / strength assessments have you taken? (Select all that apply)
+                </Label>
+                
+                <div className="space-y-3 mt-4">
+                  <div className="flex items-center space-x-2">
+                    <Checkbox 
+                      id="mbti" 
+                      checked={mbtiChecked}
+                      onCheckedChange={(checked) => setMbtiChecked(checked === true)}
+                    />
+                    <Label htmlFor="mbti" className="cursor-pointer">Myer's Briggs (MBTI)</Label>
+                  </div>
+                  
+                  <div className="flex items-center space-x-2">
+                    <Checkbox 
+                      id="strengths-finder" 
+                      checked={strengthsFinderChecked}
+                      onCheckedChange={(checked) => setStrengthsFinderChecked(checked === true)}
+                    />
+                    <Label htmlFor="strengths-finder" className="cursor-pointer">Strengths Finder</Label>
+                  </div>
+                  
+                  <div className="flex items-center space-x-2">
+                    <Checkbox 
+                      id="via" 
+                      checked={viaChecked}
+                      onCheckedChange={(checked) => setViaChecked(checked === true)}
+                    />
+                    <Label htmlFor="via" className="cursor-pointer">VIA - Values in Action</Label>
+                  </div>
+                  
+                  <div className="flex items-center space-x-2">
+                    <Checkbox 
+                      id="enneagram" 
+                      checked={enneagramChecked}
+                      onCheckedChange={(checked) => setEnneagramChecked(checked === true)}
+                    />
+                    <Label htmlFor="enneagram" className="cursor-pointer">Enneagram</Label>
+                  </div>
+                  
+                  <div className="flex items-center space-x-2">
+                    <Checkbox 
+                      id="threeSixty" 
+                      checked={threeSixtyChecked}
+                      onCheckedChange={(checked) => setThreeSixtyChecked(checked === true)}
+                    />
+                    <Label htmlFor="threeSixty" className="cursor-pointer">360* Leadership, Managerial, or Team Assessment</Label>
+                  </div>
+                  
+                  <div className="flex items-center space-x-2">
+                    <Checkbox 
+                      id="other-assessment" 
+                      checked={otherAssessmentChecked}
+                      onCheckedChange={(checked) => setOtherAssessmentChecked(checked === true)}
+                    />
+                    <Label htmlFor="other-assessment" className="cursor-pointer">Other</Label>
+                  </div>
+                  
+                  {otherAssessmentChecked && (
+                    <div className="ml-6 mt-2">
+                      <Input
+                        value={otherAssessment}
+                        onChange={(e) => setOtherAssessment(e.target.value)}
+                        placeholder="Please specify other assessments"
+                        className="w-full"
+                      />
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        );
       default:
         return null;
     }
@@ -2298,7 +2473,9 @@ export default function QuestionnairePage() {
                         ? "Digital Presence"
                         : index === 1
                         ? "Branding & Content"
-                        : "Interests"}
+                        : index === 2
+                        ? "Interests"
+                        : "Professional Goals"}
                     </span>
                   </div>
                 ))}
