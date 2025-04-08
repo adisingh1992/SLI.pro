@@ -40,6 +40,41 @@ export default function QuestionnairePage() {
   const [socialImpactChecked, setSocialImpactChecked] = useState(false);
   const [technologyChecked, setTechnologyChecked] = useState(false);
   
+  // Technology & Digital Media subcategories state
+  const [aiConsumerChecked, setAiConsumerChecked] = useState(false);
+  const [aiComputerVisionChecked, setAiComputerVisionChecked] = useState(false);
+  const [aiEthicsChecked, setAiEthicsChecked] = useState(false);
+  const [aiInfrastructureChecked, setAiInfrastructureChecked] = useState(false);
+  const [aiNlpChecked, setAiNlpChecked] = useState(false);
+  const [aiPredictiveChecked, setAiPredictiveChecked] = useState(false);
+  const [aiRoboticsChecked, setAiRoboticsChecked] = useState(false);
+  const [aiScientificChecked, setAiScientificChecked] = useState(false);
+  const [aiLearningChecked, setAiLearningChecked] = useState(false);
+  const [consumerDevicesChecked, setConsumerDevicesChecked] = useState(false);
+  const [consumerGamingChecked, setConsumerGamingChecked] = useState(false);
+  const [consumerMobileChecked, setConsumerMobileChecked] = useState(false);
+  const [consumerSmartHomeChecked, setConsumerSmartHomeChecked] = useState(false);
+  const [cybersecuritySolutionsChecked, setCybersecuritySolutionsChecked] = useState(false);
+  const [dataPrivacyChecked, setDataPrivacyChecked] = useState(false);
+  const [regulatoryComplianceChecked, setRegulatoryComplianceChecked] = useState(false);
+  const [riskManagementChecked, setRiskManagementChecked] = useState(false);
+  const [cloudComputingChecked, setCloudComputingChecked] = useState(false);
+  const [dataCentersChecked, setDataCentersChecked] = useState(false);
+  const [networksChecked, setNetworksChecked] = useState(false);
+  const [web3BlockchainChecked, setWeb3BlockchainChecked] = useState(false);
+  const [contentDistributionChecked, setContentDistributionChecked] = useState(false);
+  const [creatorEconomyChecked, setCreatorEconomyChecked] = useState(false);
+  const [digitalMarketingChecked, setDigitalMarketingChecked] = useState(false);
+  const [socialMediaPlatformsChecked, setSocialMediaPlatformsChecked] = useState(false);
+  const [arVrXrChecked, setArVrXrChecked] = useState(false);
+  const [biotechHealthChecked, setBiotechHealthChecked] = useState(false);
+  const [quantumComputingChecked, setQuantumComputingChecked] = useState(false);
+  const [emergingRoboticsChecked, setEmergingRoboticsChecked] = useState(false);
+  const [businessAppsChecked, setBusinessAppsChecked] = useState(false);
+  const [digitalTransformationChecked, setDigitalTransformationChecked] = useState(false);
+  const [integrationApisChecked, setIntegrationApisChecked] = useState(false);
+  const [saasEnterpriseChecked, setSaasEnterpriseChecked] = useState(false);
+  
   
   // Social media checkboxes state
   const [twitterChecked, setTwitterChecked] = useState(false);
@@ -544,7 +579,55 @@ export default function QuestionnairePage() {
           manufacturing: manufacturingChecked,
           socialImpact: socialImpactChecked,
           technology: technologyChecked
-        }
+        },
+        technologySubcategories: technologyChecked ? {
+          // AI/ML
+          aiConsumer: aiConsumerChecked,
+          aiComputerVision: aiComputerVisionChecked,
+          aiEthics: aiEthicsChecked,
+          aiInfrastructure: aiInfrastructureChecked,
+          aiNlp: aiNlpChecked,
+          aiPredictive: aiPredictiveChecked,
+          aiRobotics: aiRoboticsChecked,
+          aiScientific: aiScientificChecked,
+          aiLearning: aiLearningChecked,
+          
+          // Consumer Technology
+          consumerDevices: consumerDevicesChecked,
+          consumerGaming: consumerGamingChecked,
+          consumerMobile: consumerMobileChecked,
+          consumerSmartHome: consumerSmartHomeChecked,
+          
+          // Cybersecurity & Privacy
+          cybersecuritySolutions: cybersecuritySolutionsChecked,
+          dataPrivacy: dataPrivacyChecked,
+          regulatoryCompliance: regulatoryComplianceChecked,
+          riskManagement: riskManagementChecked,
+          
+          // Digital Infrastructure
+          cloudComputing: cloudComputingChecked,
+          dataCenters: dataCentersChecked,
+          networks: networksChecked,
+          web3Blockchain: web3BlockchainChecked,
+          
+          // Digital Media & Content
+          contentDistribution: contentDistributionChecked,
+          creatorEconomy: creatorEconomyChecked,
+          digitalMarketing: digitalMarketingChecked,
+          socialMediaPlatforms: socialMediaPlatformsChecked,
+          
+          // Emerging Technology
+          arVrXr: arVrXrChecked,
+          biotechHealth: biotechHealthChecked,
+          quantumComputing: quantumComputingChecked,
+          emergingRobotics: emergingRoboticsChecked,
+          
+          // Enterprise Technology
+          businessApps: businessAppsChecked,
+          digitalTransformation: digitalTransformationChecked,
+          integrationApis: integrationApisChecked,
+          saasEnterprise: saasEnterpriseChecked
+        } : null
       };
       
       questionnaireMutation.mutate(formData);
@@ -1333,6 +1416,317 @@ export default function QuestionnairePage() {
                   </div>
                 </div>
               </div>
+              
+              <hr className="my-6" />
+              
+              {/* Technology Subcategories - Only show when Technology is checked */}
+              {technologyChecked && (
+                <div className="mb-6">
+                  <Label className="text-gray-700 font-medium block mb-3">
+                    If you selected, Technology & Digital Media, please elaborate:
+                  </Label>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    {/* AI/ML Section */}
+                    <div className="space-y-2">
+                      <p className="font-medium text-gray-700">AI / ML</p>
+                      <div className="flex items-center space-x-2">
+                        <Checkbox 
+                          id="ai-consumer" 
+                          checked={aiConsumerChecked}
+                          onCheckedChange={(checked) => setAiConsumerChecked(checked === true)}
+                        />
+                        <Label htmlFor="ai-consumer" className="text-gray-700">Consumer Applications</Label>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <Checkbox 
+                          id="ai-vision" 
+                          checked={aiComputerVisionChecked}
+                          onCheckedChange={(checked) => setAiComputerVisionChecked(checked === true)}
+                        />
+                        <Label htmlFor="ai-vision" className="text-gray-700">Computer Vision & Generation</Label>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <Checkbox 
+                          id="ai-ethics" 
+                          checked={aiEthicsChecked}
+                          onCheckedChange={(checked) => setAiEthicsChecked(checked === true)}
+                        />
+                        <Label htmlFor="ai-ethics" className="text-gray-700">Ethics & Governance</Label>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <Checkbox 
+                          id="ai-infrastructure" 
+                          checked={aiInfrastructureChecked}
+                          onCheckedChange={(checked) => setAiInfrastructureChecked(checked === true)}
+                        />
+                        <Label htmlFor="ai-infrastructure" className="text-gray-700">Infrastructure & Platforms</Label>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <Checkbox 
+                          id="ai-nlp" 
+                          checked={aiNlpChecked}
+                          onCheckedChange={(checked) => setAiNlpChecked(checked === true)}
+                        />
+                        <Label htmlFor="ai-nlp" className="text-gray-700">Natural Language Processing</Label>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <Checkbox 
+                          id="ai-predictive" 
+                          checked={aiPredictiveChecked}
+                          onCheckedChange={(checked) => setAiPredictiveChecked(checked === true)}
+                        />
+                        <Label htmlFor="ai-predictive" className="text-gray-700">Predictive Analytics</Label>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <Checkbox 
+                          id="ai-robotics" 
+                          checked={aiRoboticsChecked}
+                          onCheckedChange={(checked) => setAiRoboticsChecked(checked === true)}
+                        />
+                        <Label htmlFor="ai-robotics" className="text-gray-700">Robotics & Automation</Label>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <Checkbox 
+                          id="ai-scientific" 
+                          checked={aiScientificChecked}
+                          onCheckedChange={(checked) => setAiScientificChecked(checked === true)}
+                        />
+                        <Label htmlFor="ai-scientific" className="text-gray-700">Scientific Applications</Label>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <Checkbox 
+                          id="ai-learning" 
+                          checked={aiLearningChecked}
+                          onCheckedChange={(checked) => setAiLearningChecked(checked === true)}
+                        />
+                        <Label htmlFor="ai-learning" className="text-gray-700">Supervised/Unsupervised Learning</Label>
+                      </div>
+                    </div>
+                    
+                    {/* Consumer Technology Section */}
+                    <div className="space-y-2">
+                      <p className="font-medium text-gray-700">Consumer Technology</p>
+                      <div className="flex items-center space-x-2">
+                        <Checkbox 
+                          id="consumer-devices" 
+                          checked={consumerDevicesChecked}
+                          onCheckedChange={(checked) => setConsumerDevicesChecked(checked === true)}
+                        />
+                        <Label htmlFor="consumer-devices" className="text-gray-700">Devices & Gadgets</Label>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <Checkbox 
+                          id="consumer-gaming" 
+                          checked={consumerGamingChecked}
+                          onCheckedChange={(checked) => setConsumerGamingChecked(checked === true)}
+                        />
+                        <Label htmlFor="consumer-gaming" className="text-gray-700">Gaming, Esports & Entertainment</Label>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <Checkbox 
+                          id="consumer-mobile" 
+                          checked={consumerMobileChecked}
+                          onCheckedChange={(checked) => setConsumerMobileChecked(checked === true)}
+                        />
+                        <Label htmlFor="consumer-mobile" className="text-gray-700">Mobile & Apps</Label>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <Checkbox 
+                          id="consumer-smart-home" 
+                          checked={consumerSmartHomeChecked}
+                          onCheckedChange={(checked) => setConsumerSmartHomeChecked(checked === true)}
+                        />
+                        <Label htmlFor="consumer-smart-home" className="text-gray-700">Smart Home & IoT</Label>
+                      </div>
+                    </div>
+                    
+                    {/* Cybersecurity & Privacy Section */}
+                    <div className="space-y-2">
+                      <p className="font-medium text-gray-700">Cybersecurity & Privacy</p>
+                      <div className="flex items-center space-x-2">
+                        <Checkbox 
+                          id="cybersecurity-solutions" 
+                          checked={cybersecuritySolutionsChecked}
+                          onCheckedChange={(checked) => setCybersecuritySolutionsChecked(checked === true)}
+                        />
+                        <Label htmlFor="cybersecurity-solutions" className="text-gray-700">Cybersecurity Solutions</Label>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <Checkbox 
+                          id="data-privacy" 
+                          checked={dataPrivacyChecked}
+                          onCheckedChange={(checked) => setDataPrivacyChecked(checked === true)}
+                        />
+                        <Label htmlFor="data-privacy" className="text-gray-700">Data Privacy</Label>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <Checkbox 
+                          id="regulatory-compliance" 
+                          checked={regulatoryComplianceChecked}
+                          onCheckedChange={(checked) => setRegulatoryComplianceChecked(checked === true)}
+                        />
+                        <Label htmlFor="regulatory-compliance" className="text-gray-700">Regulatory Compliance</Label>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <Checkbox 
+                          id="risk-management" 
+                          checked={riskManagementChecked}
+                          onCheckedChange={(checked) => setRiskManagementChecked(checked === true)}
+                        />
+                        <Label htmlFor="risk-management" className="text-gray-700">Risk Management</Label>
+                      </div>
+                    </div>
+                    
+                    {/* Digital Infrastructure Section */}
+                    <div className="space-y-2">
+                      <p className="font-medium text-gray-700">Digital Infrastructure</p>
+                      <div className="flex items-center space-x-2">
+                        <Checkbox 
+                          id="cloud-computing" 
+                          checked={cloudComputingChecked}
+                          onCheckedChange={(checked) => setCloudComputingChecked(checked === true)}
+                        />
+                        <Label htmlFor="cloud-computing" className="text-gray-700">Cloud Computing</Label>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <Checkbox 
+                          id="data-centers" 
+                          checked={dataCentersChecked}
+                          onCheckedChange={(checked) => setDataCentersChecked(checked === true)}
+                        />
+                        <Label htmlFor="data-centers" className="text-gray-700">Data Centers</Label>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <Checkbox 
+                          id="networks" 
+                          checked={networksChecked}
+                          onCheckedChange={(checked) => setNetworksChecked(checked === true)}
+                        />
+                        <Label htmlFor="networks" className="text-gray-700">Networks & Connectivity</Label>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <Checkbox 
+                          id="web3-blockchain" 
+                          checked={web3BlockchainChecked}
+                          onCheckedChange={(checked) => setWeb3BlockchainChecked(checked === true)}
+                        />
+                        <Label htmlFor="web3-blockchain" className="text-gray-700">Web3 & Blockchain</Label>
+                      </div>
+                    </div>
+                    
+                    {/* Digital Media & Content Section */}
+                    <div className="space-y-2">
+                      <p className="font-medium text-gray-700">Digital Media & Content</p>
+                      <div className="flex items-center space-x-2">
+                        <Checkbox 
+                          id="content-distribution" 
+                          checked={contentDistributionChecked}
+                          onCheckedChange={(checked) => setContentDistributionChecked(checked === true)}
+                        />
+                        <Label htmlFor="content-distribution" className="text-gray-700">Content Distribution</Label>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <Checkbox 
+                          id="creator-economy" 
+                          checked={creatorEconomyChecked}
+                          onCheckedChange={(checked) => setCreatorEconomyChecked(checked === true)}
+                        />
+                        <Label htmlFor="creator-economy" className="text-gray-700">Creator Economy</Label>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <Checkbox 
+                          id="digital-marketing" 
+                          checked={digitalMarketingChecked}
+                          onCheckedChange={(checked) => setDigitalMarketingChecked(checked === true)}
+                        />
+                        <Label htmlFor="digital-marketing" className="text-gray-700">Digital Marketing</Label>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <Checkbox 
+                          id="social-media-platforms" 
+                          checked={socialMediaPlatformsChecked}
+                          onCheckedChange={(checked) => setSocialMediaPlatformsChecked(checked === true)}
+                        />
+                        <Label htmlFor="social-media-platforms" className="text-gray-700">Social Media & Platforms</Label>
+                      </div>
+                    </div>
+                    
+                    {/* Emerging Technology Section */}
+                    <div className="space-y-2">
+                      <p className="font-medium text-gray-700">Emerging Technology</p>
+                      <div className="flex items-center space-x-2">
+                        <Checkbox 
+                          id="ar-vr-xr" 
+                          checked={arVrXrChecked}
+                          onCheckedChange={(checked) => setArVrXrChecked(checked === true)}
+                        />
+                        <Label htmlFor="ar-vr-xr" className="text-gray-700">AR / VR / XR</Label>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <Checkbox 
+                          id="biotech-health" 
+                          checked={biotechHealthChecked}
+                          onCheckedChange={(checked) => setBiotechHealthChecked(checked === true)}
+                        />
+                        <Label htmlFor="biotech-health" className="text-gray-700">Biotech & Digital Health</Label>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <Checkbox 
+                          id="quantum-computing" 
+                          checked={quantumComputingChecked}
+                          onCheckedChange={(checked) => setQuantumComputingChecked(checked === true)}
+                        />
+                        <Label htmlFor="quantum-computing" className="text-gray-700">Quantum Computing</Label>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <Checkbox 
+                          id="emerging-robotics" 
+                          checked={emergingRoboticsChecked}
+                          onCheckedChange={(checked) => setEmergingRoboticsChecked(checked === true)}
+                        />
+                        <Label htmlFor="emerging-robotics" className="text-gray-700">Robotics & Automation</Label>
+                      </div>
+                    </div>
+                    
+                    {/* Enterprise Technology Section */}
+                    <div className="space-y-2">
+                      <p className="font-medium text-gray-700">Enterprise Technology</p>
+                      <div className="flex items-center space-x-2">
+                        <Checkbox 
+                          id="business-apps" 
+                          checked={businessAppsChecked}
+                          onCheckedChange={(checked) => setBusinessAppsChecked(checked === true)}
+                        />
+                        <Label htmlFor="business-apps" className="text-gray-700">Business Applications</Label>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <Checkbox 
+                          id="digital-transformation" 
+                          checked={digitalTransformationChecked}
+                          onCheckedChange={(checked) => setDigitalTransformationChecked(checked === true)}
+                        />
+                        <Label htmlFor="digital-transformation" className="text-gray-700">Digital Transformation</Label>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <Checkbox 
+                          id="integration-apis" 
+                          checked={integrationApisChecked}
+                          onCheckedChange={(checked) => setIntegrationApisChecked(checked === true)}
+                        />
+                        <Label htmlFor="integration-apis" className="text-gray-700">Integration & APIs</Label>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <Checkbox 
+                          id="saas-enterprise" 
+                          checked={saasEnterpriseChecked}
+                          onCheckedChange={(checked) => setSaasEnterpriseChecked(checked === true)}
+                        />
+                        <Label htmlFor="saas-enterprise" className="text-gray-700">SaaS & Enterprise Software</Label>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
               
               <hr className="my-6" />
             </div>
