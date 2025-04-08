@@ -28,6 +28,18 @@ export default function QuestionnairePage() {
   const [interests, setInterests] = useState("");
   const [timeframe, setTimeframe] = useState("");
   
+  // Industry Interests checkboxes state
+  const [consultingChecked, setConsultingChecked] = useState(false);
+  const [consumerRetailChecked, setConsumerRetailChecked] = useState(false);
+  const [financialServicesChecked, setFinancialServicesChecked] = useState(false);
+  const [globalMarketsChecked, setGlobalMarketsChecked] = useState(false);
+  const [governmentChecked, setGovernmentChecked] = useState(false);
+  const [healthcareChecked, setHealthcareChecked] = useState(false);
+  const [innovationChecked, setInnovationChecked] = useState(false);
+  const [manufacturingChecked, setManufacturingChecked] = useState(false);
+  const [socialImpactChecked, setSocialImpactChecked] = useState(false);
+  const [technologyChecked, setTechnologyChecked] = useState(false);
+  
   // Social media checkboxes state
   const [twitterChecked, setTwitterChecked] = useState(false);
   const [mediumChecked, setMediumChecked] = useState(false);
@@ -317,7 +329,21 @@ export default function QuestionnairePage() {
       
       return hasBrandingChallengeSelected;
     } else if (currentStep === 3) {
-      return interests.trim() !== "" && timeframe.trim() !== "";
+      // At least one industry interest must be selected
+      const hasIndustryInterestSelected = 
+        consultingChecked || 
+        consumerRetailChecked || 
+        financialServicesChecked || 
+        globalMarketsChecked || 
+        governmentChecked || 
+        healthcareChecked || 
+        innovationChecked || 
+        manufacturingChecked || 
+        socialImpactChecked || 
+        technologyChecked;
+      
+      // Timeframe is required
+      return hasIndustryInterestSelected && timeframe.trim() !== "";
     }
     return false;
   };
@@ -505,7 +531,19 @@ export default function QuestionnairePage() {
         },
         brandPositioning: brandPositioningRating,
         contentCreationComfort: contentCreationComfort,
-        brandOptimizationGoals: brandOptimizationGoals
+        brandOptimizationGoals: brandOptimizationGoals,
+        industryInterests: {
+          consulting: consultingChecked,
+          consumerRetail: consumerRetailChecked,
+          financialServices: financialServicesChecked,
+          globalMarkets: globalMarketsChecked,
+          government: governmentChecked,
+          healthcare: healthcareChecked,
+          innovation: innovationChecked,
+          manufacturing: manufacturingChecked,
+          socialImpact: socialImpactChecked,
+          technology: technologyChecked
+        }
       };
       
       questionnaireMutation.mutate(formData);
@@ -516,6 +554,8 @@ export default function QuestionnairePage() {
           ? "LinkedIn URL is required to complete your profile." 
           : currentStep === 2 
           ? "Please select at least one branding challenge." 
+          : currentStep === 3
+          ? "Please select at least one industry interest and complete the timeframe field."
           : "Please complete all required fields before proceeding.",
         variant: "destructive",
       });
@@ -1191,19 +1231,123 @@ export default function QuestionnairePage() {
         return (
           <div className="space-y-6">
             <div className="mb-6">
-              <Label htmlFor="interests" className="text-gray-700 font-medium block mb-2">
-                Professional Interests
-              </Label>
-              <p className="text-sm text-gray-500 mb-3">
-                What areas, technologies, or disciplines are you most interested in?
+              <h2 className="text-xl font-semibold text-gray-800 mb-3">Content & Thought Leadership Interests</h2>
+              <p className="text-sm text-gray-500 mb-5">
+                Help us understand the topics you're passionate about or knowledgeable in as this will guide our discussions about your professional brand and thought leadership. Select any areas where you either have expertise or actively follow industry developments. Don't feel limited - this is a starting point for our conversation.
               </p>
-              <Textarea
-                id="interests"
-                value={interests}
-                onChange={(e) => setInterests(e.target.value)}
-                className="min-h-[120px] resize-y w-full"
-                placeholder="Share your professional interests..."
-              />
+              
+              <div className="mb-6">
+                <Label className="text-gray-700 font-medium block mb-3">
+                  Industry Interests
+                </Label>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <div className="flex items-center space-x-2">
+                    <Checkbox 
+                      id="consulting"
+                      checked={consultingChecked}
+                      onCheckedChange={(checked) => setConsultingChecked(checked === true)}
+                    />
+                    <Label htmlFor="consulting" className="text-gray-700">Consulting</Label>
+                  </div>
+                  
+                  <div className="flex items-center space-x-2">
+                    <Checkbox 
+                      id="consumer-retail" 
+                      checked={consumerRetailChecked}
+                      onCheckedChange={(checked) => setConsumerRetailChecked(checked === true)}
+                    />
+                    <Label htmlFor="consumer-retail" className="text-gray-700">Consumer & Retail</Label>
+                  </div>
+                  
+                  <div className="flex items-center space-x-2">
+                    <Checkbox 
+                      id="financial-services" 
+                      checked={financialServicesChecked}
+                      onCheckedChange={(checked) => setFinancialServicesChecked(checked === true)}
+                    />
+                    <Label htmlFor="financial-services" className="text-gray-700">Financial Services</Label>
+                  </div>
+                  
+                  <div className="flex items-center space-x-2">
+                    <Checkbox 
+                      id="global-markets" 
+                      checked={globalMarketsChecked}
+                      onCheckedChange={(checked) => setGlobalMarketsChecked(checked === true)}
+                    />
+                    <Label htmlFor="global-markets" className="text-gray-700">Global Markets & Trade</Label>
+                  </div>
+                  
+                  <div className="flex items-center space-x-2">
+                    <Checkbox 
+                      id="government" 
+                      checked={governmentChecked}
+                      onCheckedChange={(checked) => setGovernmentChecked(checked === true)}
+                    />
+                    <Label htmlFor="government" className="text-gray-700">Government and Public Sector</Label>
+                  </div>
+                  
+                  <div className="flex items-center space-x-2">
+                    <Checkbox 
+                      id="healthcare" 
+                      checked={healthcareChecked}
+                      onCheckedChange={(checked) => setHealthcareChecked(checked === true)}
+                    />
+                    <Label htmlFor="healthcare" className="text-gray-700">Healthcare & Life Sciences</Label>
+                  </div>
+                  
+                  <div className="flex items-center space-x-2">
+                    <Checkbox 
+                      id="innovation" 
+                      checked={innovationChecked}
+                      onCheckedChange={(checked) => setInnovationChecked(checked === true)}
+                    />
+                    <Label htmlFor="innovation" className="text-gray-700">Innovation & Entrepreneurship</Label>
+                  </div>
+                  
+                  <div className="flex items-center space-x-2">
+                    <Checkbox 
+                      id="manufacturing" 
+                      checked={manufacturingChecked}
+                      onCheckedChange={(checked) => setManufacturingChecked(checked === true)}
+                    />
+                    <Label htmlFor="manufacturing" className="text-gray-700">Manufacturing & Industry</Label>
+                  </div>
+                  
+                  <div className="flex items-center space-x-2">
+                    <Checkbox 
+                      id="social-impact" 
+                      checked={socialImpactChecked}
+                      onCheckedChange={(checked) => setSocialImpactChecked(checked === true)}
+                    />
+                    <Label htmlFor="social-impact" className="text-gray-700">Social Impact & Sustainability</Label>
+                  </div>
+                  
+                  <div className="flex items-center space-x-2">
+                    <Checkbox 
+                      id="technology" 
+                      checked={technologyChecked}
+                      onCheckedChange={(checked) => setTechnologyChecked(checked === true)}
+                    />
+                    <Label htmlFor="technology" className="text-gray-700">Technology & Digital Media</Label>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="mb-6 mt-8">
+                <Label htmlFor="interests" className="text-gray-700 font-medium block mb-2">
+                  Additional Areas of Interest or Expertise
+                </Label>
+                <p className="text-sm text-gray-500 mb-3">
+                  Please share any additional areas of interest or expertise not covered above:
+                </p>
+                <Textarea
+                  id="interests"
+                  value={interests}
+                  onChange={(e) => setInterests(e.target.value)}
+                  className="min-h-[120px] resize-y w-full"
+                  placeholder="Share your professional interests or areas of expertise..."
+                />
+              </div>
             </div>
             
             <div className="mb-6">
