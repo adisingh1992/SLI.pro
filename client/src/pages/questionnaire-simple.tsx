@@ -34,6 +34,18 @@ export default function QuestionnairePage() {
   const [otherChecked, setOtherChecked] = useState(false);
   const [otherSocialMedia, setOtherSocialMedia] = useState("");
   
+  // Branding challenges checkboxes state
+  const [consistentNarrativeChecked, setConsistentNarrativeChecked] = useState(false);
+  const [valuePropositionChecked, setValuePropositionChecked] = useState(false);
+  const [engagingContentChecked, setEngagingContentChecked] = useState(false);
+  const [findingTimeChecked, setFindingTimeChecked] = useState(false);
+  const [growingNetworkChecked, setGrowingNetworkChecked] = useState(false);
+  const [sharingInsightsChecked, setSharingInsightsChecked] = useState(false);
+  const [engagingNetworkChecked, setEngagingNetworkChecked] = useState(false);
+  const [industryEventsChecked, setIndustryEventsChecked] = useState(false);
+  const [otherBrandingChecked, setOtherBrandingChecked] = useState(false);
+  const [otherBrandingChallenge, setOtherBrandingChallenge] = useState("");
+  
   // Fetch user profile data
   const { data: userProfile, isLoading: profileLoading } = useQuery<UserProfile>({
     queryKey: ["/api/user/profile"],
@@ -96,8 +108,35 @@ export default function QuestionnairePage() {
         }
       }
       
-      // Set other questionnaire fields
+      // Set branding challenges (stored in aspirations field)
       setAspirations(q.aspirations || "");
+      
+      // Try to parse branding challenges from aspirations field if it contains our format
+      if (q.aspirations && q.aspirations.includes("Branding challenges:")) {
+        const challengesText = q.aspirations.split("Branding challenges:")[1].trim();
+        
+        // Check each branding challenge and set state accordingly
+        setConsistentNarrativeChecked(challengesText.includes("Building a consistent professional narrative"));
+        setValuePropositionChecked(challengesText.includes("Identifying my unique value proposition"));
+        setEngagingContentChecked(challengesText.includes("Creating engaging content"));
+        setFindingTimeChecked(challengesText.includes("Finding time to maintain online presence"));
+        setGrowingNetworkChecked(challengesText.includes("Growing my professional network"));
+        setSharingInsightsChecked(challengesText.includes("Sharing industry insights and work experiences"));
+        setEngagingNetworkChecked(challengesText.includes("Engaging with my professional network"));
+        setIndustryEventsChecked(challengesText.includes("Participating in industry discussions and events"));
+        
+        // Check for "Other:" entries in branding challenges
+        if (challengesText.includes("Other:")) {
+          setOtherBrandingChecked(true);
+          // Try to extract the other value
+          const otherMatch = challengesText.match(/Other: (.*?)(?:,|$)/);
+          if (otherMatch && otherMatch[1]) {
+            setOtherBrandingChallenge(otherMatch[1].trim());
+          }
+        }
+      }
+      
+      // Set other questionnaire fields
       setChallenges(q.challenges || "");
       setInterests(q.interests || "");
       setTimeframe(q.timeframe || "");
@@ -110,7 +149,19 @@ export default function QuestionnairePage() {
       // First step: LinkedIn URL is required
       return background.trim() !== "";
     } else if (currentStep === 2) {
-      return aspirations.trim() !== "" && challenges.trim() !== "";
+      // At least one branding challenge must be selected or the content strategy field must be filled
+      const hasBrandingChallengeSelected = 
+        consistentNarrativeChecked || 
+        valuePropositionChecked || 
+        engagingContentChecked || 
+        findingTimeChecked || 
+        growingNetworkChecked || 
+        sharingInsightsChecked || 
+        engagingNetworkChecked || 
+        industryEventsChecked || 
+        (otherBrandingChecked && otherBrandingChallenge.trim() !== "");
+      
+      return hasBrandingChallengeSelected || challenges.trim() !== "";
     } else if (currentStep === 3) {
       return interests.trim() !== "" && timeframe.trim() !== "";
     }
@@ -151,11 +202,30 @@ export default function QuestionnairePage() {
         ? `${goals}\n\nSelected platforms: ${socialMediaOptions.join(', ')}` 
         : `Selected platforms: ${socialMediaOptions.join(', ')}`;
       
+      // Prepare branding challenges data
+      const brandingChallenges = [];
+      if (consistentNarrativeChecked) brandingChallenges.push('Building a consistent professional narrative');
+      if (valuePropositionChecked) brandingChallenges.push('Identifying my unique value proposition');
+      if (engagingContentChecked) brandingChallenges.push('Creating engaging content');
+      if (findingTimeChecked) brandingChallenges.push('Finding time to maintain online presence');
+      if (growingNetworkChecked) brandingChallenges.push('Growing my professional network');
+      if (sharingInsightsChecked) brandingChallenges.push('Sharing industry insights and work experiences');
+      if (engagingNetworkChecked) brandingChallenges.push('Engaging with my professional network');
+      if (industryEventsChecked) brandingChallenges.push('Participating in industry discussions and events');
+      if (otherBrandingChecked && otherBrandingChallenge.trim() !== '') {
+        brandingChallenges.push(`Other: ${otherBrandingChallenge.trim()}`);
+      }
+      
+      // Update aspirations field to include selected branding challenges
+      const brandingDetails = aspirations.trim() !== '' 
+        ? `${aspirations}\n\nBranding challenges: ${brandingChallenges.join(', ')}` 
+        : `Branding challenges: ${brandingChallenges.join(', ')}`;
+      
       const formData = {
         background, // LinkedIn URL
         goals: socialMediaDetails, // Social media details
-        aspirations,
-        challenges,
+        aspirations: brandingDetails, // Branding challenges
+        challenges, // Content strategy
         interests,
         timeframe,
         // Include these fields for potential future enhancement
@@ -164,6 +234,17 @@ export default function QuestionnairePage() {
           medium: mediumChecked,
           blog: blogChecked,
           other: otherChecked ? otherSocialMedia : null
+        },
+        brandingChallenges: {
+          consistentNarrative: consistentNarrativeChecked,
+          valueProposition: valuePropositionChecked,
+          engagingContent: engagingContentChecked,
+          findingTime: findingTimeChecked,
+          growingNetwork: growingNetworkChecked,
+          sharingInsights: sharingInsightsChecked,
+          engagingNetwork: engagingNetworkChecked,
+          industryEvents: industryEventsChecked,
+          other: otherBrandingChecked ? otherBrandingChallenge : null
         }
       };
       
@@ -171,7 +252,11 @@ export default function QuestionnairePage() {
     } else {
       toast({
         title: "Please complete all required fields",
-        description: "LinkedIn URL is required to complete your profile.",
+        description: currentStep === 1 
+          ? "LinkedIn URL is required to complete your profile." 
+          : currentStep === 2 
+          ? "Please select at least one branding challenge or describe your content strategy." 
+          : "Please complete all required fields before proceeding.",
         variant: "destructive",
       });
     }
@@ -271,33 +356,128 @@ export default function QuestionnairePage() {
           <div className="space-y-6">
             <div className="mb-6">
               <Label htmlFor="aspirations" className="text-gray-700 font-medium block mb-2">
-                Professional Aspirations
+                Branding and Content Creation
               </Label>
               <p className="text-sm text-gray-500 mb-3">
-                What do you hope to achieve in your career? What impact do you want to make?
+                What are your biggest professional branding challenges? (Check all that apply)
               </p>
+              
+              <div className="space-y-3 mt-4">
+                <div className="flex items-center space-x-2">
+                  <Checkbox 
+                    id="consistentNarrative" 
+                    checked={consistentNarrativeChecked}
+                    onCheckedChange={(checked) => setConsistentNarrativeChecked(checked === true)}
+                  />
+                  <Label htmlFor="consistentNarrative" className="cursor-pointer">Building a consistent professional narrative</Label>
+                </div>
+                
+                <div className="flex items-center space-x-2">
+                  <Checkbox 
+                    id="valueProposition" 
+                    checked={valuePropositionChecked}
+                    onCheckedChange={(checked) => setValuePropositionChecked(checked === true)}
+                  />
+                  <Label htmlFor="valueProposition" className="cursor-pointer">Identifying my unique value proposition</Label>
+                </div>
+                
+                <div className="flex items-center space-x-2">
+                  <Checkbox 
+                    id="engagingContent" 
+                    checked={engagingContentChecked}
+                    onCheckedChange={(checked) => setEngagingContentChecked(checked === true)}
+                  />
+                  <Label htmlFor="engagingContent" className="cursor-pointer">Creating engaging content</Label>
+                </div>
+                
+                <div className="flex items-center space-x-2">
+                  <Checkbox 
+                    id="findingTime" 
+                    checked={findingTimeChecked}
+                    onCheckedChange={(checked) => setFindingTimeChecked(checked === true)}
+                  />
+                  <Label htmlFor="findingTime" className="cursor-pointer">Finding time to maintain online presence</Label>
+                </div>
+                
+                <div className="flex items-center space-x-2">
+                  <Checkbox 
+                    id="growingNetwork" 
+                    checked={growingNetworkChecked}
+                    onCheckedChange={(checked) => setGrowingNetworkChecked(checked === true)}
+                  />
+                  <Label htmlFor="growingNetwork" className="cursor-pointer">Growing my professional network</Label>
+                </div>
+                
+                <div className="flex items-center space-x-2">
+                  <Checkbox 
+                    id="sharingInsights" 
+                    checked={sharingInsightsChecked}
+                    onCheckedChange={(checked) => setSharingInsightsChecked(checked === true)}
+                  />
+                  <Label htmlFor="sharingInsights" className="cursor-pointer">Sharing industry insights and work experiences</Label>
+                </div>
+                
+                <div className="flex items-center space-x-2">
+                  <Checkbox 
+                    id="engagingNetwork" 
+                    checked={engagingNetworkChecked}
+                    onCheckedChange={(checked) => setEngagingNetworkChecked(checked === true)}
+                  />
+                  <Label htmlFor="engagingNetwork" className="cursor-pointer">Engaging with my professional network</Label>
+                </div>
+                
+                <div className="flex items-center space-x-2">
+                  <Checkbox 
+                    id="industryEvents" 
+                    checked={industryEventsChecked}
+                    onCheckedChange={(checked) => setIndustryEventsChecked(checked === true)}
+                  />
+                  <Label htmlFor="industryEvents" className="cursor-pointer">Participating in industry discussions and events</Label>
+                </div>
+                
+                <div className="flex items-center space-x-2">
+                  <Checkbox 
+                    id="otherBranding" 
+                    checked={otherBrandingChecked}
+                    onCheckedChange={(checked) => setOtherBrandingChecked(checked === true)}
+                  />
+                  <Label htmlFor="otherBranding" className="cursor-pointer">Other</Label>
+                </div>
+                
+                {otherBrandingChecked && (
+                  <div className="ml-6 mt-2">
+                    <Input
+                      value={otherBrandingChallenge}
+                      onChange={(e) => setOtherBrandingChallenge(e.target.value)}
+                      placeholder="Please specify your other branding challenge"
+                      className="w-full"
+                    />
+                  </div>
+                )}
+              </div>
+              
               <Textarea
                 id="aspirations"
                 value={aspirations}
                 onChange={(e) => setAspirations(e.target.value)}
-                className="min-h-[120px] resize-y w-full"
-                placeholder="Describe your professional aspirations..."
+                className="min-h-[80px] resize-y w-full mt-6"
+                placeholder="Add any additional details about your branding challenges..."
               />
             </div>
             
             <div className="mb-6">
               <Label htmlFor="challenges" className="text-gray-700 font-medium block mb-2">
-                Current Challenges
+                Current Content Strategy
               </Label>
               <p className="text-sm text-gray-500 mb-3">
-                What obstacles or challenges are you currently facing in your career?
+                Describe your current approach to content creation and professional branding, if any.
               </p>
               <Textarea
                 id="challenges"
                 value={challenges}
                 onChange={(e) => setChallenges(e.target.value)}
                 className="min-h-[120px] resize-y w-full"
-                placeholder="Describe the challenges you're facing..."
+                placeholder="Describe your current content strategy or branding approach..."
               />
             </div>
           </div>
@@ -391,7 +571,7 @@ export default function QuestionnairePage() {
                       {index === 0
                         ? "Digital Presence"
                         : index === 1
-                        ? "Aspirations"
+                        ? "Branding & Content"
                         : "Interests"}
                     </span>
                   </div>
