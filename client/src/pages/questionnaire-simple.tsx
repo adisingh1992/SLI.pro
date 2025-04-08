@@ -46,6 +46,15 @@ export default function QuestionnairePage() {
   const [otherBrandingChecked, setOtherBrandingChecked] = useState(false);
   const [otherBrandingChallenge, setOtherBrandingChallenge] = useState("");
   
+  // Published content checkboxes state
+  const [linkedInPostsChecked, setLinkedInPostsChecked] = useState(false);
+  const [blogArticlesChecked, setBlogArticlesChecked] = useState(false);
+  const [industryPresentationsChecked, setIndustryPresentationsChecked] = useState(false);
+  const [academicPapersChecked, setAcademicPapersChecked] = useState(false);
+  const [neverPublishedChecked, setNeverPublishedChecked] = useState(false);
+  const [otherPublishedContentChecked, setOtherPublishedContentChecked] = useState(false);
+  const [otherPublishedContent, setOtherPublishedContent] = useState("");
+  
   // Fetch user profile data
   const { data: userProfile, isLoading: profileLoading } = useQuery<UserProfile>({
     queryKey: ["/api/user/profile"],
@@ -136,6 +145,28 @@ export default function QuestionnairePage() {
         }
       }
       
+      // Try to parse published content data from aspirations field
+      if (q.aspirations && q.aspirations.includes("Published content:")) {
+        const publishedContentText = q.aspirations.split("Published content:")[1].trim();
+        
+        // Check each published content type and set state accordingly
+        setLinkedInPostsChecked(publishedContentText.includes("LinkedIn posts"));
+        setBlogArticlesChecked(publishedContentText.includes("Blog articles"));
+        setIndustryPresentationsChecked(publishedContentText.includes("Industry presentations"));
+        setAcademicPapersChecked(publishedContentText.includes("Academic papers"));
+        setNeverPublishedChecked(publishedContentText.includes("Never published professional content"));
+        
+        // Check for "Other:" entries in published content
+        if (publishedContentText.includes("Other:")) {
+          setOtherPublishedContentChecked(true);
+          // Try to extract the other value
+          const otherMatch = publishedContentText.match(/Other: (.*?)(?:,|$)/);
+          if (otherMatch && otherMatch[1]) {
+            setOtherPublishedContent(otherMatch[1].trim());
+          }
+        }
+      }
+      
       // Set other questionnaire fields
       setChallenges(q.challenges || "");
       setInterests(q.interests || "");
@@ -216,15 +247,29 @@ export default function QuestionnairePage() {
         brandingChallenges.push(`Other: ${otherBrandingChallenge.trim()}`);
       }
       
-      // Update aspirations field to include selected branding challenges
-      const brandingDetails = aspirations.trim() !== '' 
+      // Prepare published content data
+      const publishedContent = [];
+      if (linkedInPostsChecked) publishedContent.push('LinkedIn posts');
+      if (blogArticlesChecked) publishedContent.push('Blog articles');
+      if (industryPresentationsChecked) publishedContent.push('Industry presentations');
+      if (academicPapersChecked) publishedContent.push('Academic papers');
+      if (neverPublishedChecked) publishedContent.push('Never published professional content');
+      if (otherPublishedContentChecked && otherPublishedContent.trim() !== '') {
+        publishedContent.push(`Other: ${otherPublishedContent.trim()}`);
+      }
+      
+      // Update aspirations field to include selected branding challenges and published content
+      let brandingDetails = aspirations.trim() !== '' 
         ? `${aspirations}\n\nBranding challenges: ${brandingChallenges.join(', ')}` 
         : `Branding challenges: ${brandingChallenges.join(', ')}`;
+        
+      // Add published content to aspirations field
+      brandingDetails += `\n\nPublished content: ${publishedContent.length > 0 ? publishedContent.join(', ') : 'None'}`;
       
       const formData = {
         background, // LinkedIn URL
         goals: socialMediaDetails, // Social media details
-        aspirations: brandingDetails, // Branding challenges
+        aspirations: brandingDetails, // Branding challenges and published content
         challenges: "", // No longer using this field
         interests,
         timeframe,
@@ -245,6 +290,14 @@ export default function QuestionnairePage() {
           engagingNetwork: engagingNetworkChecked,
           industryEvents: industryEventsChecked,
           other: otherBrandingChecked ? otherBrandingChallenge : null
+        },
+        publishedContent: {
+          linkedInPosts: linkedInPostsChecked,
+          blogArticles: blogArticlesChecked,
+          industryPresentations: industryPresentationsChecked,
+          academicPapers: academicPapersChecked,
+          neverPublished: neverPublishedChecked,
+          other: otherPublishedContentChecked ? otherPublishedContent : null
         }
       };
       
@@ -450,6 +503,82 @@ export default function QuestionnairePage() {
                       value={otherBrandingChallenge}
                       onChange={(e) => setOtherBrandingChallenge(e.target.value)}
                       placeholder="Please specify your other branding challenge"
+                      className="w-full"
+                    />
+                  </div>
+                )}
+              </div>
+            </div>
+            
+            <div className="mb-6">
+              <Label htmlFor="publishedContent" className="text-gray-700 font-medium block mb-2">
+                Published Digital Content
+              </Label>
+              <p className="text-sm text-gray-500 mb-3">
+                Have you published digital professional content before? (Check all that apply)
+              </p>
+              
+              <div className="space-y-3 mt-4">
+                <div className="flex items-center space-x-2">
+                  <Checkbox 
+                    id="linkedInPosts" 
+                    checked={linkedInPostsChecked}
+                    onCheckedChange={(checked) => setLinkedInPostsChecked(checked === true)}
+                  />
+                  <Label htmlFor="linkedInPosts" className="cursor-pointer">LinkedIn posts</Label>
+                </div>
+                
+                <div className="flex items-center space-x-2">
+                  <Checkbox 
+                    id="blogArticles" 
+                    checked={blogArticlesChecked}
+                    onCheckedChange={(checked) => setBlogArticlesChecked(checked === true)}
+                  />
+                  <Label htmlFor="blogArticles" className="cursor-pointer">Blog articles</Label>
+                </div>
+                
+                <div className="flex items-center space-x-2">
+                  <Checkbox 
+                    id="industryPresentations" 
+                    checked={industryPresentationsChecked}
+                    onCheckedChange={(checked) => setIndustryPresentationsChecked(checked === true)}
+                  />
+                  <Label htmlFor="industryPresentations" className="cursor-pointer">Industry presentations</Label>
+                </div>
+                
+                <div className="flex items-center space-x-2">
+                  <Checkbox 
+                    id="academicPapers" 
+                    checked={academicPapersChecked}
+                    onCheckedChange={(checked) => setAcademicPapersChecked(checked === true)}
+                  />
+                  <Label htmlFor="academicPapers" className="cursor-pointer">Academic papers</Label>
+                </div>
+                
+                <div className="flex items-center space-x-2">
+                  <Checkbox 
+                    id="neverPublished" 
+                    checked={neverPublishedChecked}
+                    onCheckedChange={(checked) => setNeverPublishedChecked(checked === true)}
+                  />
+                  <Label htmlFor="neverPublished" className="cursor-pointer">Never published professional content</Label>
+                </div>
+                
+                <div className="flex items-center space-x-2">
+                  <Checkbox 
+                    id="otherPublishedContent" 
+                    checked={otherPublishedContentChecked}
+                    onCheckedChange={(checked) => setOtherPublishedContentChecked(checked === true)}
+                  />
+                  <Label htmlFor="otherPublishedContent" className="cursor-pointer">Other</Label>
+                </div>
+                
+                {otherPublishedContentChecked && (
+                  <div className="ml-6 mt-2">
+                    <Input
+                      value={otherPublishedContent}
+                      onChange={(e) => setOtherPublishedContent(e.target.value)}
+                      placeholder="Please specify other published content"
                       className="w-full"
                     />
                   </div>
