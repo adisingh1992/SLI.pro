@@ -6,6 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "@/hooks/use-toast";
 import { useQuery, useMutation } from "@tanstack/react-query";
+import { UserProfile } from "@shared/schema";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useLocation } from "wouter";
 import { Loader2, CheckCircle } from "lucide-react";
@@ -25,7 +26,7 @@ export default function QuestionnairePage() {
   const [timeframe, setTimeframe] = useState("");
   
   // Fetch user profile data
-  const { data: userProfile, isLoading: profileLoading } = useQuery({
+  const { data: userProfile, isLoading: profileLoading } = useQuery<UserProfile>({
     queryKey: ["/api/user/profile"],
     enabled: !!user,
   });
@@ -42,8 +43,8 @@ export default function QuestionnairePage() {
     },
     onSuccess: () => {
       toast({
-        title: "Questionnaire Submitted!",
-        description: "Your career insights have been saved successfully.",
+        title: "Registration Complete!",
+        description: "Your account setup is now complete. Thank you for providing your career insights!",
       });
       queryClient.invalidateQueries({ queryKey: ["/api/user/profile"] });
       navigate("/");
@@ -253,9 +254,11 @@ export default function QuestionnairePage() {
       <div className="container py-10 px-4 sm:px-6 lg:px-8 max-w-5xl mx-auto">
         <Card className="border-none shadow-md">
           <CardHeader className="bg-gradient-to-r from-[#0077B5] to-[#70B5F9] text-white rounded-t-lg">
-            <CardTitle className="text-2xl font-bold">Career Development Questionnaire</CardTitle>
+            <CardTitle className="text-2xl font-bold">Complete Your Registration</CardTitle>
             <CardDescription className="text-white opacity-90">
-              Help us understand your career journey and aspirations so we can provide personalized guidance.
+              {userProfile?.questionnaire 
+                ? "Review or update your career insights to receive personalized guidance."
+                : "Last step! Help us understand your career journey and aspirations so we can provide personalized guidance."}
             </CardDescription>
           </CardHeader>
           <CardContent className="p-6 lg:p-8">

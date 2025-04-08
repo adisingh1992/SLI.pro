@@ -34,13 +34,13 @@ export default function HomePage() {
     }
   }, [isError, error, toast]);
 
-  // Redirect to profile creation if profile doesn't exist or is incomplete
+  // Redirect to questionnaire if user hasn't completed it
   useEffect(() => {
     if (!isLoading && userProfile) {
-      const profileIncomplete = !userProfile.profile || !userProfile.profile.isComplete;
+      const questionnaireNotCompleted = !userProfile.questionnaire;
       
-      if (profileIncomplete) {
-        navigate("/profile/create");
+      if (questionnaireNotCompleted) {
+        navigate("/questionnaire");
       }
     }
   }, [userProfile, isLoading, navigate]);

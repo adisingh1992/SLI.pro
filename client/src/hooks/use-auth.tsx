@@ -87,7 +87,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       queryClient.setQueryData(["/api/user"], userData);
       toast({
         title: "Registration successful",
-        description: "Your account has been created. Now, let's set up your profile!",
+        description: "Your account has been created. Now, let's complete a quick questionnaire!",
       });
     },
     onError: (error: Error) => {

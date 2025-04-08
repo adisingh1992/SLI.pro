@@ -1,6 +1,8 @@
 import { useAuth } from "@/hooks/use-auth";
 import { Loader2 } from "lucide-react";
 import { Redirect, Route } from "wouter";
+import { useQuery } from "@tanstack/react-query";
+import { UserProfile } from "@shared/schema";
 
 export function ProtectedRoute({
   path,
@@ -10,7 +12,14 @@ export function ProtectedRoute({
   component: () => React.JSX.Element;
 }) {
   const { user, isLoading } = useAuth();
+  
+  // Fetch user profile data for redirection logic
+  const { data: userProfile } = useQuery<UserProfile>({
+    queryKey: ["/api/user/profile"],
+    enabled: !!user,
+  });
 
+  // Show loading state while authentication state is being determined
   if (isLoading) {
     return (
       <Route path={path}>
@@ -21,6 +30,7 @@ export function ProtectedRoute({
     );
   }
 
+  // Redirect unauthenticated users to login
   if (!user) {
     return (
       <Route path={path}>
@@ -28,6 +38,16 @@ export function ProtectedRoute({
       </Route>
     );
   }
+  
+  // For any path other than questionnaire, redirect to questionnaire if user hasn't completed it
+  if (user && userProfile && !userProfile.questionnaire && path !== "/questionnaire") {
+    return (
+      <Route path={path}>
+        <Redirect to="/questionnaire" />
+      </Route>
+    );
+  }
 
+  // Render the requested protected component
   return <Route path={path} component={Component} />;
 }
