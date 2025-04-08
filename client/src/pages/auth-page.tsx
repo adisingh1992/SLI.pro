@@ -25,6 +25,9 @@ const registerSchema = z.object({
   firstName: z.string().min(1, "First name is required"),
   lastName: z.string().min(1, "Last name is required"),
   username: z.string().email("Please enter a valid email"),
+  phoneNumber: z.string().optional().refine(val => !val || /^[+]?[(]?[0-9]{3}[)]?[-\s.]?[0-9]{3}[-\s.]?[0-9]{4,6}$/.test(val), {
+    message: "Please enter a valid phone number",
+  }),
   password: z.string()
     .min(8, "Password must be at least 8 characters")
     .refine(pwd => /\d/.test(pwd), "Password must contain at least one number")
@@ -69,6 +72,7 @@ export default function AuthPage() {
       firstName: "",
       lastName: "",
       username: "",
+      phoneNumber: "",
       password: "",
       confirmPassword: "",
       termsAgreement: false,
@@ -89,6 +93,7 @@ export default function AuthPage() {
       firstName: data.firstName,
       lastName: data.lastName,
       username: data.username,
+      phoneNumber: data.phoneNumber,
       password: data.password,
       confirmPassword: data.confirmPassword,
     });
@@ -325,6 +330,27 @@ export default function AuthPage() {
                                     This email address is already registered. Please try logging in or use a different email.
                                   </div>
                                 )}
+                              </FormItem>
+                            )}
+                          />
+
+                          <FormField
+                            control={registerForm.control}
+                            name="phoneNumber"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel className="text-gray-700 text-sm font-medium mb-1 block">
+                                  Phone number
+                                </FormLabel>
+                                <FormControl>
+                                  <Input
+                                    {...field}
+                                    className="px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-[#0077B5]"
+                                    type="tel"
+                                    placeholder="(123) 456-7890"
+                                  />
+                                </FormControl>
+                                <FormMessage className="text-[#E34240]" />
                               </FormItem>
                             )}
                           />

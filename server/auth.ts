@@ -92,7 +92,7 @@ export function setupAuth(app: Express) {
         });
       }
       
-      const { username, password, firstName, lastName } = validationResult.data;
+      const { username, password, firstName, lastName, phoneNumber } = validationResult.data;
       
       const existingUser = await storage.getUserByUsername(username);
       if (existingUser) {
@@ -103,7 +103,8 @@ export function setupAuth(app: Express) {
         username,
         password: await hashPassword(password),
         firstName,
-        lastName
+        lastName,
+        phoneNumber
       });
 
       // Create an empty profile
@@ -125,11 +126,11 @@ export function setupAuth(app: Express) {
   });
 
   app.post("/api/login", (req, res, next) => {
-    passport.authenticate("local", (err, user, info) => {
+    passport.authenticate("local", (err: any, user: any, info: any) => {
       if (err) return next(err);
       if (!user) return res.status(401).json({ message: "Invalid username or password" });
       
-      req.login(user, (err) => {
+      req.login(user, (err: any) => {
         if (err) return next(err);
         // Remove password before sending to client
         const { password, ...userWithoutPassword } = user;
@@ -139,7 +140,7 @@ export function setupAuth(app: Express) {
   });
 
   app.post("/api/logout", (req, res, next) => {
-    req.logout((err) => {
+    req.logout((err: any) => {
       if (err) return next(err);
       res.sendStatus(200);
     });

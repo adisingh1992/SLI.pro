@@ -32,7 +32,10 @@ const registerSchema = insertUserSchema.extend({
     .min(8, "Password must be at least 8 characters")
     .refine(pwd => /\d/.test(pwd), "Password must contain at least one number")
     .refine(pwd => /[!@#$%^&*(),.?":{}|<>]/.test(pwd), "Password must contain at least one special character"),
-  confirmPassword: z.string()
+  confirmPassword: z.string(),
+  phoneNumber: z.string().optional().refine(val => !val || /^[+]?[(]?[0-9]{3}[)]?[-\s.]?[0-9]{3}[-\s.]?[0-9]{4,6}$/.test(val), {
+    message: "Please enter a valid phone number",
+  }),
 }).refine(data => data.password === data.confirmPassword, {
   message: "Passwords do not match",
   path: ["confirmPassword"]
