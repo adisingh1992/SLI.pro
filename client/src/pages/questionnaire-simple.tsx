@@ -343,8 +343,8 @@ export default function QuestionnairePage() {
         socialImpactChecked || 
         technologyChecked;
       
-      // Timeframe is required
-      return hasIndustryInterestSelected && timeframe.trim() !== "";
+      // No timeframe required anymore
+      return hasIndustryInterestSelected;
     }
     return false;
   };
@@ -471,8 +471,8 @@ export default function QuestionnairePage() {
         goals: socialMediaDetails, // Social media details
         aspirations: brandingDetails, // Branding challenges and all other data
         challenges: "", // No longer using this field
-        interests,
-        timeframe,
+        interests: "",
+        timeframe: "",
         // Include these fields for potential future enhancement
         socialMedia: {
           twitter: twitterChecked,
@@ -556,7 +556,7 @@ export default function QuestionnairePage() {
           : currentStep === 2 
           ? "Please select at least one branding challenge." 
           : currentStep === 3
-          ? "Please select at least one industry interest and complete the timeframe field."
+          ? "Please select at least one industry interest."
           : "Please complete all required fields before proceeding.",
         variant: "destructive",
       });
@@ -1334,37 +1334,7 @@ export default function QuestionnairePage() {
                 </div>
               </div>
               
-              <div className="mb-6 mt-8">
-                <Label htmlFor="interests" className="text-gray-700 font-medium block mb-2">
-                  Additional Areas of Interest or Expertise
-                </Label>
-                <p className="text-sm text-gray-500 mb-3">
-                  Please share any additional areas of interest or expertise not covered above:
-                </p>
-                <Textarea
-                  id="interests"
-                  value={interests}
-                  onChange={(e) => setInterests(e.target.value)}
-                  className="min-h-[120px] resize-y w-full"
-                  placeholder="Share your professional interests or areas of expertise..."
-                />
-              </div>
-            </div>
-            
-            <div className="mb-6">
-              <Label htmlFor="timeframe" className="text-gray-700 font-medium block mb-2">
-                Development Timeframe
-              </Label>
-              <p className="text-sm text-gray-500 mb-3">
-                What is your timeframe for achieving your next career milestone? Are you looking for immediate changes or planning for the future?
-              </p>
-              <Textarea
-                id="timeframe"
-                value={timeframe}
-                onChange={(e) => setTimeframe(e.target.value)}
-                className="min-h-[120px] resize-y w-full"
-                placeholder="Describe your timeframe..."
-              />
+              <hr className="my-6" />
             </div>
           </div>
         );
