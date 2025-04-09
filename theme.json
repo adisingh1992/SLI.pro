@@ -1,8 +1,6 @@
 {
   "variant": "professional",
-  "primary": "#bed6d1",
-  "secondary": "#6c8083",
-  "tertiary": "#dcede9",
+  "primary": "oklch(70% 0.1 50)",
   "appearance": "light",
   "radius": 0.5
 }
