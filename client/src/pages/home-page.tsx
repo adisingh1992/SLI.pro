@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { UserProfile } from "@shared/schema";
 import { useToast } from "@/hooks/use-toast";
 import { useLocation } from "wouter";
-import { Loader2, FileQuestion, ArrowRight, CheckCircle } from "lucide-react";
+import { Loader2, FileQuestion, ArrowRight, CheckCircle, Calendar } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useEffect } from "react";
 import NavBar from "@/components/nav-bar";
@@ -122,6 +122,30 @@ export default function HomePage() {
                   onClick={() => navigate("/questionnaire")}
                 >
                   {userProfile?.questionnaire ? 'Review Questionnaire' : 'Start Questionnaire'}
+                  <ArrowRight className="ml-2 h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+          </div>
+          
+          {/* Coaching Session Section */}
+          <div className="mt-6 bg-[#f0fff7] border border-green-200 rounded-lg p-6">
+            <div className="flex items-start">
+              <div className="p-3 rounded-full bg-green-100 text-green-600 mr-4">
+                <Calendar className="h-6 w-6" />
+              </div>
+              <div className="flex-1">
+                <h2 className="text-lg font-medium text-[#333333] mb-2">
+                  Personal Coaching Session
+                </h2>
+                <p className="text-gray-600 mb-4">
+                  Book a one-on-one coaching session to discuss your career goals, get personalized advice, and develop strategies for professional growth.
+                </p>
+                <Button 
+                  className="flex items-center bg-green-600 hover:bg-green-700"
+                  onClick={() => window.open("https://calendly.com/dcara-sli/haas", "_blank")}
+                >
+                  Schedule Coaching Session
                   <ArrowRight className="ml-2 h-4 w-4" />
                 </Button>
               </div>
