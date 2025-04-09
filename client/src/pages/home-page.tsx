@@ -47,22 +47,22 @@ export default function HomePage() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-[#F5F5F5] flex flex-col">
+      <div className="min-h-screen bg-[#dcede9] flex flex-col">
         <NavBar />
         <div className="flex-1 flex items-center justify-center">
-          <Loader2 className="h-8 w-8 animate-spin text-[#0077B5]" />
-          <span className="ml-2 text-[#333333]">Loading your profile...</span>
+          <Loader2 className="h-8 w-8 animate-spin text-[#bed6d1]" />
+          <span className="ml-2 text-[#6c8083]">Loading your profile...</span>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-[#F5F5F5] flex flex-col">
+    <div className="min-h-screen bg-[#dcede9] flex flex-col">
       <NavBar />
       <main className="flex-1 max-w-7xl mx-auto px-4 sm:px-6 py-8">
         <div className="bg-white shadow-card rounded-lg p-6">
-          <h1 className="text-2xl font-semibold text-[#333333] mb-4">
+          <h1 className="text-2xl font-semibold text-[#6c8083] mb-4">
             Welcome, {user?.firstName}!
           </h1>
           <p className="text-gray-600 mb-6">
@@ -70,27 +70,27 @@ export default function HomePage() {
           </p>
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-            <div className="bg-[#F5F5F5] rounded-lg p-6">
-              <h2 className="text-lg font-medium text-[#333333] mb-3">Your Profile</h2>
+            <div className="bg-[#dcede9] rounded-lg p-6">
+              <h2 className="text-lg font-medium text-[#6c8083] mb-3">Your Profile</h2>
               <p className="text-gray-600 mb-4">
                 View or edit your professional profile to keep it up to date.
               </p>
               <Button 
-                className="bg-[#0077B5] hover:bg-opacity-90"
+                className="bg-[#bed6d1] hover:bg-opacity-90 text-[#6c8083]"
                 onClick={() => navigate("/profile")}
               >
                 View Profile
               </Button>
             </div>
             
-            <div className="bg-[#F5F5F5] rounded-lg p-6">
-              <h2 className="text-lg font-medium text-[#333333] mb-3">Profile Settings</h2>
+            <div className="bg-[#dcede9] rounded-lg p-6">
+              <h2 className="text-lg font-medium text-[#6c8083] mb-3">Profile Settings</h2>
               <p className="text-gray-600 mb-4">
                 Update your profile information and preferences.
               </p>
               <Button 
                 variant="outline" 
-                className="border-[#0077B5] text-[#0077B5]"
+                className="border-[#bed6d1] text-[#6c8083]"
                 onClick={() => navigate("/profile/create")}
               >
                 Edit Profile
@@ -99,9 +99,9 @@ export default function HomePage() {
           </div>
           
           {/* Career Development Questionnaire Section */}
-          <div className={userProfile?.questionnaire ? "bg-[#f0f7ff] border border-blue-200 rounded-lg p-6" : "bg-[#fff7f0] border border-orange-200 rounded-lg p-6"}>
+          <div className={userProfile?.questionnaire ? "bg-[#dcede9] border border-[#bed6d1] rounded-lg p-6" : "bg-[#dcede9] border border-[#bed6d1] rounded-lg p-6"}>
             <div className="flex items-start">
-              <div className={userProfile?.questionnaire ? "p-3 rounded-full bg-blue-100 text-[#0077B5] mr-4" : "p-3 rounded-full bg-orange-100 text-orange-500 mr-4"}>
+              <div className={userProfile?.questionnaire ? "p-3 rounded-full bg-[#bed6d1] text-[#6c8083] mr-4" : "p-3 rounded-full bg-[#bed6d1] text-[#6c8083] mr-4"}>
                 {userProfile?.questionnaire ? (
                   <CheckCircle className="h-6 w-6" />
                 ) : (
@@ -109,7 +109,7 @@ export default function HomePage() {
                 )}
               </div>
               <div className="flex-1">
-                <h2 className="text-lg font-medium text-[#333333] mb-2">
+                <h2 className="text-lg font-medium text-[#6c8083] mb-2">
                   {userProfile?.questionnaire ? 'Career Development Questionnaire Completed' : 'Complete Your Career Development Questionnaire'}
                 </h2>
                 <p className="text-gray-600 mb-4">
@@ -118,7 +118,7 @@ export default function HomePage() {
                     : 'Take a few minutes to complete our career development questionnaire. This will help us understand your professional goals and provide better guidance.'}
                 </p>
                 <Button 
-                  className={userProfile?.questionnaire ? "flex items-center bg-[#0077B5] hover:bg-opacity-90" : "flex items-center bg-orange-500 hover:bg-opacity-90"}
+                  className={userProfile?.questionnaire ? "flex items-center bg-[#bed6d1] hover:bg-opacity-90 text-[#6c8083]" : "flex items-center bg-[#bed6d1] hover:bg-opacity-90 text-[#6c8083]"}
                   onClick={() => navigate("/questionnaire")}
                 >
                   {userProfile?.questionnaire ? 'Review Questionnaire' : 'Start Questionnaire'}
@@ -129,20 +129,20 @@ export default function HomePage() {
           </div>
           
           {/* Coaching Session Section */}
-          <div className="mt-6 bg-[#f0fff7] border border-green-200 rounded-lg p-6">
+          <div className="mt-6 bg-[#dcede9] border border-[#bed6d1] rounded-lg p-6">
             <div className="flex items-start">
-              <div className="p-3 rounded-full bg-green-100 text-green-600 mr-4">
+              <div className="p-3 rounded-full bg-[#bed6d1] text-[#6c8083] mr-4">
                 <Calendar className="h-6 w-6" />
               </div>
               <div className="flex-1">
-                <h2 className="text-lg font-medium text-[#333333] mb-2">
+                <h2 className="text-lg font-medium text-[#6c8083] mb-2">
                   Personal Coaching Session
                 </h2>
                 <p className="text-gray-600 mb-4">
                   Book a one-on-one coaching session to discuss your career goals, get personalized advice, and develop strategies for professional growth.
                 </p>
                 <Button 
-                  className="flex items-center bg-green-600 hover:bg-green-700"
+                  className="flex items-center bg-[#bed6d1] hover:bg-opacity-90 text-[#6c8083]"
                   onClick={() => window.open("https://calendly.com/dcara-sli/haas", "_blank")}
                 >
                   Schedule Coaching Session
