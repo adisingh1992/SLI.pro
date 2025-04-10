@@ -1134,6 +1134,9 @@ export default function QuestionnairePage() {
       // Add brand optimization goals to aspirations field
       brandingDetails += `\n\nBrand optimization goals: ${brandOptimizationGoals.trim() !== '' ? brandOptimizationGoals : 'Not specified'}`;
       
+      // Add industry interests to aspirations field
+      brandingDetails += `\n\nIndustry interests: ${industryInterests.length > 0 ? industryInterests.join(', ') : 'None'}`;
+      
       // Add cross-cutting & societal interests to aspirations field
       brandingDetails += `\n\nCross-cutting & societal interests: ${crossCuttingInterests.length > 0 ? crossCuttingInterests.join(', ') : 'None'}`;
       
@@ -1145,6 +1148,24 @@ export default function QuestionnairePage() {
       
       // Add posting barriers to aspirations field
       brandingDetails += `\n\nPosting barriers: ${postingBarriers.length > 0 ? postingBarriers.join(', ') : 'None'}`;
+      
+      // Add LinkedIn connections percentage to aspirations field
+      brandingDetails += `\n\nLinkedIn connections percentage: ${industryConnectionsPercentage || 'Not specified'}`;
+      
+      // Add personality assessments to aspirations field
+      const assessments = [];
+      if (mbtiChecked) assessments.push('MBTI');
+      if (strengthsFinderChecked) assessments.push('Strengths Finder');
+      if (viaChecked) assessments.push('VIA');
+      if (enneagramChecked) assessments.push('Enneagram');
+      if (threeSixtyChecked) assessments.push('360*');
+      if (otherAssessmentChecked && otherAssessment.trim() !== '') {
+        assessments.push(`Other: ${otherAssessment.trim()}`);
+      }
+      brandingDetails += `\n\nPersonality assessments: ${assessments.length > 0 ? assessments.join(', ') : 'None'}`;
+      
+      // Add career goals
+      brandingDetails += `\n\nCareer goals: ${careerGoals.trim() !== '' ? careerGoals : 'Not specified'}`;
       
       // Add additional info to aspirations field if provided
       if (additionalInfo.trim() !== '') {
