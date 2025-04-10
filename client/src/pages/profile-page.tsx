@@ -89,7 +89,7 @@ export default function ProfilePage() {
               <TabsContent value="profile">
                 <div className="pt-4">
                   {/* Profile Info - Only showing Name, Email, Phone Number and Career Development Summary */}
-                  <div className="md:max-w-3xl mx-auto">
+                  <div className="md:max-w-5xl mx-auto">
                     <div className="mb-8 bg-white rounded-lg p-6 shadow-sm">
                       <h2 className="text-xl font-medium text-[#333333] mb-4">Basic Information</h2>
                       
@@ -185,18 +185,15 @@ export default function ProfilePage() {
               </TabsContent>
               
               <TabsContent value="documents" className="pt-4">
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                  <div className="md:col-span-2">
-                    <div className="flex items-center mb-6">
-                      <FileText className="h-6 w-6 mr-2 text-[#0077B5]" />
-                      <h2 className="text-xl font-medium text-[#333333]">My Documents</h2>
+                <div className="pt-4">
+                  <div className="md:max-w-5xl mx-auto">
+                    <div className="mb-8 bg-white rounded-lg p-6 shadow-sm">
+                      <div className="flex items-center mb-4">
+                        <FileText className="h-6 w-6 mr-2 text-[#0077B5]" />
+                        <h2 className="text-xl font-medium text-[#333333]">My Documents</h2>
+                      </div>
+                      <DocumentUpload />
                     </div>
-                    <DocumentUpload />
-                  </div>
-                  
-                  {/* Empty column to maintain the same layout as profile tab */}
-                  <div className="hidden md:block">
-                    {/* This empty div preserves the grid layout */}
                   </div>
                 </div>
               </TabsContent>
