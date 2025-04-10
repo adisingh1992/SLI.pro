@@ -109,7 +109,7 @@ export default function ProfilePage() {
                         {/* Phone Number */}
                         <div className="flex flex-col md:flex-row md:items-center border-b border-gray-100 pb-3">
                           <div className="md:w-1/3 font-medium text-gray-700">Phone Number:</div>
-                          <div className="md:w-2/3 text-gray-900">{userProfile.phone || "Not provided"}</div>
+                          <div className="md:w-2/3 text-gray-900">{userProfile.phoneNumber || "Not provided"}</div>
                         </div>
                       </div>
                     </div>
