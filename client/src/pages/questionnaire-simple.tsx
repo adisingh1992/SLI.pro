@@ -435,12 +435,21 @@ export default function QuestionnairePage() {
     if (userProfile?.questionnaire) {
       const q = userProfile.questionnaire;
       
-      // Set industry if available
-      if (q.timeframe && q.timeframe.includes("Industry:")) {
+      // Set industry directly from the industry field
+      if (q.industry) {
+        setIndustry(q.industry);
+      }
+      // Fallback to the old method if industry field doesn't exist
+      else if (q.timeframe && q.timeframe.includes("Industry:")) {
         const industryMatch = q.timeframe.match(/Industry: (.*?)(?:,|$)/);
         if (industryMatch && industryMatch[1]) {
           setIndustry(industryMatch[1].trim());
         }
+      }
+      
+      // Set job function directly from the jobFunction field
+      if (q.jobFunction) {
+        setJobFunction(q.jobFunction);
       }
       
       // Set LinkedIn URL (which is saved in 'background' field)
