@@ -61,35 +61,6 @@ export default function HomePage() {
             From here you can view and manage your professional profile on SLIPro.
           </p>
           
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-            <div className="bg-[#F5F5F5] rounded-lg p-6">
-              <h2 className="text-lg font-medium text-[#333333] mb-3">Your Profile</h2>
-              <p className="text-gray-600 mb-4">
-                View or edit your professional profile to keep it up to date.
-              </p>
-              <Button 
-                className="bg-[#0077B5] hover:bg-opacity-90"
-                onClick={() => navigate("/profile")}
-              >
-                View Profile
-              </Button>
-            </div>
-            
-            <div className="bg-[#F5F5F5] rounded-lg p-6">
-              <h2 className="text-lg font-medium text-[#333333] mb-3">Profile Settings</h2>
-              <p className="text-gray-600 mb-4">
-                Update your profile information and preferences.
-              </p>
-              <Button 
-                variant="outline" 
-                className="border-[#0077B5] text-[#0077B5]"
-                onClick={() => navigate("/profile/create")}
-              >
-                Edit Profile
-              </Button>
-            </div>
-          </div>
-          
           {/* Career Development Questionnaire Section */}
           <div className={userProfile?.questionnaire ? "bg-[#f0f7ff] border border-blue-200 rounded-lg p-6" : "bg-[#fff7f0] border border-orange-200 rounded-lg p-6"}>
             <div className="flex items-start">

@@ -59,10 +59,6 @@ export default function NavBar() {
                     <User className="mr-2 h-4 w-4" />
                     <span>View Profile</span>
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => navigate("/profile/create")} className="cursor-pointer">
-                    <Settings className="mr-2 h-4 w-4" />
-                    <span>Edit Profile</span>
-                  </DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={handleLogout} className="cursor-pointer text-red-500">
                     <LogOut className="mr-2 h-4 w-4" />
