@@ -39,14 +39,8 @@ export function ProtectedRoute({
     );
   }
   
-  // For any path other than questionnaire, redirect to questionnaire if user hasn't completed it
-  if (user && userProfile && !userProfile.questionnaire && path !== "/questionnaire") {
-    return (
-      <Route path={path}>
-        <Redirect to="/questionnaire" />
-      </Route>
-    );
-  }
+  // No longer redirecting to questionnaire even if it's not completed
+  // The user will go directly to the requested page
 
   // Render the requested protected component
   return <Route path={path} component={Component} />;
