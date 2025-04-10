@@ -73,15 +73,7 @@ export default function ProfilePage() {
                     <p className="text-white text-opacity-90">{userProfile.headline || "No headline set"}</p>
                   </div>
                 </div>
-                <div>
-                  <Button
-                    onClick={() => navigate("/profile/create")}
-                    className="px-4 py-2 bg-white text-[#0077B5] hover:bg-opacity-90 flex items-center"
-                  >
-                    <Edit className="h-4 w-4 mr-1" />
-                    Edit Profile
-                  </Button>
-                </div>
+                {/* Edit Profile button removed */}
               </div>
             </div>
           </div>
@@ -95,59 +87,36 @@ export default function ProfilePage() {
               </TabsList>
               
               <TabsContent value="profile">
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-4">
-                  {/* Profile Info */}
-                  <div className="md:col-span-2">
-                    <div className="mb-8">
-                      <h2 className="text-xl font-medium text-[#333333] mb-4">About</h2>
-                      <p className="text-gray-700">
-                        {userProfile.bio || "No bio information added yet."}
-                      </p>
-                    </div>
-                    
-                    <div className="mb-8">
-                      <h2 className="text-xl font-medium text-[#333333] mb-4">Experience</h2>
+                <div className="pt-4">
+                  {/* Profile Info - Only showing Name, Email, Phone Number and Career Development Summary */}
+                  <div className="md:max-w-3xl mx-auto">
+                    <div className="mb-8 bg-white rounded-lg p-6 shadow-sm">
+                      <h2 className="text-xl font-medium text-[#333333] mb-4">Basic Information</h2>
+                      
                       <div className="space-y-4">
-                        {userProfile.experiences && userProfile.experiences.length > 0 ? (
-                          userProfile.experiences.map((experience) => (
-                            <div key={experience.id} className="border-l-2 border-gray-200 pl-4 py-1">
-                              <h3 className="font-medium text-[#333333]">{experience.title}</h3>
-                              <p className="text-gray-600">{experience.company}</p>
-                              <p className="text-sm text-gray-500">
-                                {experience.startDate} - {experience.endDate || "Present"}
-                              </p>
-                              <p className="mt-2 text-gray-700">{experience.description}</p>
-                            </div>
-                          ))
-                        ) : (
-                          <p className="text-gray-500">No experience added yet.</p>
-                        )}
-                      </div>
-                    </div>
-                    
-                    <div className="mb-8">
-                      <h2 className="text-xl font-medium text-[#333333] mb-4">Education</h2>
-                      <div className="space-y-4">
-                        {userProfile.education && userProfile.education.length > 0 ? (
-                          userProfile.education.map((edu) => (
-                            <div key={edu.id} className="border-l-2 border-gray-200 pl-4 py-1">
-                              <h3 className="font-medium text-[#333333]">{edu.degree}</h3>
-                              <p className="text-gray-600">{edu.institution}</p>
-                              <p className="text-sm text-gray-500">
-                                {edu.startYear} - {edu.endYear || "Present"}
-                              </p>
-                              <p className="mt-2 text-gray-700">{edu.description}</p>
-                            </div>
-                          ))
-                        ) : (
-                          <p className="text-gray-500">No education added yet.</p>
-                        )}
+                        {/* Name */}
+                        <div className="flex flex-col md:flex-row md:items-center border-b border-gray-100 pb-3">
+                          <div className="md:w-1/3 font-medium text-gray-700">Name:</div>
+                          <div className="md:w-2/3 text-gray-900">{userProfile.firstName} {userProfile.lastName}</div>
+                        </div>
+                        
+                        {/* Email */}
+                        <div className="flex flex-col md:flex-row md:items-center border-b border-gray-100 pb-3">
+                          <div className="md:w-1/3 font-medium text-gray-700">Email:</div>
+                          <div className="md:w-2/3 text-gray-900">{userProfile.username}</div>
+                        </div>
+                        
+                        {/* Phone Number */}
+                        <div className="flex flex-col md:flex-row md:items-center border-b border-gray-100 pb-3">
+                          <div className="md:w-1/3 font-medium text-gray-700">Phone Number:</div>
+                          <div className="md:w-2/3 text-gray-900">{userProfile.phone || "Not provided"}</div>
+                        </div>
                       </div>
                     </div>
 
                     {/* Career Questionnaire Results */}
                     {userProfile.questionnaire && (
-                      <div className="mb-8 bg-[#f8fafc] p-6 rounded-lg border border-gray-100">
+                      <div className="mb-8 bg-[#f8fafc] p-6 rounded-lg border border-gray-100 shadow-sm">
                         <div className="flex justify-between items-center mb-4">
                           <h2 className="text-xl font-medium text-[#333333]">Career Development Summary</h2>
                           <Button
@@ -167,8 +136,20 @@ export default function ProfilePage() {
                                 <Clipboard className="h-4 w-4 mr-2 text-[#0077B5]" />
                                 Professional Background
                               </h3>
-                              <p className="mt-1 text-gray-700 text-sm line-clamp-3">
+                              <p className="mt-1 text-gray-700 text-sm">
                                 {userProfile.questionnaire.background}
+                              </p>
+                            </div>
+                          )}
+                          
+                          {userProfile.questionnaire.timeframe && (
+                            <div className="border-l-2 border-[#0077B5] pl-4 py-1">
+                              <h3 className="font-medium text-[#333333] flex items-center">
+                                <Clock className="h-4 w-4 mr-2 text-[#0077B5]" />
+                                Current Industry & Function
+                              </h3>
+                              <p className="mt-1 text-gray-700 text-sm">
+                                {userProfile.questionnaire.timeframe}
                               </p>
                             </div>
                           )}
@@ -179,7 +160,7 @@ export default function ProfilePage() {
                                 <Target className="h-4 w-4 mr-2 text-[#0077B5]" />
                                 Career Goals
                               </h3>
-                              <p className="mt-1 text-gray-700 text-sm line-clamp-3">
+                              <p className="mt-1 text-gray-700 text-sm">
                                 {userProfile.questionnaire.goals}
                               </p>
                             </div>
@@ -191,95 +172,14 @@ export default function ProfilePage() {
                                 <BookText className="h-4 w-4 mr-2 text-[#0077B5]" />
                                 Professional Aspirations
                               </h3>
-                              <p className="mt-1 text-gray-700 text-sm line-clamp-3">
+                              <p className="mt-1 text-gray-700 text-sm">
                                 {userProfile.questionnaire.aspirations}
-                              </p>
-                            </div>
-                          )}
-                          
-                          {userProfile.questionnaire.challenges && (
-                            <div className="border-l-2 border-[#0077B5] pl-4 py-1">
-                              <h3 className="font-medium text-[#333333] flex items-center">
-                                <AlertTriangle className="h-4 w-4 mr-2 text-[#0077B5]" />
-                                Current Challenges
-                              </h3>
-                              <p className="mt-1 text-gray-700 text-sm line-clamp-3">
-                                {userProfile.questionnaire.challenges}
-                              </p>
-                            </div>
-                          )}
-                          
-                          {userProfile.questionnaire.interests && (
-                            <div className="border-l-2 border-[#0077B5] pl-4 py-1">
-                              <h3 className="font-medium text-[#333333] flex items-center">
-                                <Heart className="h-4 w-4 mr-2 text-[#0077B5]" />
-                                Professional Interests
-                              </h3>
-                              <p className="mt-1 text-gray-700 text-sm line-clamp-3">
-                                {userProfile.questionnaire.interests}
-                              </p>
-                            </div>
-                          )}
-                          
-                          {userProfile.questionnaire.timeframe && (
-                            <div className="border-l-2 border-[#0077B5] pl-4 py-1">
-                              <h3 className="font-medium text-[#333333] flex items-center">
-                                <Clock className="h-4 w-4 mr-2 text-[#0077B5]" />
-                                Development Timeframe
-                              </h3>
-                              <p className="mt-1 text-gray-700 text-sm line-clamp-3">
-                                {userProfile.questionnaire.timeframe}
                               </p>
                             </div>
                           )}
                         </div>
                       </div>
                     )}
-                  </div>
-                  
-                  {/* Sidebar */}
-                  <div>
-                    <div className="bg-gray-50 rounded-lg p-4 mb-6">
-                      <h3 className="font-medium text-[#333333] mb-3">Location</h3>
-                      <p className="text-gray-700 flex items-center">
-                        <MapPin className="h-5 w-5 mr-2 text-gray-500" />
-                        <span>{userProfile.location || "No location set"}</span>
-                      </p>
-                    </div>
-                    
-                    <div className="bg-gray-50 rounded-lg p-4 mb-6">
-                      <h3 className="font-medium text-[#333333] mb-3">Skills</h3>
-                      <div className="flex flex-wrap gap-2">
-                        {userProfile.skills && userProfile.skills.length > 0 ? (
-                          userProfile.skills.map((skill) => (
-                            <span 
-                              key={skill.id} 
-                              className="inline-block px-3 py-1 rounded-full text-sm bg-[#70B5F9] bg-opacity-20 text-[#0077B5]"
-                            >
-                              {skill.name}
-                            </span>
-                          ))
-                        ) : (
-                          <p className="text-gray-500">No skills added yet.</p>
-                        )}
-                      </div>
-                    </div>
-                    
-                    <div className="bg-gray-50 rounded-lg p-4">
-                      <h3 className="font-medium text-[#333333] mb-3">Languages</h3>
-                      <ul className="space-y-2">
-                        {userProfile.languages && userProfile.languages.length > 0 ? (
-                          userProfile.languages.map((language) => (
-                            <li key={language.id} className="flex justify-between">
-                              <span>{language.name}</span>
-                              <span className="text-sm text-gray-500">{language.proficiency}</span>
-                            </li>
-                          ))
-                        ) : (
-                          <p className="text-gray-500">No languages added yet.</p>
-                        )}
-                      </ul>
-                    </div>
                   </div>
                 </div>
               </TabsContent>
