@@ -102,6 +102,7 @@ export default function AuthPage() {
       password: data.password,
       confirmPassword: data.confirmPassword,
     });
+    // Navigation will be handled by useEffect when user state changes
   };
 
   return (
