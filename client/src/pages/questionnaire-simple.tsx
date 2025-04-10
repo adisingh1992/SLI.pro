@@ -628,7 +628,7 @@ export default function QuestionnairePage() {
       }
       
       // Try to parse industry connections percentage
-      if (q.aspirations && q.aspirations.includes("LinkedIn profile update timing:")) {
+      if (q.aspirations && q.aspirations.includes("LinkedIn connections percentage:")) {
         const connectionsText = q.aspirations.split("LinkedIn connections percentage:")[1]?.trim().split('\n')[0];
         if (connectionsText) {
           if (connectionsText.includes("0-10%")) setIndustryConnectionsPercentage("0-10%");
@@ -636,6 +636,101 @@ export default function QuestionnairePage() {
           else if (connectionsText.includes("25-50%")) setIndustryConnectionsPercentage("25-50%");
           else if (connectionsText.includes("50%+")) setIndustryConnectionsPercentage("50%+");
           else if (connectionsText.includes("not-sure")) setIndustryConnectionsPercentage("not-sure");
+        }
+      }
+      
+      // Step 4: Parse industry interests
+      if (q.aspirations && q.aspirations.includes("Industry interests:")) {
+        const industryInterestsText = q.aspirations.split("Industry interests:")[1]?.trim().split('\n')[0];
+        if (industryInterestsText) {
+          setConsultingChecked(industryInterestsText.includes("Consulting"));
+          setConsumerRetailChecked(industryInterestsText.includes("Consumer Products / Retail"));
+          setFinancialServicesChecked(industryInterestsText.includes("Financial Services"));
+          setGlobalMarketsChecked(industryInterestsText.includes("Global Markets"));
+          setGovernmentChecked(industryInterestsText.includes("Government / Public Sector"));
+          setHealthcareChecked(industryInterestsText.includes("Healthcare"));
+          setInnovationChecked(industryInterestsText.includes("Innovation / R&D"));
+          setManufacturingChecked(industryInterestsText.includes("Manufacturing"));
+          setSocialImpactChecked(industryInterestsText.includes("Social Impact / ESG"));
+          setTechnologyChecked(industryInterestsText.includes("Technology"));
+        }
+      }
+      
+      // Parse societal interests
+      if (q.aspirations && q.aspirations.includes("Cross-cutting & societal interests:")) {
+        const societalInterestsText = q.aspirations.split("Cross-cutting & societal interests:")[1]?.trim().split('\n')[0];
+        if (societalInterestsText) {
+          setClimateChecked(societalInterestsText.includes("Climate Change & Sustainability"));
+          setConsumerBehaviorChecked(societalInterestsText.includes("Consumer Behavior & Culture"));
+          setCrimeJusticeChecked(societalInterestsText.includes("Crime & Justice"));
+          setDigitalTransformationAIChecked(societalInterestsText.includes("Digital Transformation/AI"));
+          setEducationLearningChecked(societalInterestsText.includes("Education & Learning"));
+          setEmergingMarketsChecked(societalInterestsText.includes("Emerging Markets"));
+          setEntertainmentArtsChecked(societalInterestsText.includes("Entertainment & Arts"));
+          setFinancialInnovationChecked(societalInterestsText.includes("Financial Innovation"));
+          setFutureOfWorkChecked(societalInterestsText.includes("Future of Work"));
+          setGlobalEconomyChecked(societalInterestsText.includes("Global Economy"));
+          setGeopoliticsChecked(societalInterestsText.includes("Geopolitics & International Relations"));
+          setHealthWellnessChecked(societalInterestsText.includes("Health & Wellness"));
+          setHealthcareInnovationChecked(societalInterestsText.includes("Healthcare Innovation"));
+          setSocialImpactDEIChecked(societalInterestsText.includes("Social Impact & DEI"));
+          setSportsRecreationChecked(societalInterestsText.includes("Sports & Recreation"));
+          setTravelTourismChecked(societalInterestsText.includes("Travel & Tourism"));
+          setUrbanDevelopmentChecked(societalInterestsText.includes("Urban Development"));
+          setUsPoliticsChecked(societalInterestsText.includes("US Politics & Governance"));
+        }
+      }
+      
+      // Parse technology subcategories if technology is selected
+      if (technologyChecked && q.aspirations && q.aspirations.includes("Technology subcategories:")) {
+        const techSubcategoriesText = q.aspirations.split("Technology subcategories:")[1]?.trim().split('\n')[0];
+        if (techSubcategoriesText) {
+          // AI/ML
+          setAiConsumerChecked(techSubcategoriesText.includes("AI - Consumer Applications"));
+          setAiComputerVisionChecked(techSubcategoriesText.includes("AI - Computer Vision"));
+          setAiEthicsChecked(techSubcategoriesText.includes("AI - Ethics & Governance"));
+          setAiInfrastructureChecked(techSubcategoriesText.includes("AI - Infrastructure"));
+          setAiNlpChecked(techSubcategoriesText.includes("AI - Natural Language Processing"));
+          setAiPredictiveChecked(techSubcategoriesText.includes("AI - Predictive Analytics"));
+          setAiRoboticsChecked(techSubcategoriesText.includes("AI - Robotics & Automation"));
+          setAiScientificChecked(techSubcategoriesText.includes("AI - Scientific Applications"));
+          setAiLearningChecked(techSubcategoriesText.includes("ML - Machine Learning"));
+          
+          // Consumer Technology
+          setConsumerDevicesChecked(techSubcategoriesText.includes("Consumer Devices"));
+          setConsumerGamingChecked(techSubcategoriesText.includes("Consumer Gaming"));
+          setConsumerMobileChecked(techSubcategoriesText.includes("Consumer Mobile Tech"));
+          setConsumerSmartHomeChecked(techSubcategoriesText.includes("Consumer Smart Home"));
+          
+          // Cybersecurity & Privacy
+          setCybersecuritySolutionsChecked(techSubcategoriesText.includes("Cybersecurity Solutions"));
+          setDataPrivacyChecked(techSubcategoriesText.includes("Data Privacy"));
+          setRegulatoryComplianceChecked(techSubcategoriesText.includes("Regulatory Compliance"));
+          setRiskManagementChecked(techSubcategoriesText.includes("Risk Management"));
+          
+          // Digital Infrastructure
+          setCloudComputingChecked(techSubcategoriesText.includes("Cloud Computing"));
+          setDataCentersChecked(techSubcategoriesText.includes("Data Centers"));
+          setNetworksChecked(techSubcategoriesText.includes("Networks"));
+          setWeb3BlockchainChecked(techSubcategoriesText.includes("Web3 / Blockchain"));
+          
+          // Digital Media & Content
+          setContentDistributionChecked(techSubcategoriesText.includes("Content Distribution"));
+          setCreatorEconomyChecked(techSubcategoriesText.includes("Creator Economy"));
+          setDigitalMarketingChecked(techSubcategoriesText.includes("Digital Marketing"));
+          setSocialMediaPlatformsChecked(techSubcategoriesText.includes("Social Media Platforms"));
+          
+          // Emerging Technology
+          setArVrXrChecked(techSubcategoriesText.includes("AR / VR / XR"));
+          setBiotechHealthChecked(techSubcategoriesText.includes("Biotech / Health Tech"));
+          setQuantumComputingChecked(techSubcategoriesText.includes("Quantum Computing"));
+          setEmergingRoboticsChecked(techSubcategoriesText.includes("Robotics & Automation"));
+          
+          // Enterprise Technology
+          setBusinessAppsChecked(techSubcategoriesText.includes("Business Applications"));
+          setEnterpriseDigitalTransformationChecked(techSubcategoriesText.includes("Digital Transformation"));
+          setIntegrationApisChecked(techSubcategoriesText.includes("Integration & APIs"));
+          setSaasEnterpriseChecked(techSubcategoriesText.includes("SaaS / Enterprise Software"));
         }
       }
       
@@ -956,6 +1051,19 @@ export default function QuestionnairePage() {
       if (reactedFewTimesMonthChecked) linkedInActivity.push('Reacted to Posts (likes, etc.) - A few times a month');
       if (reactedFewTimesWeekChecked) linkedInActivity.push('Reacted to Posts (likes, etc.) - A few times a week');
       if (reactedDailyChecked) linkedInActivity.push('Reacted to Posts (likes, etc.) - Daily');
+      
+      // Prepare industry interests
+      const industryInterests = [];
+      if (consultingChecked) industryInterests.push('Consulting');
+      if (consumerRetailChecked) industryInterests.push('Consumer Products / Retail');
+      if (financialServicesChecked) industryInterests.push('Financial Services');
+      if (globalMarketsChecked) industryInterests.push('Global Markets');
+      if (governmentChecked) industryInterests.push('Government / Public Sector');
+      if (healthcareChecked) industryInterests.push('Healthcare');
+      if (innovationChecked) industryInterests.push('Innovation / R&D');
+      if (manufacturingChecked) industryInterests.push('Manufacturing');
+      if (socialImpactChecked) industryInterests.push('Social Impact / ESG');
+      if (technologyChecked) industryInterests.push('Technology');
       
       // Prepare cross-cutting & societal interests data
       const crossCuttingInterests = [];
