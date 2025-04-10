@@ -1,13 +1,25 @@
 import React, { useState } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { toast } from "@/hooks/use-toast";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { UserProfile } from "@shared/schema";
@@ -110,7 +122,7 @@ const INDUSTRY_OPTIONS = [
   "Technology - Other",
   "Technology - Software",
   "Technology - Telecom",
-  "Transportation / Logistics - General"
+  "Transportation / Logistics - General",
 ];
 
 // Function options array
@@ -196,7 +208,7 @@ const FUNCTION_OPTIONS = [
   "Technical - Integration / Implementation",
   "Technical - Other",
   "Technical - Product Management",
-  "Technical - Systems Management"
+  "Technical - Systems Management",
 ];
 
 export default function QuestionnairePage() {
@@ -204,11 +216,11 @@ export default function QuestionnairePage() {
   const [, navigate] = useLocation();
   const [currentStep, setCurrentStep] = useState(1);
   const totalSteps = 5; // Updated to 5 steps to include the industry selection
-  
+
   // Add state for industry and function selection
   const [industry, setIndustry] = useState("");
   const [jobFunction, setJobFunction] = useState("");
-  
+
   // Define separate state variables for each field
   const [background, setBackground] = useState(""); // LinkedIn URL
   const [goals, setGoals] = useState(""); // Other social media details
@@ -216,11 +228,12 @@ export default function QuestionnairePage() {
   const [challenges, setChallenges] = useState("");
   const [interests, setInterests] = useState("");
   const [timeframe, setTimeframe] = useState("");
-  
+
   // Industry Interests checkboxes state
   const [consultingChecked, setConsultingChecked] = useState(false);
   const [consumerRetailChecked, setConsumerRetailChecked] = useState(false);
-  const [financialServicesChecked, setFinancialServicesChecked] = useState(false);
+  const [financialServicesChecked, setFinancialServicesChecked] =
+    useState(false);
   const [globalMarketsChecked, setGlobalMarketsChecked] = useState(false);
   const [governmentChecked, setGovernmentChecked] = useState(false);
   const [healthcareChecked, setHealthcareChecked] = useState(false);
@@ -228,51 +241,61 @@ export default function QuestionnairePage() {
   const [manufacturingChecked, setManufacturingChecked] = useState(false);
   const [socialImpactChecked, setSocialImpactChecked] = useState(false);
   const [technologyChecked, setTechnologyChecked] = useState(false);
-  
+
   // Cross-Cutting & Societal Interests checkboxes state
   const [climateChecked, setClimateChecked] = useState(false);
   const [consumerBehaviorChecked, setConsumerBehaviorChecked] = useState(false);
   const [crimeJusticeChecked, setCrimeJusticeChecked] = useState(false);
-  const [digitalTransformationAIChecked, setDigitalTransformationAIChecked] = useState(false);
-  const [educationLearningChecked, setEducationLearningChecked] = useState(false);
-  
+  const [digitalTransformationAIChecked, setDigitalTransformationAIChecked] =
+    useState(false);
+  const [educationLearningChecked, setEducationLearningChecked] =
+    useState(false);
+
   // Content Creation Format preferences
   const [sharingNewsChecked, setSharingNewsChecked] = useState(false);
-  const [writingExperiencesChecked, setWritingExperiencesChecked] = useState(false);
+  const [writingExperiencesChecked, setWritingExperiencesChecked] =
+    useState(false);
   const [analyzingTrendsChecked, setAnalyzingTrendsChecked] = useState(false);
   const [commentingPostsChecked, setCommentingPostsChecked] = useState(false);
   const [howToContentChecked, setHowToContentChecked] = useState(false);
   const [eventTakeawaysChecked, setEventTakeawaysChecked] = useState(false);
   const [personalAnecdoteChecked, setPersonalAnecdoteChecked] = useState(false);
-  const [digitalCommunitiesChecked, setDigitalCommunitiesChecked] = useState(false);
-  const [otherContentFormatChecked, setOtherContentFormatChecked] = useState(false);
+  const [digitalCommunitiesChecked, setDigitalCommunitiesChecked] =
+    useState(false);
+  const [otherContentFormatChecked, setOtherContentFormatChecked] =
+    useState(false);
   const [otherContentFormat, setOtherContentFormat] = useState("");
-  
+
   // Posting Barriers
   const [unsureWhatToSayChecked, setUnsureWhatToSayChecked] = useState(false);
   const [fearOfJudgmentChecked, setFearOfJudgmentChecked] = useState(false);
   const [timeManagementChecked, setTimeManagementChecked] = useState(false);
-  const [dontKnowHowToStartChecked, setDontKnowHowToStartChecked] = useState(false);
-  const [unclearProfessionalVoiceChecked, setUnclearProfessionalVoiceChecked] = useState(false);
+  const [dontKnowHowToStartChecked, setDontKnowHowToStartChecked] =
+    useState(false);
+  const [unclearProfessionalVoiceChecked, setUnclearProfessionalVoiceChecked] =
+    useState(false);
   const [otherBarrierChecked, setOtherBarrierChecked] = useState(false);
   const [otherBarrier, setOtherBarrier] = useState("");
   const [emergingMarketsChecked, setEmergingMarketsChecked] = useState(false);
-  const [entertainmentArtsChecked, setEntertainmentArtsChecked] = useState(false);
-  const [financialInnovationChecked, setFinancialInnovationChecked] = useState(false);
+  const [entertainmentArtsChecked, setEntertainmentArtsChecked] =
+    useState(false);
+  const [financialInnovationChecked, setFinancialInnovationChecked] =
+    useState(false);
   const [futureOfWorkChecked, setFutureOfWorkChecked] = useState(false);
   const [globalEconomyChecked, setGlobalEconomyChecked] = useState(false);
   const [geopoliticsChecked, setGeopoliticsChecked] = useState(false);
   const [healthWellnessChecked, setHealthWellnessChecked] = useState(false);
-  const [healthcareInnovationChecked, setHealthcareInnovationChecked] = useState(false);
+  const [healthcareInnovationChecked, setHealthcareInnovationChecked] =
+    useState(false);
   const [socialImpactDEIChecked, setSocialImpactDEIChecked] = useState(false);
   const [sportsRecreationChecked, setSportsRecreationChecked] = useState(false);
   const [travelTourismChecked, setTravelTourismChecked] = useState(false);
   const [urbanDevelopmentChecked, setUrbanDevelopmentChecked] = useState(false);
   const [usPoliticsChecked, setUsPoliticsChecked] = useState(false);
-  
+
   // Professional areas for thought leadership
   const [professionalAreas, setProfessionalAreas] = useState("");
-  
+
   // Technology & Digital Media subcategories state
   const [aiConsumerChecked, setAiConsumerChecked] = useState(false);
   const [aiComputerVisionChecked, setAiComputerVisionChecked] = useState(false);
@@ -286,38 +309,46 @@ export default function QuestionnairePage() {
   const [consumerDevicesChecked, setConsumerDevicesChecked] = useState(false);
   const [consumerGamingChecked, setConsumerGamingChecked] = useState(false);
   const [consumerMobileChecked, setConsumerMobileChecked] = useState(false);
-  const [consumerSmartHomeChecked, setConsumerSmartHomeChecked] = useState(false);
-  const [cybersecuritySolutionsChecked, setCybersecuritySolutionsChecked] = useState(false);
+  const [consumerSmartHomeChecked, setConsumerSmartHomeChecked] =
+    useState(false);
+  const [cybersecuritySolutionsChecked, setCybersecuritySolutionsChecked] =
+    useState(false);
   const [dataPrivacyChecked, setDataPrivacyChecked] = useState(false);
-  const [regulatoryComplianceChecked, setRegulatoryComplianceChecked] = useState(false);
+  const [regulatoryComplianceChecked, setRegulatoryComplianceChecked] =
+    useState(false);
   const [riskManagementChecked, setRiskManagementChecked] = useState(false);
   const [cloudComputingChecked, setCloudComputingChecked] = useState(false);
   const [dataCentersChecked, setDataCentersChecked] = useState(false);
   const [networksChecked, setNetworksChecked] = useState(false);
   const [web3BlockchainChecked, setWeb3BlockchainChecked] = useState(false);
-  const [contentDistributionChecked, setContentDistributionChecked] = useState(false);
+  const [contentDistributionChecked, setContentDistributionChecked] =
+    useState(false);
   const [creatorEconomyChecked, setCreatorEconomyChecked] = useState(false);
   const [digitalMarketingChecked, setDigitalMarketingChecked] = useState(false);
-  const [socialMediaPlatformsChecked, setSocialMediaPlatformsChecked] = useState(false);
+  const [socialMediaPlatformsChecked, setSocialMediaPlatformsChecked] =
+    useState(false);
   const [arVrXrChecked, setArVrXrChecked] = useState(false);
   const [biotechHealthChecked, setBiotechHealthChecked] = useState(false);
   const [quantumComputingChecked, setQuantumComputingChecked] = useState(false);
   const [emergingRoboticsChecked, setEmergingRoboticsChecked] = useState(false);
   const [businessAppsChecked, setBusinessAppsChecked] = useState(false);
-  const [enterpriseDigitalTransformationChecked, setEnterpriseDigitalTransformationChecked] = useState(false);
+  const [
+    enterpriseDigitalTransformationChecked,
+    setEnterpriseDigitalTransformationChecked,
+  ] = useState(false);
   const [integrationApisChecked, setIntegrationApisChecked] = useState(false);
   const [saasEnterpriseChecked, setSaasEnterpriseChecked] = useState(false);
-  
-  
+
   // Social media checkboxes state
   const [twitterChecked, setTwitterChecked] = useState(false);
   const [mediumChecked, setMediumChecked] = useState(false);
   const [blogChecked, setBlogChecked] = useState(false);
   const [otherChecked, setOtherChecked] = useState(false);
   const [otherSocialMedia, setOtherSocialMedia] = useState("");
-  
+
   // Branding challenges checkboxes state
-  const [consistentNarrativeChecked, setConsistentNarrativeChecked] = useState(false);
+  const [consistentNarrativeChecked, setConsistentNarrativeChecked] =
+    useState(false);
   const [valuePropositionChecked, setValuePropositionChecked] = useState(false);
   const [engagingContentChecked, setEngagingContentChecked] = useState(false);
   const [findingTimeChecked, setFindingTimeChecked] = useState(false);
@@ -327,16 +358,18 @@ export default function QuestionnairePage() {
   const [industryEventsChecked, setIndustryEventsChecked] = useState(false);
   const [otherBrandingChecked, setOtherBrandingChecked] = useState(false);
   const [otherBrandingChallenge, setOtherBrandingChallenge] = useState("");
-  
+
   // Published content checkboxes state
   const [linkedInPostsChecked, setLinkedInPostsChecked] = useState(false);
   const [blogArticlesChecked, setBlogArticlesChecked] = useState(false);
-  const [industryPresentationsChecked, setIndustryPresentationsChecked] = useState(false);
+  const [industryPresentationsChecked, setIndustryPresentationsChecked] =
+    useState(false);
   const [academicPapersChecked, setAcademicPapersChecked] = useState(false);
   const [neverPublishedChecked, setNeverPublishedChecked] = useState(false);
-  const [otherPublishedContentChecked, setOtherPublishedContentChecked] = useState(false);
+  const [otherPublishedContentChecked, setOtherPublishedContentChecked] =
+    useState(false);
   const [otherPublishedContent, setOtherPublishedContent] = useState("");
-  
+
   // LinkedIn profile update timing state
   const [lastWeekChecked, setLastWeekChecked] = useState(false);
   const [lastMonthChecked, setLastMonthChecked] = useState(false);
@@ -347,10 +380,11 @@ export default function QuestionnairePage() {
   const [neverUpdatedChecked, setNeverUpdatedChecked] = useState(false);
   const [otherUpdateTimeChecked, setOtherUpdateTimeChecked] = useState(false);
   const [otherUpdateTime, setOtherUpdateTime] = useState("");
-  
+
   // LinkedIn activity state
   const [readNewsfeedChecked, setReadNewsfeedChecked] = useState(false);
-  const [acceptedConnectionsChecked, setAcceptedConnectionsChecked] = useState(false);
+  const [acceptedConnectionsChecked, setAcceptedConnectionsChecked] =
+    useState(false);
   const [notActiveChecked, setNotActiveChecked] = useState(false);
   const [postedNeverChecked, setPostedNeverChecked] = useState(false);
   const [posted12TimesChecked, setPosted12TimesChecked] = useState(false);
@@ -361,29 +395,41 @@ export default function QuestionnairePage() {
   const [shared35TimesChecked, setShared35TimesChecked] = useState(false);
   const [shared6PlusTimesChecked, setShared6PlusTimesChecked] = useState(false);
   const [commentedNeverChecked, setCommentedNeverChecked] = useState(false);
-  const [commented12TimesPerMonthChecked, setCommented12TimesPerMonthChecked] = useState(false);
-  const [commented12TimesPerWeekChecked, setCommented12TimesPerWeekChecked] = useState(false);
-  const [commented3PlusTimesPerWeekChecked, setCommented3PlusTimesPerWeekChecked] = useState(false);
+  const [commented12TimesPerMonthChecked, setCommented12TimesPerMonthChecked] =
+    useState(false);
+  const [commented12TimesPerWeekChecked, setCommented12TimesPerWeekChecked] =
+    useState(false);
+  const [
+    commented3PlusTimesPerWeekChecked,
+    setCommented3PlusTimesPerWeekChecked,
+  ] = useState(false);
   const [reactedNeverChecked, setReactedNeverChecked] = useState(false);
-  const [reactedFewTimesMonthChecked, setReactedFewTimesMonthChecked] = useState(false);
-  const [reactedFewTimesWeekChecked, setReactedFewTimesWeekChecked] = useState(false);
+  const [reactedFewTimesMonthChecked, setReactedFewTimesMonthChecked] =
+    useState(false);
+  const [reactedFewTimesWeekChecked, setReactedFewTimesWeekChecked] =
+    useState(false);
   const [reactedDailyChecked, setReactedDailyChecked] = useState(false);
-  
+
   // Brand positioning rating (scale 1-5)
-  const [brandPositioningRating, setBrandPositioningRating] = useState<number | null>(null);
-  
+  const [brandPositioningRating, setBrandPositioningRating] = useState<
+    number | null
+  >(null);
+
   // Content creation comfort rating (scale 1-5)
-  const [contentCreationComfort, setContentCreationComfort] = useState<number | null>(null);
-  
+  const [contentCreationComfort, setContentCreationComfort] = useState<
+    number | null
+  >(null);
+
   // Professional brand optimization goals
   const [brandOptimizationGoals, setBrandOptimizationGoals] = useState("");
-  
+
   // Professional Goals - Step 4
   const [careerGoals, setCareerGoals] = useState(""); // For 2-5 year career goals
-  
+
   // LinkedIn connections in target industry
-  const [industryConnectionsPercentage, setIndustryConnectionsPercentage] = useState<string | undefined>(undefined);
-  
+  const [industryConnectionsPercentage, setIndustryConnectionsPercentage] =
+    useState<string | undefined>(undefined);
+
   // Personality assessments
   const [mbtiChecked, setMbtiChecked] = useState(false);
   const [strengthsFinderChecked, setStrengthsFinderChecked] = useState(false);
@@ -392,31 +438,29 @@ export default function QuestionnairePage() {
   const [threeSixtyChecked, setThreeSixtyChecked] = useState(false);
   const [otherAssessmentChecked, setOtherAssessmentChecked] = useState(false);
   const [otherAssessment, setOtherAssessment] = useState("");
-  
+
   // Files and additional information for Step 4
   const [files, setFiles] = useState<File[]>([]);
   const [additionalInfo, setAdditionalInfo] = useState("");
-  
+
   // Fetch user profile data
-  const { data: userProfile, isLoading: profileLoading } = useQuery<UserProfile>({
-    queryKey: ["/api/user/profile"],
-    enabled: !!user,
-  });
+  const { data: userProfile, isLoading: profileLoading } =
+    useQuery<UserProfile>({
+      queryKey: ["/api/user/profile"],
+      enabled: !!user,
+    });
 
   // Create/update questionnaire mutation
   const questionnaireMutation = useMutation({
     mutationFn: async (data: any) => {
-      const response = await apiRequest(
-        "POST",
-        "/api/questionnaire",
-        data
-      );
+      const response = await apiRequest("POST", "/api/questionnaire", data);
       return response.json();
     },
     onSuccess: () => {
       toast({
         title: "Registration Complete!",
-        description: "Your account setup is now complete. Thank you for providing your career insights!",
+        description:
+          "Your account setup is now complete. Thank you for providing your career insights!",
       });
       queryClient.invalidateQueries({ queryKey: ["/api/user/profile"] });
       navigate("/profile");
@@ -424,17 +468,18 @@ export default function QuestionnairePage() {
     onError: () => {
       toast({
         title: "Error",
-        description: "There was a problem submitting your questionnaire. Please try again.",
+        description:
+          "There was a problem submitting your questionnaire. Please try again.",
         variant: "destructive",
       });
     },
   });
-  
+
   // Initialize form data from user profile if available
   React.useEffect(() => {
     if (userProfile?.questionnaire) {
       const q = userProfile.questionnaire;
-      
+
       // Step 1: Industry & Function
       // Set industry directly from the industry field
       if (q.industry) {
@@ -447,7 +492,7 @@ export default function QuestionnairePage() {
           setIndustry(industryMatch[1].trim());
         }
       }
-      
+
       // Try to extract job function from timeframe field
       if (q.timeframe && q.timeframe.includes("Function:")) {
         const functionMatch = q.timeframe.match(/Function: (.*?)(?:,|$)/);
@@ -455,20 +500,20 @@ export default function QuestionnairePage() {
           setJobFunction(functionMatch[1].trim());
         }
       }
-      
+
       // Set LinkedIn URL (which is saved in 'background' field)
       setBackground(q.background || "");
-      
+
       // Set social media details (which is saved in 'goals' field)
       setGoals(q.goals || "");
-      
+
       // Try to parse social media selections from goals field if it contains our format
       if (q.goals && q.goals.includes("Selected platforms:")) {
         const platformsText = q.goals.split("Selected platforms:")[1].trim();
         setTwitterChecked(platformsText.includes("Twitter/X"));
         setMediumChecked(platformsText.includes("Medium"));
         setBlogChecked(platformsText.includes("Personal blog/Website"));
-        
+
         // Check for "Other:" entries
         if (platformsText.includes("Other:")) {
           setOtherChecked(true);
@@ -479,24 +524,48 @@ export default function QuestionnairePage() {
           }
         }
       }
-      
+
       // Set branding challenges (stored in aspirations field)
       setAspirations(q.aspirations || "");
-      
+
       // Try to parse branding challenges from aspirations field if it contains our format
       if (q.aspirations && q.aspirations.includes("Branding challenges:")) {
-        const challengesText = q.aspirations.split("Branding challenges:")[1].trim();
-        
+        const challengesText = q.aspirations
+          .split("Branding challenges:")[1]
+          .trim();
+
         // Check each branding challenge and set state accordingly
-        setConsistentNarrativeChecked(challengesText.includes("Building a consistent professional narrative"));
-        setValuePropositionChecked(challengesText.includes("Identifying my unique value proposition"));
-        setEngagingContentChecked(challengesText.includes("Creating engaging content"));
-        setFindingTimeChecked(challengesText.includes("Finding time to maintain online presence"));
-        setGrowingNetworkChecked(challengesText.includes("Growing my professional network"));
-        setSharingInsightsChecked(challengesText.includes("Sharing industry insights and work experiences"));
-        setEngagingNetworkChecked(challengesText.includes("Engaging with my professional network"));
-        setIndustryEventsChecked(challengesText.includes("Participating in industry discussions and events"));
-        
+        setConsistentNarrativeChecked(
+          challengesText.includes(
+            "Building a consistent professional narrative",
+          ),
+        );
+        setValuePropositionChecked(
+          challengesText.includes("Identifying my unique value proposition"),
+        );
+        setEngagingContentChecked(
+          challengesText.includes("Creating engaging content"),
+        );
+        setFindingTimeChecked(
+          challengesText.includes("Finding time to maintain online presence"),
+        );
+        setGrowingNetworkChecked(
+          challengesText.includes("Growing my professional network"),
+        );
+        setSharingInsightsChecked(
+          challengesText.includes(
+            "Sharing industry insights and work experiences",
+          ),
+        );
+        setEngagingNetworkChecked(
+          challengesText.includes("Engaging with my professional network"),
+        );
+        setIndustryEventsChecked(
+          challengesText.includes(
+            "Participating in industry discussions and events",
+          ),
+        );
+
         // Check for "Other:" entries in branding challenges
         if (challengesText.includes("Other:")) {
           setOtherBrandingChecked(true);
@@ -507,18 +576,29 @@ export default function QuestionnairePage() {
           }
         }
       }
-      
+
       // Try to parse published content data from aspirations field
       if (q.aspirations && q.aspirations.includes("Published content:")) {
-        const publishedContentText = q.aspirations.split("Published content:")[1].trim().split('\n')[0];
-        
+        const publishedContentText = q.aspirations
+          .split("Published content:")[1]
+          .trim()
+          .split("\n")[0];
+
         // Check each published content type and set state accordingly
-        setLinkedInPostsChecked(publishedContentText.includes("LinkedIn posts"));
+        setLinkedInPostsChecked(
+          publishedContentText.includes("LinkedIn posts"),
+        );
         setBlogArticlesChecked(publishedContentText.includes("Blog articles"));
-        setIndustryPresentationsChecked(publishedContentText.includes("Industry presentations"));
-        setAcademicPapersChecked(publishedContentText.includes("Academic papers"));
-        setNeverPublishedChecked(publishedContentText.includes("Never published professional content"));
-        
+        setIndustryPresentationsChecked(
+          publishedContentText.includes("Industry presentations"),
+        );
+        setAcademicPapersChecked(
+          publishedContentText.includes("Academic papers"),
+        );
+        setNeverPublishedChecked(
+          publishedContentText.includes("Never published professional content"),
+        );
+
         // Check for "Other:" entries in published content
         if (publishedContentText.includes("Other:")) {
           setOtherPublishedContentChecked(true);
@@ -529,20 +609,36 @@ export default function QuestionnairePage() {
           }
         }
       }
-      
+
       // Try to parse LinkedIn profile update timing data from aspirations field
-      if (q.aspirations && q.aspirations.includes("LinkedIn profile update timing:")) {
-        const updateTimingText = q.aspirations.split("LinkedIn profile update timing:")[1].trim().split('\n')[0];
-        
+      if (
+        q.aspirations &&
+        q.aspirations.includes("LinkedIn profile update timing:")
+      ) {
+        const updateTimingText = q.aspirations
+          .split("LinkedIn profile update timing:")[1]
+          .trim()
+          .split("\n")[0];
+
         // Check each update timing option and set state accordingly
         setLastWeekChecked(updateTimingText.includes("Within the last week"));
         setLastMonthChecked(updateTimingText.includes("Within the last month"));
-        setBusinessSchoolChecked(updateTimingText.includes("For / during business school"));
-        setCareerCoachChecked(updateTimingText.includes("After I spoke with a career coach"));
-        setJobChangeChecked(updateTimingText.includes("When I last changed jobs"));
+        setBusinessSchoolChecked(
+          updateTimingText.includes("For / during business school"),
+        );
+        setCareerCoachChecked(
+          updateTimingText.includes("After I spoke with a career coach"),
+        );
+        setJobChangeChecked(
+          updateTimingText.includes("When I last changed jobs"),
+        );
         setCantRememberChecked(updateTimingText.includes("I can't remember"));
-        setNeverUpdatedChecked(updateTimingText.includes("I've never really updated it beyond creating the profile"));
-        
+        setNeverUpdatedChecked(
+          updateTimingText.includes(
+            "I've never really updated it beyond creating the profile",
+          ),
+        );
+
         // Check for "Other:" entries in update timing
         if (updateTimingText.includes("Other:")) {
           setOtherUpdateTimeChecked(true);
@@ -553,56 +649,116 @@ export default function QuestionnairePage() {
           }
         }
       }
-      
+
       // Try to parse LinkedIn activity data from aspirations field
       if (q.aspirations && q.aspirations.includes("LinkedIn activity:")) {
-        const activityText = q.aspirations.split("LinkedIn activity:")[1].trim().split('\n')[0];
-        
+        const activityText = q.aspirations
+          .split("LinkedIn activity:")[1]
+          .trim()
+          .split("\n")[0];
+
         // Check each activity option and set state accordingly
         setReadNewsfeedChecked(activityText.includes("Read your Newsfeed"));
-        setAcceptedConnectionsChecked(activityText.includes("Accepted Connections"));
-        setNotActiveChecked(activityText.includes("Not Active in the Last Month"));
-        setPostedNeverChecked(activityText.includes("Posted Original Content - Never"));
-        setPosted12TimesChecked(activityText.includes("Posted Original Content - 1-2 times"));
-        setPosted35TimesChecked(activityText.includes("Posted Original Content - 3-5 times"));
-        setPosted6PlusTimesChecked(activityText.includes("Posted Original Content - 6+ times"));
-        setSharedNeverChecked(activityText.includes("Shared Others' Posts - Never"));
-        setShared12TimesChecked(activityText.includes("Shared Others' Posts - 1-2 times"));
-        setShared35TimesChecked(activityText.includes("Shared Others' Posts - 3-5 times"));
-        setShared6PlusTimesChecked(activityText.includes("Shared Others' Posts - 6+ times"));
-        setCommentedNeverChecked(activityText.includes("Commented on Posts - Never"));
-        setCommented12TimesPerMonthChecked(activityText.includes("Commented on Posts - 1-2 times per month"));
-        setCommented12TimesPerWeekChecked(activityText.includes("Commented on Posts - 1-2 times per week"));
-        setCommented3PlusTimesPerWeekChecked(activityText.includes("Commented on Posts - 3+ times per week"));
-        setReactedNeverChecked(activityText.includes("Reacted to Posts (likes, etc.) - Never"));
-        setReactedFewTimesMonthChecked(activityText.includes("Reacted to Posts (likes, etc.) - A few times a month"));
-        setReactedFewTimesWeekChecked(activityText.includes("Reacted to Posts (likes, etc.) - A few times a week"));
-        setReactedDailyChecked(activityText.includes("Reacted to Posts (likes, etc.) - Daily"));
+        setAcceptedConnectionsChecked(
+          activityText.includes("Accepted Connections"),
+        );
+        setNotActiveChecked(
+          activityText.includes("Not Active in the Last Month"),
+        );
+        setPostedNeverChecked(
+          activityText.includes("Posted Original Content - Never"),
+        );
+        setPosted12TimesChecked(
+          activityText.includes("Posted Original Content - 1-2 times"),
+        );
+        setPosted35TimesChecked(
+          activityText.includes("Posted Original Content - 3-5 times"),
+        );
+        setPosted6PlusTimesChecked(
+          activityText.includes("Posted Original Content - 6+ times"),
+        );
+        setSharedNeverChecked(
+          activityText.includes("Shared Others' Posts - Never"),
+        );
+        setShared12TimesChecked(
+          activityText.includes("Shared Others' Posts - 1-2 times"),
+        );
+        setShared35TimesChecked(
+          activityText.includes("Shared Others' Posts - 3-5 times"),
+        );
+        setShared6PlusTimesChecked(
+          activityText.includes("Shared Others' Posts - 6+ times"),
+        );
+        setCommentedNeverChecked(
+          activityText.includes("Commented on Posts - Never"),
+        );
+        setCommented12TimesPerMonthChecked(
+          activityText.includes("Commented on Posts - 1-2 times per month"),
+        );
+        setCommented12TimesPerWeekChecked(
+          activityText.includes("Commented on Posts - 1-2 times per week"),
+        );
+        setCommented3PlusTimesPerWeekChecked(
+          activityText.includes("Commented on Posts - 3+ times per week"),
+        );
+        setReactedNeverChecked(
+          activityText.includes("Reacted to Posts (likes, etc.) - Never"),
+        );
+        setReactedFewTimesMonthChecked(
+          activityText.includes(
+            "Reacted to Posts (likes, etc.) - A few times a month",
+          ),
+        );
+        setReactedFewTimesWeekChecked(
+          activityText.includes(
+            "Reacted to Posts (likes, etc.) - A few times a week",
+          ),
+        );
+        setReactedDailyChecked(
+          activityText.includes("Reacted to Posts (likes, etc.) - Daily"),
+        );
       }
-      
+
       // Try to parse brand positioning rating from aspirations field
-      if (q.aspirations && q.aspirations.includes("Brand positioning rating:")) {
-        const ratingText = q.aspirations.split("Brand positioning rating:")[1].trim().split('\n')[0];
+      if (
+        q.aspirations &&
+        q.aspirations.includes("Brand positioning rating:")
+      ) {
+        const ratingText = q.aspirations
+          .split("Brand positioning rating:")[1]
+          .trim()
+          .split("\n")[0];
         if (ratingText.includes("1")) setBrandPositioningRating(1);
         else if (ratingText.includes("2")) setBrandPositioningRating(2);
         else if (ratingText.includes("3")) setBrandPositioningRating(3);
         else if (ratingText.includes("4")) setBrandPositioningRating(4);
         else if (ratingText.includes("5")) setBrandPositioningRating(5);
       }
-      
+
       // Try to parse content creation comfort from aspirations field
-      if (q.aspirations && q.aspirations.includes("Content creation comfort:")) {
-        const comfortText = q.aspirations.split("Content creation comfort:")[1].trim().split('\n')[0];
+      if (
+        q.aspirations &&
+        q.aspirations.includes("Content creation comfort:")
+      ) {
+        const comfortText = q.aspirations
+          .split("Content creation comfort:")[1]
+          .trim()
+          .split("\n")[0];
         if (comfortText.includes("1")) setContentCreationComfort(1);
         else if (comfortText.includes("2")) setContentCreationComfort(2);
         else if (comfortText.includes("3")) setContentCreationComfort(3);
         else if (comfortText.includes("4")) setContentCreationComfort(4);
         else if (comfortText.includes("5")) setContentCreationComfort(5);
       }
-      
+
       // Try to parse brand optimization goals from aspirations field
-      if (q.aspirations && q.aspirations.includes("Brand optimization goals:")) {
-        const goalsText = q.aspirations.split("Brand optimization goals:")[1].trim();
+      if (
+        q.aspirations &&
+        q.aspirations.includes("Brand optimization goals:")
+      ) {
+        const goalsText = q.aspirations
+          .split("Brand optimization goals:")[1]
+          .trim();
         // If there's another section after this one, only get the text up to that section
         if (goalsText.includes("\n\n")) {
           setBrandOptimizationGoals(goalsText.split("\n\n")[0].trim());
@@ -610,159 +766,316 @@ export default function QuestionnairePage() {
           setBrandOptimizationGoals(goalsText);
         }
       }
-      
+
       // Set other questionnaire fields
       setChallenges(q.challenges || "");
       setInterests(q.interests || "");
       setTimeframe(q.timeframe || "");
-      
+
       // Step 5: Load professional goals
       // Try to parse career goals from aspirations field
       if (q.aspirations && q.aspirations.includes("Career goals:")) {
-        const careerGoalsText = q.aspirations.split("Career goals:")[1].trim().split('\n\n')[0];
+        const careerGoalsText = q.aspirations
+          .split("Career goals:")[1]
+          .trim()
+          .split("\n\n")[0];
         setCareerGoals(careerGoalsText || "");
       }
-      
+
       // Try to parse professional areas for thought leadership
-      if (q.aspirations && q.aspirations.includes("Professional areas for thought leadership:")) {
-        const areasText = q.aspirations.split("Professional areas for thought leadership:")[1].trim().split('\n\n')[0];
+      if (
+        q.aspirations &&
+        q.aspirations.includes("Professional areas for thought leadership:")
+      ) {
+        const areasText = q.aspirations
+          .split("Professional areas for thought leadership:")[1]
+          .trim()
+          .split("\n\n")[0];
         if (areasText && areasText !== "Not specified") {
           setProfessionalAreas(areasText);
         }
       }
-      
+
       // Try to parse additional info
-      if (q.aspirations && q.aspirations.includes("Additional professional journey information:")) {
+      if (
+        q.aspirations &&
+        q.aspirations.includes("Additional professional journey information:")
+      ) {
         // Extract additional info, but make sure to limit to just this section by splitting on newlines
-        const fullText = q.aspirations.split("Additional professional journey information:")[1];
+        const fullText = q.aspirations.split(
+          "Additional professional journey information:",
+        )[1];
         if (fullText) {
           // If there's another section header after this one, only get text up to that point
           const nextSectionIndex = fullText.indexOf("\n\n");
-          const additionalInfoText = nextSectionIndex > 0 
-            ? fullText.substring(0, nextSectionIndex).trim()
-            : fullText.trim();
-          
+          const additionalInfoText =
+            nextSectionIndex > 0
+              ? fullText.substring(0, nextSectionIndex).trim()
+              : fullText.trim();
+
           setAdditionalInfo(additionalInfoText || "");
         }
       }
-      
+
       // Try to parse industry connections percentage
-      if (q.aspirations && q.aspirations.includes("LinkedIn connections percentage:")) {
-        const connectionsText = q.aspirations.split("LinkedIn connections percentage:")[1]?.trim().split('\n')[0];
+      if (
+        q.aspirations &&
+        q.aspirations.includes("LinkedIn connections percentage:")
+      ) {
+        const connectionsText = q.aspirations
+          .split("LinkedIn connections percentage:")[1]
+          ?.trim()
+          .split("\n")[0];
         if (connectionsText) {
-          if (connectionsText.includes("0-10%")) setIndustryConnectionsPercentage("0-10%");
-          else if (connectionsText.includes("10-25%")) setIndustryConnectionsPercentage("10-25%");
-          else if (connectionsText.includes("25-50%")) setIndustryConnectionsPercentage("25-50%");
-          else if (connectionsText.includes("50%+")) setIndustryConnectionsPercentage("50%+");
-          else if (connectionsText.includes("not-sure")) setIndustryConnectionsPercentage("not-sure");
+          if (connectionsText.includes("0-10%"))
+            setIndustryConnectionsPercentage("0-10%");
+          else if (connectionsText.includes("10-25%"))
+            setIndustryConnectionsPercentage("10-25%");
+          else if (connectionsText.includes("25-50%"))
+            setIndustryConnectionsPercentage("25-50%");
+          else if (connectionsText.includes("50%+"))
+            setIndustryConnectionsPercentage("50%+");
+          else if (connectionsText.includes("not-sure"))
+            setIndustryConnectionsPercentage("not-sure");
         }
       }
-      
+
       // Step 4: Parse industry interests
       if (q.aspirations && q.aspirations.includes("Industry interests:")) {
-        const industryInterestsText = q.aspirations.split("Industry interests:")[1]?.trim().split('\n')[0];
+        const industryInterestsText = q.aspirations
+          .split("Industry interests:")[1]
+          ?.trim()
+          .split("\n")[0];
         if (industryInterestsText) {
           setConsultingChecked(industryInterestsText.includes("Consulting"));
-          setConsumerRetailChecked(industryInterestsText.includes("Consumer Products / Retail"));
-          setFinancialServicesChecked(industryInterestsText.includes("Financial Services"));
-          setGlobalMarketsChecked(industryInterestsText.includes("Global Markets"));
-          setGovernmentChecked(industryInterestsText.includes("Government / Public Sector"));
+          setConsumerRetailChecked(
+            industryInterestsText.includes("Consumer Products / Retail"),
+          );
+          setFinancialServicesChecked(
+            industryInterestsText.includes("Financial Services"),
+          );
+          setGlobalMarketsChecked(
+            industryInterestsText.includes("Global Markets"),
+          );
+          setGovernmentChecked(
+            industryInterestsText.includes("Government / Public Sector"),
+          );
           setHealthcareChecked(industryInterestsText.includes("Healthcare"));
-          setInnovationChecked(industryInterestsText.includes("Innovation / R&D"));
-          setManufacturingChecked(industryInterestsText.includes("Manufacturing"));
-          setSocialImpactChecked(industryInterestsText.includes("Social Impact / ESG"));
+          setInnovationChecked(
+            industryInterestsText.includes("Innovation / R&D"),
+          );
+          setManufacturingChecked(
+            industryInterestsText.includes("Manufacturing"),
+          );
+          setSocialImpactChecked(
+            industryInterestsText.includes("Social Impact / ESG"),
+          );
           setTechnologyChecked(industryInterestsText.includes("Technology"));
         }
       }
-      
+
       // Parse societal interests
-      if (q.aspirations && q.aspirations.includes("Cross-cutting & societal interests:")) {
-        const societalInterestsText = q.aspirations.split("Cross-cutting & societal interests:")[1]?.trim().split('\n')[0];
+      if (
+        q.aspirations &&
+        q.aspirations.includes("Cross-cutting & societal interests:")
+      ) {
+        const societalInterestsText = q.aspirations
+          .split("Cross-cutting & societal interests:")[1]
+          ?.trim()
+          .split("\n")[0];
         if (societalInterestsText) {
-          setClimateChecked(societalInterestsText.includes("Climate Change & Sustainability"));
-          setConsumerBehaviorChecked(societalInterestsText.includes("Consumer Behavior & Culture"));
-          setCrimeJusticeChecked(societalInterestsText.includes("Crime & Justice"));
-          setDigitalTransformationAIChecked(societalInterestsText.includes("Digital Transformation/AI"));
-          setEducationLearningChecked(societalInterestsText.includes("Education & Learning"));
-          setEmergingMarketsChecked(societalInterestsText.includes("Emerging Markets"));
-          setEntertainmentArtsChecked(societalInterestsText.includes("Entertainment & Arts"));
-          setFinancialInnovationChecked(societalInterestsText.includes("Financial Innovation"));
-          setFutureOfWorkChecked(societalInterestsText.includes("Future of Work"));
-          setGlobalEconomyChecked(societalInterestsText.includes("Global Economy"));
-          setGeopoliticsChecked(societalInterestsText.includes("Geopolitics & International Relations"));
-          setHealthWellnessChecked(societalInterestsText.includes("Health & Wellness"));
-          setHealthcareInnovationChecked(societalInterestsText.includes("Healthcare Innovation"));
-          setSocialImpactDEIChecked(societalInterestsText.includes("Social Impact & DEI"));
-          setSportsRecreationChecked(societalInterestsText.includes("Sports & Recreation"));
-          setTravelTourismChecked(societalInterestsText.includes("Travel & Tourism"));
-          setUrbanDevelopmentChecked(societalInterestsText.includes("Urban Development"));
-          setUsPoliticsChecked(societalInterestsText.includes("US Politics & Governance"));
+          setClimateChecked(
+            societalInterestsText.includes("Climate Change & Sustainability"),
+          );
+          setConsumerBehaviorChecked(
+            societalInterestsText.includes("Consumer Behavior & Culture"),
+          );
+          setCrimeJusticeChecked(
+            societalInterestsText.includes("Crime & Justice"),
+          );
+          setDigitalTransformationAIChecked(
+            societalInterestsText.includes("Digital Transformation/AI"),
+          );
+          setEducationLearningChecked(
+            societalInterestsText.includes("Education & Learning"),
+          );
+          setEmergingMarketsChecked(
+            societalInterestsText.includes("Emerging Markets"),
+          );
+          setEntertainmentArtsChecked(
+            societalInterestsText.includes("Entertainment & Arts"),
+          );
+          setFinancialInnovationChecked(
+            societalInterestsText.includes("Financial Innovation"),
+          );
+          setFutureOfWorkChecked(
+            societalInterestsText.includes("Future of Work"),
+          );
+          setGlobalEconomyChecked(
+            societalInterestsText.includes("Global Economy"),
+          );
+          setGeopoliticsChecked(
+            societalInterestsText.includes(
+              "Geopolitics & International Relations",
+            ),
+          );
+          setHealthWellnessChecked(
+            societalInterestsText.includes("Health & Wellness"),
+          );
+          setHealthcareInnovationChecked(
+            societalInterestsText.includes("Healthcare Innovation"),
+          );
+          setSocialImpactDEIChecked(
+            societalInterestsText.includes("Social Impact & DEI"),
+          );
+          setSportsRecreationChecked(
+            societalInterestsText.includes("Sports & Recreation"),
+          );
+          setTravelTourismChecked(
+            societalInterestsText.includes("Travel & Tourism"),
+          );
+          setUrbanDevelopmentChecked(
+            societalInterestsText.includes("Urban Development"),
+          );
+          setUsPoliticsChecked(
+            societalInterestsText.includes("US Politics & Governance"),
+          );
         }
       }
-      
+
       // Parse technology subcategories if technology is selected
-      if (technologyChecked && q.aspirations && q.aspirations.includes("Technology subcategories:")) {
-        const techSubcategoriesText = q.aspirations.split("Technology subcategories:")[1]?.trim().split('\n')[0];
+      if (
+        technologyChecked &&
+        q.aspirations &&
+        q.aspirations.includes("Technology subcategories:")
+      ) {
+        const techSubcategoriesText = q.aspirations
+          .split("Technology subcategories:")[1]
+          ?.trim()
+          .split("\n")[0];
         if (techSubcategoriesText) {
           // AI/ML
-          setAiConsumerChecked(techSubcategoriesText.includes("AI - Consumer Applications"));
-          setAiComputerVisionChecked(techSubcategoriesText.includes("AI - Computer Vision"));
-          setAiEthicsChecked(techSubcategoriesText.includes("AI - Ethics & Governance"));
-          setAiInfrastructureChecked(techSubcategoriesText.includes("AI - Infrastructure"));
-          setAiNlpChecked(techSubcategoriesText.includes("AI - Natural Language Processing"));
-          setAiPredictiveChecked(techSubcategoriesText.includes("AI - Predictive Analytics"));
-          setAiRoboticsChecked(techSubcategoriesText.includes("AI - Robotics & Automation"));
-          setAiScientificChecked(techSubcategoriesText.includes("AI - Scientific Applications"));
-          setAiLearningChecked(techSubcategoriesText.includes("ML - Machine Learning"));
-          
+          setAiConsumerChecked(
+            techSubcategoriesText.includes("AI - Consumer Applications"),
+          );
+          setAiComputerVisionChecked(
+            techSubcategoriesText.includes("AI - Computer Vision"),
+          );
+          setAiEthicsChecked(
+            techSubcategoriesText.includes("AI - Ethics & Governance"),
+          );
+          setAiInfrastructureChecked(
+            techSubcategoriesText.includes("AI - Infrastructure"),
+          );
+          setAiNlpChecked(
+            techSubcategoriesText.includes("AI - Natural Language Processing"),
+          );
+          setAiPredictiveChecked(
+            techSubcategoriesText.includes("AI - Predictive Analytics"),
+          );
+          setAiRoboticsChecked(
+            techSubcategoriesText.includes("AI - Robotics & Automation"),
+          );
+          setAiScientificChecked(
+            techSubcategoriesText.includes("AI - Scientific Applications"),
+          );
+          setAiLearningChecked(
+            techSubcategoriesText.includes("ML - Machine Learning"),
+          );
+
           // Consumer Technology
-          setConsumerDevicesChecked(techSubcategoriesText.includes("Consumer Devices"));
-          setConsumerGamingChecked(techSubcategoriesText.includes("Consumer Gaming"));
-          setConsumerMobileChecked(techSubcategoriesText.includes("Consumer Mobile Tech"));
-          setConsumerSmartHomeChecked(techSubcategoriesText.includes("Consumer Smart Home"));
-          
+          setConsumerDevicesChecked(
+            techSubcategoriesText.includes("Consumer Devices"),
+          );
+          setConsumerGamingChecked(
+            techSubcategoriesText.includes("Consumer Gaming"),
+          );
+          setConsumerMobileChecked(
+            techSubcategoriesText.includes("Consumer Mobile Tech"),
+          );
+          setConsumerSmartHomeChecked(
+            techSubcategoriesText.includes("Consumer Smart Home"),
+          );
+
           // Cybersecurity & Privacy
-          setCybersecuritySolutionsChecked(techSubcategoriesText.includes("Cybersecurity Solutions"));
+          setCybersecuritySolutionsChecked(
+            techSubcategoriesText.includes("Cybersecurity Solutions"),
+          );
           setDataPrivacyChecked(techSubcategoriesText.includes("Data Privacy"));
-          setRegulatoryComplianceChecked(techSubcategoriesText.includes("Regulatory Compliance"));
-          setRiskManagementChecked(techSubcategoriesText.includes("Risk Management"));
-          
+          setRegulatoryComplianceChecked(
+            techSubcategoriesText.includes("Regulatory Compliance"),
+          );
+          setRiskManagementChecked(
+            techSubcategoriesText.includes("Risk Management"),
+          );
+
           // Digital Infrastructure
-          setCloudComputingChecked(techSubcategoriesText.includes("Cloud Computing"));
+          setCloudComputingChecked(
+            techSubcategoriesText.includes("Cloud Computing"),
+          );
           setDataCentersChecked(techSubcategoriesText.includes("Data Centers"));
           setNetworksChecked(techSubcategoriesText.includes("Networks"));
-          setWeb3BlockchainChecked(techSubcategoriesText.includes("Web3 / Blockchain"));
-          
+          setWeb3BlockchainChecked(
+            techSubcategoriesText.includes("Web3 / Blockchain"),
+          );
+
           // Digital Media & Content
-          setContentDistributionChecked(techSubcategoriesText.includes("Content Distribution"));
-          setCreatorEconomyChecked(techSubcategoriesText.includes("Creator Economy"));
-          setDigitalMarketingChecked(techSubcategoriesText.includes("Digital Marketing"));
-          setSocialMediaPlatformsChecked(techSubcategoriesText.includes("Social Media Platforms"));
-          
+          setContentDistributionChecked(
+            techSubcategoriesText.includes("Content Distribution"),
+          );
+          setCreatorEconomyChecked(
+            techSubcategoriesText.includes("Creator Economy"),
+          );
+          setDigitalMarketingChecked(
+            techSubcategoriesText.includes("Digital Marketing"),
+          );
+          setSocialMediaPlatformsChecked(
+            techSubcategoriesText.includes("Social Media Platforms"),
+          );
+
           // Emerging Technology
           setArVrXrChecked(techSubcategoriesText.includes("AR / VR / XR"));
-          setBiotechHealthChecked(techSubcategoriesText.includes("Biotech / Health Tech"));
-          setQuantumComputingChecked(techSubcategoriesText.includes("Quantum Computing"));
-          setEmergingRoboticsChecked(techSubcategoriesText.includes("Robotics & Automation"));
-          
+          setBiotechHealthChecked(
+            techSubcategoriesText.includes("Biotech / Health Tech"),
+          );
+          setQuantumComputingChecked(
+            techSubcategoriesText.includes("Quantum Computing"),
+          );
+          setEmergingRoboticsChecked(
+            techSubcategoriesText.includes("Robotics & Automation"),
+          );
+
           // Enterprise Technology
-          setBusinessAppsChecked(techSubcategoriesText.includes("Business Applications"));
-          setEnterpriseDigitalTransformationChecked(techSubcategoriesText.includes("Digital Transformation"));
-          setIntegrationApisChecked(techSubcategoriesText.includes("Integration & APIs"));
-          setSaasEnterpriseChecked(techSubcategoriesText.includes("SaaS / Enterprise Software"));
+          setBusinessAppsChecked(
+            techSubcategoriesText.includes("Business Applications"),
+          );
+          setEnterpriseDigitalTransformationChecked(
+            techSubcategoriesText.includes("Digital Transformation"),
+          );
+          setIntegrationApisChecked(
+            techSubcategoriesText.includes("Integration & APIs"),
+          );
+          setSaasEnterpriseChecked(
+            techSubcategoriesText.includes("SaaS / Enterprise Software"),
+          );
         }
       }
-      
+
       // Try to parse personality assessments
       if (q.aspirations && q.aspirations.includes("Personality assessments:")) {
-        const assessmentsText = q.aspirations.split("Personality assessments:")[1]?.trim().split('\n')[0];
+        const assessmentsText = q.aspirations
+          .split("Personality assessments:")[1]
+          ?.trim()
+          .split("\n")[0];
         if (assessmentsText) {
           setMbtiChecked(assessmentsText.includes("MBTI"));
-          setStrengthsFinderChecked(assessmentsText.includes("Strengths Finder"));
+          setStrengthsFinderChecked(
+            assessmentsText.includes("Strengths Finder"),
+          );
           setViaChecked(assessmentsText.includes("VIA"));
           setEnneagramChecked(assessmentsText.includes("Enneagram"));
           setThreeSixtyChecked(assessmentsText.includes("360*"));
-          
+
           if (assessmentsText.includes("Other:")) {
             setOtherAssessmentChecked(true);
             const otherMatch = assessmentsText.match(/Other: (.*?)(?:,|$)/);
@@ -772,20 +1085,36 @@ export default function QuestionnairePage() {
           }
         }
       }
-      
+
       // Parse content format preferences
-      if (q.aspirations && q.aspirations.includes("Content creation format preferences:")) {
-        const formatText = q.aspirations.split("Content creation format preferences:")[1]?.trim().split('\n')[0];
+      if (
+        q.aspirations &&
+        q.aspirations.includes("Content creation format preferences:")
+      ) {
+        const formatText = q.aspirations
+          .split("Content creation format preferences:")[1]
+          ?.trim()
+          .split("\n")[0];
         if (formatText) {
           setSharingNewsChecked(formatText.includes("Sharing industry news"));
-          setWritingExperiencesChecked(formatText.includes("Writing about your learned experiences"));
+          setWritingExperiencesChecked(
+            formatText.includes("Writing about your learned experiences"),
+          );
           setAnalyzingTrendsChecked(formatText.includes("Analyzing trends"));
-          setCommentingPostsChecked(formatText.includes("Commenting on others"));
-          setHowToContentChecked(formatText.includes("Creating how-to content"));
-          setEventTakeawaysChecked(formatText.includes("Sharing event takeaways"));
+          setCommentingPostsChecked(
+            formatText.includes("Commenting on others"),
+          );
+          setHowToContentChecked(
+            formatText.includes("Creating how-to content"),
+          );
+          setEventTakeawaysChecked(
+            formatText.includes("Sharing event takeaways"),
+          );
           setPersonalAnecdoteChecked(formatText.includes("Personal anecdote"));
-          setDigitalCommunitiesChecked(formatText.includes("Digital communities"));
-          
+          setDigitalCommunitiesChecked(
+            formatText.includes("Digital communities"),
+          );
+
           if (formatText.includes("Other:")) {
             setOtherContentFormatChecked(true);
             const otherMatch = formatText.match(/Other: (.*?)(?:,|$)/);
@@ -795,17 +1124,26 @@ export default function QuestionnairePage() {
           }
         }
       }
-      
+
       // Parse posting barriers
       if (q.aspirations && q.aspirations.includes("Posting barriers:")) {
-        const barriersText = q.aspirations.split("Posting barriers:")[1]?.trim().split('\n')[0];
+        const barriersText = q.aspirations
+          .split("Posting barriers:")[1]
+          ?.trim()
+          .split("\n")[0];
         if (barriersText) {
-          setUnsureWhatToSayChecked(barriersText.includes("Unsure what to say"));
+          setUnsureWhatToSayChecked(
+            barriersText.includes("Unsure what to say"),
+          );
           setFearOfJudgmentChecked(barriersText.includes("Fear of judgment"));
           setTimeManagementChecked(barriersText.includes("Time management"));
-          setDontKnowHowToStartChecked(barriersText.includes("Don't know how to start"));
-          setUnclearProfessionalVoiceChecked(barriersText.includes("Unclear on professional voice"));
-          
+          setDontKnowHowToStartChecked(
+            barriersText.includes("Don't know how to start"),
+          );
+          setUnclearProfessionalVoiceChecked(
+            barriersText.includes("Unclear on professional voice"),
+          );
+
           if (barriersText.includes("Other:")) {
             setOtherBarrierChecked(true);
             const otherMatch = barriersText.match(/Other: (.*?)(?:,|$)/);
@@ -817,99 +1155,99 @@ export default function QuestionnairePage() {
       }
     }
   }, [userProfile]);
-  
+
   // Validate current step fields
   const validateCurrentStep = () => {
     if (currentStep === 1) {
       // Step 1: Require industry and function selection
       const hasIndustry = industry.trim() !== "";
       const hasFunction = jobFunction.trim() !== "";
-      
+
       // Show toast for missing fields
       if (!hasIndustry || !hasFunction) {
         toast({
           title: "Required Fields Missing",
-          description: !hasIndustry 
-            ? "Please select your current or prior industry" 
+          description: !hasIndustry
+            ? "Please select your current or prior industry"
             : "Please select your current or prior function",
           variant: "destructive",
         });
       }
-      
+
       return hasIndustry && hasFunction;
     } else if (currentStep === 2) {
       // Step 2: Require LinkedIn URL and at least one social media platform
       const hasLinkedInUrl = background.trim() !== "";
-      const hasSocialMediaSelected = 
-        twitterChecked || 
-        mediumChecked || 
-        blogChecked || 
+      const hasSocialMediaSelected =
+        twitterChecked ||
+        mediumChecked ||
+        blogChecked ||
         (otherChecked && otherSocialMedia.trim() !== "");
-        
+
       // Show toast for missing fields
       if (!hasLinkedInUrl || !hasSocialMediaSelected) {
         toast({
           title: "Required Fields Missing",
-          description: !hasLinkedInUrl 
-            ? "Please enter your LinkedIn URL" 
+          description: !hasLinkedInUrl
+            ? "Please enter your LinkedIn URL"
             : "Please select at least one social media platform",
           variant: "destructive",
         });
       }
-      
+
       return hasLinkedInUrl && hasSocialMediaSelected;
     } else if (currentStep === 3) {
       // Step 3: Require at least one branding challenge and published content
-      const hasBrandingChallengeSelected = 
-        consistentNarrativeChecked || 
-        valuePropositionChecked || 
-        engagingContentChecked || 
-        findingTimeChecked || 
-        growingNetworkChecked || 
-        sharingInsightsChecked || 
-        engagingNetworkChecked || 
-        industryEventsChecked || 
+      const hasBrandingChallengeSelected =
+        consistentNarrativeChecked ||
+        valuePropositionChecked ||
+        engagingContentChecked ||
+        findingTimeChecked ||
+        growingNetworkChecked ||
+        sharingInsightsChecked ||
+        engagingNetworkChecked ||
+        industryEventsChecked ||
         (otherBrandingChecked && otherBrandingChallenge.trim() !== "");
-      
-      const hasPublishedContentSelected = 
-        linkedInPostsChecked || 
-        blogArticlesChecked || 
-        industryPresentationsChecked || 
-        academicPapersChecked || 
-        neverPublishedChecked || 
+
+      const hasPublishedContentSelected =
+        linkedInPostsChecked ||
+        blogArticlesChecked ||
+        industryPresentationsChecked ||
+        academicPapersChecked ||
+        neverPublishedChecked ||
         (otherPublishedContentChecked && otherPublishedContent.trim() !== "");
-        
+
       // Show toast for missing fields
       if (!hasBrandingChallengeSelected || !hasPublishedContentSelected) {
         toast({
           title: "Required Fields Missing",
-          description: !hasBrandingChallengeSelected 
-            ? "Please select at least one branding challenge" 
+          description: !hasBrandingChallengeSelected
+            ? "Please select at least one branding challenge"
             : "Please select at least one type of content you've published",
           variant: "destructive",
         });
       }
-      
+
       return hasBrandingChallengeSelected && hasPublishedContentSelected;
     } else if (currentStep === 4) {
       // Step 4: Require at least one industry interest and one societal interest
-      const hasIndustryInterestSelected = 
-        consultingChecked || 
-        consumerRetailChecked || 
-        financialServicesChecked || 
-        globalMarketsChecked || 
-        governmentChecked || 
-        healthcareChecked || 
-        innovationChecked || 
-        manufacturingChecked || 
-        socialImpactChecked || 
+      const hasIndustryInterestSelected =
+        consultingChecked ||
+        consumerRetailChecked ||
+        financialServicesChecked ||
+        globalMarketsChecked ||
+        governmentChecked ||
+        healthcareChecked ||
+        innovationChecked ||
+        manufacturingChecked ||
+        socialImpactChecked ||
         technologyChecked;
-      
-      const hasSocietalInterestSelected = 
-        climateChecked || 
-        consumerBehaviorChecked || 
-        crimeJusticeChecked || 
-        digitalTransformationAIChecked || 
+
+      const hasSocietalInterestSelected =
+        climateChecked ||
+        consumerBehaviorChecked ||
+        crimeJusticeChecked ||
+        digitalTransformationAIChecked ||
         educationLearningChecked ||
         emergingMarketsChecked ||
         entertainmentArtsChecked ||
@@ -924,36 +1262,37 @@ export default function QuestionnairePage() {
         travelTourismChecked ||
         urbanDevelopmentChecked ||
         usPoliticsChecked;
-        
+
       // Show toast for missing fields
       if (!hasIndustryInterestSelected || !hasSocietalInterestSelected) {
         toast({
           title: "Required Fields Missing",
-          description: !hasIndustryInterestSelected 
-            ? "Please select at least one industry interest" 
+          description: !hasIndustryInterestSelected
+            ? "Please select at least one industry interest"
             : "Please select at least one societal interest",
           variant: "destructive",
         });
       }
-      
+
       return hasIndustryInterestSelected && hasSocietalInterestSelected;
     } else if (currentStep === 5) {
       // Step 5: Require career goals and industry connections percentage
       // Note that file upload is NOT required
       const hasCareerGoals = careerGoals.trim() !== "";
-      const hasConnectionsPercentage = industryConnectionsPercentage !== undefined;
-        
+      const hasConnectionsPercentage =
+        industryConnectionsPercentage !== undefined;
+
       // Show toast for missing fields
       if (!hasCareerGoals || !hasConnectionsPercentage) {
         toast({
           title: "Required Fields Missing",
-          description: !hasCareerGoals 
-            ? "Please describe your career goals" 
+          description: !hasCareerGoals
+            ? "Please describe your career goals"
             : "Please select your LinkedIn connections percentage",
           variant: "destructive",
         });
       }
-      
+
       return hasCareerGoals && hasConnectionsPercentage;
     }
     return false;
@@ -965,7 +1304,8 @@ export default function QuestionnairePage() {
     } else if (!validateCurrentStep()) {
       toast({
         title: "Please complete all fields",
-        description: "All fields are required before proceeding to the next step.",
+        description:
+          "All fields are required before proceeding to the next step.",
         variant: "destructive",
       });
     }
@@ -987,47 +1327,49 @@ export default function QuestionnairePage() {
           reject(new Error("Failed to read file"));
           return;
         }
-        
+
         // Extract the base64 data part from the data URL
         const base64String = reader.result.toString();
-        const base64Data = base64String.split(',')[1];
+        const base64Data = base64String.split(",")[1];
         resolve(base64Data);
       };
       reader.onerror = (error) => reject(error);
     });
   };
-  
+
   // Function to upload assessment files
   const uploadAssessmentFiles = async () => {
     if (files.length === 0) return;
-    
+
     try {
       for (const file of files) {
         const fileData = await fileToBase64(file);
-        
+
         // Determine file type
-        const fileType = file.name.toLowerCase().endsWith(".pdf") ? "assessment-pdf" : 
-                         file.name.toLowerCase().match(/\.(jpg|jpeg|png)$/) ? "assessment-image" : 
-                         "assessment-doc";
-        
+        const fileType = file.name.toLowerCase().endsWith(".pdf")
+          ? "assessment-pdf"
+          : file.name.toLowerCase().match(/\.(jpg|jpeg|png)$/)
+            ? "assessment-image"
+            : "assessment-doc";
+
         await apiRequest("POST", "/api/documents", {
           name: `Assessment: ${file.name}`,
           type: fileType,
           fileName: file.name,
-          fileData: fileData
+          fileData: fileData,
         });
       }
-      
+
       toast({
         title: "Files Uploaded",
-        description: `Successfully uploaded ${files.length} file${files.length > 1 ? 's' : ''}.`,
+        description: `Successfully uploaded ${files.length} file${files.length > 1 ? "s" : ""}.`,
       });
-      
     } catch (error) {
       console.error("Error uploading files:", error);
       toast({
         title: "Upload Error",
-        description: "There was a problem uploading one or more files. Please try again.",
+        description:
+          "There was a problem uploading one or more files. Please try again.",
         variant: "destructive",
       });
     }
@@ -1039,259 +1381,356 @@ export default function QuestionnairePage() {
       if (files.length > 0) {
         await uploadAssessmentFiles();
       }
-      
+
       // Prepare social media data
       const socialMediaOptions = [];
-      if (twitterChecked) socialMediaOptions.push('Twitter/X');
-      if (mediumChecked) socialMediaOptions.push('Medium');
-      if (blogChecked) socialMediaOptions.push('Personal blog/Website');
-      if (otherChecked && otherSocialMedia.trim() !== '') {
+      if (twitterChecked) socialMediaOptions.push("Twitter/X");
+      if (mediumChecked) socialMediaOptions.push("Medium");
+      if (blogChecked) socialMediaOptions.push("Personal blog/Website");
+      if (otherChecked && otherSocialMedia.trim() !== "") {
         socialMediaOptions.push(`Other: ${otherSocialMedia.trim()}`);
       }
-      
+
       // Update goals field to include selected social media options
-      const socialMediaDetails = goals.trim() !== '' 
-        ? `${goals}\n\nSelected platforms: ${socialMediaOptions.join(', ')}` 
-        : `Selected platforms: ${socialMediaOptions.join(', ')}`;
-      
+      const socialMediaDetails =
+        goals.trim() !== ""
+          ? `${goals}\n\nSelected platforms: ${socialMediaOptions.join(", ")}`
+          : `Selected platforms: ${socialMediaOptions.join(", ")}`;
+
       // Prepare branding challenges data
       const brandingChallenges = [];
-      if (consistentNarrativeChecked) brandingChallenges.push('Building a consistent professional narrative');
-      if (valuePropositionChecked) brandingChallenges.push('Identifying my unique value proposition');
-      if (engagingContentChecked) brandingChallenges.push('Creating engaging content');
-      if (findingTimeChecked) brandingChallenges.push('Finding time to maintain online presence');
-      if (growingNetworkChecked) brandingChallenges.push('Growing my professional network');
-      if (sharingInsightsChecked) brandingChallenges.push('Sharing industry insights and work experiences');
-      if (engagingNetworkChecked) brandingChallenges.push('Engaging with my professional network');
-      if (industryEventsChecked) brandingChallenges.push('Participating in industry discussions and events');
-      if (otherBrandingChecked && otherBrandingChallenge.trim() !== '') {
+      if (consistentNarrativeChecked)
+        brandingChallenges.push("Building a consistent professional narrative");
+      if (valuePropositionChecked)
+        brandingChallenges.push("Identifying my unique value proposition");
+      if (engagingContentChecked)
+        brandingChallenges.push("Creating engaging content");
+      if (findingTimeChecked)
+        brandingChallenges.push("Finding time to maintain online presence");
+      if (growingNetworkChecked)
+        brandingChallenges.push("Growing my professional network");
+      if (sharingInsightsChecked)
+        brandingChallenges.push(
+          "Sharing industry insights and work experiences",
+        );
+      if (engagingNetworkChecked)
+        brandingChallenges.push("Engaging with my professional network");
+      if (industryEventsChecked)
+        brandingChallenges.push(
+          "Participating in industry discussions and events",
+        );
+      if (otherBrandingChecked && otherBrandingChallenge.trim() !== "") {
         brandingChallenges.push(`Other: ${otherBrandingChallenge.trim()}`);
       }
-      
+
       // Prepare published content data
       const publishedContent = [];
-      if (linkedInPostsChecked) publishedContent.push('LinkedIn posts');
-      if (blogArticlesChecked) publishedContent.push('Blog articles');
-      if (industryPresentationsChecked) publishedContent.push('Industry presentations');
-      if (academicPapersChecked) publishedContent.push('Academic papers');
-      if (neverPublishedChecked) publishedContent.push('Never published professional content');
-      if (otherPublishedContentChecked && otherPublishedContent.trim() !== '') {
+      if (linkedInPostsChecked) publishedContent.push("LinkedIn posts");
+      if (blogArticlesChecked) publishedContent.push("Blog articles");
+      if (industryPresentationsChecked)
+        publishedContent.push("Industry presentations");
+      if (academicPapersChecked) publishedContent.push("Academic papers");
+      if (neverPublishedChecked)
+        publishedContent.push("Never published professional content");
+      if (otherPublishedContentChecked && otherPublishedContent.trim() !== "") {
         publishedContent.push(`Other: ${otherPublishedContent.trim()}`);
       }
-      
+
       // Prepare LinkedIn profile update timing data
       const profileUpdateTiming = [];
-      if (lastWeekChecked) profileUpdateTiming.push('Within the last week');
-      if (lastMonthChecked) profileUpdateTiming.push('Within the last month');
-      if (businessSchoolChecked) profileUpdateTiming.push('For / during business school (if applicable)');
-      if (careerCoachChecked) profileUpdateTiming.push('After I spoke with a career coach');
-      if (jobChangeChecked) profileUpdateTiming.push('When I last changed jobs');
-      if (cantRememberChecked) profileUpdateTiming.push('I can\'t remember');
-      if (neverUpdatedChecked) profileUpdateTiming.push('I\'ve never really updated it beyond creating the profile');
-      if (otherUpdateTimeChecked && otherUpdateTime.trim() !== '') {
+      if (lastWeekChecked) profileUpdateTiming.push("Within the last week");
+      if (lastMonthChecked) profileUpdateTiming.push("Within the last month");
+      if (businessSchoolChecked)
+        profileUpdateTiming.push(
+          "For / during business school (if applicable)",
+        );
+      if (careerCoachChecked)
+        profileUpdateTiming.push("After I spoke with a career coach");
+      if (jobChangeChecked)
+        profileUpdateTiming.push("When I last changed jobs");
+      if (cantRememberChecked) profileUpdateTiming.push("I can't remember");
+      if (neverUpdatedChecked)
+        profileUpdateTiming.push(
+          "I've never really updated it beyond creating the profile",
+        );
+      if (otherUpdateTimeChecked && otherUpdateTime.trim() !== "") {
         profileUpdateTiming.push(`Other: ${otherUpdateTime.trim()}`);
       }
-      
+
       // Prepare LinkedIn activity data
       const linkedInActivity = [];
-      if (readNewsfeedChecked) linkedInActivity.push('Read your Newsfeed');
-      if (acceptedConnectionsChecked) linkedInActivity.push('Accepted Connections');
-      if (notActiveChecked) linkedInActivity.push('Not Active in the Last Month');
-      if (postedNeverChecked) linkedInActivity.push('Posted Original Content - Never');
-      if (posted12TimesChecked) linkedInActivity.push('Posted Original Content - 1-2 times');
-      if (posted35TimesChecked) linkedInActivity.push('Posted Original Content - 3-5 times');
-      if (posted6PlusTimesChecked) linkedInActivity.push('Posted Original Content - 6+ times');
-      if (sharedNeverChecked) linkedInActivity.push('Shared Others\' Posts - Never');
-      if (shared12TimesChecked) linkedInActivity.push('Shared Others\' Posts - 1-2 times');
-      if (shared35TimesChecked) linkedInActivity.push('Shared Others\' Posts - 3-5 times');
-      if (shared6PlusTimesChecked) linkedInActivity.push('Shared Others\' Posts - 6+ times');
-      if (commentedNeverChecked) linkedInActivity.push('Commented on Posts - Never');
-      if (commented12TimesPerMonthChecked) linkedInActivity.push('Commented on Posts - 1-2 times per month');
-      if (commented12TimesPerWeekChecked) linkedInActivity.push('Commented on Posts - 1-2 times per week');
-      if (commented3PlusTimesPerWeekChecked) linkedInActivity.push('Commented on Posts - 3+ times per week');
-      if (reactedNeverChecked) linkedInActivity.push('Reacted to Posts (likes, etc.) - Never');
-      if (reactedFewTimesMonthChecked) linkedInActivity.push('Reacted to Posts (likes, etc.) - A few times a month');
-      if (reactedFewTimesWeekChecked) linkedInActivity.push('Reacted to Posts (likes, etc.) - A few times a week');
-      if (reactedDailyChecked) linkedInActivity.push('Reacted to Posts (likes, etc.) - Daily');
-      
+      if (readNewsfeedChecked) linkedInActivity.push("Read your Newsfeed");
+      if (acceptedConnectionsChecked)
+        linkedInActivity.push("Accepted Connections");
+      if (notActiveChecked)
+        linkedInActivity.push("Not Active in the Last Month");
+      if (postedNeverChecked)
+        linkedInActivity.push("Posted Original Content - Never");
+      if (posted12TimesChecked)
+        linkedInActivity.push("Posted Original Content - 1-2 times");
+      if (posted35TimesChecked)
+        linkedInActivity.push("Posted Original Content - 3-5 times");
+      if (posted6PlusTimesChecked)
+        linkedInActivity.push("Posted Original Content - 6+ times");
+      if (sharedNeverChecked)
+        linkedInActivity.push("Shared Others' Posts - Never");
+      if (shared12TimesChecked)
+        linkedInActivity.push("Shared Others' Posts - 1-2 times");
+      if (shared35TimesChecked)
+        linkedInActivity.push("Shared Others' Posts - 3-5 times");
+      if (shared6PlusTimesChecked)
+        linkedInActivity.push("Shared Others' Posts - 6+ times");
+      if (commentedNeverChecked)
+        linkedInActivity.push("Commented on Posts - Never");
+      if (commented12TimesPerMonthChecked)
+        linkedInActivity.push("Commented on Posts - 1-2 times per month");
+      if (commented12TimesPerWeekChecked)
+        linkedInActivity.push("Commented on Posts - 1-2 times per week");
+      if (commented3PlusTimesPerWeekChecked)
+        linkedInActivity.push("Commented on Posts - 3+ times per week");
+      if (reactedNeverChecked)
+        linkedInActivity.push("Reacted to Posts (likes, etc.) - Never");
+      if (reactedFewTimesMonthChecked)
+        linkedInActivity.push(
+          "Reacted to Posts (likes, etc.) - A few times a month",
+        );
+      if (reactedFewTimesWeekChecked)
+        linkedInActivity.push(
+          "Reacted to Posts (likes, etc.) - A few times a week",
+        );
+      if (reactedDailyChecked)
+        linkedInActivity.push("Reacted to Posts (likes, etc.) - Daily");
+
       // Prepare industry interests
       const industryInterests = [];
-      if (consultingChecked) industryInterests.push('Consulting');
-      if (consumerRetailChecked) industryInterests.push('Consumer Products / Retail');
-      if (financialServicesChecked) industryInterests.push('Financial Services');
-      if (globalMarketsChecked) industryInterests.push('Global Markets');
-      if (governmentChecked) industryInterests.push('Government / Public Sector');
-      if (healthcareChecked) industryInterests.push('Healthcare');
-      if (innovationChecked) industryInterests.push('Innovation / R&D');
-      if (manufacturingChecked) industryInterests.push('Manufacturing');
-      if (socialImpactChecked) industryInterests.push('Social Impact / ESG');
-      if (technologyChecked) industryInterests.push('Technology');
-      
+      if (consultingChecked) industryInterests.push("Consulting");
+      if (consumerRetailChecked)
+        industryInterests.push("Consumer Products / Retail");
+      if (financialServicesChecked)
+        industryInterests.push("Financial Services");
+      if (globalMarketsChecked) industryInterests.push("Global Markets");
+      if (governmentChecked)
+        industryInterests.push("Government / Public Sector");
+      if (healthcareChecked) industryInterests.push("Healthcare");
+      if (innovationChecked) industryInterests.push("Innovation / R&D");
+      if (manufacturingChecked) industryInterests.push("Manufacturing");
+      if (socialImpactChecked) industryInterests.push("Social Impact / ESG");
+      if (technologyChecked) industryInterests.push("Technology");
+
       // Prepare cross-cutting & societal interests data
       const crossCuttingInterests = [];
-      if (climateChecked) crossCuttingInterests.push('Climate Change & Sustainability');
-      if (consumerBehaviorChecked) crossCuttingInterests.push('Consumer Behavior & Culture');
-      if (crimeJusticeChecked) crossCuttingInterests.push('Crime & Justice');
-      if (digitalTransformationAIChecked) crossCuttingInterests.push('Digital Transformation/AI');
-      if (educationLearningChecked) crossCuttingInterests.push('Education & Learning');
-      if (emergingMarketsChecked) crossCuttingInterests.push('Emerging Markets');
-      if (entertainmentArtsChecked) crossCuttingInterests.push('Entertainment & Arts');
-      if (financialInnovationChecked) crossCuttingInterests.push('Financial Innovation & Markets');
-      if (futureOfWorkChecked) crossCuttingInterests.push('Future of Work');
-      if (globalEconomyChecked) crossCuttingInterests.push('Global Markets & Economy');
-      if (geopoliticsChecked) crossCuttingInterests.push('Global Politics & Geopolitics');
-      if (healthWellnessChecked) crossCuttingInterests.push('Health & Wellness');
-      if (healthcareInnovationChecked) crossCuttingInterests.push('Healthcare Innovation');
-      if (socialImpactDEIChecked) crossCuttingInterests.push('Social Impact & DEI');
-      if (sportsRecreationChecked) crossCuttingInterests.push('Sports & Recreation');
-      if (travelTourismChecked) crossCuttingInterests.push('Travel & Tourism');
-      if (urbanDevelopmentChecked) crossCuttingInterests.push('Urban Development & Infrastructure');
-      if (usPoliticsChecked) crossCuttingInterests.push('U.S. Politics & Policy');
-      
+      if (climateChecked)
+        crossCuttingInterests.push("Climate Change & Sustainability");
+      if (consumerBehaviorChecked)
+        crossCuttingInterests.push("Consumer Behavior & Culture");
+      if (crimeJusticeChecked) crossCuttingInterests.push("Crime & Justice");
+      if (digitalTransformationAIChecked)
+        crossCuttingInterests.push("Digital Transformation/AI");
+      if (educationLearningChecked)
+        crossCuttingInterests.push("Education & Learning");
+      if (emergingMarketsChecked)
+        crossCuttingInterests.push("Emerging Markets");
+      if (entertainmentArtsChecked)
+        crossCuttingInterests.push("Entertainment & Arts");
+      if (financialInnovationChecked)
+        crossCuttingInterests.push("Financial Innovation & Markets");
+      if (futureOfWorkChecked) crossCuttingInterests.push("Future of Work");
+      if (globalEconomyChecked)
+        crossCuttingInterests.push("Global Markets & Economy");
+      if (geopoliticsChecked)
+        crossCuttingInterests.push("Global Politics & Geopolitics");
+      if (healthWellnessChecked)
+        crossCuttingInterests.push("Health & Wellness");
+      if (healthcareInnovationChecked)
+        crossCuttingInterests.push("Healthcare Innovation");
+      if (socialImpactDEIChecked)
+        crossCuttingInterests.push("Social Impact & DEI");
+      if (sportsRecreationChecked)
+        crossCuttingInterests.push("Sports & Recreation");
+      if (travelTourismChecked) crossCuttingInterests.push("Travel & Tourism");
+      if (urbanDevelopmentChecked)
+        crossCuttingInterests.push("Urban Development & Infrastructure");
+      if (usPoliticsChecked)
+        crossCuttingInterests.push("U.S. Politics & Policy");
+
       // Prepare content creation format preferences data
       const contentFormatPreferences = [];
-      if (sharingNewsChecked) contentFormatPreferences.push('Sharing industry news with your perspective');
-      if (writingExperiencesChecked) contentFormatPreferences.push('Writing about your learned experiences');
-      if (analyzingTrendsChecked) contentFormatPreferences.push('Analyzing trends');
-      if (commentingPostsChecked) contentFormatPreferences.push('Commenting on others\' posts');
-      if (howToContentChecked) contentFormatPreferences.push('Creating how-to content');
-      if (eventTakeawaysChecked) contentFormatPreferences.push('Sharing event takeaways');
-      if (personalAnecdoteChecked) contentFormatPreferences.push('Personal anecdote');
-      if (digitalCommunitiesChecked) contentFormatPreferences.push('Digital communities');
-      if (otherContentFormatChecked && otherContentFormat.trim() !== '') {
+      if (sharingNewsChecked)
+        contentFormatPreferences.push(
+          "Sharing industry news with your perspective",
+        );
+      if (writingExperiencesChecked)
+        contentFormatPreferences.push("Writing about your learned experiences");
+      if (analyzingTrendsChecked)
+        contentFormatPreferences.push("Analyzing trends");
+      if (commentingPostsChecked)
+        contentFormatPreferences.push("Commenting on others' posts");
+      if (howToContentChecked)
+        contentFormatPreferences.push("Creating how-to content");
+      if (eventTakeawaysChecked)
+        contentFormatPreferences.push("Sharing event takeaways");
+      if (personalAnecdoteChecked)
+        contentFormatPreferences.push("Personal anecdote");
+      if (digitalCommunitiesChecked)
+        contentFormatPreferences.push("Digital communities");
+      if (otherContentFormatChecked && otherContentFormat.trim() !== "") {
         contentFormatPreferences.push(`Other: ${otherContentFormat.trim()}`);
       }
-      
+
       // Prepare posting barriers data
       const postingBarriers = [];
-      if (unsureWhatToSayChecked) postingBarriers.push('Unsure what to say');
-      if (fearOfJudgmentChecked) postingBarriers.push('Fear of judgment');
-      if (timeManagementChecked) postingBarriers.push('Time management');
-      if (dontKnowHowToStartChecked) postingBarriers.push('Don\'t know how to start');
-      if (unclearProfessionalVoiceChecked) postingBarriers.push('Unclear on professional voice');
-      if (otherBarrierChecked && otherBarrier.trim() !== '') {
+      if (unsureWhatToSayChecked) postingBarriers.push("Unsure what to say");
+      if (fearOfJudgmentChecked) postingBarriers.push("Fear of judgment");
+      if (timeManagementChecked) postingBarriers.push("Time management");
+      if (dontKnowHowToStartChecked)
+        postingBarriers.push("Don't know how to start");
+      if (unclearProfessionalVoiceChecked)
+        postingBarriers.push("Unclear on professional voice");
+      if (otherBarrierChecked && otherBarrier.trim() !== "") {
         postingBarriers.push(`Other: ${otherBarrier.trim()}`);
       }
 
       // Update aspirations field to include selected branding challenges and published content
-      let brandingDetails = aspirations.trim() !== '' 
-        ? `${aspirations}\n\nBranding challenges: ${brandingChallenges.join(', ')}` 
-        : `Branding challenges: ${brandingChallenges.join(', ')}`;
-        
+      let brandingDetails =
+        aspirations.trim() !== ""
+          ? `${aspirations}\n\nBranding challenges: ${brandingChallenges.join(", ")}`
+          : `Branding challenges: ${brandingChallenges.join(", ")}`;
+
       // Add published content to aspirations field
-      brandingDetails += `\n\nPublished content: ${publishedContent.length > 0 ? publishedContent.join(', ') : 'None'}`;
-      
+      brandingDetails += `\n\nPublished content: ${publishedContent.length > 0 ? publishedContent.join(", ") : "None"}`;
+
       // Add LinkedIn profile update timing to aspirations field
-      brandingDetails += `\n\nLinkedIn profile update timing: ${profileUpdateTiming.length > 0 ? profileUpdateTiming.join(', ') : 'Not specified'}`;
-      
+      brandingDetails += `\n\nLinkedIn profile update timing: ${profileUpdateTiming.length > 0 ? profileUpdateTiming.join(", ") : "Not specified"}`;
+
       // Add LinkedIn activity to aspirations field
-      brandingDetails += `\n\nLinkedIn activity: ${linkedInActivity.length > 0 ? linkedInActivity.join(', ') : 'Not specified'}`;
-      
+      brandingDetails += `\n\nLinkedIn activity: ${linkedInActivity.length > 0 ? linkedInActivity.join(", ") : "Not specified"}`;
+
       // Add brand positioning rating to aspirations field
-      brandingDetails += `\n\nBrand positioning rating: ${brandPositioningRating !== null ? brandPositioningRating : 'Not specified'}`;
-      
+      brandingDetails += `\n\nBrand positioning rating: ${brandPositioningRating !== null ? brandPositioningRating : "Not specified"}`;
+
       // Add content creation comfort to aspirations field
-      brandingDetails += `\n\nContent creation comfort: ${contentCreationComfort !== null ? contentCreationComfort : 'Not specified'}`;
-      
+      brandingDetails += `\n\nContent creation comfort: ${contentCreationComfort !== null ? contentCreationComfort : "Not specified"}`;
+
       // Add brand optimization goals to aspirations field
-      brandingDetails += `\n\nBrand optimization goals: ${brandOptimizationGoals.trim() !== '' ? brandOptimizationGoals : 'Not specified'}`;
-      
+      brandingDetails += `\n\nBrand optimization goals: ${brandOptimizationGoals.trim() !== "" ? brandOptimizationGoals : "Not specified"}`;
+
       // Add industry interests to aspirations field
-      brandingDetails += `\n\nIndustry interests: ${industryInterests.length > 0 ? industryInterests.join(', ') : 'None'}`;
-      
+      brandingDetails += `\n\nIndustry interests: ${industryInterests.length > 0 ? industryInterests.join(", ") : "None"}`;
+
       // Add technology subcategories if technology is selected
       if (technologyChecked) {
         const techSubcategories = [];
-        
+
         // AI/ML
-        if (aiConsumerChecked) techSubcategories.push('AI - Consumer Applications');
-        if (aiComputerVisionChecked) techSubcategories.push('AI - Computer Vision');
-        if (aiEthicsChecked) techSubcategories.push('AI - Ethics & Governance');
-        if (aiInfrastructureChecked) techSubcategories.push('AI - Infrastructure');
-        if (aiNlpChecked) techSubcategories.push('AI - Natural Language Processing');
-        if (aiPredictiveChecked) techSubcategories.push('AI - Predictive Analytics');
-        if (aiRoboticsChecked) techSubcategories.push('AI - Robotics & Automation');
-        if (aiScientificChecked) techSubcategories.push('AI - Scientific Applications');
-        if (aiLearningChecked) techSubcategories.push('ML - Machine Learning');
-        
+        if (aiConsumerChecked)
+          techSubcategories.push("AI - Consumer Applications");
+        if (aiComputerVisionChecked)
+          techSubcategories.push("AI - Computer Vision");
+        if (aiEthicsChecked) techSubcategories.push("AI - Ethics & Governance");
+        if (aiInfrastructureChecked)
+          techSubcategories.push("AI - Infrastructure");
+        if (aiNlpChecked)
+          techSubcategories.push("AI - Natural Language Processing");
+        if (aiPredictiveChecked)
+          techSubcategories.push("AI - Predictive Analytics");
+        if (aiRoboticsChecked)
+          techSubcategories.push("AI - Robotics & Automation");
+        if (aiScientificChecked)
+          techSubcategories.push("AI - Scientific Applications");
+        if (aiLearningChecked) techSubcategories.push("ML - Machine Learning");
+
         // Consumer Technology
-        if (consumerDevicesChecked) techSubcategories.push('Consumer Devices');
-        if (consumerGamingChecked) techSubcategories.push('Consumer Gaming');
-        if (consumerMobileChecked) techSubcategories.push('Consumer Mobile Tech');
-        if (consumerSmartHomeChecked) techSubcategories.push('Consumer Smart Home');
-        
+        if (consumerDevicesChecked) techSubcategories.push("Consumer Devices");
+        if (consumerGamingChecked) techSubcategories.push("Consumer Gaming");
+        if (consumerMobileChecked)
+          techSubcategories.push("Consumer Mobile Tech");
+        if (consumerSmartHomeChecked)
+          techSubcategories.push("Consumer Smart Home");
+
         // Cybersecurity & Privacy
-        if (cybersecuritySolutionsChecked) techSubcategories.push('Cybersecurity Solutions');
-        if (dataPrivacyChecked) techSubcategories.push('Data Privacy');
-        if (regulatoryComplianceChecked) techSubcategories.push('Regulatory Compliance');
-        if (riskManagementChecked) techSubcategories.push('Risk Management');
-        
+        if (cybersecuritySolutionsChecked)
+          techSubcategories.push("Cybersecurity Solutions");
+        if (dataPrivacyChecked) techSubcategories.push("Data Privacy");
+        if (regulatoryComplianceChecked)
+          techSubcategories.push("Regulatory Compliance");
+        if (riskManagementChecked) techSubcategories.push("Risk Management");
+
         // Digital Infrastructure
-        if (cloudComputingChecked) techSubcategories.push('Cloud Computing');
-        if (dataCentersChecked) techSubcategories.push('Data Centers');
-        if (networksChecked) techSubcategories.push('Networks');
-        if (web3BlockchainChecked) techSubcategories.push('Web3 / Blockchain');
-        
+        if (cloudComputingChecked) techSubcategories.push("Cloud Computing");
+        if (dataCentersChecked) techSubcategories.push("Data Centers");
+        if (networksChecked) techSubcategories.push("Networks");
+        if (web3BlockchainChecked) techSubcategories.push("Web3 / Blockchain");
+
         // Digital Media & Content
-        if (contentDistributionChecked) techSubcategories.push('Content Distribution');
-        if (creatorEconomyChecked) techSubcategories.push('Creator Economy');
-        if (digitalMarketingChecked) techSubcategories.push('Digital Marketing');
-        if (socialMediaPlatformsChecked) techSubcategories.push('Social Media Platforms');
-        
+        if (contentDistributionChecked)
+          techSubcategories.push("Content Distribution");
+        if (creatorEconomyChecked) techSubcategories.push("Creator Economy");
+        if (digitalMarketingChecked)
+          techSubcategories.push("Digital Marketing");
+        if (socialMediaPlatformsChecked)
+          techSubcategories.push("Social Media Platforms");
+
         // Emerging Technology
-        if (arVrXrChecked) techSubcategories.push('AR / VR / XR');
-        if (biotechHealthChecked) techSubcategories.push('Biotech / Health Tech');
-        if (quantumComputingChecked) techSubcategories.push('Quantum Computing');
-        if (emergingRoboticsChecked) techSubcategories.push('Robotics & Automation');
-        
+        if (arVrXrChecked) techSubcategories.push("AR / VR / XR");
+        if (biotechHealthChecked)
+          techSubcategories.push("Biotech / Health Tech");
+        if (quantumComputingChecked)
+          techSubcategories.push("Quantum Computing");
+        if (emergingRoboticsChecked)
+          techSubcategories.push("Robotics & Automation");
+
         // Enterprise Technology
-        if (businessAppsChecked) techSubcategories.push('Business Applications');
-        if (enterpriseDigitalTransformationChecked) techSubcategories.push('Digital Transformation');
-        if (integrationApisChecked) techSubcategories.push('Integration & APIs');
-        if (saasEnterpriseChecked) techSubcategories.push('SaaS / Enterprise Software');
-        
+        if (businessAppsChecked)
+          techSubcategories.push("Business Applications");
+        if (enterpriseDigitalTransformationChecked)
+          techSubcategories.push("Digital Transformation");
+        if (integrationApisChecked)
+          techSubcategories.push("Integration & APIs");
+        if (saasEnterpriseChecked)
+          techSubcategories.push("SaaS / Enterprise Software");
+
         // Add to branding details
-        brandingDetails += `\n\nTechnology subcategories: ${techSubcategories.length > 0 ? techSubcategories.join(', ') : 'None'}`;
+        brandingDetails += `\n\nTechnology subcategories: ${techSubcategories.length > 0 ? techSubcategories.join(", ") : "None"}`;
       }
-      
+
       // Add cross-cutting & societal interests to aspirations field
-      brandingDetails += `\n\nCross-cutting & societal interests: ${crossCuttingInterests.length > 0 ? crossCuttingInterests.join(', ') : 'None'}`;
-      
+      brandingDetails += `\n\nCross-cutting & societal interests: ${crossCuttingInterests.length > 0 ? crossCuttingInterests.join(", ") : "None"}`;
+
       // Add professional areas for thought leadership to aspirations field
-      brandingDetails += `\n\nProfessional areas for thought leadership: ${professionalAreas.trim() !== '' ? professionalAreas : 'Not specified'}`;
-      
+      brandingDetails += `\n\nProfessional areas for thought leadership: ${professionalAreas.trim() !== "" ? professionalAreas : "Not specified"}`;
+
       // Add content format preferences to aspirations field
-      brandingDetails += `\n\nContent creation format preferences: ${contentFormatPreferences.length > 0 ? contentFormatPreferences.join(', ') : 'None'}`;
-      
+      brandingDetails += `\n\nContent creation format preferences: ${contentFormatPreferences.length > 0 ? contentFormatPreferences.join(", ") : "None"}`;
+
       // Add posting barriers to aspirations field
-      brandingDetails += `\n\nPosting barriers: ${postingBarriers.length > 0 ? postingBarriers.join(', ') : 'None'}`;
-      
+      brandingDetails += `\n\nPosting barriers: ${postingBarriers.length > 0 ? postingBarriers.join(", ") : "None"}`;
+
       // Add LinkedIn connections percentage to aspirations field
-      brandingDetails += `\n\nLinkedIn connections percentage: ${industryConnectionsPercentage || 'Not specified'}`;
-      
+      brandingDetails += `\n\nLinkedIn connections percentage: ${industryConnectionsPercentage || "Not specified"}`;
+
       // Add personality assessments to aspirations field
       const assessments = [];
-      if (mbtiChecked) assessments.push('MBTI');
-      if (strengthsFinderChecked) assessments.push('Strengths Finder');
-      if (viaChecked) assessments.push('VIA');
-      if (enneagramChecked) assessments.push('Enneagram');
-      if (threeSixtyChecked) assessments.push('360*');
-      if (otherAssessmentChecked && otherAssessment.trim() !== '') {
+      if (mbtiChecked) assessments.push("MBTI");
+      if (strengthsFinderChecked) assessments.push("Strengths Finder");
+      if (viaChecked) assessments.push("VIA");
+      if (enneagramChecked) assessments.push("Enneagram");
+      if (threeSixtyChecked) assessments.push("360*");
+      if (otherAssessmentChecked && otherAssessment.trim() !== "") {
         assessments.push(`Other: ${otherAssessment.trim()}`);
       }
-      brandingDetails += `\n\nPersonality assessments: ${assessments.length > 0 ? assessments.join(', ') : 'None'}`;
-      
+      brandingDetails += `\n\nPersonality assessments: ${assessments.length > 0 ? assessments.join(", ") : "None"}`;
+
       // Add career goals
-      brandingDetails += `\n\nCareer goals: ${careerGoals.trim() !== '' ? careerGoals : 'Not specified'}`;
-      
+      brandingDetails += `\n\nCareer goals: ${careerGoals.trim() !== "" ? careerGoals : "Not specified"}`;
+
       // Add additional info to aspirations field if provided, but clean it first
       // to avoid any special characters that might cause parsing issues
-      if (additionalInfo.trim() !== '') {
+      if (additionalInfo.trim() !== "") {
         // Replace any newlines with spaces to avoid multi-line issues in parsing
-        const cleanAdditionalInfo = additionalInfo.trim().replace(/\n/g, ' ');
+        const cleanAdditionalInfo = additionalInfo.trim().replace(/\n/g, " ");
         brandingDetails += `\n\nAdditional professional journey information: ${cleanAdditionalInfo}`;
       }
-      
+
       const formData = {
         background, // LinkedIn URL
         goals: socialMediaDetails, // Social media details
@@ -1310,7 +1749,7 @@ export default function QuestionnairePage() {
           eventTakeaways: eventTakeawaysChecked,
           personalAnecdote: personalAnecdoteChecked,
           digitalCommunities: digitalCommunitiesChecked,
-          other: otherContentFormatChecked ? otherContentFormat : null
+          other: otherContentFormatChecked ? otherContentFormat : null,
         },
         postingBarriers: {
           unsureWhatToSay: unsureWhatToSayChecked,
@@ -1318,13 +1757,13 @@ export default function QuestionnairePage() {
           timeManagement: timeManagementChecked,
           dontKnowHowToStart: dontKnowHowToStartChecked,
           unclearProfessionalVoice: unclearProfessionalVoiceChecked,
-          other: otherBarrierChecked ? otherBarrier : null
+          other: otherBarrierChecked ? otherBarrier : null,
         },
         socialMedia: {
           twitter: twitterChecked,
           medium: mediumChecked,
           blog: blogChecked,
-          other: otherChecked ? otherSocialMedia : null
+          other: otherChecked ? otherSocialMedia : null,
         },
         brandingChallenges: {
           consistentNarrative: consistentNarrativeChecked,
@@ -1335,7 +1774,7 @@ export default function QuestionnairePage() {
           sharingInsights: sharingInsightsChecked,
           engagingNetwork: engagingNetworkChecked,
           industryEvents: industryEventsChecked,
-          other: otherBrandingChecked ? otherBrandingChallenge : null
+          other: otherBrandingChecked ? otherBrandingChallenge : null,
         },
         publishedContent: {
           linkedInPosts: linkedInPostsChecked,
@@ -1343,7 +1782,7 @@ export default function QuestionnairePage() {
           industryPresentations: industryPresentationsChecked,
           academicPapers: academicPapersChecked,
           neverPublished: neverPublishedChecked,
-          other: otherPublishedContentChecked ? otherPublishedContent : null
+          other: otherPublishedContentChecked ? otherPublishedContent : null,
         },
         linkedInProfileUpdate: {
           lastWeek: lastWeekChecked,
@@ -1353,7 +1792,7 @@ export default function QuestionnairePage() {
           jobChange: jobChangeChecked,
           cantRemember: cantRememberChecked,
           neverUpdated: neverUpdatedChecked,
-          other: otherUpdateTimeChecked ? otherUpdateTime : null
+          other: otherUpdateTimeChecked ? otherUpdateTime : null,
         },
         linkedInActivity: {
           readNewsfeed: readNewsfeedChecked,
@@ -1374,7 +1813,7 @@ export default function QuestionnairePage() {
           reactedNever: reactedNeverChecked,
           reactedFewTimesMonth: reactedFewTimesMonthChecked,
           reactedFewTimesWeek: reactedFewTimesWeekChecked,
-          reactedDaily: reactedDailyChecked
+          reactedDaily: reactedDailyChecked,
         },
         brandPositioning: brandPositioningRating,
         contentCreationComfort: contentCreationComfort,
@@ -1389,7 +1828,7 @@ export default function QuestionnairePage() {
           innovation: innovationChecked,
           manufacturing: manufacturingChecked,
           socialImpact: socialImpactChecked,
-          technology: technologyChecked
+          technology: technologyChecked,
         },
         crossCuttingInterests: {
           climate: climateChecked,
@@ -1409,59 +1848,61 @@ export default function QuestionnairePage() {
           sportsRecreation: sportsRecreationChecked,
           travelTourism: travelTourismChecked,
           urbanDevelopment: urbanDevelopmentChecked,
-          usPolitics: usPoliticsChecked
+          usPolitics: usPoliticsChecked,
         },
-        
+
         professionalAreasForThoughtLeadership: professionalAreas,
-        
-        technologySubcategories: technologyChecked ? {
-          // AI/ML
-          aiConsumer: aiConsumerChecked,
-          aiComputerVision: aiComputerVisionChecked,
-          aiEthics: aiEthicsChecked,
-          aiInfrastructure: aiInfrastructureChecked,
-          aiNlp: aiNlpChecked,
-          aiPredictive: aiPredictiveChecked,
-          aiRobotics: aiRoboticsChecked,
-          aiScientific: aiScientificChecked,
-          aiLearning: aiLearningChecked,
-          
-          // Consumer Technology
-          consumerDevices: consumerDevicesChecked,
-          consumerGaming: consumerGamingChecked,
-          consumerMobile: consumerMobileChecked,
-          consumerSmartHome: consumerSmartHomeChecked,
-          
-          // Cybersecurity & Privacy
-          cybersecuritySolutions: cybersecuritySolutionsChecked,
-          dataPrivacy: dataPrivacyChecked,
-          regulatoryCompliance: regulatoryComplianceChecked,
-          riskManagement: riskManagementChecked,
-          
-          // Digital Infrastructure
-          cloudComputing: cloudComputingChecked,
-          dataCenters: dataCentersChecked,
-          networks: networksChecked,
-          web3Blockchain: web3BlockchainChecked,
-          
-          // Digital Media & Content
-          contentDistribution: contentDistributionChecked,
-          creatorEconomy: creatorEconomyChecked,
-          digitalMarketing: digitalMarketingChecked,
-          socialMediaPlatforms: socialMediaPlatformsChecked,
-          
-          // Emerging Technology
-          arVrXr: arVrXrChecked,
-          biotechHealth: biotechHealthChecked,
-          quantumComputing: quantumComputingChecked,
-          emergingRobotics: emergingRoboticsChecked,
-          
-          // Enterprise Technology
-          businessApps: businessAppsChecked,
-          digitalTransformation: enterpriseDigitalTransformationChecked,
-          integrationApis: integrationApisChecked,
-          saasEnterprise: saasEnterpriseChecked
-        } : null,
+
+        technologySubcategories: technologyChecked
+          ? {
+              // AI/ML
+              aiConsumer: aiConsumerChecked,
+              aiComputerVision: aiComputerVisionChecked,
+              aiEthics: aiEthicsChecked,
+              aiInfrastructure: aiInfrastructureChecked,
+              aiNlp: aiNlpChecked,
+              aiPredictive: aiPredictiveChecked,
+              aiRobotics: aiRoboticsChecked,
+              aiScientific: aiScientificChecked,
+              aiLearning: aiLearningChecked,
+
+              // Consumer Technology
+              consumerDevices: consumerDevicesChecked,
+              consumerGaming: consumerGamingChecked,
+              consumerMobile: consumerMobileChecked,
+              consumerSmartHome: consumerSmartHomeChecked,
+
+              // Cybersecurity & Privacy
+              cybersecuritySolutions: cybersecuritySolutionsChecked,
+              dataPrivacy: dataPrivacyChecked,
+              regulatoryCompliance: regulatoryComplianceChecked,
+              riskManagement: riskManagementChecked,
+
+              // Digital Infrastructure
+              cloudComputing: cloudComputingChecked,
+              dataCenters: dataCentersChecked,
+              networks: networksChecked,
+              web3Blockchain: web3BlockchainChecked,
+
+              // Digital Media & Content
+              contentDistribution: contentDistributionChecked,
+              creatorEconomy: creatorEconomyChecked,
+              digitalMarketing: digitalMarketingChecked,
+              socialMediaPlatforms: socialMediaPlatformsChecked,
+
+              // Emerging Technology
+              arVrXr: arVrXrChecked,
+              biotechHealth: biotechHealthChecked,
+              quantumComputing: quantumComputingChecked,
+              emergingRobotics: emergingRoboticsChecked,
+
+              // Enterprise Technology
+              businessApps: businessAppsChecked,
+              digitalTransformation: enterpriseDigitalTransformationChecked,
+              integrationApis: integrationApisChecked,
+              saasEnterprise: saasEnterpriseChecked,
+            }
+          : null,
         // Step 4: Professional Goals
         professionalGoals: {
           careerGoals: careerGoals,
@@ -1472,27 +1913,28 @@ export default function QuestionnairePage() {
             via: viaChecked,
             enneagram: enneagramChecked,
             threeSixty: threeSixtyChecked,
-            other: otherAssessmentChecked ? otherAssessment : null
+            other: otherAssessmentChecked ? otherAssessment : null,
           },
-          additionalInfo: additionalInfo
-        }
+          additionalInfo: additionalInfo,
+        },
       };
-      
+
       await questionnaireMutation.mutateAsync(formData);
     } else {
       toast({
         title: "Please complete all required fields",
-        description: currentStep === 1 
-          ? "Please select your current or prior industry and function." 
-          : currentStep === 2 
-          ? "LinkedIn URL is required to complete your profile." 
-          : currentStep === 3 
-          ? "Please select at least one branding challenge." 
-          : currentStep === 4
-          ? "Please select at least one industry interest."
-          : currentStep === 5
-          ? "Please fill in your career goals and select a percentage of connections in your target industry."
-          : "Please complete all required fields before proceeding.",
+        description:
+          currentStep === 1
+            ? "Please select your current or prior industry and function."
+            : currentStep === 2
+              ? "LinkedIn URL is required to complete your profile."
+              : currentStep === 3
+                ? "Please select at least one branding challenge."
+                : currentStep === 4
+                  ? "Please select at least one industry interest."
+                  : currentStep === 5
+                    ? "Please fill in your career goals and select a percentage of connections in your target industry."
+                    : "Please complete all required fields before proceeding.",
         variant: "destructive",
       });
     }
@@ -1505,16 +1947,16 @@ export default function QuestionnairePage() {
         return (
           <div className="space-y-6">
             <div className="mb-6">
-              <Label htmlFor="industry" className="text-gray-700 font-medium block mb-2">
+              <Label
+                htmlFor="industry"
+                className="text-gray-700 font-medium block mb-2"
+              >
                 Current / Prior Industry <span className="text-red-500">*</span>
               </Label>
               <p className="text-sm text-gray-500 mb-3">
                 Please select your current or most recent industry
               </p>
-              <Select
-                value={industry}
-                onValueChange={setIndustry}
-              >
+              <Select value={industry} onValueChange={setIndustry}>
                 <SelectTrigger className="w-full">
                   <SelectValue placeholder="Select an industry" />
                 </SelectTrigger>
@@ -1527,18 +1969,18 @@ export default function QuestionnairePage() {
                 </SelectContent>
               </Select>
             </div>
-            
+
             <div className="mb-6">
-              <Label htmlFor="function" className="text-gray-700 font-medium block mb-2">
+              <Label
+                htmlFor="function"
+                className="text-gray-700 font-medium block mb-2"
+              >
                 Current / Prior Function <span className="text-red-500">*</span>
               </Label>
               <p className="text-sm text-gray-500 mb-3">
                 Please select your current or most recent job function
               </p>
-              <Select
-                value={jobFunction}
-                onValueChange={setJobFunction}
-              >
+              <Select value={jobFunction} onValueChange={setJobFunction}>
                 <SelectTrigger className="w-full">
                   <SelectValue placeholder="Select a function" />
                 </SelectTrigger>
@@ -1557,7 +1999,10 @@ export default function QuestionnairePage() {
         return (
           <div className="space-y-6">
             <div className="mb-6">
-              <Label htmlFor="background" className="text-gray-700 font-medium block mb-2">
+              <Label
+                htmlFor="background"
+                className="text-gray-700 font-medium block mb-2"
+              >
                 LinkedIn URL <span className="text-red-500">*</span>
               </Label>
               <p className="text-sm text-gray-500 mb-3">
@@ -1571,52 +2016,72 @@ export default function QuestionnairePage() {
                 placeholder="https://www.linkedin.com/in/yourprofile"
               />
             </div>
-            
+
             <div className="mb-6">
-              <Label htmlFor="goals" className="text-gray-700 font-medium block mb-2">
-                Other Professional Social Media Presence <span className="text-red-500">*</span>
+              <Label
+                htmlFor="goals"
+                className="text-gray-700 font-medium block mb-2"
+              >
+                Other Professional Social Media Presence{" "}
+                <span className="text-red-500">*</span>
               </Label>
               <p className="text-sm text-gray-500 mb-3">
                 Select the platforms where you have a professional presence
               </p>
-              
+
               <div className="space-y-4 mt-4">
                 <div className="flex items-center space-x-2">
-                  <Checkbox 
-                    id="twitter" 
+                  <Checkbox
+                    id="twitter"
                     checked={twitterChecked}
-                    onCheckedChange={(checked) => setTwitterChecked(checked === true)}
+                    onCheckedChange={(checked) =>
+                      setTwitterChecked(checked === true)
+                    }
                   />
-                  <Label htmlFor="twitter" className="cursor-pointer">Twitter/X</Label>
+                  <Label htmlFor="twitter" className="cursor-pointer">
+                    Twitter/X
+                  </Label>
                 </div>
-                
+
                 <div className="flex items-center space-x-2">
-                  <Checkbox 
-                    id="medium" 
+                  <Checkbox
+                    id="medium"
                     checked={mediumChecked}
-                    onCheckedChange={(checked) => setMediumChecked(checked === true)}
+                    onCheckedChange={(checked) =>
+                      setMediumChecked(checked === true)
+                    }
                   />
-                  <Label htmlFor="medium" className="cursor-pointer">Medium</Label>
+                  <Label htmlFor="medium" className="cursor-pointer">
+                    Medium
+                  </Label>
                 </div>
-                
+
                 <div className="flex items-center space-x-2">
-                  <Checkbox 
-                    id="blog" 
+                  <Checkbox
+                    id="blog"
                     checked={blogChecked}
-                    onCheckedChange={(checked) => setBlogChecked(checked === true)}
+                    onCheckedChange={(checked) =>
+                      setBlogChecked(checked === true)
+                    }
                   />
-                  <Label htmlFor="blog" className="cursor-pointer">Personal blog/Website</Label>
+                  <Label htmlFor="blog" className="cursor-pointer">
+                    Personal blog/Website
+                  </Label>
                 </div>
-                
+
                 <div className="flex items-center space-x-2">
-                  <Checkbox 
-                    id="other" 
+                  <Checkbox
+                    id="other"
                     checked={otherChecked}
-                    onCheckedChange={(checked) => setOtherChecked(checked === true)}
+                    onCheckedChange={(checked) =>
+                      setOtherChecked(checked === true)
+                    }
                   />
-                  <Label htmlFor="other" className="cursor-pointer">Other</Label>
+                  <Label htmlFor="other" className="cursor-pointer">
+                    Other
+                  </Label>
                 </div>
-                
+
                 {otherChecked && (
                   <div className="ml-6 mt-2">
                     <Input
@@ -1628,7 +2093,7 @@ export default function QuestionnairePage() {
                   </div>
                 )}
               </div>
-              
+
               <Textarea
                 id="goals"
                 value={goals}
@@ -1643,100 +2108,145 @@ export default function QuestionnairePage() {
         return (
           <div className="space-y-6">
             <div className="mb-6">
-              <Label htmlFor="aspirations" className="text-gray-700 font-medium block mb-2">
+              <Label
+                htmlFor="aspirations"
+                className="text-gray-700 font-medium block mb-2"
+              >
                 Branding and Content Creation
               </Label>
               <p className="text-sm text-gray-500 mb-3">
-                What are your biggest professional branding challenges? (Check all that apply)
+                What are your biggest professional branding challenges? (Check
+                all that apply)
               </p>
-              
+
               <div className="space-y-3 mt-4">
                 <div className="flex items-center space-x-2">
-                  <Checkbox 
-                    id="consistentNarrative" 
+                  <Checkbox
+                    id="consistentNarrative"
                     checked={consistentNarrativeChecked}
-                    onCheckedChange={(checked) => setConsistentNarrativeChecked(checked === true)}
+                    onCheckedChange={(checked) =>
+                      setConsistentNarrativeChecked(checked === true)
+                    }
                   />
-                  <Label htmlFor="consistentNarrative" className="cursor-pointer">Building a consistent professional narrative</Label>
+                  <Label
+                    htmlFor="consistentNarrative"
+                    className="cursor-pointer"
+                  >
+                    Building a consistent professional narrative
+                  </Label>
                 </div>
-                
+
                 <div className="flex items-center space-x-2">
-                  <Checkbox 
-                    id="valueProposition" 
+                  <Checkbox
+                    id="valueProposition"
                     checked={valuePropositionChecked}
-                    onCheckedChange={(checked) => setValuePropositionChecked(checked === true)}
+                    onCheckedChange={(checked) =>
+                      setValuePropositionChecked(checked === true)
+                    }
                   />
-                  <Label htmlFor="valueProposition" className="cursor-pointer">Identifying my unique value proposition</Label>
+                  <Label htmlFor="valueProposition" className="cursor-pointer">
+                    Identifying my unique value proposition
+                  </Label>
                 </div>
-                
+
                 <div className="flex items-center space-x-2">
-                  <Checkbox 
-                    id="engagingContent" 
+                  <Checkbox
+                    id="engagingContent"
                     checked={engagingContentChecked}
-                    onCheckedChange={(checked) => setEngagingContentChecked(checked === true)}
+                    onCheckedChange={(checked) =>
+                      setEngagingContentChecked(checked === true)
+                    }
                   />
-                  <Label htmlFor="engagingContent" className="cursor-pointer">Creating engaging content</Label>
+                  <Label htmlFor="engagingContent" className="cursor-pointer">
+                    Creating engaging content
+                  </Label>
                 </div>
-                
+
                 <div className="flex items-center space-x-2">
-                  <Checkbox 
-                    id="findingTime" 
+                  <Checkbox
+                    id="findingTime"
                     checked={findingTimeChecked}
-                    onCheckedChange={(checked) => setFindingTimeChecked(checked === true)}
+                    onCheckedChange={(checked) =>
+                      setFindingTimeChecked(checked === true)
+                    }
                   />
-                  <Label htmlFor="findingTime" className="cursor-pointer">Finding time to maintain online presence</Label>
+                  <Label htmlFor="findingTime" className="cursor-pointer">
+                    Finding time to maintain online presence
+                  </Label>
                 </div>
-                
+
                 <div className="flex items-center space-x-2">
-                  <Checkbox 
-                    id="growingNetwork" 
+                  <Checkbox
+                    id="growingNetwork"
                     checked={growingNetworkChecked}
-                    onCheckedChange={(checked) => setGrowingNetworkChecked(checked === true)}
+                    onCheckedChange={(checked) =>
+                      setGrowingNetworkChecked(checked === true)
+                    }
                   />
-                  <Label htmlFor="growingNetwork" className="cursor-pointer">Growing my professional network</Label>
+                  <Label htmlFor="growingNetwork" className="cursor-pointer">
+                    Growing my professional network
+                  </Label>
                 </div>
-                
+
                 <div className="flex items-center space-x-2">
-                  <Checkbox 
-                    id="sharingInsights" 
+                  <Checkbox
+                    id="sharingInsights"
                     checked={sharingInsightsChecked}
-                    onCheckedChange={(checked) => setSharingInsightsChecked(checked === true)}
+                    onCheckedChange={(checked) =>
+                      setSharingInsightsChecked(checked === true)
+                    }
                   />
-                  <Label htmlFor="sharingInsights" className="cursor-pointer">Sharing industry insights and work experiences</Label>
+                  <Label htmlFor="sharingInsights" className="cursor-pointer">
+                    Sharing industry insights and work experiences
+                  </Label>
                 </div>
-                
+
                 <div className="flex items-center space-x-2">
-                  <Checkbox 
-                    id="engagingNetwork" 
+                  <Checkbox
+                    id="engagingNetwork"
                     checked={engagingNetworkChecked}
-                    onCheckedChange={(checked) => setEngagingNetworkChecked(checked === true)}
+                    onCheckedChange={(checked) =>
+                      setEngagingNetworkChecked(checked === true)
+                    }
                   />
-                  <Label htmlFor="engagingNetwork" className="cursor-pointer">Engaging with my professional network</Label>
+                  <Label htmlFor="engagingNetwork" className="cursor-pointer">
+                    Engaging with my professional network
+                  </Label>
                 </div>
-                
+
                 <div className="flex items-center space-x-2">
-                  <Checkbox 
-                    id="industryEvents" 
+                  <Checkbox
+                    id="industryEvents"
                     checked={industryEventsChecked}
-                    onCheckedChange={(checked) => setIndustryEventsChecked(checked === true)}
+                    onCheckedChange={(checked) =>
+                      setIndustryEventsChecked(checked === true)
+                    }
                   />
-                  <Label htmlFor="industryEvents" className="cursor-pointer">Participating in industry discussions and events</Label>
+                  <Label htmlFor="industryEvents" className="cursor-pointer">
+                    Participating in industry discussions and events
+                  </Label>
                 </div>
-                
+
                 <div className="flex items-center space-x-2">
-                  <Checkbox 
-                    id="otherBranding" 
+                  <Checkbox
+                    id="otherBranding"
                     checked={otherBrandingChecked}
-                    onCheckedChange={(checked) => setOtherBrandingChecked(checked === true)}
+                    onCheckedChange={(checked) =>
+                      setOtherBrandingChecked(checked === true)
+                    }
                   />
-                  <Label htmlFor="otherBranding" className="cursor-pointer">Other</Label>
+                  <Label htmlFor="otherBranding" className="cursor-pointer">
+                    Other
+                  </Label>
                 </div>
-                
+
                 {otherBrandingChecked && (
                   <div className="ml-6 mt-2">
                     <Input
                       value={otherBrandingChallenge}
-                      onChange={(e) => setOtherBrandingChallenge(e.target.value)}
+                      onChange={(e) =>
+                        setOtherBrandingChallenge(e.target.value)
+                      }
                       placeholder="Please specify your other branding challenge"
                       className="w-full"
                     />
@@ -1744,72 +2254,106 @@ export default function QuestionnairePage() {
                 )}
               </div>
             </div>
-            
+
             <hr className="my-6" />
-            
+
             <div className="mb-6">
-              <Label htmlFor="publishedContent" className="text-gray-700 font-medium block mb-2">
+              <Label
+                htmlFor="publishedContent"
+                className="text-gray-700 font-medium block mb-2"
+              >
                 Published Digital Content
               </Label>
               <p className="text-sm text-gray-500 mb-3">
-                Have you published digital professional content before? (Check all that apply)
+                Have you published digital professional content before? (Check
+                all that apply)
               </p>
-              
+
               <div className="space-y-3 mt-4">
                 <div className="flex items-center space-x-2">
-                  <Checkbox 
-                    id="linkedInPosts" 
+                  <Checkbox
+                    id="linkedInPosts"
                     checked={linkedInPostsChecked}
-                    onCheckedChange={(checked) => setLinkedInPostsChecked(checked === true)}
+                    onCheckedChange={(checked) =>
+                      setLinkedInPostsChecked(checked === true)
+                    }
                   />
-                  <Label htmlFor="linkedInPosts" className="cursor-pointer">LinkedIn posts</Label>
+                  <Label htmlFor="linkedInPosts" className="cursor-pointer">
+                    LinkedIn posts
+                  </Label>
                 </div>
-                
+
                 <div className="flex items-center space-x-2">
-                  <Checkbox 
-                    id="blogArticles" 
+                  <Checkbox
+                    id="blogArticles"
                     checked={blogArticlesChecked}
-                    onCheckedChange={(checked) => setBlogArticlesChecked(checked === true)}
+                    onCheckedChange={(checked) =>
+                      setBlogArticlesChecked(checked === true)
+                    }
                   />
-                  <Label htmlFor="blogArticles" className="cursor-pointer">Blog articles</Label>
+                  <Label htmlFor="blogArticles" className="cursor-pointer">
+                    Blog articles
+                  </Label>
                 </div>
-                
+
                 <div className="flex items-center space-x-2">
-                  <Checkbox 
-                    id="industryPresentations" 
+                  <Checkbox
+                    id="industryPresentations"
                     checked={industryPresentationsChecked}
-                    onCheckedChange={(checked) => setIndustryPresentationsChecked(checked === true)}
+                    onCheckedChange={(checked) =>
+                      setIndustryPresentationsChecked(checked === true)
+                    }
                   />
-                  <Label htmlFor="industryPresentations" className="cursor-pointer">Industry presentations</Label>
+                  <Label
+                    htmlFor="industryPresentations"
+                    className="cursor-pointer"
+                  >
+                    Industry presentations
+                  </Label>
                 </div>
-                
+
                 <div className="flex items-center space-x-2">
-                  <Checkbox 
-                    id="academicPapers" 
+                  <Checkbox
+                    id="academicPapers"
                     checked={academicPapersChecked}
-                    onCheckedChange={(checked) => setAcademicPapersChecked(checked === true)}
+                    onCheckedChange={(checked) =>
+                      setAcademicPapersChecked(checked === true)
+                    }
                   />
-                  <Label htmlFor="academicPapers" className="cursor-pointer">Academic papers</Label>
+                  <Label htmlFor="academicPapers" className="cursor-pointer">
+                    Academic papers
+                  </Label>
                 </div>
-                
+
                 <div className="flex items-center space-x-2">
-                  <Checkbox 
-                    id="neverPublished" 
+                  <Checkbox
+                    id="neverPublished"
                     checked={neverPublishedChecked}
-                    onCheckedChange={(checked) => setNeverPublishedChecked(checked === true)}
+                    onCheckedChange={(checked) =>
+                      setNeverPublishedChecked(checked === true)
+                    }
                   />
-                  <Label htmlFor="neverPublished" className="cursor-pointer">Never published professional content</Label>
+                  <Label htmlFor="neverPublished" className="cursor-pointer">
+                    Never published professional content
+                  </Label>
                 </div>
-                
+
                 <div className="flex items-center space-x-2">
-                  <Checkbox 
-                    id="otherPublishedContent" 
+                  <Checkbox
+                    id="otherPublishedContent"
                     checked={otherPublishedContentChecked}
-                    onCheckedChange={(checked) => setOtherPublishedContentChecked(checked === true)}
+                    onCheckedChange={(checked) =>
+                      setOtherPublishedContentChecked(checked === true)
+                    }
                   />
-                  <Label htmlFor="otherPublishedContent" className="cursor-pointer">Other</Label>
+                  <Label
+                    htmlFor="otherPublishedContent"
+                    className="cursor-pointer"
+                  >
+                    Other
+                  </Label>
                 </div>
-                
+
                 {otherPublishedContentChecked && (
                   <div className="ml-6 mt-2">
                     <Input
@@ -1822,90 +2366,125 @@ export default function QuestionnairePage() {
                 )}
               </div>
             </div>
-            
+
             <hr className="my-6" />
-            
+
             <div className="mb-6">
-              <Label htmlFor="profileUpdateTime" className="text-gray-700 font-medium block mb-2">
+              <Label
+                htmlFor="profileUpdateTime"
+                className="text-gray-700 font-medium block mb-2"
+              >
                 LinkedIn Profile Updates
               </Label>
               <p className="text-sm text-gray-500 mb-3">
                 When was the most recent time you updated your LinkedIn profile?
               </p>
-              
+
               <div className="space-y-3 mt-4">
                 <div className="flex items-center space-x-2">
-                  <Checkbox 
-                    id="lastWeek" 
+                  <Checkbox
+                    id="lastWeek"
                     checked={lastWeekChecked}
-                    onCheckedChange={(checked) => setLastWeekChecked(checked === true)}
+                    onCheckedChange={(checked) =>
+                      setLastWeekChecked(checked === true)
+                    }
                   />
-                  <Label htmlFor="lastWeek" className="cursor-pointer">Within the last week</Label>
+                  <Label htmlFor="lastWeek" className="cursor-pointer">
+                    Within the last week
+                  </Label>
                 </div>
-                
+
                 <div className="flex items-center space-x-2">
-                  <Checkbox 
-                    id="lastMonth" 
+                  <Checkbox
+                    id="lastMonth"
                     checked={lastMonthChecked}
-                    onCheckedChange={(checked) => setLastMonthChecked(checked === true)}
+                    onCheckedChange={(checked) =>
+                      setLastMonthChecked(checked === true)
+                    }
                   />
-                  <Label htmlFor="lastMonth" className="cursor-pointer">Within the last month</Label>
+                  <Label htmlFor="lastMonth" className="cursor-pointer">
+                    Within the last month
+                  </Label>
                 </div>
-                
+
                 <div className="flex items-center space-x-2">
-                  <Checkbox 
-                    id="businessSchool" 
+                  <Checkbox
+                    id="businessSchool"
                     checked={businessSchoolChecked}
-                    onCheckedChange={(checked) => setBusinessSchoolChecked(checked === true)}
+                    onCheckedChange={(checked) =>
+                      setBusinessSchoolChecked(checked === true)
+                    }
                   />
-                  <Label htmlFor="businessSchool" className="cursor-pointer">For / during business school (if applicable)</Label>
+                  <Label htmlFor="businessSchool" className="cursor-pointer">
+                    For / during business school (if applicable)
+                  </Label>
                 </div>
-                
+
                 <div className="flex items-center space-x-2">
-                  <Checkbox 
-                    id="careerCoach" 
+                  <Checkbox
+                    id="careerCoach"
                     checked={careerCoachChecked}
-                    onCheckedChange={(checked) => setCareerCoachChecked(checked === true)}
+                    onCheckedChange={(checked) =>
+                      setCareerCoachChecked(checked === true)
+                    }
                   />
-                  <Label htmlFor="careerCoach" className="cursor-pointer">After I spoke with a career coach</Label>
+                  <Label htmlFor="careerCoach" className="cursor-pointer">
+                    After I spoke with a career coach
+                  </Label>
                 </div>
-                
+
                 <div className="flex items-center space-x-2">
-                  <Checkbox 
-                    id="jobChange" 
+                  <Checkbox
+                    id="jobChange"
                     checked={jobChangeChecked}
-                    onCheckedChange={(checked) => setJobChangeChecked(checked === true)}
+                    onCheckedChange={(checked) =>
+                      setJobChangeChecked(checked === true)
+                    }
                   />
-                  <Label htmlFor="jobChange" className="cursor-pointer">When I last changed jobs</Label>
+                  <Label htmlFor="jobChange" className="cursor-pointer">
+                    When I last changed jobs
+                  </Label>
                 </div>
-                
+
                 <div className="flex items-center space-x-2">
-                  <Checkbox 
-                    id="cantRemember" 
+                  <Checkbox
+                    id="cantRemember"
                     checked={cantRememberChecked}
-                    onCheckedChange={(checked) => setCantRememberChecked(checked === true)}
+                    onCheckedChange={(checked) =>
+                      setCantRememberChecked(checked === true)
+                    }
                   />
-                  <Label htmlFor="cantRemember" className="cursor-pointer">I can't remember</Label>
+                  <Label htmlFor="cantRemember" className="cursor-pointer">
+                    I can't remember
+                  </Label>
                 </div>
-                
+
                 <div className="flex items-center space-x-2">
-                  <Checkbox 
-                    id="neverUpdated" 
+                  <Checkbox
+                    id="neverUpdated"
                     checked={neverUpdatedChecked}
-                    onCheckedChange={(checked) => setNeverUpdatedChecked(checked === true)}
+                    onCheckedChange={(checked) =>
+                      setNeverUpdatedChecked(checked === true)
+                    }
                   />
-                  <Label htmlFor="neverUpdated" className="cursor-pointer">I've never really updated it beyond creating the profile</Label>
+                  <Label htmlFor="neverUpdated" className="cursor-pointer">
+                    I've never really updated it beyond creating the profile
+                  </Label>
                 </div>
-                
+
                 <div className="flex items-center space-x-2">
-                  <Checkbox 
-                    id="otherUpdateTime" 
+                  <Checkbox
+                    id="otherUpdateTime"
                     checked={otherUpdateTimeChecked}
-                    onCheckedChange={(checked) => setOtherUpdateTimeChecked(checked === true)}
+                    onCheckedChange={(checked) =>
+                      setOtherUpdateTimeChecked(checked === true)
+                    }
                   />
-                  <Label htmlFor="otherUpdateTime" className="cursor-pointer">Other</Label>
+                  <Label htmlFor="otherUpdateTime" className="cursor-pointer">
+                    Other
+                  </Label>
                 </div>
-                
+
                 {otherUpdateTimeChecked && (
                   <div className="ml-6 mt-2">
                     <Input
@@ -1918,291 +2497,432 @@ export default function QuestionnairePage() {
                 )}
               </div>
             </div>
-            
+
             <hr className="my-6" />
-            
+
             <div className="mb-6">
-              <Label htmlFor="linkedInActivity" className="text-gray-700 font-medium block mb-2">
+              <Label
+                htmlFor="linkedInActivity"
+                className="text-gray-700 font-medium block mb-2"
+              >
                 LinkedIn Activity
               </Label>
               <p className="text-sm text-gray-500 mb-3">
-                In the last month, how active have you been on LinkedIn? (check all that apply)
+                In the last month, how active have you been on LinkedIn? (check
+                all that apply)
               </p>
-              
+
               <div className="space-y-3 mt-4">
                 <div className="flex items-center space-x-2">
-                  <Checkbox 
-                    id="readNewsfeed" 
+                  <Checkbox
+                    id="readNewsfeed"
                     checked={readNewsfeedChecked}
-                    onCheckedChange={(checked) => setReadNewsfeedChecked(checked === true)}
+                    onCheckedChange={(checked) =>
+                      setReadNewsfeedChecked(checked === true)
+                    }
                   />
-                  <Label htmlFor="readNewsfeed" className="cursor-pointer">Read your Newsfeed</Label>
+                  <Label htmlFor="readNewsfeed" className="cursor-pointer">
+                    Read your Newsfeed
+                  </Label>
                 </div>
-                
+
                 <div className="flex items-center space-x-2">
-                  <Checkbox 
-                    id="acceptedConnections" 
+                  <Checkbox
+                    id="acceptedConnections"
                     checked={acceptedConnectionsChecked}
-                    onCheckedChange={(checked) => setAcceptedConnectionsChecked(checked === true)}
+                    onCheckedChange={(checked) =>
+                      setAcceptedConnectionsChecked(checked === true)
+                    }
                   />
-                  <Label htmlFor="acceptedConnections" className="cursor-pointer">Accepted Connections</Label>
+                  <Label
+                    htmlFor="acceptedConnections"
+                    className="cursor-pointer"
+                  >
+                    Accepted Connections
+                  </Label>
                 </div>
-                
+
                 <div className="flex items-center space-x-2">
-                  <Checkbox 
-                    id="notActive" 
+                  <Checkbox
+                    id="notActive"
                     checked={notActiveChecked}
-                    onCheckedChange={(checked) => setNotActiveChecked(checked === true)}
+                    onCheckedChange={(checked) =>
+                      setNotActiveChecked(checked === true)
+                    }
                   />
-                  <Label htmlFor="notActive" className="cursor-pointer">Not Active in the Last Month</Label>
+                  <Label htmlFor="notActive" className="cursor-pointer">
+                    Not Active in the Last Month
+                  </Label>
                 </div>
-                
-                <p className="text-sm font-medium text-gray-600 mt-5 mb-2">Original Content</p>
+
+                <p className="text-sm font-medium text-gray-600 mt-5 mb-2">
+                  Original Content
+                </p>
                 <div className="flex items-center space-x-2">
-                  <Checkbox 
-                    id="postedNever" 
+                  <Checkbox
+                    id="postedNever"
                     checked={postedNeverChecked}
-                    onCheckedChange={(checked) => setPostedNeverChecked(checked === true)}
+                    onCheckedChange={(checked) =>
+                      setPostedNeverChecked(checked === true)
+                    }
                   />
-                  <Label htmlFor="postedNever" className="cursor-pointer">Posted Original Content - Never</Label>
+                  <Label htmlFor="postedNever" className="cursor-pointer">
+                    Posted Original Content - Never
+                  </Label>
                 </div>
-                
+
                 <div className="flex items-center space-x-2">
-                  <Checkbox 
-                    id="posted12Times" 
+                  <Checkbox
+                    id="posted12Times"
                     checked={posted12TimesChecked}
-                    onCheckedChange={(checked) => setPosted12TimesChecked(checked === true)}
+                    onCheckedChange={(checked) =>
+                      setPosted12TimesChecked(checked === true)
+                    }
                   />
-                  <Label htmlFor="posted12Times" className="cursor-pointer">Posted Original Content - 1-2 times</Label>
+                  <Label htmlFor="posted12Times" className="cursor-pointer">
+                    Posted Original Content - 1-2 times
+                  </Label>
                 </div>
-                
+
                 <div className="flex items-center space-x-2">
-                  <Checkbox 
-                    id="posted35Times" 
+                  <Checkbox
+                    id="posted35Times"
                     checked={posted35TimesChecked}
-                    onCheckedChange={(checked) => setPosted35TimesChecked(checked === true)}
+                    onCheckedChange={(checked) =>
+                      setPosted35TimesChecked(checked === true)
+                    }
                   />
-                  <Label htmlFor="posted35Times" className="cursor-pointer">Posted Original Content - 3-5 times</Label>
+                  <Label htmlFor="posted35Times" className="cursor-pointer">
+                    Posted Original Content - 3-5 times
+                  </Label>
                 </div>
-                
+
                 <div className="flex items-center space-x-2">
-                  <Checkbox 
-                    id="posted6PlusTimes" 
+                  <Checkbox
+                    id="posted6PlusTimes"
                     checked={posted6PlusTimesChecked}
-                    onCheckedChange={(checked) => setPosted6PlusTimesChecked(checked === true)}
+                    onCheckedChange={(checked) =>
+                      setPosted6PlusTimesChecked(checked === true)
+                    }
                   />
-                  <Label htmlFor="posted6PlusTimes" className="cursor-pointer">Posted Original Content - 6+ times</Label>
+                  <Label htmlFor="posted6PlusTimes" className="cursor-pointer">
+                    Posted Original Content - 6+ times
+                  </Label>
                 </div>
-                
-                <p className="text-sm font-medium text-gray-600 mt-5 mb-2">Sharing Content</p>
+
+                <p className="text-sm font-medium text-gray-600 mt-5 mb-2">
+                  Sharing Content
+                </p>
                 <div className="flex items-center space-x-2">
-                  <Checkbox 
-                    id="sharedNever" 
+                  <Checkbox
+                    id="sharedNever"
                     checked={sharedNeverChecked}
-                    onCheckedChange={(checked) => setSharedNeverChecked(checked === true)}
+                    onCheckedChange={(checked) =>
+                      setSharedNeverChecked(checked === true)
+                    }
                   />
-                  <Label htmlFor="sharedNever" className="cursor-pointer">Shared Others' Posts - Never</Label>
+                  <Label htmlFor="sharedNever" className="cursor-pointer">
+                    Shared Others' Posts - Never
+                  </Label>
                 </div>
-                
+
                 <div className="flex items-center space-x-2">
-                  <Checkbox 
-                    id="shared12Times" 
+                  <Checkbox
+                    id="shared12Times"
                     checked={shared12TimesChecked}
-                    onCheckedChange={(checked) => setShared12TimesChecked(checked === true)}
+                    onCheckedChange={(checked) =>
+                      setShared12TimesChecked(checked === true)
+                    }
                   />
-                  <Label htmlFor="shared12Times" className="cursor-pointer">Shared Others' Posts - 1-2 times</Label>
+                  <Label htmlFor="shared12Times" className="cursor-pointer">
+                    Shared Others' Posts - 1-2 times
+                  </Label>
                 </div>
-                
+
                 <div className="flex items-center space-x-2">
-                  <Checkbox 
-                    id="shared35Times" 
+                  <Checkbox
+                    id="shared35Times"
                     checked={shared35TimesChecked}
-                    onCheckedChange={(checked) => setShared35TimesChecked(checked === true)}
+                    onCheckedChange={(checked) =>
+                      setShared35TimesChecked(checked === true)
+                    }
                   />
-                  <Label htmlFor="shared35Times" className="cursor-pointer">Shared Others' Posts - 3-5 times</Label>
+                  <Label htmlFor="shared35Times" className="cursor-pointer">
+                    Shared Others' Posts - 3-5 times
+                  </Label>
                 </div>
-                
+
                 <div className="flex items-center space-x-2">
-                  <Checkbox 
-                    id="shared6PlusTimes" 
+                  <Checkbox
+                    id="shared6PlusTimes"
                     checked={shared6PlusTimesChecked}
-                    onCheckedChange={(checked) => setShared6PlusTimesChecked(checked === true)}
+                    onCheckedChange={(checked) =>
+                      setShared6PlusTimesChecked(checked === true)
+                    }
                   />
-                  <Label htmlFor="shared6PlusTimes" className="cursor-pointer">Shared Others' Posts - 6+ times</Label>
+                  <Label htmlFor="shared6PlusTimes" className="cursor-pointer">
+                    Shared Others' Posts - 6+ times
+                  </Label>
                 </div>
-                
-                <p className="text-sm font-medium text-gray-600 mt-5 mb-2">Commenting</p>
+
+                <p className="text-sm font-medium text-gray-600 mt-5 mb-2">
+                  Commenting
+                </p>
                 <div className="flex items-center space-x-2">
-                  <Checkbox 
-                    id="commentedNever" 
+                  <Checkbox
+                    id="commentedNever"
                     checked={commentedNeverChecked}
-                    onCheckedChange={(checked) => setCommentedNeverChecked(checked === true)}
+                    onCheckedChange={(checked) =>
+                      setCommentedNeverChecked(checked === true)
+                    }
                   />
-                  <Label htmlFor="commentedNever" className="cursor-pointer">Commented on Posts - Never</Label>
+                  <Label htmlFor="commentedNever" className="cursor-pointer">
+                    Commented on Posts - Never
+                  </Label>
                 </div>
-                
+
                 <div className="flex items-center space-x-2">
-                  <Checkbox 
-                    id="commented12TimesPerMonth" 
+                  <Checkbox
+                    id="commented12TimesPerMonth"
                     checked={commented12TimesPerMonthChecked}
-                    onCheckedChange={(checked) => setCommented12TimesPerMonthChecked(checked === true)}
+                    onCheckedChange={(checked) =>
+                      setCommented12TimesPerMonthChecked(checked === true)
+                    }
                   />
-                  <Label htmlFor="commented12TimesPerMonth" className="cursor-pointer">Commented on Posts - 1-2 times per month</Label>
+                  <Label
+                    htmlFor="commented12TimesPerMonth"
+                    className="cursor-pointer"
+                  >
+                    Commented on Posts - 1-2 times per month
+                  </Label>
                 </div>
-                
+
                 <div className="flex items-center space-x-2">
-                  <Checkbox 
-                    id="commented12TimesPerWeek" 
+                  <Checkbox
+                    id="commented12TimesPerWeek"
                     checked={commented12TimesPerWeekChecked}
-                    onCheckedChange={(checked) => setCommented12TimesPerWeekChecked(checked === true)}
+                    onCheckedChange={(checked) =>
+                      setCommented12TimesPerWeekChecked(checked === true)
+                    }
                   />
-                  <Label htmlFor="commented12TimesPerWeek" className="cursor-pointer">Commented on Posts - 1-2 times per week</Label>
+                  <Label
+                    htmlFor="commented12TimesPerWeek"
+                    className="cursor-pointer"
+                  >
+                    Commented on Posts - 1-2 times per week
+                  </Label>
                 </div>
-                
+
                 <div className="flex items-center space-x-2">
-                  <Checkbox 
-                    id="commented3PlusTimesPerWeek" 
+                  <Checkbox
+                    id="commented3PlusTimesPerWeek"
                     checked={commented3PlusTimesPerWeekChecked}
-                    onCheckedChange={(checked) => setCommented3PlusTimesPerWeekChecked(checked === true)}
+                    onCheckedChange={(checked) =>
+                      setCommented3PlusTimesPerWeekChecked(checked === true)
+                    }
                   />
-                  <Label htmlFor="commented3PlusTimesPerWeek" className="cursor-pointer">Commented on Posts - 3+ times per week</Label>
+                  <Label
+                    htmlFor="commented3PlusTimesPerWeek"
+                    className="cursor-pointer"
+                  >
+                    Commented on Posts - 3+ times per week
+                  </Label>
                 </div>
-                
-                <p className="text-sm font-medium text-gray-600 mt-5 mb-2">Reactions</p>
+
+                <p className="text-sm font-medium text-gray-600 mt-5 mb-2">
+                  Reactions
+                </p>
                 <div className="flex items-center space-x-2">
-                  <Checkbox 
-                    id="reactedNever" 
+                  <Checkbox
+                    id="reactedNever"
                     checked={reactedNeverChecked}
-                    onCheckedChange={(checked) => setReactedNeverChecked(checked === true)}
+                    onCheckedChange={(checked) =>
+                      setReactedNeverChecked(checked === true)
+                    }
                   />
-                  <Label htmlFor="reactedNever" className="cursor-pointer">Reacted to Posts (likes, etc.) - Never</Label>
+                  <Label htmlFor="reactedNever" className="cursor-pointer">
+                    Reacted to Posts (likes, etc.) - Never
+                  </Label>
                 </div>
-                
+
                 <div className="flex items-center space-x-2">
-                  <Checkbox 
-                    id="reactedFewTimesMonth" 
+                  <Checkbox
+                    id="reactedFewTimesMonth"
                     checked={reactedFewTimesMonthChecked}
-                    onCheckedChange={(checked) => setReactedFewTimesMonthChecked(checked === true)}
+                    onCheckedChange={(checked) =>
+                      setReactedFewTimesMonthChecked(checked === true)
+                    }
                   />
-                  <Label htmlFor="reactedFewTimesMonth" className="cursor-pointer">Reacted to Posts (likes, etc.) - A few times a month</Label>
+                  <Label
+                    htmlFor="reactedFewTimesMonth"
+                    className="cursor-pointer"
+                  >
+                    Reacted to Posts (likes, etc.) - A few times a month
+                  </Label>
                 </div>
-                
+
                 <div className="flex items-center space-x-2">
-                  <Checkbox 
-                    id="reactedFewTimesWeek" 
+                  <Checkbox
+                    id="reactedFewTimesWeek"
                     checked={reactedFewTimesWeekChecked}
-                    onCheckedChange={(checked) => setReactedFewTimesWeekChecked(checked === true)}
+                    onCheckedChange={(checked) =>
+                      setReactedFewTimesWeekChecked(checked === true)
+                    }
                   />
-                  <Label htmlFor="reactedFewTimesWeek" className="cursor-pointer">Reacted to Posts (likes, etc.) - A few times a week</Label>
+                  <Label
+                    htmlFor="reactedFewTimesWeek"
+                    className="cursor-pointer"
+                  >
+                    Reacted to Posts (likes, etc.) - A few times a week
+                  </Label>
                 </div>
-                
+
                 <div className="flex items-center space-x-2">
-                  <Checkbox 
-                    id="reactedDaily" 
+                  <Checkbox
+                    id="reactedDaily"
                     checked={reactedDailyChecked}
-                    onCheckedChange={(checked) => setReactedDailyChecked(checked === true)}
+                    onCheckedChange={(checked) =>
+                      setReactedDailyChecked(checked === true)
+                    }
                   />
-                  <Label htmlFor="reactedDaily" className="cursor-pointer">Reacted to Posts (likes, etc.) - Daily</Label>
+                  <Label htmlFor="reactedDaily" className="cursor-pointer">
+                    Reacted to Posts (likes, etc.) - Daily
+                  </Label>
                 </div>
               </div>
             </div>
-            
+
             <hr className="my-6" />
-            
+
             <div className="mb-6">
-              <Label htmlFor="brandPositioning" className="text-gray-700 font-medium block mb-2">
+              <Label
+                htmlFor="brandPositioning"
+                className="text-gray-700 font-medium block mb-2"
+              >
                 Digital Professional Brand Positioning
               </Label>
               <p className="text-sm text-gray-500 mb-3">
-                On a scale of 1-5, how well do you feel your current digital professional brand positions you for your target roles?
+                On a scale of 1-5, how well do you feel your current digital
+                professional brand positions you for your target roles?
               </p>
-              
+
               <div className="space-y-3 mt-4">
-                <RadioGroup 
-                  value={brandPositioningRating?.toString() || ""} 
-                  onValueChange={(value) => setBrandPositioningRating(parseInt(value))}
+                <RadioGroup
+                  value={brandPositioningRating?.toString() || ""}
+                  onValueChange={(value) =>
+                    setBrandPositioningRating(parseInt(value))
+                  }
                   className="flex flex-col space-y-3"
                 >
                   <div className="flex items-center space-x-2">
                     <RadioGroupItem value="1" id="bp-1" />
-                    <Label htmlFor="bp-1" className="cursor-pointer">1 - Needs Significant Work</Label>
+                    <Label htmlFor="bp-1" className="cursor-pointer">
+                      1 - Needs Significant Work
+                    </Label>
                   </div>
-                  
+
                   <div className="flex items-center space-x-2">
                     <RadioGroupItem value="2" id="bp-2" />
-                    <Label htmlFor="bp-2" className="cursor-pointer">2</Label>
+                    <Label htmlFor="bp-2" className="cursor-pointer">
+                      2
+                    </Label>
                   </div>
-                  
+
                   <div className="flex items-center space-x-2">
                     <RadioGroupItem value="3" id="bp-3" />
-                    <Label htmlFor="bp-3" className="cursor-pointer">3</Label>
+                    <Label htmlFor="bp-3" className="cursor-pointer">
+                      3
+                    </Label>
                   </div>
-                  
+
                   <div className="flex items-center space-x-2">
                     <RadioGroupItem value="4" id="bp-4" />
-                    <Label htmlFor="bp-4" className="cursor-pointer">4</Label>
+                    <Label htmlFor="bp-4" className="cursor-pointer">
+                      4
+                    </Label>
                   </div>
-                  
+
                   <div className="flex items-center space-x-2">
                     <RadioGroupItem value="5" id="bp-5" />
-                    <Label htmlFor="bp-5" className="cursor-pointer">5 - Strongly Positioned</Label>
+                    <Label htmlFor="bp-5" className="cursor-pointer">
+                      5 - Strongly Positioned
+                    </Label>
                   </div>
                 </RadioGroup>
               </div>
             </div>
-            
+
             <hr className="my-6" />
-            
+
             <div className="mb-6">
-              <Label htmlFor="contentComfort" className="text-gray-700 font-medium block mb-2">
+              <Label
+                htmlFor="contentComfort"
+                className="text-gray-700 font-medium block mb-2"
+              >
                 Content Creation Comfort
               </Label>
               <p className="text-sm text-gray-500 mb-3">
                 How comfortable are you with creating professional content?
               </p>
-              
+
               <div className="space-y-3 mt-4">
-                <RadioGroup 
-                  value={contentCreationComfort?.toString() || ""} 
-                  onValueChange={(value) => setContentCreationComfort(parseInt(value))}
+                <RadioGroup
+                  value={contentCreationComfort?.toString() || ""}
+                  onValueChange={(value) =>
+                    setContentCreationComfort(parseInt(value))
+                  }
                   className="flex flex-col space-y-3"
                 >
                   <div className="flex items-center space-x-2">
                     <RadioGroupItem value="1" id="cc-1" />
-                    <Label htmlFor="cc-1" className="cursor-pointer">1 - Not at all comfortable</Label>
+                    <Label htmlFor="cc-1" className="cursor-pointer">
+                      1 - Not at all comfortable
+                    </Label>
                   </div>
-                  
+
                   <div className="flex items-center space-x-2">
                     <RadioGroupItem value="2" id="cc-2" />
-                    <Label htmlFor="cc-2" className="cursor-pointer">2</Label>
+                    <Label htmlFor="cc-2" className="cursor-pointer">
+                      2
+                    </Label>
                   </div>
-                  
+
                   <div className="flex items-center space-x-2">
                     <RadioGroupItem value="3" id="cc-3" />
-                    <Label htmlFor="cc-3" className="cursor-pointer">3</Label>
+                    <Label htmlFor="cc-3" className="cursor-pointer">
+                      3
+                    </Label>
                   </div>
-                  
+
                   <div className="flex items-center space-x-2">
                     <RadioGroupItem value="4" id="cc-4" />
-                    <Label htmlFor="cc-4" className="cursor-pointer">4</Label>
+                    <Label htmlFor="cc-4" className="cursor-pointer">
+                      4
+                    </Label>
                   </div>
-                  
+
                   <div className="flex items-center space-x-2">
                     <RadioGroupItem value="5" id="cc-5" />
-                    <Label htmlFor="cc-5" className="cursor-pointer">5 - Very comfortable</Label>
+                    <Label htmlFor="cc-5" className="cursor-pointer">
+                      5 - Very comfortable
+                    </Label>
                   </div>
                 </RadioGroup>
               </div>
             </div>
-            
+
             <hr className="my-6" />
-            
+
             <div className="mb-6">
-              <Label htmlFor="brandOptimizationGoals" className="text-gray-700 font-medium block mb-2">
+              <Label
+                htmlFor="brandOptimizationGoals"
+                className="text-gray-700 font-medium block mb-2"
+              >
                 Professional Brand Optimization Goals
               </Label>
               <p className="text-sm text-gray-500 mb-3">
-                What do you hope to gain from optimizing your professional brand?
+                What do you hope to gain from optimizing your professional
+                brand?
               </p>
               <Textarea
                 id="brandOptimizationGoals"
@@ -2212,296 +2932,453 @@ export default function QuestionnairePage() {
                 placeholder="Describe your goals for your professional brand..."
               />
             </div>
-
           </div>
         );
       case 4:
         return (
           <div className="space-y-6">
             <div className="mb-6">
-              <h2 className="text-xl font-semibold text-gray-800 mb-3">Content & Thought Leadership Interests</h2>
+              <h2 className="text-xl font-semibold text-gray-800 mb-3">
+                Content & Thought Leadership Interests
+              </h2>
               <p className="text-sm text-gray-500 mb-5">
-                Help us understand the topics you're passionate about or knowledgeable in as this will guide our discussions about your professional brand and thought leadership. Select any areas where you either have expertise or actively follow industry developments. Don't feel limited - this is a starting point for our conversation.
+                Help us understand the topics you're passionate about or
+                knowledgeable in as this will guide our discussions about your
+                professional brand and thought leadership. Select any areas
+                where you either have expertise or actively follow industry
+                developments. Don't feel limited - this is a starting point for
+                our conversation.
               </p>
-              
+
               <div className="mb-6">
                 <Label className="text-gray-700 font-medium block mb-3">
                   Industry Interests <span className="text-red-500">*</span>
                 </Label>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                   <div className="flex items-center space-x-2">
-                    <Checkbox 
+                    <Checkbox
                       id="consulting"
                       checked={consultingChecked}
-                      onCheckedChange={(checked) => setConsultingChecked(checked === true)}
+                      onCheckedChange={(checked) =>
+                        setConsultingChecked(checked === true)
+                      }
                     />
-                    <Label htmlFor="consulting" className="text-gray-700">Consulting</Label>
+                    <Label htmlFor="consulting" className="text-gray-700">
+                      Consulting
+                    </Label>
                   </div>
-                  
+
                   <div className="flex items-center space-x-2">
-                    <Checkbox 
-                      id="consumer-retail" 
+                    <Checkbox
+                      id="consumer-retail"
                       checked={consumerRetailChecked}
-                      onCheckedChange={(checked) => setConsumerRetailChecked(checked === true)}
+                      onCheckedChange={(checked) =>
+                        setConsumerRetailChecked(checked === true)
+                      }
                     />
-                    <Label htmlFor="consumer-retail" className="text-gray-700">Consumer & Retail</Label>
+                    <Label htmlFor="consumer-retail" className="text-gray-700">
+                      Consumer & Retail
+                    </Label>
                   </div>
-                  
+
                   <div className="flex items-center space-x-2">
-                    <Checkbox 
-                      id="financial-services" 
+                    <Checkbox
+                      id="financial-services"
                       checked={financialServicesChecked}
-                      onCheckedChange={(checked) => setFinancialServicesChecked(checked === true)}
+                      onCheckedChange={(checked) =>
+                        setFinancialServicesChecked(checked === true)
+                      }
                     />
-                    <Label htmlFor="financial-services" className="text-gray-700">Financial Services</Label>
+                    <Label
+                      htmlFor="financial-services"
+                      className="text-gray-700"
+                    >
+                      Financial Services
+                    </Label>
                   </div>
-                  
+
                   <div className="flex items-center space-x-2">
-                    <Checkbox 
-                      id="global-markets" 
+                    <Checkbox
+                      id="global-markets"
                       checked={globalMarketsChecked}
-                      onCheckedChange={(checked) => setGlobalMarketsChecked(checked === true)}
+                      onCheckedChange={(checked) =>
+                        setGlobalMarketsChecked(checked === true)
+                      }
                     />
-                    <Label htmlFor="global-markets" className="text-gray-700">Global Markets & Trade</Label>
+                    <Label htmlFor="global-markets" className="text-gray-700">
+                      Global Markets & Trade
+                    </Label>
                   </div>
-                  
+
                   <div className="flex items-center space-x-2">
-                    <Checkbox 
-                      id="government" 
+                    <Checkbox
+                      id="government"
                       checked={governmentChecked}
-                      onCheckedChange={(checked) => setGovernmentChecked(checked === true)}
+                      onCheckedChange={(checked) =>
+                        setGovernmentChecked(checked === true)
+                      }
                     />
-                    <Label htmlFor="government" className="text-gray-700">Government and Public Sector</Label>
+                    <Label htmlFor="government" className="text-gray-700">
+                      Government and Public Sector
+                    </Label>
                   </div>
-                  
+
                   <div className="flex items-center space-x-2">
-                    <Checkbox 
-                      id="healthcare" 
+                    <Checkbox
+                      id="healthcare"
                       checked={healthcareChecked}
-                      onCheckedChange={(checked) => setHealthcareChecked(checked === true)}
+                      onCheckedChange={(checked) =>
+                        setHealthcareChecked(checked === true)
+                      }
                     />
-                    <Label htmlFor="healthcare" className="text-gray-700">Healthcare & Life Sciences</Label>
+                    <Label htmlFor="healthcare" className="text-gray-700">
+                      Healthcare & Life Sciences
+                    </Label>
                   </div>
-                  
+
                   <div className="flex items-center space-x-2">
-                    <Checkbox 
-                      id="innovation" 
+                    <Checkbox
+                      id="innovation"
                       checked={innovationChecked}
-                      onCheckedChange={(checked) => setInnovationChecked(checked === true)}
+                      onCheckedChange={(checked) =>
+                        setInnovationChecked(checked === true)
+                      }
                     />
-                    <Label htmlFor="innovation" className="text-gray-700">Innovation & Entrepreneurship</Label>
+                    <Label htmlFor="innovation" className="text-gray-700">
+                      Innovation & Entrepreneurship
+                    </Label>
                   </div>
-                  
+
                   <div className="flex items-center space-x-2">
-                    <Checkbox 
-                      id="manufacturing" 
+                    <Checkbox
+                      id="manufacturing"
                       checked={manufacturingChecked}
-                      onCheckedChange={(checked) => setManufacturingChecked(checked === true)}
+                      onCheckedChange={(checked) =>
+                        setManufacturingChecked(checked === true)
+                      }
                     />
-                    <Label htmlFor="manufacturing" className="text-gray-700">Manufacturing & Industry</Label>
+                    <Label htmlFor="manufacturing" className="text-gray-700">
+                      Manufacturing & Industry
+                    </Label>
                   </div>
-                  
+
                   <div className="flex items-center space-x-2">
-                    <Checkbox 
-                      id="social-impact" 
+                    <Checkbox
+                      id="social-impact"
                       checked={socialImpactChecked}
-                      onCheckedChange={(checked) => setSocialImpactChecked(checked === true)}
+                      onCheckedChange={(checked) =>
+                        setSocialImpactChecked(checked === true)
+                      }
                     />
-                    <Label htmlFor="social-impact" className="text-gray-700">Social Impact & Sustainability</Label>
+                    <Label htmlFor="social-impact" className="text-gray-700">
+                      Social Impact & Sustainability
+                    </Label>
                   </div>
-                  
+
                   <div className="flex items-center space-x-2">
-                    <Checkbox 
-                      id="technology" 
+                    <Checkbox
+                      id="technology"
                       checked={technologyChecked}
-                      onCheckedChange={(checked) => setTechnologyChecked(checked === true)}
+                      onCheckedChange={(checked) =>
+                        setTechnologyChecked(checked === true)
+                      }
                     />
-                    <Label htmlFor="technology" className="text-gray-700">Technology & Digital Media</Label>
+                    <Label htmlFor="technology" className="text-gray-700">
+                      Technology & Digital Media
+                    </Label>
                   </div>
                 </div>
               </div>
-              
+
               <hr className="my-6" />
-              
+
               {/* Cross-Cutting & Societal Interests Section */}
               <div className="mb-6">
                 <Label className="text-gray-700 font-medium block mb-3">
-                  Cross-Cutting & Societal Interests <span className="text-red-500">*</span>
+                  Cross-Cutting & Societal Interests{" "}
+                  <span className="text-red-500">*</span>
                 </Label>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                   <div className="flex items-center space-x-2">
-                    <Checkbox 
-                      id="climate" 
+                    <Checkbox
+                      id="climate"
                       checked={climateChecked}
-                      onCheckedChange={(checked) => setClimateChecked(checked === true)}
+                      onCheckedChange={(checked) =>
+                        setClimateChecked(checked === true)
+                      }
                     />
-                    <Label htmlFor="climate" className="text-gray-700">Climate Change & Sustainability</Label>
+                    <Label htmlFor="climate" className="text-gray-700">
+                      Climate Change & Sustainability
+                    </Label>
                   </div>
-                  
+
                   <div className="flex items-center space-x-2">
-                    <Checkbox 
-                      id="consumer-behavior" 
+                    <Checkbox
+                      id="consumer-behavior"
                       checked={consumerBehaviorChecked}
-                      onCheckedChange={(checked) => setConsumerBehaviorChecked(checked === true)}
+                      onCheckedChange={(checked) =>
+                        setConsumerBehaviorChecked(checked === true)
+                      }
                     />
-                    <Label htmlFor="consumer-behavior" className="text-gray-700">Consumer Behavior & Culture</Label>
+                    <Label
+                      htmlFor="consumer-behavior"
+                      className="text-gray-700"
+                    >
+                      Consumer Behavior & Culture
+                    </Label>
                   </div>
-                  
+
                   <div className="flex items-center space-x-2">
-                    <Checkbox 
-                      id="crime-justice" 
+                    <Checkbox
+                      id="crime-justice"
                       checked={crimeJusticeChecked}
-                      onCheckedChange={(checked) => setCrimeJusticeChecked(checked === true)}
+                      onCheckedChange={(checked) =>
+                        setCrimeJusticeChecked(checked === true)
+                      }
                     />
-                    <Label htmlFor="crime-justice" className="text-gray-700">Crime & Justice</Label>
+                    <Label htmlFor="crime-justice" className="text-gray-700">
+                      Crime & Justice
+                    </Label>
                   </div>
-                  
+
                   <div className="flex items-center space-x-2">
-                    <Checkbox 
-                      id="digital-transformation-ai" 
+                    <Checkbox
+                      id="digital-transformation-ai"
                       checked={digitalTransformationAIChecked}
-                      onCheckedChange={(checked) => setDigitalTransformationAIChecked(checked === true)}
+                      onCheckedChange={(checked) =>
+                        setDigitalTransformationAIChecked(checked === true)
+                      }
                     />
-                    <Label htmlFor="digital-transformation-ai" className="text-gray-700">Digital Transformation/AI</Label>
+                    <Label
+                      htmlFor="digital-transformation-ai"
+                      className="text-gray-700"
+                    >
+                      Digital Transformation/AI
+                    </Label>
                   </div>
-                  
+
                   <div className="flex items-center space-x-2">
-                    <Checkbox 
-                      id="education-learning" 
+                    <Checkbox
+                      id="education-learning"
                       checked={educationLearningChecked}
-                      onCheckedChange={(checked) => setEducationLearningChecked(checked === true)}
+                      onCheckedChange={(checked) =>
+                        setEducationLearningChecked(checked === true)
+                      }
                     />
-                    <Label htmlFor="education-learning" className="text-gray-700">Education & Learning</Label>
+                    <Label
+                      htmlFor="education-learning"
+                      className="text-gray-700"
+                    >
+                      Education & Learning
+                    </Label>
                   </div>
-                  
+
                   <div className="flex items-center space-x-2">
-                    <Checkbox 
-                      id="emerging-markets" 
+                    <Checkbox
+                      id="emerging-markets"
                       checked={emergingMarketsChecked}
-                      onCheckedChange={(checked) => setEmergingMarketsChecked(checked === true)}
+                      onCheckedChange={(checked) =>
+                        setEmergingMarketsChecked(checked === true)
+                      }
                     />
-                    <Label htmlFor="emerging-markets" className="text-gray-700">Emerging Markets</Label>
+                    <Label htmlFor="emerging-markets" className="text-gray-700">
+                      Emerging Markets
+                    </Label>
                   </div>
-                  
+
                   <div className="flex items-center space-x-2">
-                    <Checkbox 
-                      id="entertainment-arts" 
+                    <Checkbox
+                      id="entertainment-arts"
                       checked={entertainmentArtsChecked}
-                      onCheckedChange={(checked) => setEntertainmentArtsChecked(checked === true)}
+                      onCheckedChange={(checked) =>
+                        setEntertainmentArtsChecked(checked === true)
+                      }
                     />
-                    <Label htmlFor="entertainment-arts" className="text-gray-700">Entertainment & Arts</Label>
+                    <Label
+                      htmlFor="entertainment-arts"
+                      className="text-gray-700"
+                    >
+                      Entertainment & Arts
+                    </Label>
                   </div>
-                  
+
                   <div className="flex items-center space-x-2">
-                    <Checkbox 
-                      id="financial-innovation" 
+                    <Checkbox
+                      id="financial-innovation"
                       checked={financialInnovationChecked}
-                      onCheckedChange={(checked) => setFinancialInnovationChecked(checked === true)}
+                      onCheckedChange={(checked) =>
+                        setFinancialInnovationChecked(checked === true)
+                      }
                     />
-                    <Label htmlFor="financial-innovation" className="text-gray-700">Financial Innovation & Markets</Label>
+                    <Label
+                      htmlFor="financial-innovation"
+                      className="text-gray-700"
+                    >
+                      Financial Innovation & Markets
+                    </Label>
                   </div>
-                  
+
                   <div className="flex items-center space-x-2">
-                    <Checkbox 
-                      id="future-of-work" 
+                    <Checkbox
+                      id="future-of-work"
                       checked={futureOfWorkChecked}
-                      onCheckedChange={(checked) => setFutureOfWorkChecked(checked === true)}
+                      onCheckedChange={(checked) =>
+                        setFutureOfWorkChecked(checked === true)
+                      }
                     />
-                    <Label htmlFor="future-of-work" className="text-gray-700">Future of Work</Label>
+                    <Label htmlFor="future-of-work" className="text-gray-700">
+                      Future of Work
+                    </Label>
                   </div>
-                  
+
                   <div className="flex items-center space-x-2">
-                    <Checkbox 
-                      id="global-economy" 
+                    <Checkbox
+                      id="global-economy"
                       checked={globalEconomyChecked}
-                      onCheckedChange={(checked) => setGlobalEconomyChecked(checked === true)}
+                      onCheckedChange={(checked) =>
+                        setGlobalEconomyChecked(checked === true)
+                      }
                     />
-                    <Label htmlFor="global-economy" className="text-gray-700">Global Markets & Economy</Label>
+                    <Label htmlFor="global-economy" className="text-gray-700">
+                      Global Markets & Economy
+                    </Label>
                   </div>
-                  
+
                   <div className="flex items-center space-x-2">
-                    <Checkbox 
-                      id="geopolitics" 
+                    <Checkbox
+                      id="geopolitics"
                       checked={geopoliticsChecked}
-                      onCheckedChange={(checked) => setGeopoliticsChecked(checked === true)}
+                      onCheckedChange={(checked) =>
+                        setGeopoliticsChecked(checked === true)
+                      }
                     />
-                    <Label htmlFor="geopolitics" className="text-gray-700">Global Politics & Geopolitics</Label>
+                    <Label htmlFor="geopolitics" className="text-gray-700">
+                      Global Politics & Geopolitics
+                    </Label>
                   </div>
-                  
+
                   <div className="flex items-center space-x-2">
-                    <Checkbox 
-                      id="health-wellness" 
+                    <Checkbox
+                      id="health-wellness"
                       checked={healthWellnessChecked}
-                      onCheckedChange={(checked) => setHealthWellnessChecked(checked === true)}
+                      onCheckedChange={(checked) =>
+                        setHealthWellnessChecked(checked === true)
+                      }
                     />
-                    <Label htmlFor="health-wellness" className="text-gray-700">Health & Wellness</Label>
+                    <Label htmlFor="health-wellness" className="text-gray-700">
+                      Health & Wellness
+                    </Label>
                   </div>
-                  
+
                   <div className="flex items-center space-x-2">
-                    <Checkbox 
-                      id="healthcare-innovation" 
+                    <Checkbox
+                      id="healthcare-innovation"
                       checked={healthcareInnovationChecked}
-                      onCheckedChange={(checked) => setHealthcareInnovationChecked(checked === true)}
+                      onCheckedChange={(checked) =>
+                        setHealthcareInnovationChecked(checked === true)
+                      }
                     />
-                    <Label htmlFor="healthcare-innovation" className="text-gray-700">Healthcare Innovation</Label>
+                    <Label
+                      htmlFor="healthcare-innovation"
+                      className="text-gray-700"
+                    >
+                      Healthcare Innovation
+                    </Label>
                   </div>
-                  
+
                   <div className="flex items-center space-x-2">
-                    <Checkbox 
-                      id="social-impact-dei" 
+                    <Checkbox
+                      id="social-impact-dei"
                       checked={socialImpactDEIChecked}
-                      onCheckedChange={(checked) => setSocialImpactDEIChecked(checked === true)}
+                      onCheckedChange={(checked) =>
+                        setSocialImpactDEIChecked(checked === true)
+                      }
                     />
-                    <Label htmlFor="social-impact-dei" className="text-gray-700">Social Impact & DEI</Label>
+                    <Label
+                      htmlFor="social-impact-dei"
+                      className="text-gray-700"
+                    >
+                      Social Impact & DEI
+                    </Label>
                   </div>
-                  
+
                   <div className="flex items-center space-x-2">
-                    <Checkbox 
-                      id="sports-recreation" 
+                    <Checkbox
+                      id="sports-recreation"
                       checked={sportsRecreationChecked}
-                      onCheckedChange={(checked) => setSportsRecreationChecked(checked === true)}
+                      onCheckedChange={(checked) =>
+                        setSportsRecreationChecked(checked === true)
+                      }
                     />
-                    <Label htmlFor="sports-recreation" className="text-gray-700">Sports & Recreation</Label>
+                    <Label
+                      htmlFor="sports-recreation"
+                      className="text-gray-700"
+                    >
+                      Sports & Recreation
+                    </Label>
                   </div>
-                  
+
                   <div className="flex items-center space-x-2">
-                    <Checkbox 
-                      id="travel-tourism" 
+                    <Checkbox
+                      id="travel-tourism"
                       checked={travelTourismChecked}
-                      onCheckedChange={(checked) => setTravelTourismChecked(checked === true)}
+                      onCheckedChange={(checked) =>
+                        setTravelTourismChecked(checked === true)
+                      }
                     />
-                    <Label htmlFor="travel-tourism" className="text-gray-700">Travel & Tourism</Label>
+                    <Label htmlFor="travel-tourism" className="text-gray-700">
+                      Travel & Tourism
+                    </Label>
                   </div>
-                  
+
                   <div className="flex items-center space-x-2">
-                    <Checkbox 
-                      id="urban-development" 
+                    <Checkbox
+                      id="urban-development"
                       checked={urbanDevelopmentChecked}
-                      onCheckedChange={(checked) => setUrbanDevelopmentChecked(checked === true)}
+                      onCheckedChange={(checked) =>
+                        setUrbanDevelopmentChecked(checked === true)
+                      }
                     />
-                    <Label htmlFor="urban-development" className="text-gray-700">Urban Development & Infrastructure</Label>
+                    <Label
+                      htmlFor="urban-development"
+                      className="text-gray-700"
+                    >
+                      Urban Development & Infrastructure
+                    </Label>
                   </div>
-                  
+
                   <div className="flex items-center space-x-2">
-                    <Checkbox 
-                      id="us-politics" 
+                    <Checkbox
+                      id="us-politics"
                       checked={usPoliticsChecked}
-                      onCheckedChange={(checked) => setUsPoliticsChecked(checked === true)}
+                      onCheckedChange={(checked) =>
+                        setUsPoliticsChecked(checked === true)
+                      }
                     />
-                    <Label htmlFor="us-politics" className="text-gray-700">U.S. Politics & Policy</Label>
+                    <Label htmlFor="us-politics" className="text-gray-700">
+                      U.S. Politics & Policy
+                    </Label>
                   </div>
                 </div>
               </div>
-              
+
               <hr className="my-6" />
-              
+
               {/* Thought Leadership Areas */}
               <div className="mb-6">
-                <Label htmlFor="professionalAreas" className="text-gray-700 font-medium block mb-2">
-                  In what professional areas do you seek to become a thought leader?
+                <Label
+                  htmlFor="professionalAreas"
+                  className="text-gray-700 font-medium block mb-2"
+                >
+                  In what professional areas do you seek to become a thought
+                  leader?
                 </Label>
                 <p className="text-sm text-gray-500 mb-3">
-                  Consider both your current expertise and areas where you aspire to build credibility. Professional areas might include any business topics, functions, market segments, verticals, etc. An example might be: AI/ML applications in healthcare delivery, ESG integration in private equity
+                  Consider both your current expertise and areas where you
+                  aspire to build credibility. Professional areas might include
+                  any business topics, functions, market segments, verticals,
+                  etc. An example might be: AI/ML applications in healthcare
+                  delivery, ESG integration in private equity
                 </p>
                 <Textarea
                   id="professionalAreas"
@@ -2511,96 +3388,145 @@ export default function QuestionnairePage() {
                   placeholder="Describe your professional focus areas..."
                 />
               </div>
-              
+
               <hr className="my-6" />
-              
+
               {/* Content Creation Format Preferences */}
               <div className="mb-6">
                 <Label className="text-gray-700 font-medium block mb-3">
-                  As you think about content creation, are there any formats that feel more natural to you? (Select all that apply)
+                  As you think about content creation, are there any formats
+                  that feel more natural to you? (Select all that apply)
                 </Label>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                   <div className="flex items-center space-x-2">
-                    <Checkbox 
-                      id="sharing-news" 
+                    <Checkbox
+                      id="sharing-news"
                       checked={sharingNewsChecked}
-                      onCheckedChange={(checked) => setSharingNewsChecked(checked === true)}
+                      onCheckedChange={(checked) =>
+                        setSharingNewsChecked(checked === true)
+                      }
                     />
-                    <Label htmlFor="sharing-news" className="text-gray-700">Sharing industry news with your perspective</Label>
+                    <Label htmlFor="sharing-news" className="text-gray-700">
+                      Sharing industry news with your perspective
+                    </Label>
                   </div>
-                  
+
                   <div className="flex items-center space-x-2">
-                    <Checkbox 
-                      id="writing-experiences" 
+                    <Checkbox
+                      id="writing-experiences"
                       checked={writingExperiencesChecked}
-                      onCheckedChange={(checked) => setWritingExperiencesChecked(checked === true)}
+                      onCheckedChange={(checked) =>
+                        setWritingExperiencesChecked(checked === true)
+                      }
                     />
-                    <Label htmlFor="writing-experiences" className="text-gray-700">Writing about your learned experiences</Label>
+                    <Label
+                      htmlFor="writing-experiences"
+                      className="text-gray-700"
+                    >
+                      Writing about your learned experiences
+                    </Label>
                   </div>
-                  
+
                   <div className="flex items-center space-x-2">
-                    <Checkbox 
-                      id="analyzing-trends" 
+                    <Checkbox
+                      id="analyzing-trends"
                       checked={analyzingTrendsChecked}
-                      onCheckedChange={(checked) => setAnalyzingTrendsChecked(checked === true)}
+                      onCheckedChange={(checked) =>
+                        setAnalyzingTrendsChecked(checked === true)
+                      }
                     />
-                    <Label htmlFor="analyzing-trends" className="text-gray-700">Analyzing trends</Label>
+                    <Label htmlFor="analyzing-trends" className="text-gray-700">
+                      Analyzing trends
+                    </Label>
                   </div>
-                  
+
                   <div className="flex items-center space-x-2">
-                    <Checkbox 
-                      id="commenting-posts" 
+                    <Checkbox
+                      id="commenting-posts"
                       checked={commentingPostsChecked}
-                      onCheckedChange={(checked) => setCommentingPostsChecked(checked === true)}
+                      onCheckedChange={(checked) =>
+                        setCommentingPostsChecked(checked === true)
+                      }
                     />
-                    <Label htmlFor="commenting-posts" className="text-gray-700">Commenting on others' posts</Label>
+                    <Label htmlFor="commenting-posts" className="text-gray-700">
+                      Commenting on others' posts
+                    </Label>
                   </div>
-                  
+
                   <div className="flex items-center space-x-2">
-                    <Checkbox 
-                      id="how-to-content" 
+                    <Checkbox
+                      id="how-to-content"
                       checked={howToContentChecked}
-                      onCheckedChange={(checked) => setHowToContentChecked(checked === true)}
+                      onCheckedChange={(checked) =>
+                        setHowToContentChecked(checked === true)
+                      }
                     />
-                    <Label htmlFor="how-to-content" className="text-gray-700">Creating how-to content</Label>
+                    <Label htmlFor="how-to-content" className="text-gray-700">
+                      Creating how-to content
+                    </Label>
                   </div>
-                  
+
                   <div className="flex items-center space-x-2">
-                    <Checkbox 
-                      id="event-takeaways" 
+                    <Checkbox
+                      id="event-takeaways"
                       checked={eventTakeawaysChecked}
-                      onCheckedChange={(checked) => setEventTakeawaysChecked(checked === true)}
+                      onCheckedChange={(checked) =>
+                        setEventTakeawaysChecked(checked === true)
+                      }
                     />
-                    <Label htmlFor="event-takeaways" className="text-gray-700">Sharing event takeaways</Label>
+                    <Label htmlFor="event-takeaways" className="text-gray-700">
+                      Sharing event takeaways
+                    </Label>
                   </div>
-                  
+
                   <div className="flex items-center space-x-2">
-                    <Checkbox 
-                      id="personal-anecdote" 
+                    <Checkbox
+                      id="personal-anecdote"
                       checked={personalAnecdoteChecked}
-                      onCheckedChange={(checked) => setPersonalAnecdoteChecked(checked === true)}
+                      onCheckedChange={(checked) =>
+                        setPersonalAnecdoteChecked(checked === true)
+                      }
                     />
-                    <Label htmlFor="personal-anecdote" className="text-gray-700">Personal anecdote</Label>
+                    <Label
+                      htmlFor="personal-anecdote"
+                      className="text-gray-700"
+                    >
+                      Personal anecdote
+                    </Label>
                   </div>
-                  
+
                   <div className="flex items-center space-x-2">
-                    <Checkbox 
-                      id="digital-communities" 
+                    <Checkbox
+                      id="digital-communities"
                       checked={digitalCommunitiesChecked}
-                      onCheckedChange={(checked) => setDigitalCommunitiesChecked(checked === true)}
+                      onCheckedChange={(checked) =>
+                        setDigitalCommunitiesChecked(checked === true)
+                      }
                     />
-                    <Label htmlFor="digital-communities" className="text-gray-700">Digital communities</Label>
+                    <Label
+                      htmlFor="digital-communities"
+                      className="text-gray-700"
+                    >
+                      Digital communities
+                    </Label>
                   </div>
-                  
+
                   <div className="flex items-center space-x-2">
-                    <Checkbox 
-                      id="other-content-format" 
+                    <Checkbox
+                      id="other-content-format"
                       checked={otherContentFormatChecked}
-                      onCheckedChange={(checked) => setOtherContentFormatChecked(checked === true)}
+                      onCheckedChange={(checked) =>
+                        setOtherContentFormatChecked(checked === true)
+                      }
                     />
-                    <Label htmlFor="other-content-format" className="text-gray-700">Other</Label>
+                    <Label
+                      htmlFor="other-content-format"
+                      className="text-gray-700"
+                    >
+                      Other
+                    </Label>
                   </div>
-                  
+
                   {otherContentFormatChecked && (
                     <div className="ml-6 mt-2 md:col-span-2">
                       <Input
@@ -2613,69 +3539,103 @@ export default function QuestionnairePage() {
                   )}
                 </div>
               </div>
-              
+
               <hr className="my-6" />
-              
+
               {/* Posting Barriers */}
               <div className="mb-6">
                 <Label className="text-gray-700 font-medium block mb-3">
-                  What holds you back from posting more frequently? (Select all that apply)
+                  What holds you back from posting more frequently? (Select all
+                  that apply)
                 </Label>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                   <div className="flex items-center space-x-2">
-                    <Checkbox 
-                      id="unsure-what-to-say" 
+                    <Checkbox
+                      id="unsure-what-to-say"
                       checked={unsureWhatToSayChecked}
-                      onCheckedChange={(checked) => setUnsureWhatToSayChecked(checked === true)}
+                      onCheckedChange={(checked) =>
+                        setUnsureWhatToSayChecked(checked === true)
+                      }
                     />
-                    <Label htmlFor="unsure-what-to-say" className="text-gray-700">Unsure what to say</Label>
+                    <Label
+                      htmlFor="unsure-what-to-say"
+                      className="text-gray-700"
+                    >
+                      Unsure what to say
+                    </Label>
                   </div>
-                  
+
                   <div className="flex items-center space-x-2">
-                    <Checkbox 
-                      id="fear-of-judgment" 
+                    <Checkbox
+                      id="fear-of-judgment"
                       checked={fearOfJudgmentChecked}
-                      onCheckedChange={(checked) => setFearOfJudgmentChecked(checked === true)}
+                      onCheckedChange={(checked) =>
+                        setFearOfJudgmentChecked(checked === true)
+                      }
                     />
-                    <Label htmlFor="fear-of-judgment" className="text-gray-700">Fear of judgment</Label>
+                    <Label htmlFor="fear-of-judgment" className="text-gray-700">
+                      Fear of judgment
+                    </Label>
                   </div>
-                  
+
                   <div className="flex items-center space-x-2">
-                    <Checkbox 
-                      id="time-management" 
+                    <Checkbox
+                      id="time-management"
                       checked={timeManagementChecked}
-                      onCheckedChange={(checked) => setTimeManagementChecked(checked === true)}
+                      onCheckedChange={(checked) =>
+                        setTimeManagementChecked(checked === true)
+                      }
                     />
-                    <Label htmlFor="time-management" className="text-gray-700">Time management</Label>
+                    <Label htmlFor="time-management" className="text-gray-700">
+                      Time management
+                    </Label>
                   </div>
-                  
+
                   <div className="flex items-center space-x-2">
-                    <Checkbox 
-                      id="dont-know-how-to-start" 
+                    <Checkbox
+                      id="dont-know-how-to-start"
                       checked={dontKnowHowToStartChecked}
-                      onCheckedChange={(checked) => setDontKnowHowToStartChecked(checked === true)}
+                      onCheckedChange={(checked) =>
+                        setDontKnowHowToStartChecked(checked === true)
+                      }
                     />
-                    <Label htmlFor="dont-know-how-to-start" className="text-gray-700">Don't know how to start</Label>
+                    <Label
+                      htmlFor="dont-know-how-to-start"
+                      className="text-gray-700"
+                    >
+                      Don't know how to start
+                    </Label>
                   </div>
-                  
+
                   <div className="flex items-center space-x-2">
-                    <Checkbox 
-                      id="unclear-professional-voice" 
+                    <Checkbox
+                      id="unclear-professional-voice"
                       checked={unclearProfessionalVoiceChecked}
-                      onCheckedChange={(checked) => setUnclearProfessionalVoiceChecked(checked === true)}
+                      onCheckedChange={(checked) =>
+                        setUnclearProfessionalVoiceChecked(checked === true)
+                      }
                     />
-                    <Label htmlFor="unclear-professional-voice" className="text-gray-700">Unclear on professional voice</Label>
+                    <Label
+                      htmlFor="unclear-professional-voice"
+                      className="text-gray-700"
+                    >
+                      Unclear on professional voice
+                    </Label>
                   </div>
-                  
+
                   <div className="flex items-center space-x-2">
-                    <Checkbox 
-                      id="other-barrier" 
+                    <Checkbox
+                      id="other-barrier"
                       checked={otherBarrierChecked}
-                      onCheckedChange={(checked) => setOtherBarrierChecked(checked === true)}
+                      onCheckedChange={(checked) =>
+                        setOtherBarrierChecked(checked === true)
+                      }
                     />
-                    <Label htmlFor="other-barrier" className="text-gray-700">Other</Label>
+                    <Label htmlFor="other-barrier" className="text-gray-700">
+                      Other
+                    </Label>
                   </div>
-                  
+
                   {otherBarrierChecked && (
                     <div className="ml-6 mt-2 md:col-span-2">
                       <Input
@@ -2688,318 +3648,534 @@ export default function QuestionnairePage() {
                   )}
                 </div>
               </div>
-              
+
               <hr className="my-6" />
-              
+
               {/* Technology Subcategories - Only show when Technology is checked */}
               {technologyChecked && (
                 <div className="mb-6">
                   <Label className="text-gray-700 font-medium block mb-3">
-                    If you selected, Technology & Digital Media, please elaborate:
+                    If you selected, Technology & Digital Media, please
+                    elaborate:
                   </Label>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                     {/* AI/ML Section */}
                     <div className="space-y-2">
                       <p className="font-medium text-gray-700">AI / ML</p>
                       <div className="flex items-center space-x-2">
-                        <Checkbox 
-                          id="ai-consumer" 
+                        <Checkbox
+                          id="ai-consumer"
                           checked={aiConsumerChecked}
-                          onCheckedChange={(checked) => setAiConsumerChecked(checked === true)}
+                          onCheckedChange={(checked) =>
+                            setAiConsumerChecked(checked === true)
+                          }
                         />
-                        <Label htmlFor="ai-consumer" className="text-gray-700">Consumer Applications</Label>
+                        <Label htmlFor="ai-consumer" className="text-gray-700">
+                          Consumer Applications
+                        </Label>
                       </div>
                       <div className="flex items-center space-x-2">
-                        <Checkbox 
-                          id="ai-vision" 
+                        <Checkbox
+                          id="ai-vision"
                           checked={aiComputerVisionChecked}
-                          onCheckedChange={(checked) => setAiComputerVisionChecked(checked === true)}
+                          onCheckedChange={(checked) =>
+                            setAiComputerVisionChecked(checked === true)
+                          }
                         />
-                        <Label htmlFor="ai-vision" className="text-gray-700">Computer Vision & Generation</Label>
+                        <Label htmlFor="ai-vision" className="text-gray-700">
+                          Computer Vision & Generation
+                        </Label>
                       </div>
                       <div className="flex items-center space-x-2">
-                        <Checkbox 
-                          id="ai-ethics" 
+                        <Checkbox
+                          id="ai-ethics"
                           checked={aiEthicsChecked}
-                          onCheckedChange={(checked) => setAiEthicsChecked(checked === true)}
+                          onCheckedChange={(checked) =>
+                            setAiEthicsChecked(checked === true)
+                          }
                         />
-                        <Label htmlFor="ai-ethics" className="text-gray-700">Ethics & Governance</Label>
+                        <Label htmlFor="ai-ethics" className="text-gray-700">
+                          Ethics & Governance
+                        </Label>
                       </div>
                       <div className="flex items-center space-x-2">
-                        <Checkbox 
-                          id="ai-infrastructure" 
+                        <Checkbox
+                          id="ai-infrastructure"
                           checked={aiInfrastructureChecked}
-                          onCheckedChange={(checked) => setAiInfrastructureChecked(checked === true)}
+                          onCheckedChange={(checked) =>
+                            setAiInfrastructureChecked(checked === true)
+                          }
                         />
-                        <Label htmlFor="ai-infrastructure" className="text-gray-700">Infrastructure & Platforms</Label>
+                        <Label
+                          htmlFor="ai-infrastructure"
+                          className="text-gray-700"
+                        >
+                          Infrastructure & Platforms
+                        </Label>
                       </div>
                       <div className="flex items-center space-x-2">
-                        <Checkbox 
-                          id="ai-nlp" 
+                        <Checkbox
+                          id="ai-nlp"
                           checked={aiNlpChecked}
-                          onCheckedChange={(checked) => setAiNlpChecked(checked === true)}
+                          onCheckedChange={(checked) =>
+                            setAiNlpChecked(checked === true)
+                          }
                         />
-                        <Label htmlFor="ai-nlp" className="text-gray-700">Natural Language Processing</Label>
+                        <Label htmlFor="ai-nlp" className="text-gray-700">
+                          Natural Language Processing
+                        </Label>
                       </div>
                       <div className="flex items-center space-x-2">
-                        <Checkbox 
-                          id="ai-predictive" 
+                        <Checkbox
+                          id="ai-predictive"
                           checked={aiPredictiveChecked}
-                          onCheckedChange={(checked) => setAiPredictiveChecked(checked === true)}
+                          onCheckedChange={(checked) =>
+                            setAiPredictiveChecked(checked === true)
+                          }
                         />
-                        <Label htmlFor="ai-predictive" className="text-gray-700">Predictive Analytics</Label>
+                        <Label
+                          htmlFor="ai-predictive"
+                          className="text-gray-700"
+                        >
+                          Predictive Analytics
+                        </Label>
                       </div>
                       <div className="flex items-center space-x-2">
-                        <Checkbox 
-                          id="ai-robotics" 
+                        <Checkbox
+                          id="ai-robotics"
                           checked={aiRoboticsChecked}
-                          onCheckedChange={(checked) => setAiRoboticsChecked(checked === true)}
+                          onCheckedChange={(checked) =>
+                            setAiRoboticsChecked(checked === true)
+                          }
                         />
-                        <Label htmlFor="ai-robotics" className="text-gray-700">Robotics & Automation</Label>
+                        <Label htmlFor="ai-robotics" className="text-gray-700">
+                          Robotics & Automation
+                        </Label>
                       </div>
                       <div className="flex items-center space-x-2">
-                        <Checkbox 
-                          id="ai-scientific" 
+                        <Checkbox
+                          id="ai-scientific"
                           checked={aiScientificChecked}
-                          onCheckedChange={(checked) => setAiScientificChecked(checked === true)}
+                          onCheckedChange={(checked) =>
+                            setAiScientificChecked(checked === true)
+                          }
                         />
-                        <Label htmlFor="ai-scientific" className="text-gray-700">Scientific Applications</Label>
+                        <Label
+                          htmlFor="ai-scientific"
+                          className="text-gray-700"
+                        >
+                          Scientific Applications
+                        </Label>
                       </div>
                       <div className="flex items-center space-x-2">
-                        <Checkbox 
-                          id="ai-learning" 
+                        <Checkbox
+                          id="ai-learning"
                           checked={aiLearningChecked}
-                          onCheckedChange={(checked) => setAiLearningChecked(checked === true)}
+                          onCheckedChange={(checked) =>
+                            setAiLearningChecked(checked === true)
+                          }
                         />
-                        <Label htmlFor="ai-learning" className="text-gray-700">Supervised/Unsupervised Learning</Label>
+                        <Label htmlFor="ai-learning" className="text-gray-700">
+                          Supervised/Unsupervised Learning
+                        </Label>
                       </div>
                     </div>
-                    
+
                     {/* Consumer Technology Section */}
                     <div className="space-y-2">
-                      <p className="font-medium text-gray-700">Consumer Technology</p>
+                      <p className="font-medium text-gray-700">
+                        Consumer Technology
+                      </p>
                       <div className="flex items-center space-x-2">
-                        <Checkbox 
-                          id="consumer-devices" 
+                        <Checkbox
+                          id="consumer-devices"
                           checked={consumerDevicesChecked}
-                          onCheckedChange={(checked) => setConsumerDevicesChecked(checked === true)}
+                          onCheckedChange={(checked) =>
+                            setConsumerDevicesChecked(checked === true)
+                          }
                         />
-                        <Label htmlFor="consumer-devices" className="text-gray-700">Devices & Gadgets</Label>
+                        <Label
+                          htmlFor="consumer-devices"
+                          className="text-gray-700"
+                        >
+                          Devices & Gadgets
+                        </Label>
                       </div>
                       <div className="flex items-center space-x-2">
-                        <Checkbox 
-                          id="consumer-gaming" 
+                        <Checkbox
+                          id="consumer-gaming"
                           checked={consumerGamingChecked}
-                          onCheckedChange={(checked) => setConsumerGamingChecked(checked === true)}
+                          onCheckedChange={(checked) =>
+                            setConsumerGamingChecked(checked === true)
+                          }
                         />
-                        <Label htmlFor="consumer-gaming" className="text-gray-700">Gaming, Esports & Entertainment</Label>
+                        <Label
+                          htmlFor="consumer-gaming"
+                          className="text-gray-700"
+                        >
+                          Gaming, Esports & Entertainment
+                        </Label>
                       </div>
                       <div className="flex items-center space-x-2">
-                        <Checkbox 
-                          id="consumer-mobile" 
+                        <Checkbox
+                          id="consumer-mobile"
                           checked={consumerMobileChecked}
-                          onCheckedChange={(checked) => setConsumerMobileChecked(checked === true)}
+                          onCheckedChange={(checked) =>
+                            setConsumerMobileChecked(checked === true)
+                          }
                         />
-                        <Label htmlFor="consumer-mobile" className="text-gray-700">Mobile & Apps</Label>
+                        <Label
+                          htmlFor="consumer-mobile"
+                          className="text-gray-700"
+                        >
+                          Mobile & Apps
+                        </Label>
                       </div>
                       <div className="flex items-center space-x-2">
-                        <Checkbox 
-                          id="consumer-smart-home" 
+                        <Checkbox
+                          id="consumer-smart-home"
                           checked={consumerSmartHomeChecked}
-                          onCheckedChange={(checked) => setConsumerSmartHomeChecked(checked === true)}
+                          onCheckedChange={(checked) =>
+                            setConsumerSmartHomeChecked(checked === true)
+                          }
                         />
-                        <Label htmlFor="consumer-smart-home" className="text-gray-700">Smart Home & IoT</Label>
+                        <Label
+                          htmlFor="consumer-smart-home"
+                          className="text-gray-700"
+                        >
+                          Smart Home & IoT
+                        </Label>
                       </div>
                     </div>
-                    
+
                     {/* Cybersecurity & Privacy Section */}
                     <div className="space-y-2">
-                      <p className="font-medium text-gray-700">Cybersecurity & Privacy</p>
+                      <p className="font-medium text-gray-700">
+                        Cybersecurity & Privacy
+                      </p>
                       <div className="flex items-center space-x-2">
-                        <Checkbox 
-                          id="cybersecurity-solutions" 
+                        <Checkbox
+                          id="cybersecurity-solutions"
                           checked={cybersecuritySolutionsChecked}
-                          onCheckedChange={(checked) => setCybersecuritySolutionsChecked(checked === true)}
+                          onCheckedChange={(checked) =>
+                            setCybersecuritySolutionsChecked(checked === true)
+                          }
                         />
-                        <Label htmlFor="cybersecurity-solutions" className="text-gray-700">Cybersecurity Solutions</Label>
+                        <Label
+                          htmlFor="cybersecurity-solutions"
+                          className="text-gray-700"
+                        >
+                          Cybersecurity Solutions
+                        </Label>
                       </div>
                       <div className="flex items-center space-x-2">
-                        <Checkbox 
-                          id="data-privacy" 
+                        <Checkbox
+                          id="data-privacy"
                           checked={dataPrivacyChecked}
-                          onCheckedChange={(checked) => setDataPrivacyChecked(checked === true)}
+                          onCheckedChange={(checked) =>
+                            setDataPrivacyChecked(checked === true)
+                          }
                         />
-                        <Label htmlFor="data-privacy" className="text-gray-700">Data Privacy</Label>
+                        <Label htmlFor="data-privacy" className="text-gray-700">
+                          Data Privacy
+                        </Label>
                       </div>
                       <div className="flex items-center space-x-2">
-                        <Checkbox 
-                          id="regulatory-compliance" 
+                        <Checkbox
+                          id="regulatory-compliance"
                           checked={regulatoryComplianceChecked}
-                          onCheckedChange={(checked) => setRegulatoryComplianceChecked(checked === true)}
+                          onCheckedChange={(checked) =>
+                            setRegulatoryComplianceChecked(checked === true)
+                          }
                         />
-                        <Label htmlFor="regulatory-compliance" className="text-gray-700">Regulatory Compliance</Label>
+                        <Label
+                          htmlFor="regulatory-compliance"
+                          className="text-gray-700"
+                        >
+                          Regulatory Compliance
+                        </Label>
                       </div>
                       <div className="flex items-center space-x-2">
-                        <Checkbox 
-                          id="risk-management" 
+                        <Checkbox
+                          id="risk-management"
                           checked={riskManagementChecked}
-                          onCheckedChange={(checked) => setRiskManagementChecked(checked === true)}
+                          onCheckedChange={(checked) =>
+                            setRiskManagementChecked(checked === true)
+                          }
                         />
-                        <Label htmlFor="risk-management" className="text-gray-700">Risk Management</Label>
+                        <Label
+                          htmlFor="risk-management"
+                          className="text-gray-700"
+                        >
+                          Risk Management
+                        </Label>
                       </div>
                     </div>
-                    
+
                     {/* Digital Infrastructure Section */}
                     <div className="space-y-2">
-                      <p className="font-medium text-gray-700">Digital Infrastructure</p>
+                      <p className="font-medium text-gray-700">
+                        Digital Infrastructure
+                      </p>
                       <div className="flex items-center space-x-2">
-                        <Checkbox 
-                          id="cloud-computing" 
+                        <Checkbox
+                          id="cloud-computing"
                           checked={cloudComputingChecked}
-                          onCheckedChange={(checked) => setCloudComputingChecked(checked === true)}
+                          onCheckedChange={(checked) =>
+                            setCloudComputingChecked(checked === true)
+                          }
                         />
-                        <Label htmlFor="cloud-computing" className="text-gray-700">Cloud Computing</Label>
+                        <Label
+                          htmlFor="cloud-computing"
+                          className="text-gray-700"
+                        >
+                          Cloud Computing
+                        </Label>
                       </div>
                       <div className="flex items-center space-x-2">
-                        <Checkbox 
-                          id="data-centers" 
+                        <Checkbox
+                          id="data-centers"
                           checked={dataCentersChecked}
-                          onCheckedChange={(checked) => setDataCentersChecked(checked === true)}
+                          onCheckedChange={(checked) =>
+                            setDataCentersChecked(checked === true)
+                          }
                         />
-                        <Label htmlFor="data-centers" className="text-gray-700">Data Centers</Label>
+                        <Label htmlFor="data-centers" className="text-gray-700">
+                          Data Centers
+                        </Label>
                       </div>
                       <div className="flex items-center space-x-2">
-                        <Checkbox 
-                          id="networks" 
+                        <Checkbox
+                          id="networks"
                           checked={networksChecked}
-                          onCheckedChange={(checked) => setNetworksChecked(checked === true)}
+                          onCheckedChange={(checked) =>
+                            setNetworksChecked(checked === true)
+                          }
                         />
-                        <Label htmlFor="networks" className="text-gray-700">Networks & Connectivity</Label>
+                        <Label htmlFor="networks" className="text-gray-700">
+                          Networks & Connectivity
+                        </Label>
                       </div>
                       <div className="flex items-center space-x-2">
-                        <Checkbox 
-                          id="web3-blockchain" 
+                        <Checkbox
+                          id="web3-blockchain"
                           checked={web3BlockchainChecked}
-                          onCheckedChange={(checked) => setWeb3BlockchainChecked(checked === true)}
+                          onCheckedChange={(checked) =>
+                            setWeb3BlockchainChecked(checked === true)
+                          }
                         />
-                        <Label htmlFor="web3-blockchain" className="text-gray-700">Web3 & Blockchain</Label>
+                        <Label
+                          htmlFor="web3-blockchain"
+                          className="text-gray-700"
+                        >
+                          Web3 & Blockchain
+                        </Label>
                       </div>
                     </div>
-                    
+
                     {/* Digital Media & Content Section */}
                     <div className="space-y-2">
-                      <p className="font-medium text-gray-700">Digital Media & Content</p>
+                      <p className="font-medium text-gray-700">
+                        Digital Media & Content
+                      </p>
                       <div className="flex items-center space-x-2">
-                        <Checkbox 
-                          id="content-distribution" 
+                        <Checkbox
+                          id="content-distribution"
                           checked={contentDistributionChecked}
-                          onCheckedChange={(checked) => setContentDistributionChecked(checked === true)}
+                          onCheckedChange={(checked) =>
+                            setContentDistributionChecked(checked === true)
+                          }
                         />
-                        <Label htmlFor="content-distribution" className="text-gray-700">Content Distribution</Label>
+                        <Label
+                          htmlFor="content-distribution"
+                          className="text-gray-700"
+                        >
+                          Content Distribution
+                        </Label>
                       </div>
                       <div className="flex items-center space-x-2">
-                        <Checkbox 
-                          id="creator-economy" 
+                        <Checkbox
+                          id="creator-economy"
                           checked={creatorEconomyChecked}
-                          onCheckedChange={(checked) => setCreatorEconomyChecked(checked === true)}
+                          onCheckedChange={(checked) =>
+                            setCreatorEconomyChecked(checked === true)
+                          }
                         />
-                        <Label htmlFor="creator-economy" className="text-gray-700">Creator Economy</Label>
+                        <Label
+                          htmlFor="creator-economy"
+                          className="text-gray-700"
+                        >
+                          Creator Economy
+                        </Label>
                       </div>
                       <div className="flex items-center space-x-2">
-                        <Checkbox 
-                          id="digital-marketing" 
+                        <Checkbox
+                          id="digital-marketing"
                           checked={digitalMarketingChecked}
-                          onCheckedChange={(checked) => setDigitalMarketingChecked(checked === true)}
+                          onCheckedChange={(checked) =>
+                            setDigitalMarketingChecked(checked === true)
+                          }
                         />
-                        <Label htmlFor="digital-marketing" className="text-gray-700">Digital Marketing</Label>
+                        <Label
+                          htmlFor="digital-marketing"
+                          className="text-gray-700"
+                        >
+                          Digital Marketing
+                        </Label>
                       </div>
                       <div className="flex items-center space-x-2">
-                        <Checkbox 
-                          id="social-media-platforms" 
+                        <Checkbox
+                          id="social-media-platforms"
                           checked={socialMediaPlatformsChecked}
-                          onCheckedChange={(checked) => setSocialMediaPlatformsChecked(checked === true)}
+                          onCheckedChange={(checked) =>
+                            setSocialMediaPlatformsChecked(checked === true)
+                          }
                         />
-                        <Label htmlFor="social-media-platforms" className="text-gray-700">Social Media & Platforms</Label>
+                        <Label
+                          htmlFor="social-media-platforms"
+                          className="text-gray-700"
+                        >
+                          Social Media & Platforms
+                        </Label>
                       </div>
                     </div>
-                    
+
                     {/* Emerging Technology Section */}
                     <div className="space-y-2">
-                      <p className="font-medium text-gray-700">Emerging Technology</p>
+                      <p className="font-medium text-gray-700">
+                        Emerging Technology
+                      </p>
                       <div className="flex items-center space-x-2">
-                        <Checkbox 
-                          id="ar-vr-xr" 
+                        <Checkbox
+                          id="ar-vr-xr"
                           checked={arVrXrChecked}
-                          onCheckedChange={(checked) => setArVrXrChecked(checked === true)}
+                          onCheckedChange={(checked) =>
+                            setArVrXrChecked(checked === true)
+                          }
                         />
-                        <Label htmlFor="ar-vr-xr" className="text-gray-700">AR / VR / XR</Label>
+                        <Label htmlFor="ar-vr-xr" className="text-gray-700">
+                          AR / VR / XR
+                        </Label>
                       </div>
                       <div className="flex items-center space-x-2">
-                        <Checkbox 
-                          id="biotech-health" 
+                        <Checkbox
+                          id="biotech-health"
                           checked={biotechHealthChecked}
-                          onCheckedChange={(checked) => setBiotechHealthChecked(checked === true)}
+                          onCheckedChange={(checked) =>
+                            setBiotechHealthChecked(checked === true)
+                          }
                         />
-                        <Label htmlFor="biotech-health" className="text-gray-700">Biotech & Digital Health</Label>
+                        <Label
+                          htmlFor="biotech-health"
+                          className="text-gray-700"
+                        >
+                          Biotech & Digital Health
+                        </Label>
                       </div>
                       <div className="flex items-center space-x-2">
-                        <Checkbox 
-                          id="quantum-computing" 
+                        <Checkbox
+                          id="quantum-computing"
                           checked={quantumComputingChecked}
-                          onCheckedChange={(checked) => setQuantumComputingChecked(checked === true)}
+                          onCheckedChange={(checked) =>
+                            setQuantumComputingChecked(checked === true)
+                          }
                         />
-                        <Label htmlFor="quantum-computing" className="text-gray-700">Quantum Computing</Label>
+                        <Label
+                          htmlFor="quantum-computing"
+                          className="text-gray-700"
+                        >
+                          Quantum Computing
+                        </Label>
                       </div>
                       <div className="flex items-center space-x-2">
-                        <Checkbox 
-                          id="emerging-robotics" 
+                        <Checkbox
+                          id="emerging-robotics"
                           checked={emergingRoboticsChecked}
-                          onCheckedChange={(checked) => setEmergingRoboticsChecked(checked === true)}
+                          onCheckedChange={(checked) =>
+                            setEmergingRoboticsChecked(checked === true)
+                          }
                         />
-                        <Label htmlFor="emerging-robotics" className="text-gray-700">Robotics & Automation</Label>
+                        <Label
+                          htmlFor="emerging-robotics"
+                          className="text-gray-700"
+                        >
+                          Robotics & Automation
+                        </Label>
                       </div>
                     </div>
-                    
+
                     {/* Enterprise Technology Section */}
                     <div className="space-y-2">
-                      <p className="font-medium text-gray-700">Enterprise Technology</p>
+                      <p className="font-medium text-gray-700">
+                        Enterprise Technology
+                      </p>
                       <div className="flex items-center space-x-2">
-                        <Checkbox 
-                          id="business-apps" 
+                        <Checkbox
+                          id="business-apps"
                           checked={businessAppsChecked}
-                          onCheckedChange={(checked) => setBusinessAppsChecked(checked === true)}
+                          onCheckedChange={(checked) =>
+                            setBusinessAppsChecked(checked === true)
+                          }
                         />
-                        <Label htmlFor="business-apps" className="text-gray-700">Business Applications</Label>
+                        <Label
+                          htmlFor="business-apps"
+                          className="text-gray-700"
+                        >
+                          Business Applications
+                        </Label>
                       </div>
                       <div className="flex items-center space-x-2">
-                        <Checkbox 
-                          id="digital-transformation" 
+                        <Checkbox
+                          id="digital-transformation"
                           checked={enterpriseDigitalTransformationChecked}
-                          onCheckedChange={(checked) => setEnterpriseDigitalTransformationChecked(checked === true)}
+                          onCheckedChange={(checked) =>
+                            setEnterpriseDigitalTransformationChecked(
+                              checked === true,
+                            )
+                          }
                         />
-                        <Label htmlFor="digital-transformation" className="text-gray-700">Digital Transformation</Label>
+                        <Label
+                          htmlFor="digital-transformation"
+                          className="text-gray-700"
+                        >
+                          Digital Transformation
+                        </Label>
                       </div>
                       <div className="flex items-center space-x-2">
-                        <Checkbox 
-                          id="integration-apis" 
+                        <Checkbox
+                          id="integration-apis"
                           checked={integrationApisChecked}
-                          onCheckedChange={(checked) => setIntegrationApisChecked(checked === true)}
+                          onCheckedChange={(checked) =>
+                            setIntegrationApisChecked(checked === true)
+                          }
                         />
-                        <Label htmlFor="integration-apis" className="text-gray-700">Integration & APIs</Label>
+                        <Label
+                          htmlFor="integration-apis"
+                          className="text-gray-700"
+                        >
+                          Integration & APIs
+                        </Label>
                       </div>
                       <div className="flex items-center space-x-2">
-                        <Checkbox 
-                          id="saas-enterprise" 
+                        <Checkbox
+                          id="saas-enterprise"
                           checked={saasEnterpriseChecked}
-                          onCheckedChange={(checked) => setSaasEnterpriseChecked(checked === true)}
+                          onCheckedChange={(checked) =>
+                            setSaasEnterpriseChecked(checked === true)
+                          }
                         />
-                        <Label htmlFor="saas-enterprise" className="text-gray-700">SaaS & Enterprise Software</Label>
+                        <Label
+                          htmlFor="saas-enterprise"
+                          className="text-gray-700"
+                        >
+                          SaaS & Enterprise Software
+                        </Label>
                       </div>
                     </div>
                   </div>
                 </div>
               )}
-              
+
               <hr className="my-6" />
             </div>
           </div>
@@ -3008,11 +4184,18 @@ export default function QuestionnairePage() {
         return (
           <div className="space-y-6">
             <div className="mb-6">
-              <h2 className="text-xl font-semibold text-gray-800 mb-3">Professional Goals</h2>
-              
+              <h2 className="text-xl font-semibold text-gray-800 mb-3">
+                Professional Goals
+              </h2>
+
               <div className="mb-8">
-                <Label htmlFor="careerGoals" className="text-gray-700 font-medium block mb-2">
-                  Beyond your immediate next job, what are your career goals within the next 2-5 years? <span className="text-red-500">*</span>
+                <Label
+                  htmlFor="careerGoals"
+                  className="text-gray-700 font-medium block mb-2"
+                >
+                  Beyond your immediate next job, what are your career goals
+                  within the next 2-5 years?{" "}
+                  <span className="text-red-500">*</span>
                 </Label>
                 <p className="text-sm text-gray-500 mb-3">
                   What roles, industries, or impact do you want to have?
@@ -3025,14 +4208,15 @@ export default function QuestionnairePage() {
                   placeholder="Describe your career goals..."
                 />
               </div>
-              
+
               <hr className="my-6" />
-              
+
               <div className="mb-8">
                 <Label className="text-gray-700 font-medium block mb-3">
-                  What percentage of your LinkedIn connections are in your target industry? <span className="text-red-500">*</span>
+                  What percentage of your LinkedIn connections are in your
+                  target industry? <span className="text-red-500">*</span>
                 </Label>
-                
+
                 <div className="space-y-3 mt-4">
                   <div className="flex items-center space-x-2">
                     <RadioGroup
@@ -3041,96 +4225,161 @@ export default function QuestionnairePage() {
                       className="space-y-3"
                     >
                       <div className="flex items-center space-x-2">
-                        <RadioGroupItem value="0-10%" id="connections-very-few" />
-                        <Label htmlFor="connections-very-few" className="cursor-pointer">Very Few (0-10%)</Label>
+                        <RadioGroupItem
+                          value="0-10%"
+                          id="connections-very-few"
+                        />
+                        <Label
+                          htmlFor="connections-very-few"
+                          className="cursor-pointer"
+                        >
+                          Very Few (0-10%)
+                        </Label>
                       </div>
-                      
+
                       <div className="flex items-center space-x-2">
                         <RadioGroupItem value="10-25%" id="connections-some" />
-                        <Label htmlFor="connections-some" className="cursor-pointer">Some (10-25%)</Label>
+                        <Label
+                          htmlFor="connections-some"
+                          className="cursor-pointer"
+                        >
+                          Some (10-25%)
+                        </Label>
                       </div>
-                      
+
                       <div className="flex items-center space-x-2">
                         <RadioGroupItem value="25-50%" id="connections-half" />
-                        <Label htmlFor="connections-half" className="cursor-pointer">About Half (25-50%)</Label>
+                        <Label
+                          htmlFor="connections-half"
+                          className="cursor-pointer"
+                        >
+                          About Half (25-50%)
+                        </Label>
                       </div>
-                      
+
                       <div className="flex items-center space-x-2">
-                        <RadioGroupItem value="50%+" id="connections-majority" />
-                        <Label htmlFor="connections-majority" className="cursor-pointer">Majority (50%+)</Label>
+                        <RadioGroupItem
+                          value="50%+"
+                          id="connections-majority"
+                        />
+                        <Label
+                          htmlFor="connections-majority"
+                          className="cursor-pointer"
+                        >
+                          Majority (50%+)
+                        </Label>
                       </div>
-                      
+
                       <div className="flex items-center space-x-2">
-                        <RadioGroupItem value="not-sure" id="connections-not-sure" />
-                        <Label htmlFor="connections-not-sure" className="cursor-pointer">Not Sure / Still Exploring Target Industry</Label>
+                        <RadioGroupItem
+                          value="not-sure"
+                          id="connections-not-sure"
+                        />
+                        <Label
+                          htmlFor="connections-not-sure"
+                          className="cursor-pointer"
+                        >
+                          Not Sure / Still Exploring Target Industry
+                        </Label>
                       </div>
                     </RadioGroup>
                   </div>
                 </div>
               </div>
-              
+
               <hr className="my-6" />
-              
+
               <div className="mb-6">
                 <Label className="text-gray-700 font-medium block mb-3">
-                  What personality / strength assessments have you taken? (Select all that apply)
+                  What personality / strength assessments have you taken?
+                  (Select all that apply)
                 </Label>
-                
+
                 <div className="space-y-3 mt-4">
                   <div className="flex items-center space-x-2">
-                    <Checkbox 
-                      id="mbti" 
+                    <Checkbox
+                      id="mbti"
                       checked={mbtiChecked}
-                      onCheckedChange={(checked) => setMbtiChecked(checked === true)}
+                      onCheckedChange={(checked) =>
+                        setMbtiChecked(checked === true)
+                      }
                     />
-                    <Label htmlFor="mbti" className="cursor-pointer">Myer's Briggs (MBTI)</Label>
+                    <Label htmlFor="mbti" className="cursor-pointer">
+                      Myer's Briggs (MBTI)
+                    </Label>
                   </div>
-                  
+
                   <div className="flex items-center space-x-2">
-                    <Checkbox 
-                      id="strengths-finder" 
+                    <Checkbox
+                      id="strengths-finder"
                       checked={strengthsFinderChecked}
-                      onCheckedChange={(checked) => setStrengthsFinderChecked(checked === true)}
+                      onCheckedChange={(checked) =>
+                        setStrengthsFinderChecked(checked === true)
+                      }
                     />
-                    <Label htmlFor="strengths-finder" className="cursor-pointer">Strengths Finder</Label>
+                    <Label
+                      htmlFor="strengths-finder"
+                      className="cursor-pointer"
+                    >
+                      Strengths Finder
+                    </Label>
                   </div>
-                  
+
                   <div className="flex items-center space-x-2">
-                    <Checkbox 
-                      id="via" 
+                    <Checkbox
+                      id="via"
                       checked={viaChecked}
-                      onCheckedChange={(checked) => setViaChecked(checked === true)}
+                      onCheckedChange={(checked) =>
+                        setViaChecked(checked === true)
+                      }
                     />
-                    <Label htmlFor="via" className="cursor-pointer">VIA - Values in Action</Label>
+                    <Label htmlFor="via" className="cursor-pointer">
+                      VIA - Values in Action
+                    </Label>
                   </div>
-                  
+
                   <div className="flex items-center space-x-2">
-                    <Checkbox 
-                      id="enneagram" 
+                    <Checkbox
+                      id="enneagram"
                       checked={enneagramChecked}
-                      onCheckedChange={(checked) => setEnneagramChecked(checked === true)}
+                      onCheckedChange={(checked) =>
+                        setEnneagramChecked(checked === true)
+                      }
                     />
-                    <Label htmlFor="enneagram" className="cursor-pointer">Enneagram</Label>
+                    <Label htmlFor="enneagram" className="cursor-pointer">
+                      Enneagram
+                    </Label>
                   </div>
-                  
+
                   <div className="flex items-center space-x-2">
-                    <Checkbox 
-                      id="threeSixty" 
+                    <Checkbox
+                      id="threeSixty"
                       checked={threeSixtyChecked}
-                      onCheckedChange={(checked) => setThreeSixtyChecked(checked === true)}
+                      onCheckedChange={(checked) =>
+                        setThreeSixtyChecked(checked === true)
+                      }
                     />
-                    <Label htmlFor="threeSixty" className="cursor-pointer">360* Leadership, Managerial, or Team Assessment</Label>
+                    <Label htmlFor="threeSixty" className="cursor-pointer">
+                      360* Leadership, Managerial, or Team Assessment
+                    </Label>
                   </div>
-                  
+
                   <div className="flex items-center space-x-2">
-                    <Checkbox 
-                      id="other-assessment" 
+                    <Checkbox
+                      id="other-assessment"
                       checked={otherAssessmentChecked}
-                      onCheckedChange={(checked) => setOtherAssessmentChecked(checked === true)}
+                      onCheckedChange={(checked) =>
+                        setOtherAssessmentChecked(checked === true)
+                      }
                     />
-                    <Label htmlFor="other-assessment" className="cursor-pointer">Other</Label>
+                    <Label
+                      htmlFor="other-assessment"
+                      className="cursor-pointer"
+                    >
+                      Other
+                    </Label>
                   </div>
-                  
+
                   {otherAssessmentChecked && (
                     <div className="ml-6 mt-2">
                       <Input
@@ -3143,17 +4392,19 @@ export default function QuestionnairePage() {
                   )}
                 </div>
               </div>
-              
+
               <hr className="my-6" />
-              
+
               <div className="mb-6">
                 <Label className="text-gray-700 font-medium block mb-3">
-                  Please upload the personality / strength assessments you have taken
+                  Please upload the personality / strength assessments you have
+                  taken
                 </Label>
                 <p className="text-sm text-gray-500 mb-3">
-                  You can upload up to 10 files. PDF, PNG, JPEG, and DOC/DOCX formats are supported.
+                  You can upload up to 10 files. PDF, PNG, JPEG, and DOC/DOCX
+                  formats are supported.
                 </p>
-                
+
                 <div className="mt-4 border-2 border-dashed border-gray-300 p-6 rounded-md">
                   <Input
                     id="file-upload"
@@ -3166,7 +4417,8 @@ export default function QuestionnairePage() {
                         if (fileList.length > 10) {
                           toast({
                             title: "Too many files",
-                            description: "You can upload a maximum of 10 files.",
+                            description:
+                              "You can upload a maximum of 10 files.",
                             variant: "destructive",
                           });
                           return;
@@ -3176,15 +4428,20 @@ export default function QuestionnairePage() {
                     }}
                     className="cursor-pointer"
                   />
-                  <p className="text-xs text-gray-500 mt-2">Max file size: 5MB per file</p>
-                  
+                  <p className="text-xs text-gray-500 mt-2">
+                    Max file size: 5MB per file
+                  </p>
+
                   {files.length > 0 && (
                     <div className="mt-4">
-                      <h4 className="font-medium mb-2">Selected Files ({files.length}):</h4>
+                      <h4 className="font-medium mb-2">
+                        Selected Files ({files.length}):
+                      </h4>
                       <ul className="list-disc pl-5 space-y-1">
                         {files.map((file, index) => (
                           <li key={index} className="text-sm">
-                            {file.name} ({(file.size / 1024 / 1024).toFixed(2)} MB)
+                            {file.name} ({(file.size / 1024 / 1024).toFixed(2)}{" "}
+                            MB)
                           </li>
                         ))}
                       </ul>
@@ -3192,15 +4449,20 @@ export default function QuestionnairePage() {
                   )}
                 </div>
               </div>
-              
+
               <hr className="my-6" />
-              
+
               <div className="mb-6">
-                <Label htmlFor="additionalInfo" className="text-gray-700 font-medium block mb-3">
-                  Is there anything else you want to share about your professional journey and brand?
+                <Label
+                  htmlFor="additionalInfo"
+                  className="text-gray-700 font-medium block mb-3"
+                >
+                  Is there anything else you want to share about your
+                  professional journey and brand?
                 </Label>
                 <p className="text-sm text-gray-500 mb-3">
-                  Please provide any additional information that might be relevant
+                  Please provide any additional information that might be
+                  relevant
                 </p>
                 <Textarea
                   id="additionalInfo"
@@ -3234,9 +4496,11 @@ export default function QuestionnairePage() {
       <div className="container py-10 px-4 sm:px-6 lg:px-8 max-w-5xl mx-auto">
         <Card className="border-none shadow-md">
           <CardHeader className="bg-gradient-to-r from-[#0077B5] to-[#70B5F9] text-white rounded-t-lg">
-            <CardTitle className="text-2xl font-bold">Complete Your Registration</CardTitle>
+            <CardTitle className="text-2xl font-bold">
+              Initial Questionnaire
+            </CardTitle>
             <CardDescription className="text-white opacity-90">
-              {userProfile?.questionnaire 
+              {userProfile?.questionnaire
                 ? "Review or update your career insights to receive personalized guidance."
                 : "Last step! Help us understand your career journey and aspirations so we can provide personalized guidance."}
             </CardDescription>
@@ -3252,8 +4516,8 @@ export default function QuestionnairePage() {
                         index + 1 === currentStep
                           ? "bg-[#0077B5] text-white"
                           : index + 1 < currentStep
-                          ? "bg-green-500 text-white"
-                          : "bg-gray-200 text-gray-500"
+                            ? "bg-green-500 text-white"
+                            : "bg-gray-200 text-gray-500"
                       }`}
                     >
                       {index + 1 < currentStep ? (
@@ -3266,12 +4530,12 @@ export default function QuestionnairePage() {
                       {index === 0
                         ? "Industry"
                         : index === 1
-                        ? "Digital Presence"
-                        : index === 2
-                        ? "Branding & Content"
-                        : index === 3
-                        ? "Interests"
-                        : "Professional Goals"}
+                          ? "Digital Presence"
+                          : index === 2
+                            ? "Branding & Content"
+                            : index === 3
+                              ? "Interests"
+                              : "Professional Goals"}
                     </span>
                   </div>
                 ))}
@@ -3286,7 +4550,7 @@ export default function QuestionnairePage() {
 
             <div className="space-y-6">
               {renderStepContent()}
-              
+
               <div className="flex justify-between mt-8">
                 <Button
                   type="button"
@@ -3297,9 +4561,9 @@ export default function QuestionnairePage() {
                 >
                   Previous
                 </Button>
-                
+
                 {isLastStep ? (
-                  <Button 
+                  <Button
                     type="button"
                     onClick={handleSubmit}
                     className="w-[120px] bg-[#0077B5] hover:bg-[#006097]"
@@ -3311,9 +4575,9 @@ export default function QuestionnairePage() {
                     Submit
                   </Button>
                 ) : (
-                  <Button 
-                    type="button" 
-                    onClick={nextStep} 
+                  <Button
+                    type="button"
+                    onClick={nextStep}
                     className="w-[120px] bg-[#0077B5] hover:bg-[#006097]"
                   >
                     Next
