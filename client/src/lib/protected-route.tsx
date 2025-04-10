@@ -42,13 +42,6 @@ export function ProtectedRoute({
   // No longer redirecting to questionnaire even if it's not completed
   // The user will go directly to the requested page
 
-  // Render the requested protected component with safety check
-  return (
-    <Route path={path}>
-      {(params) => {
-        const element = Component();
-        return element !== null ? element : null;
-      }}
-    </Route>
-  );
+  // Render the requested protected component
+  return <Route path={path} component={Component} />;
 }
