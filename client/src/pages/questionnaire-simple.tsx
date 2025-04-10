@@ -764,6 +764,49 @@ export default function QuestionnairePage() {
           }
         }
       }
+      
+      // Parse content format preferences
+      if (q.aspirations && q.aspirations.includes("Content creation format preferences:")) {
+        const formatText = q.aspirations.split("Content creation format preferences:")[1]?.trim().split('\n')[0];
+        if (formatText) {
+          setSharingNewsChecked(formatText.includes("Sharing industry news"));
+          setWritingExperiencesChecked(formatText.includes("Writing about your learned experiences"));
+          setAnalyzingTrendsChecked(formatText.includes("Analyzing trends"));
+          setCommentingPostsChecked(formatText.includes("Commenting on others"));
+          setHowToContentChecked(formatText.includes("Creating how-to content"));
+          setEventTakeawaysChecked(formatText.includes("Sharing event takeaways"));
+          setPersonalAnecdoteChecked(formatText.includes("Personal anecdote"));
+          setDigitalCommunitiesChecked(formatText.includes("Digital communities"));
+          
+          if (formatText.includes("Other:")) {
+            setOtherContentFormatChecked(true);
+            const otherMatch = formatText.match(/Other: (.*?)(?:,|$)/);
+            if (otherMatch && otherMatch[1]) {
+              setOtherContentFormat(otherMatch[1].trim());
+            }
+          }
+        }
+      }
+      
+      // Parse posting barriers
+      if (q.aspirations && q.aspirations.includes("Posting barriers:")) {
+        const barriersText = q.aspirations.split("Posting barriers:")[1]?.trim().split('\n')[0];
+        if (barriersText) {
+          setUnsureWhatToSayChecked(barriersText.includes("Unsure what to say"));
+          setFearOfJudgmentChecked(barriersText.includes("Fear of judgment"));
+          setTimeManagementChecked(barriersText.includes("Time management"));
+          setDontKnowHowToStartChecked(barriersText.includes("Don't know how to start"));
+          setUnclearProfessionalVoiceChecked(barriersText.includes("Unclear on professional voice"));
+          
+          if (barriersText.includes("Other:")) {
+            setOtherBarrierChecked(true);
+            const otherMatch = barriersText.match(/Other: (.*?)(?:,|$)/);
+            if (otherMatch && otherMatch[1]) {
+              setOtherBarrier(otherMatch[1].trim());
+            }
+          }
+        }
+      }
     }
   }, [userProfile]);
   
