@@ -621,7 +621,18 @@ export default function QuestionnairePage() {
       if (q.aspirations && q.aspirations.includes("Career goals:")) {
         const careerGoalsText = q.aspirations.split("Career goals:")[1].trim().split('\n\n')[0];
         setCareerGoals(careerGoalsText || "");
-      } else if (q.aspirations && q.aspirations.includes("Additional professional journey information:")) {
+      }
+      
+      // Try to parse professional areas for thought leadership
+      if (q.aspirations && q.aspirations.includes("Professional areas for thought leadership:")) {
+        const areasText = q.aspirations.split("Professional areas for thought leadership:")[1].trim().split('\n\n')[0];
+        if (areasText && areasText !== "Not specified") {
+          setProfessionalAreas(areasText);
+        }
+      }
+      
+      // Try to parse additional info
+      if (q.aspirations && q.aspirations.includes("Additional professional journey information:")) {
         // Alternative location
         const additionalInfoText = q.aspirations.split("Additional professional journey information:")[1].trim();
         setAdditionalInfo(additionalInfoText || "");
@@ -1136,6 +1147,61 @@ export default function QuestionnairePage() {
       
       // Add industry interests to aspirations field
       brandingDetails += `\n\nIndustry interests: ${industryInterests.length > 0 ? industryInterests.join(', ') : 'None'}`;
+      
+      // Add technology subcategories if technology is selected
+      if (technologyChecked) {
+        const techSubcategories = [];
+        
+        // AI/ML
+        if (aiConsumerChecked) techSubcategories.push('AI - Consumer Applications');
+        if (aiComputerVisionChecked) techSubcategories.push('AI - Computer Vision');
+        if (aiEthicsChecked) techSubcategories.push('AI - Ethics & Governance');
+        if (aiInfrastructureChecked) techSubcategories.push('AI - Infrastructure');
+        if (aiNlpChecked) techSubcategories.push('AI - Natural Language Processing');
+        if (aiPredictiveChecked) techSubcategories.push('AI - Predictive Analytics');
+        if (aiRoboticsChecked) techSubcategories.push('AI - Robotics & Automation');
+        if (aiScientificChecked) techSubcategories.push('AI - Scientific Applications');
+        if (aiLearningChecked) techSubcategories.push('ML - Machine Learning');
+        
+        // Consumer Technology
+        if (consumerDevicesChecked) techSubcategories.push('Consumer Devices');
+        if (consumerGamingChecked) techSubcategories.push('Consumer Gaming');
+        if (consumerMobileChecked) techSubcategories.push('Consumer Mobile Tech');
+        if (consumerSmartHomeChecked) techSubcategories.push('Consumer Smart Home');
+        
+        // Cybersecurity & Privacy
+        if (cybersecuritySolutionsChecked) techSubcategories.push('Cybersecurity Solutions');
+        if (dataPrivacyChecked) techSubcategories.push('Data Privacy');
+        if (regulatoryComplianceChecked) techSubcategories.push('Regulatory Compliance');
+        if (riskManagementChecked) techSubcategories.push('Risk Management');
+        
+        // Digital Infrastructure
+        if (cloudComputingChecked) techSubcategories.push('Cloud Computing');
+        if (dataCentersChecked) techSubcategories.push('Data Centers');
+        if (networksChecked) techSubcategories.push('Networks');
+        if (web3BlockchainChecked) techSubcategories.push('Web3 / Blockchain');
+        
+        // Digital Media & Content
+        if (contentDistributionChecked) techSubcategories.push('Content Distribution');
+        if (creatorEconomyChecked) techSubcategories.push('Creator Economy');
+        if (digitalMarketingChecked) techSubcategories.push('Digital Marketing');
+        if (socialMediaPlatformsChecked) techSubcategories.push('Social Media Platforms');
+        
+        // Emerging Technology
+        if (arVrXrChecked) techSubcategories.push('AR / VR / XR');
+        if (biotechHealthChecked) techSubcategories.push('Biotech / Health Tech');
+        if (quantumComputingChecked) techSubcategories.push('Quantum Computing');
+        if (emergingRoboticsChecked) techSubcategories.push('Robotics & Automation');
+        
+        // Enterprise Technology
+        if (businessAppsChecked) techSubcategories.push('Business Applications');
+        if (enterpriseDigitalTransformationChecked) techSubcategories.push('Digital Transformation');
+        if (integrationApisChecked) techSubcategories.push('Integration & APIs');
+        if (saasEnterpriseChecked) techSubcategories.push('SaaS / Enterprise Software');
+        
+        // Add to branding details
+        brandingDetails += `\n\nTechnology subcategories: ${techSubcategories.length > 0 ? techSubcategories.join(', ') : 'None'}`;
+      }
       
       // Add cross-cutting & societal interests to aspirations field
       brandingDetails += `\n\nCross-cutting & societal interests: ${crossCuttingInterests.length > 0 ? crossCuttingInterests.join(', ') : 'None'}`;
