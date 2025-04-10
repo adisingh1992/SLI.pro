@@ -995,6 +995,7 @@ export default function QuestionnairePage() {
         interests: "",
         timeframe: "",
         industry, // Current/Prior industry
+        jobFunction, // Current/Prior function
         // Include these fields for potential future enhancement
         contentFormatPreferences: {
           sharingNews: sharingNewsChecked,
@@ -1178,7 +1179,7 @@ export default function QuestionnairePage() {
       toast({
         title: "Please complete all required fields",
         description: currentStep === 1 
-          ? "Please select your current or prior industry." 
+          ? "Please select your current or prior industry and function." 
           : currentStep === 2 
           ? "LinkedIn URL is required to complete your profile." 
           : currentStep === 3 
@@ -1201,7 +1202,7 @@ export default function QuestionnairePage() {
           <div className="space-y-6">
             <div className="mb-6">
               <Label htmlFor="industry" className="text-gray-700 font-medium block mb-2">
-                Current / Prior Industry
+                Current / Prior Industry <span className="text-red-500">*</span>
               </Label>
               <p className="text-sm text-gray-500 mb-3">
                 Please select your current or most recent industry
@@ -1222,6 +1223,30 @@ export default function QuestionnairePage() {
                 </SelectContent>
               </Select>
             </div>
+            
+            <div className="mb-6">
+              <Label htmlFor="function" className="text-gray-700 font-medium block mb-2">
+                Current / Prior Function <span className="text-red-500">*</span>
+              </Label>
+              <p className="text-sm text-gray-500 mb-3">
+                Please select your current or most recent job function
+              </p>
+              <Select
+                value={jobFunction}
+                onValueChange={setJobFunction}
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Select a function" />
+                </SelectTrigger>
+                <SelectContent>
+                  {FUNCTION_OPTIONS.map((option) => (
+                    <SelectItem key={option} value={option}>
+                      {option}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
         );
       case 2:
@@ -1229,7 +1254,7 @@ export default function QuestionnairePage() {
           <div className="space-y-6">
             <div className="mb-6">
               <Label htmlFor="background" className="text-gray-700 font-medium block mb-2">
-                LinkedIn URL
+                LinkedIn URL <span className="text-red-500">*</span>
               </Label>
               <p className="text-sm text-gray-500 mb-3">
                 Please provide the URL to your LinkedIn profile
@@ -1245,7 +1270,7 @@ export default function QuestionnairePage() {
             
             <div className="mb-6">
               <Label htmlFor="goals" className="text-gray-700 font-medium block mb-2">
-                Other Professional Social Media Presence
+                Other Professional Social Media Presence <span className="text-red-500">*</span>
               </Label>
               <p className="text-sm text-gray-500 mb-3">
                 Select the platforms where you have a professional presence
