@@ -2582,7 +2582,7 @@ export default function QuestionnairePage() {
             </div>
           </div>
         );
-      case 4:
+      case 5:
         return (
           <div className="space-y-6">
             <div className="mb-6">
@@ -2842,10 +2842,12 @@ export default function QuestionnairePage() {
                     </div>
                     <span className="text-xs text-gray-500">
                       {index === 0
-                        ? "Digital Presence"
+                        ? "Industry"
                         : index === 1
-                        ? "Branding & Content"
+                        ? "Digital Presence"
                         : index === 2
+                        ? "Branding & Content"
+                        : index === 3
                         ? "Interests"
                         : "Professional Goals"}
                     </span>
