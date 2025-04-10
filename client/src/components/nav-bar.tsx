@@ -31,10 +31,10 @@ export default function NavBar() {
         <div className="flex justify-between h-16">
           <div className="flex">
             <div className="flex-shrink-0 flex items-center cursor-pointer" onClick={() => navigate("/")}>
-              <svg className="h-8 w-auto text-[#6c8083]" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <svg className="h-8 w-auto text-[#0077B5]" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                 <path d="M12 12C14.21 12 16 10.21 16 8C16 5.79 14.21 4 12 4C9.79 4 8 5.79 8 8C8 10.21 9.79 12 12 12ZM12 14C9.33 14 4 15.34 4 18V20H20V18C20 15.34 14.67 14 12 14Z" fill="currentColor"/>
               </svg>
-              <span className="ml-2 text-xl font-semibold text-[#6c8083]">SLIPro</span>
+              <span className="ml-2 text-xl font-semibold text-[#0077B5]">SLIPro</span>
             </div>
           </div>
           
@@ -48,10 +48,10 @@ export default function NavBar() {
                       lastName={user.lastName} 
                       size="small" 
                     />
-                    <span className="font-medium text-[#6c8083]">
+                    <span className="font-medium text-[#333333]">
                       {user.firstName} {user.lastName}
                     </span>
-                    <ChevronDown className="h-4 w-4 text-[#6c8083]" />
+                    <ChevronDown className="h-4 w-4 text-[#333333]" />
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-48">
@@ -75,14 +75,14 @@ export default function NavBar() {
             <div className="flex items-center">
               <Button 
                 variant="ghost" 
-                className="text-[#6c8083]"
+                className="text-[#0077B5]"
                 onClick={() => navigate("/auth")}
               >
                 Log In
               </Button>
               <Button 
                 variant="default" 
-                className="ml-4 bg-[#bed6d1] hover:bg-opacity-90 text-[#6c8083]"
+                className="ml-4 bg-[#0077B5] hover:bg-opacity-90"
                 onClick={() => navigate("/auth")}
               >
                 Sign Up
