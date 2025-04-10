@@ -21,7 +21,7 @@ import { toast } from "@/hooks/use-toast";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { Document } from "@shared/schema";
-import { Upload, File, FileText, Trash2, Eye } from "lucide-react";
+import { Upload, File, FileText, Trash2, Eye, Image, FileType } from "lucide-react";
 
 // Document types
 const DOCUMENT_TYPES = [
@@ -29,7 +29,10 @@ const DOCUMENT_TYPES = [
   { id: "linkedin", label: "LinkedIn Profile PDF" },
   { id: "certificate", label: "Certificate" },
   { id: "cover_letter", label: "Cover Letter" },
-  { id: "other", label: "Other Document" }
+  { id: "other", label: "Other Document" },
+  { id: "assessment-pdf", label: "Assessment (PDF)" },
+  { id: "assessment-image", label: "Assessment (Image)" },
+  { id: "assessment-doc", label: "Assessment (Document)" }
 ];
 
 const DocumentUpload = () => {
@@ -230,7 +233,18 @@ const DocumentUpload = () => {
       }
       
       const byteArray = new Uint8Array(byteNumbers);
-      const blob = new Blob([byteArray], { type: 'application/pdf' });
+      
+      // Determine content type based on document type
+      let contentType = 'application/pdf';
+      if (document.type === 'assessment-image') {
+        // Use a generic image type, browsers will detect the actual format
+        contentType = 'image/jpeg';
+      } else if (document.type === 'assessment-doc') {
+        // For doc/docx files
+        contentType = 'application/msword';
+      }
+      
+      const blob = new Blob([byteArray], { type: contentType });
       
       // Create a URL for the blob and open it in a new tab
       const url = URL.createObjectURL(blob);
@@ -241,6 +255,7 @@ const DocumentUpload = () => {
         URL.revokeObjectURL(url);
       }, 100);
     } catch (error) {
+      console.error("Error viewing document:", error);
       toast({
         title: "Error",
         description: "Failed to view document",
@@ -352,41 +367,133 @@ const DocumentUpload = () => {
               <p>No documents uploaded yet</p>
             </div>
           ) : (
-            <div className="space-y-4">
-              {documents.map((document) => {
-                // Find document type label
-                const docType = DOCUMENT_TYPES.find(t => t.id === document.type)?.label || document.type;
+            <div>
+              {/* Group documents by type */}
+              {(() => {
+                // Separate user-uploaded documents from assessment documents
+                const userDocuments = documents.filter(doc => 
+                  !doc.type.startsWith('assessment-')
+                );
+                
+                const assessmentDocuments = documents.filter(doc => 
+                  doc.type.startsWith('assessment-')
+                );
                 
                 return (
-                  <div key={document.id} className="flex items-center justify-between border p-3 rounded-md">
-                    <div className="flex items-center space-x-3">
-                      <File className="h-8 w-8 text-blue-500" />
-                      <div>
-                        <h4 className="font-medium">{document.name}</h4>
-                        <p className="text-sm text-gray-500">{docType}</p>
+                  <>
+                    {/* Regular Documents Section */}
+                    {userDocuments.length > 0 && (
+                      <div className="mb-6">
+                        <h3 className="text-md font-medium mb-3 text-gray-700">Professional Documents</h3>
+                        <div className="space-y-4">
+                          {userDocuments.map((document) => {
+                            // Find document type label
+                            const docType = DOCUMENT_TYPES.find(t => t.id === document.type)?.label || document.type;
+                            
+                            return (
+                              <div key={document.id} className="flex items-center justify-between border p-3 rounded-md">
+                                <div className="flex items-center space-x-3">
+                                  {document.type === 'resume' ? (
+                                    <FileText className="h-8 w-8 text-blue-500" />
+                                  ) : document.type === 'linkedin' ? (
+                                    <FileText className="h-8 w-8 text-blue-500" />
+                                  ) : (
+                                    <File className="h-8 w-8 text-blue-500" />
+                                  )}
+                                  <div>
+                                    <h4 className="font-medium">{document.name}</h4>
+                                    <p className="text-sm text-gray-500">{docType}</p>
+                                  </div>
+                                </div>
+                                
+                                <div className="flex space-x-2">
+                                  <Button 
+                                    variant="outline" 
+                                    size="sm" 
+                                    onClick={() => handleViewDocument(document)}
+                                  >
+                                    <Eye className="h-4 w-4" />
+                                  </Button>
+                                  <Button 
+                                    variant="outline" 
+                                    size="sm" 
+                                    className="text-red-500" 
+                                    onClick={() => handleDelete(document.id)}
+                                  >
+                                    <Trash2 className="h-4 w-4" />
+                                  </Button>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
                       </div>
-                    </div>
+                    )}
                     
-                    <div className="flex space-x-2">
-                      <Button 
-                        variant="outline" 
-                        size="sm" 
-                        onClick={() => handleViewDocument(document)}
-                      >
-                        <Eye className="h-4 w-4" />
-                      </Button>
-                      <Button 
-                        variant="outline" 
-                        size="sm" 
-                        className="text-red-500" 
-                        onClick={() => handleDelete(document.id)}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </div>
+                    {/* Assessment Documents Section */}
+                    {assessmentDocuments.length > 0 && (
+                      <div>
+                        <h3 className="text-md font-medium mb-3 text-gray-700">Assessment Documents</h3>
+                        <div className="space-y-4">
+                          {assessmentDocuments.map((document) => {
+                            // Extract assessment type
+                            let docType = "Assessment";
+                            if (document.type === 'assessment-pdf') {
+                              docType = "Assessment (PDF)";
+                            } else if (document.type === 'assessment-image') {
+                              docType = "Assessment (Image)";
+                            } else if (document.type === 'assessment-doc') {
+                              docType = "Assessment (Document)";
+                            }
+                            
+                            return (
+                              <div key={document.id} className="flex items-center justify-between border border-blue-100 bg-blue-50 p-3 rounded-md">
+                                <div className="flex items-center space-x-3">
+                                  {document.type === 'assessment-pdf' ? (
+                                    <FileText className="h-8 w-8 text-blue-500" />
+                                  ) : document.type === 'assessment-image' ? (
+                                    <Image className="h-8 w-8 text-blue-500" />
+                                  ) : document.type === 'assessment-doc' ? (
+                                    <FileType className="h-8 w-8 text-blue-500" />
+                                  ) : (
+                                    <File className="h-8 w-8 text-blue-500" />
+                                  )}
+                                  <div>
+                                    <h4 className="font-medium">{document.name}</h4>
+                                    <p className="text-sm text-gray-500">{docType}</p>
+                                  </div>
+                                </div>
+                                
+                                <div className="flex space-x-2">
+                                  <Button 
+                                    variant="outline" 
+                                    size="sm" 
+                                    onClick={() => handleViewDocument(document)}
+                                  >
+                                    {document.type === 'assessment-image' ? (
+                                      <Image className="h-4 w-4" />
+                                    ) : (
+                                      <Eye className="h-4 w-4" />
+                                    )}
+                                  </Button>
+                                  <Button 
+                                    variant="outline" 
+                                    size="sm" 
+                                    className="text-red-500" 
+                                    onClick={() => handleDelete(document.id)}
+                                  >
+                                    <Trash2 className="h-4 w-4" />
+                                  </Button>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+                  </>
                 );
-              })}
+              })()}
             </div>
           )}
         </CardContent>
