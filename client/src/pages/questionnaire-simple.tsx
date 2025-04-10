@@ -7,6 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "@/hooks/use-toast";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { UserProfile } from "@shared/schema";
@@ -14,11 +15,112 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useLocation } from "wouter";
 import { Loader2, CheckCircle } from "lucide-react";
 
+// Industry options array
+const INDUSTRY_OPTIONS = [
+  "Accounting - General",
+  "Consulting - Biotechnology / Healthcare",
+  "Consulting - Design",
+  "Consulting - Energy",
+  "Consulting - General",
+  "Consulting - Nonprofit",
+  "Consulting - Other",
+  "Consulting - Strategy",
+  "Consulting - Technology",
+  "Consumer Products - Alcohol",
+  "Consumer Products - Apparel / Textiles",
+  "Consumer Products - Automotive",
+  "Consumer Products - Beverages / Food",
+  "Consumer Products - Electronics",
+  "Consumer Products - General",
+  "Consumer Products - Household / Personal",
+  "Consumer Products - Luxury Goods",
+  "Consumer Products - Other",
+  "Consumer Products - Services",
+  "Consumer Products - Tobacco",
+  "Economic Development / Microfinanace - General",
+  "Energy / Utilities - Alternative Energy",
+  "Energy / Utilities - Energy Trading",
+  "Energy / Utilities - General",
+  "Energy / Utilities - Infrastructure / Hardware",
+  "Energy / Utilities - Oil / Gas",
+  "Energy / Utilities - Other",
+  "Energy / Utilities - Utility Services (Electric/ Water/ etc.)",
+  "Entertainment - Film / Media",
+  "Entertainment - General",
+  "Entertainment - Leisure / Recreation",
+  "Entertainment - Other",
+  "Entertainment - Sports & Sports Management",
+  "Financial - Commercial Banking",
+  "Financial - Diversified Financial Services",
+  "Financial - Fin Tech",
+  "Financial - General",
+  "Financial - Hedge Funds",
+  "Financial - Insurance",
+  "Financial - Investment Banking / Brokerage",
+  "Financial - Investment Management",
+  "Financial - Other",
+  "Financial - Private Equity",
+  "Financial - Research & Ratings",
+  "Financial - Venture Capital",
+  "Government - Local / State / Federal",
+  "Government - Military",
+  "Government - Other",
+  "Healthcare - Biotechnology",
+  "Healthcare - General",
+  "Healthcare - Health Tech",
+  "Healthcare - Medical Devices",
+  "Healthcare - Other",
+  "Healthcare - Payors, Providers & Services",
+  "Manufacturing - Automotive",
+  "Manufacturing - Chemical",
+  "Manufacturing - General",
+  "Manufacturing - Other",
+  "Media - Advertising",
+  "Media - Other",
+  "Media - Publishing (Print / Web)",
+  "Media - Radio / TV / Cable / Film",
+  "Natural Resources - General",
+  "Natural Resources - Metals / Mining",
+  "Natural Resources - Other",
+  "Natural Resources - Renewable",
+  "Other - Aerospace / Aviation / Defense",
+  "Other - Agribusiness",
+  "Other - Construction",
+  "Other - Engineering Services",
+  "Other - Hospitality / Tourism",
+  "Other - Law / Legal Services",
+  "Other - Retail",
+  "Other -Unspecified / Other",
+  "Pharmaceutical - General",
+  "Pharmaceutical - Manufacturers",
+  "Pharmaceutical - Other",
+  "Public Sector / Non-Profit - Education",
+  "Public Sector / Non-Profit - Environmental Services & Sustainability",
+  "Public Sector / Non-Profit - Nonprofits & Social Enterprises",
+  "Real Estate - Commercial",
+  "Real Estate - General",
+  "Real Estate - Other",
+  "Real Estate - Residential",
+  "Real Estate - Services",
+  "Technology - Ed Tech",
+  "Technology - Equipment / Hardware / Networking",
+  "Technology - General",
+  "Technology - Internet Services / E-Commerce",
+  "Technology - Multimedia Products & Services",
+  "Technology - Other",
+  "Technology - Software",
+  "Technology - Telecom",
+  "Transportation / Logistics - General"
+];
+
 export default function QuestionnairePage() {
   const { user } = useAuth();
   const [, navigate] = useLocation();
   const [currentStep, setCurrentStep] = useState(1);
-  const totalSteps = 4;
+  const totalSteps = 5; // Updated to 5 steps to include the industry selection
+  
+  // Add state for industry selection
+  const [industry, setIndustry] = useState("");
   
   // Define separate state variables for each field
   const [background, setBackground] = useState(""); // LinkedIn URL
@@ -246,6 +348,14 @@ export default function QuestionnairePage() {
     if (userProfile?.questionnaire) {
       const q = userProfile.questionnaire;
       
+      // Set industry if available
+      if (q.timeframe && q.timeframe.includes("Industry:")) {
+        const industryMatch = q.timeframe.match(/Industry: (.*?)(?:,|$)/);
+        if (industryMatch && industryMatch[1]) {
+          setIndustry(industryMatch[1].trim());
+        }
+      }
+      
       // Set LinkedIn URL (which is saved in 'background' field)
       setBackground(q.background || "");
       
@@ -411,7 +521,21 @@ export default function QuestionnairePage() {
   // Validate current step fields
   const validateCurrentStep = () => {
     if (currentStep === 1) {
-      // Step 1: Require LinkedIn URL and at least one social media platform
+      // Step 1: Require industry selection
+      const hasIndustry = industry.trim() !== "";
+      
+      // Show toast for missing fields
+      if (!hasIndustry) {
+        toast({
+          title: "Required Fields Missing",
+          description: "Please select your current or prior industry",
+          variant: "destructive",
+        });
+      }
+      
+      return hasIndustry;
+    } else if (currentStep === 2) {
+      // Step 2: Require LinkedIn URL and at least one social media platform
       const hasLinkedInUrl = background.trim() !== "";
       const hasSocialMediaSelected = 
         twitterChecked || 
