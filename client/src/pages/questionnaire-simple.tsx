@@ -1922,7 +1922,7 @@ export default function QuestionnairePage() {
               
               <div className="mb-6">
                 <Label className="text-gray-700 font-medium block mb-3">
-                  Industry Interests
+                  Industry Interests <span className="text-red-500">*</span>
                 </Label>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                   <div className="flex items-center space-x-2">
@@ -2022,7 +2022,7 @@ export default function QuestionnairePage() {
               {/* Cross-Cutting & Societal Interests Section */}
               <div className="mb-6">
                 <Label className="text-gray-700 font-medium block mb-3">
-                  Cross-Cutting & Societal Interests
+                  Cross-Cutting & Societal Interests <span className="text-red-500">*</span>
                 </Label>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                   <div className="flex items-center space-x-2">
@@ -2708,7 +2708,7 @@ export default function QuestionnairePage() {
               
               <div className="mb-8">
                 <Label htmlFor="careerGoals" className="text-gray-700 font-medium block mb-2">
-                  Beyond your immediate next job, what are your career goals within the next 2-5 years?
+                  Beyond your immediate next job, what are your career goals within the next 2-5 years? <span className="text-red-500">*</span>
                 </Label>
                 <p className="text-sm text-gray-500 mb-3">
                   What roles, industries, or impact do you want to have?
@@ -2726,7 +2726,7 @@ export default function QuestionnairePage() {
               
               <div className="mb-8">
                 <Label className="text-gray-700 font-medium block mb-3">
-                  What percentage of your LinkedIn connections are in your target industry?
+                  What percentage of your LinkedIn connections are in your target industry? <span className="text-red-500">*</span>
                 </Label>
                 
                 <div className="space-y-3 mt-4">
