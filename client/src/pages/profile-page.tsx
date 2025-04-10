@@ -50,9 +50,6 @@ export default function ProfilePage() {
     navigate("/profile/create");
     return null;
   }
-  
-  // Debug log to see if questionnaire data exists
-  console.log("User Profile Data:", userProfile);
 
   return (
     <div className="min-h-screen bg-[#F5F5F5] flex flex-col">
@@ -117,21 +114,21 @@ export default function ProfilePage() {
                       </div>
                     </div>
 
-                    {/* Career Questionnaire Results - Always show this section */}
-                    <div className="mb-8 bg-[#f8fafc] p-6 rounded-lg border border-gray-100 shadow-sm">
-                      <div className="flex justify-between items-center mb-4">
-                        <h2 className="text-xl font-medium text-[#333333]">Career Development Summary</h2>
-                        <Button
-                          onClick={() => navigate("/questionnaire")}
-                          variant="outline"
-                          className="px-3 py-1 h-auto text-sm border-[#0077B5] text-[#0077B5] hover:bg-[#0077B5] hover:text-white"
-                        >
-                          <Edit className="h-3 w-3 mr-1" />
-                          {userProfile.questionnaire ? 'Edit' : 'Complete'}
-                        </Button>
-                      </div>
-                      
-                      {userProfile.questionnaire ? (
+                    {/* Career Questionnaire Results */}
+                    {userProfile.questionnaire && (
+                      <div className="mb-8 bg-[#f8fafc] p-6 rounded-lg border border-gray-100 shadow-sm">
+                        <div className="flex justify-between items-center mb-4">
+                          <h2 className="text-xl font-medium text-[#333333]">Career Development Summary</h2>
+                          <Button
+                            onClick={() => navigate("/questionnaire")}
+                            variant="outline"
+                            className="px-3 py-1 h-auto text-sm border-[#0077B5] text-[#0077B5] hover:bg-[#0077B5] hover:text-white"
+                          >
+                            <Edit className="h-3 w-3 mr-1" />
+                            Edit
+                          </Button>
+                        </div>
+                        
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                           {userProfile.questionnaire.background && (
                             <div className="border-l-2 border-[#0077B5] pl-4 py-1">
@@ -181,14 +178,8 @@ export default function ProfilePage() {
                             </div>
                           )}
                         </div>
-                      ) : (
-                        <div className="text-center py-8">
-                          <FileQuestion className="h-12 w-12 mx-auto text-gray-400 mb-4" />
-                          <p className="text-gray-600 mb-2">You haven't completed your career development questionnaire yet.</p>
-                          <p className="text-gray-500 text-sm mb-4">Complete the questionnaire to see your career development summary.</p>
-                        </div>
-                      )}
-                    </div>
+                      </div>
+                    )}
                   </div>
                 </div>
               </TabsContent>
