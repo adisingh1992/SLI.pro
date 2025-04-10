@@ -1107,6 +1107,34 @@ export default function QuestionnairePage() {
         return (
           <div className="space-y-6">
             <div className="mb-6">
+              <Label htmlFor="industry" className="text-gray-700 font-medium block mb-2">
+                Current / Prior Industry
+              </Label>
+              <p className="text-sm text-gray-500 mb-3">
+                Please select your current or most recent industry
+              </p>
+              <Select
+                value={industry}
+                onValueChange={setIndustry}
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Select an industry" />
+                </SelectTrigger>
+                <SelectContent>
+                  {INDUSTRY_OPTIONS.map((option) => (
+                    <SelectItem key={option} value={option}>
+                      {option}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+        );
+      case 2:
+        return (
+          <div className="space-y-6">
+            <div className="mb-6">
               <Label htmlFor="background" className="text-gray-700 font-medium block mb-2">
                 LinkedIn URL
               </Label>
@@ -1189,7 +1217,7 @@ export default function QuestionnairePage() {
             </div>
           </div>
         );
-      case 2:
+      case 3:
         return (
           <div className="space-y-6">
             <div className="mb-6">
@@ -1765,7 +1793,7 @@ export default function QuestionnairePage() {
 
           </div>
         );
-      case 3:
+      case 4:
         return (
           <div className="space-y-6">
             <div className="mb-6">
