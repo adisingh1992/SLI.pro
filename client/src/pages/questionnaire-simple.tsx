@@ -904,6 +904,7 @@ export default function QuestionnairePage() {
         challenges: "", // No longer using this field
         interests: "",
         timeframe: "",
+        industry, // Current/Prior industry
         // Include these fields for potential future enhancement
         contentFormatPreferences: {
           sharingNews: sharingNewsChecked,
@@ -1087,12 +1088,14 @@ export default function QuestionnairePage() {
       toast({
         title: "Please complete all required fields",
         description: currentStep === 1 
-          ? "LinkedIn URL is required to complete your profile." 
+          ? "Please select your current or prior industry." 
           : currentStep === 2 
+          ? "LinkedIn URL is required to complete your profile." 
+          : currentStep === 3 
           ? "Please select at least one branding challenge." 
-          : currentStep === 3
-          ? "Please select at least one industry interest."
           : currentStep === 4
+          ? "Please select at least one industry interest."
+          : currentStep === 5
           ? "Please fill in your career goals and select a percentage of connections in your target industry."
           : "Please complete all required fields before proceeding.",
         variant: "destructive",
