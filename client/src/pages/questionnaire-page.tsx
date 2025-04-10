@@ -223,6 +223,44 @@ export default function QuestionnairePage() {
           <>
             <FormField
               control={form.control}
+              name="industry"
+              render={({ field }) => (
+                <FormItem className="mb-6">
+                  <FormLabel className="text-gray-700 font-medium">
+                    Current / Prior Industry
+                  </FormLabel>
+                  <FormDescription>
+                    Select the industry that best represents your current or most recent work experience.
+                  </FormDescription>
+                  <FormControl>
+                    <Select
+                      value={field.value}
+                      onValueChange={field.onChange}
+                      defaultValue={field.value}
+                    >
+                      <SelectTrigger className="w-full">
+                        <SelectValue placeholder="Select an industry" />
+                      </SelectTrigger>
+                      <SelectContent className="max-h-[300px]">
+                        {INDUSTRY_OPTIONS.map((industry) => (
+                          <SelectItem key={industry} value={industry}>
+                            {industry}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </>
+        );
+      case 2:
+        return (
+          <>
+            <FormField
+              control={form.control}
               name="background"
               render={({ field }) => (
                 <FormItem className="mb-6">
@@ -275,7 +313,7 @@ export default function QuestionnairePage() {
             />
           </>
         );
-      case 2:
+      case 3:
         return (
           <>
             <FormField
@@ -332,7 +370,7 @@ export default function QuestionnairePage() {
             />
           </>
         );
-      case 3:
+      case 4:
         return (
           <>
             <FormField
