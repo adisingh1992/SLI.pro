@@ -411,10 +411,28 @@ export default function QuestionnairePage() {
   // Validate current step fields
   const validateCurrentStep = () => {
     if (currentStep === 1) {
-      // First step: LinkedIn URL is required
-      return background.trim() !== "";
+      // Step 1: Require LinkedIn URL and at least one social media platform
+      const hasLinkedInUrl = background.trim() !== "";
+      const hasSocialMediaSelected = 
+        twitterChecked || 
+        mediumChecked || 
+        blogChecked || 
+        (otherChecked && otherSocialMedia.trim() !== "");
+        
+      // Show toast for missing fields
+      if (!hasLinkedInUrl || !hasSocialMediaSelected) {
+        toast({
+          title: "Required Fields Missing",
+          description: !hasLinkedInUrl 
+            ? "Please enter your LinkedIn URL" 
+            : "Please select at least one social media platform",
+          variant: "destructive",
+        });
+      }
+      
+      return hasLinkedInUrl && hasSocialMediaSelected;
     } else if (currentStep === 2) {
-      // At least one branding challenge must be selected
+      // Step 2: Require at least one branding challenge and published content
       const hasBrandingChallengeSelected = 
         consistentNarrativeChecked || 
         valuePropositionChecked || 
@@ -426,9 +444,28 @@ export default function QuestionnairePage() {
         industryEventsChecked || 
         (otherBrandingChecked && otherBrandingChallenge.trim() !== "");
       
-      return hasBrandingChallengeSelected;
+      const hasPublishedContentSelected = 
+        linkedInPostsChecked || 
+        blogArticlesChecked || 
+        industryPresentationsChecked || 
+        academicPapersChecked || 
+        neverPublishedChecked || 
+        (otherPublishedContentChecked && otherPublishedContent.trim() !== "");
+        
+      // Show toast for missing fields
+      if (!hasBrandingChallengeSelected || !hasPublishedContentSelected) {
+        toast({
+          title: "Required Fields Missing",
+          description: !hasBrandingChallengeSelected 
+            ? "Please select at least one branding challenge" 
+            : "Please select at least one type of content you've published",
+          variant: "destructive",
+        });
+      }
+      
+      return hasBrandingChallengeSelected && hasPublishedContentSelected;
     } else if (currentStep === 3) {
-      // At least one industry interest must be selected
+      // Step 3: Require at least one industry interest and one societal interest
       const hasIndustryInterestSelected = 
         consultingChecked || 
         consumerRetailChecked || 
@@ -441,11 +478,56 @@ export default function QuestionnairePage() {
         socialImpactChecked || 
         technologyChecked;
       
-      // No timeframe required anymore
-      return hasIndustryInterestSelected;
+      const hasSocietalInterestSelected = 
+        climateChecked || 
+        consumerBehaviorChecked || 
+        crimeJusticeChecked || 
+        digitalTransformationAIChecked || 
+        educationLearningChecked ||
+        emergingMarketsChecked ||
+        entertainmentArtsChecked ||
+        financialInnovationChecked ||
+        futureOfWorkChecked ||
+        globalEconomyChecked ||
+        geopoliticsChecked ||
+        healthWellnessChecked ||
+        healthcareInnovationChecked ||
+        socialImpactDEIChecked ||
+        sportsRecreationChecked ||
+        travelTourismChecked ||
+        urbanDevelopmentChecked ||
+        usPoliticsChecked;
+        
+      // Show toast for missing fields
+      if (!hasIndustryInterestSelected || !hasSocietalInterestSelected) {
+        toast({
+          title: "Required Fields Missing",
+          description: !hasIndustryInterestSelected 
+            ? "Please select at least one industry interest" 
+            : "Please select at least one societal interest",
+          variant: "destructive",
+        });
+      }
+      
+      return hasIndustryInterestSelected && hasSocietalInterestSelected;
     } else if (currentStep === 4) {
-      // For step 4, require career goals and industry connections percentage
-      return careerGoals.trim() !== "" && industryConnectionsPercentage !== undefined;
+      // Step 4: Require career goals and industry connections percentage
+      // Note that file upload is NOT required
+      const hasCareerGoals = careerGoals.trim() !== "";
+      const hasConnectionsPercentage = industryConnectionsPercentage !== undefined;
+        
+      // Show toast for missing fields
+      if (!hasCareerGoals || !hasConnectionsPercentage) {
+        toast({
+          title: "Required Fields Missing",
+          description: !hasCareerGoals 
+            ? "Please describe your career goals" 
+            : "Please select your LinkedIn connections percentage",
+          variant: "destructive",
+        });
+      }
+      
+      return hasCareerGoals && hasConnectionsPercentage;
     }
     return false;
   };
