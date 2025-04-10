@@ -71,11 +71,11 @@ export default function ProfileCreationPage() {
     
     toast({
       title: "Success",
-      description: "Your profile has been created successfully! Now let's complete a career questionnaire.",
+      description: "Your profile has been created successfully!",
     });
     
-    // Navigate to questionnaire page instead of profile
-    navigate("/questionnaire");
+    // Navigate to home page instead of questionnaire
+    navigate("/");
   };
 
   if (isLoading) {

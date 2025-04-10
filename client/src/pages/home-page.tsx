@@ -34,16 +34,8 @@ export default function HomePage() {
     }
   }, [isError, error, toast]);
 
-  // Redirect to questionnaire if user hasn't completed it
-  useEffect(() => {
-    if (!isLoading && userProfile) {
-      const questionnaireNotCompleted = !userProfile.questionnaire;
-      
-      if (questionnaireNotCompleted) {
-        navigate("/questionnaire");
-      }
-    }
-  }, [userProfile, isLoading, navigate]);
+  // No longer automatically redirecting to questionnaire if it's not completed
+  // User can choose to complete it from the home page
 
   if (isLoading) {
     return (
