@@ -102,15 +102,23 @@ export default function HomePage() {
                   Personal Coaching Session
                 </h2>
                 <p className="text-gray-600 mb-4">
-                  Book a one-on-one coaching session to discuss your career goals, get personalized advice, and develop strategies for professional growth.
+                  {userProfile?.questionnaire 
+                    ? "Book a one-on-one coaching session to discuss your career goals, get personalized advice, and develop strategies for professional growth."
+                    : "Complete the career development questionnaire first to unlock the ability to schedule a coaching session."}
                 </p>
                 <Button 
-                  className="flex items-center bg-green-600 hover:bg-green-700"
+                  className="flex items-center bg-green-600 hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
                   onClick={() => window.open("https://calendly.com/dcara-sli/haas", "_blank")}
+                  disabled={!userProfile?.questionnaire}
                 >
                   Schedule Coaching Session
                   <ArrowRight className="ml-2 h-4 w-4" />
                 </Button>
+                {!userProfile?.questionnaire && (
+                  <p className="text-sm text-gray-500 italic mt-2">
+                    <span className="text-orange-500 font-medium">*</span> You must complete the questionnaire before scheduling a coaching session
+                  </p>
+                )}
               </div>
             </div>
           </div>
