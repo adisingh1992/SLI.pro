@@ -633,9 +633,17 @@ export default function QuestionnairePage() {
       
       // Try to parse additional info
       if (q.aspirations && q.aspirations.includes("Additional professional journey information:")) {
-        // Alternative location
-        const additionalInfoText = q.aspirations.split("Additional professional journey information:")[1].trim();
-        setAdditionalInfo(additionalInfoText || "");
+        // Extract additional info, but make sure to limit to just this section by splitting on newlines
+        const fullText = q.aspirations.split("Additional professional journey information:")[1];
+        if (fullText) {
+          // If there's another section header after this one, only get text up to that point
+          const nextSectionIndex = fullText.indexOf("\n\n");
+          const additionalInfoText = nextSectionIndex > 0 
+            ? fullText.substring(0, nextSectionIndex).trim()
+            : fullText.trim();
+          
+          setAdditionalInfo(additionalInfoText || "");
+        }
       }
       
       // Try to parse industry connections percentage
@@ -1276,9 +1284,12 @@ export default function QuestionnairePage() {
       // Add career goals
       brandingDetails += `\n\nCareer goals: ${careerGoals.trim() !== '' ? careerGoals : 'Not specified'}`;
       
-      // Add additional info to aspirations field if provided
+      // Add additional info to aspirations field if provided, but clean it first
+      // to avoid any special characters that might cause parsing issues
       if (additionalInfo.trim() !== '') {
-        brandingDetails += `\n\nAdditional professional journey information: ${additionalInfo}`;
+        // Replace any newlines with spaces to avoid multi-line issues in parsing
+        const cleanAdditionalInfo = additionalInfo.trim().replace(/\n/g, ' ');
+        brandingDetails += `\n\nAdditional professional journey information: ${cleanAdditionalInfo}`;
       }
       
       const formData = {
