@@ -134,6 +134,7 @@ export const insertDocumentSchema = createInsertSchema(documents).omit({
 export const questionnaires = pgTable("questionnaires", {
   id: serial("id").primaryKey(),
   userId: integer("user_id").notNull().references(() => users.id),
+  industry: text("industry"),
   background: text("background"),
   goals: text("goals"),
   aspirations: text("aspirations"),

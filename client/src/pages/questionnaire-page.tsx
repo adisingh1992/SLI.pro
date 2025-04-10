@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "@/hooks/use-toast";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
@@ -13,8 +14,107 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useLocation } from "wouter";
 import { Loader2, CheckCircle } from "lucide-react";
 
+// Industry options array
+const INDUSTRY_OPTIONS = [
+  "Accounting - General",
+  "Consulting - Biotechnology / Healthcare",
+  "Consulting - Design",
+  "Consulting - Energy",
+  "Consulting - General",
+  "Consulting - Nonprofit",
+  "Consulting - Other",
+  "Consulting - Strategy",
+  "Consulting - Technology",
+  "Consumer Products - Alcohol",
+  "Consumer Products - Apparel / Textiles",
+  "Consumer Products - Automotive",
+  "Consumer Products - Beverages / Food",
+  "Consumer Products - Electronics",
+  "Consumer Products - General",
+  "Consumer Products - Household / Personal",
+  "Consumer Products - Luxury Goods",
+  "Consumer Products - Other",
+  "Consumer Products - Services",
+  "Consumer Products - Tobacco",
+  "Economic Development / Microfinanace - General",
+  "Energy / Utilities - Alternative Energy",
+  "Energy / Utilities - Energy Trading",
+  "Energy / Utilities - General",
+  "Energy / Utilities - Infrastructure / Hardware",
+  "Energy / Utilities - Oil / Gas",
+  "Energy / Utilities - Other",
+  "Energy / Utilities - Utility Services (Electric/ Water/ etc.)",
+  "Entertainment - Film / Media",
+  "Entertainment - General",
+  "Entertainment - Leisure / Recreation",
+  "Entertainment - Other",
+  "Entertainment - Sports & Sports Management",
+  "Financial - Commercial Banking",
+  "Financial - Diversified Financial Services",
+  "Financial - Fin Tech",
+  "Financial - General",
+  "Financial - Hedge Funds",
+  "Financial - Insurance",
+  "Financial - Investment Banking / Brokerage",
+  "Financial - Investment Management",
+  "Financial - Other",
+  "Financial - Private Equity",
+  "Financial - Research & Ratings",
+  "Financial - Venture Capital",
+  "Government - Local / State / Federal",
+  "Government - Military",
+  "Government - Other",
+  "Healthcare - Biotechnology",
+  "Healthcare - General",
+  "Healthcare - Health Tech",
+  "Healthcare - Medical Devices",
+  "Healthcare - Other",
+  "Healthcare - Payors, Providers & Services",
+  "Manufacturing - Automotive",
+  "Manufacturing - Chemical",
+  "Manufacturing - General",
+  "Manufacturing - Other",
+  "Media - Advertising",
+  "Media - Other",
+  "Media - Publishing (Print / Web)",
+  "Media - Radio / TV / Cable / Film",
+  "Natural Resources - General",
+  "Natural Resources - Metals / Mining",
+  "Natural Resources - Other",
+  "Natural Resources - Renewable",
+  "Other - Aerospace / Aviation / Defense",
+  "Other - Agribusiness",
+  "Other - Construction",
+  "Other - Engineering Services",
+  "Other - Hospitality / Tourism",
+  "Other - Law / Legal Services",
+  "Other - Retail",
+  "Other -Unspecified / Other",
+  "Pharmaceutical - General",
+  "Pharmaceutical - Manufacturers",
+  "Pharmaceutical - Other",
+  "Public Sector / Non-Profit - Education",
+  "Public Sector / Non-Profit - Environmental Services & Sustainability",
+  "Public Sector / Non-Profit - Nonprofits & Social Enterprises",
+  "Real Estate - Commercial",
+  "Real Estate - General",
+  "Real Estate - Other",
+  "Real Estate - Residential",
+  "Real Estate - Services",
+  "Technology - Ed Tech",
+  "Technology - Equipment / Hardware / Networking",
+  "Technology - General",
+  "Technology - Internet Services / E-Commerce",
+  "Technology - Multimedia Products & Services",
+  "Technology - Other",
+  "Technology - Software",
+  "Technology - Telecom",
+  "Transportation / Logistics - General"
+];
+
 // Create schema for questionnaire
 const questionnaireSchema = z.object({
+  industry: z.string().min(1, "Please select your current or prior industry"),
   background: z.string().min(1, "Please share your professional background"),
   goals: z.string().min(1, "Please describe your career goals"),
   aspirations: z.string().min(1, "Please describe your aspirations"),
@@ -29,7 +129,7 @@ export default function QuestionnairePage() {
   const { user } = useAuth();
   const [, navigate] = useLocation();
   const [currentStep, setCurrentStep] = useState(1);
-  const totalSteps = 3;
+  const totalSteps = 4;
 
   // Fetch user profile data
   const { data: userProfile, isLoading: profileLoading } = useQuery({
@@ -73,6 +173,7 @@ export default function QuestionnairePage() {
   const form = useForm<QuestionnaireFormValues>({
     resolver: zodResolver(questionnaireSchema),
     defaultValues: {
+      industry: userProfile?.questionnaire?.industry || "",
       background: userProfile?.questionnaire?.background || "",
       goals: userProfile?.questionnaire?.goals || "",
       aspirations: userProfile?.questionnaire?.aspirations || "",
@@ -86,6 +187,7 @@ export default function QuestionnairePage() {
   useEffect(() => {
     if (userProfile?.questionnaire) {
       form.reset({
+        industry: userProfile.questionnaire.industry || "",
         background: userProfile.questionnaire.background || "",
         goals: userProfile.questionnaire.goals || "",
         aspirations: userProfile.questionnaire.aspirations || "",
@@ -336,8 +438,10 @@ export default function QuestionnairePage() {
                     </div>
                     <span className="text-xs text-gray-500">
                       {index === 0
-                        ? "Background"
+                        ? "Industry"
                         : index === 1
+                        ? "Background"
+                        : index === 2
                         ? "Aspirations"
                         : "Interests"}
                     </span>
