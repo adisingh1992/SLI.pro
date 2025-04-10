@@ -113,14 +113,101 @@ const INDUSTRY_OPTIONS = [
   "Transportation / Logistics - General"
 ];
 
+// Function options array
+const FUNCTION_OPTIONS = [
+  "Accounting - Advisory",
+  "Accounting - Audit",
+  "Accounting - General",
+  "Accounting - Other",
+  "Consulting - Change Management / HR",
+  "Consulting - Financial",
+  "Consulting - General",
+  "Consulting - Healthcare",
+  "Consulting - Management / Strategy",
+  "Consulting - Other",
+  "Consulting - Social Impact/Enterprise",
+  "Consulting - Technology",
+  "Corporate - Business Analysis and Planning",
+  "Corporate - Business Development",
+  "Corporate - Financial Analysis",
+  "Corporate - General Management",
+  "Corporate - Management Information Systems",
+  "Corporate - Operations",
+  "Corporate - Project Management",
+  "Corporate - Social Responsibility / Sustainability / Compliance",
+  "Corporate - Strategy",
+  "Corporate - Supply Chain",
+  "Corporate - Treasury",
+  "Finance - Banking / M&A / Corporate Finance",
+  "Finance - Commercial Lending",
+  "Finance - Economic Analysis / Research",
+  "Finance - General",
+  "Finance - Investment / Portfolio Management",
+  "Finance - Other",
+  "Finance - Private Client Services / Wealth Management",
+  "Finance - Public Finance",
+  "Finance - Research",
+  "Finance - Restructure / Turnaround",
+  "Finance - Risk Management",
+  "Finance - Sales & Trading",
+  "Finance - Venture Capital",
+  "Human Resources - Generalist",
+  "Human Resources - Organizational Design / Development",
+  "Human Resources - Recruiter / Executive Search",
+  "Manufacturing - General",
+  "Manufacturing - Other",
+  "Manufacturing - Plant / Facility Management",
+  "Marketing - Advertising",
+  "Marketing - Brand / Product Management",
+  "Marketing - Communications / Public Relations",
+  "Marketing - General",
+  "Marketing - Market Research / Market Intelligence",
+  "Marketing - Merchandising / Retail",
+  "Marketing - Online / Social",
+  "Marketing - Other",
+  "Marketing - Product Development / Design",
+  "Operations/Logistics",
+  "Other - Administration",
+  "Other - Community Relations",
+  "Other - Customer Relations",
+  "Other - Education (Administrator / Faculty)",
+  "Other - Entrepreneurship",
+  "Other - Fundraising / Development",
+  "Other - Health Care / Medical Professional",
+  "Other - Lawyer / Legal Professional",
+  "Other - Military - Officer",
+  "Other - Multiple Positions",
+  "Other - Relationship / Partnership / Client Management",
+  "Other - Research & Development",
+  "Other - Sales",
+  "Other - Unspecified / Other",
+  "Real Estate - Asset / Property Management",
+  "Real Estate - Development / Construction",
+  "Real Estate - Finance",
+  "Real Estate - General",
+  "Real Estate - Other",
+  "Rotational Program - Finance",
+  "Rotational Program - General Management",
+  "Rotational Program - Marketing",
+  "Rotational Program - Other",
+  "Technical - Ecommerce / Internet / Web Site Mgmt",
+  "Technical - Engineering",
+  "Technical - General",
+  "Technical - Integration / Implementation",
+  "Technical - Other",
+  "Technical - Product Management",
+  "Technical - Systems Management"
+];
+
 export default function QuestionnairePage() {
   const { user } = useAuth();
   const [, navigate] = useLocation();
   const [currentStep, setCurrentStep] = useState(1);
   const totalSteps = 5; // Updated to 5 steps to include the industry selection
   
-  // Add state for industry selection
+  // Add state for industry and function selection
   const [industry, setIndustry] = useState("");
+  const [jobFunction, setJobFunction] = useState("");
   
   // Define separate state variables for each field
   const [background, setBackground] = useState(""); // LinkedIn URL
@@ -521,19 +608,22 @@ export default function QuestionnairePage() {
   // Validate current step fields
   const validateCurrentStep = () => {
     if (currentStep === 1) {
-      // Step 1: Require industry selection
+      // Step 1: Require industry and function selection
       const hasIndustry = industry.trim() !== "";
+      const hasFunction = jobFunction.trim() !== "";
       
       // Show toast for missing fields
-      if (!hasIndustry) {
+      if (!hasIndustry || !hasFunction) {
         toast({
           title: "Required Fields Missing",
-          description: "Please select your current or prior industry",
+          description: !hasIndustry 
+            ? "Please select your current or prior industry" 
+            : "Please select your current or prior function",
           variant: "destructive",
         });
       }
       
-      return hasIndustry;
+      return hasIndustry && hasFunction;
     } else if (currentStep === 2) {
       // Step 2: Require LinkedIn URL and at least one social media platform
       const hasLinkedInUrl = background.trim() !== "";
@@ -555,8 +645,8 @@ export default function QuestionnairePage() {
       }
       
       return hasLinkedInUrl && hasSocialMediaSelected;
-    } else if (currentStep === 2) {
-      // Step 2: Require at least one branding challenge and published content
+    } else if (currentStep === 3) {
+      // Step 3: Require at least one branding challenge and published content
       const hasBrandingChallengeSelected = 
         consistentNarrativeChecked || 
         valuePropositionChecked || 
@@ -588,8 +678,8 @@ export default function QuestionnairePage() {
       }
       
       return hasBrandingChallengeSelected && hasPublishedContentSelected;
-    } else if (currentStep === 3) {
-      // Step 3: Require at least one industry interest and one societal interest
+    } else if (currentStep === 4) {
+      // Step 4: Require at least one industry interest and one societal interest
       const hasIndustryInterestSelected = 
         consultingChecked || 
         consumerRetailChecked || 
@@ -634,8 +724,8 @@ export default function QuestionnairePage() {
       }
       
       return hasIndustryInterestSelected && hasSocietalInterestSelected;
-    } else if (currentStep === 4) {
-      // Step 4: Require career goals and industry connections percentage
+    } else if (currentStep === 5) {
+      // Step 5: Require career goals and industry connections percentage
       // Note that file upload is NOT required
       const hasCareerGoals = careerGoals.trim() !== "";
       const hasConnectionsPercentage = industryConnectionsPercentage !== undefined;
