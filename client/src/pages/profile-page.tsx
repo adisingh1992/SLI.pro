@@ -14,6 +14,7 @@ import {
   Heart,
   Clock,
   FileText,
+  Home,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -97,7 +98,14 @@ export default function ProfilePage() {
                     </h1>
                   </div>
                 </div>
-                {/* Edit Profile button removed */}
+                <Button
+                  onClick={() => navigate("/")}
+                  variant="outline"
+                  className="bg-white/10 border-white/20 hover:bg-white/20 text-white"
+                >
+                  <Home className="h-4 w-4 mr-2" />
+                  Home Page
+                </Button>
               </div>
             </div>
           </div>
