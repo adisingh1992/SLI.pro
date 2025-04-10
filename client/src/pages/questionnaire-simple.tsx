@@ -435,6 +435,7 @@ export default function QuestionnairePage() {
     if (userProfile?.questionnaire) {
       const q = userProfile.questionnaire;
       
+      // Step 1: Industry & Function
       // Set industry directly from the industry field
       if (q.industry) {
         setIndustry(q.industry);
@@ -447,9 +448,12 @@ export default function QuestionnairePage() {
         }
       }
       
-      // Set job function directly from the jobFunction field
-      if (q.jobFunction) {
-        setJobFunction(q.jobFunction);
+      // Try to extract job function from timeframe field
+      if (q.timeframe && q.timeframe.includes("Function:")) {
+        const functionMatch = q.timeframe.match(/Function: (.*?)(?:,|$)/);
+        if (functionMatch && functionMatch[1]) {
+          setJobFunction(functionMatch[1].trim());
+        }
       }
       
       // Set LinkedIn URL (which is saved in 'background' field)
@@ -611,6 +615,49 @@ export default function QuestionnairePage() {
       setChallenges(q.challenges || "");
       setInterests(q.interests || "");
       setTimeframe(q.timeframe || "");
+      
+      // Step 5: Load professional goals
+      // Try to parse career goals from aspirations field
+      if (q.aspirations && q.aspirations.includes("Career goals:")) {
+        const careerGoalsText = q.aspirations.split("Career goals:")[1].trim().split('\n\n')[0];
+        setCareerGoals(careerGoalsText || "");
+      } else if (q.aspirations && q.aspirations.includes("Additional professional journey information:")) {
+        // Alternative location
+        const additionalInfoText = q.aspirations.split("Additional professional journey information:")[1].trim();
+        setAdditionalInfo(additionalInfoText || "");
+      }
+      
+      // Try to parse industry connections percentage
+      if (q.aspirations && q.aspirations.includes("LinkedIn profile update timing:")) {
+        const connectionsText = q.aspirations.split("LinkedIn connections percentage:")[1]?.trim().split('\n')[0];
+        if (connectionsText) {
+          if (connectionsText.includes("0-10%")) setIndustryConnectionsPercentage("0-10%");
+          else if (connectionsText.includes("10-25%")) setIndustryConnectionsPercentage("10-25%");
+          else if (connectionsText.includes("25-50%")) setIndustryConnectionsPercentage("25-50%");
+          else if (connectionsText.includes("50%+")) setIndustryConnectionsPercentage("50%+");
+          else if (connectionsText.includes("not-sure")) setIndustryConnectionsPercentage("not-sure");
+        }
+      }
+      
+      // Try to parse personality assessments
+      if (q.aspirations && q.aspirations.includes("Personality assessments:")) {
+        const assessmentsText = q.aspirations.split("Personality assessments:")[1]?.trim().split('\n')[0];
+        if (assessmentsText) {
+          setMbtiChecked(assessmentsText.includes("MBTI"));
+          setStrengthsFinderChecked(assessmentsText.includes("Strengths Finder"));
+          setViaChecked(assessmentsText.includes("VIA"));
+          setEnneagramChecked(assessmentsText.includes("Enneagram"));
+          setThreeSixtyChecked(assessmentsText.includes("360*"));
+          
+          if (assessmentsText.includes("Other:")) {
+            setOtherAssessmentChecked(true);
+            const otherMatch = assessmentsText.match(/Other: (.*?)(?:,|$)/);
+            if (otherMatch && otherMatch[1]) {
+              setOtherAssessment(otherMatch[1].trim());
+            }
+          }
+        }
+      }
     }
   }, [userProfile]);
   
@@ -1002,9 +1049,8 @@ export default function QuestionnairePage() {
         aspirations: brandingDetails, // Branding challenges and all other data
         challenges: "", // No longer using this field
         interests: "",
-        timeframe: "",
+        timeframe: `Industry: ${industry}, Function: ${jobFunction}`, // Store both industry and function
         industry, // Current/Prior industry
-        jobFunction, // Current/Prior function
         // Include these fields for potential future enhancement
         contentFormatPreferences: {
           sharingNews: sharingNewsChecked,
