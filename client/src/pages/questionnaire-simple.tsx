@@ -1227,7 +1227,8 @@ export default function QuestionnairePage() {
 
       return hasBrandingChallengeSelected && hasPublishedContentSelected && hasContentComfortSelected;
     } else if (currentStep === 4) {
-      // Step 4: Require at least one industry interest and one societal interest
+      // Step 4: Require at least one industry interest, one societal interest,
+      // one content creation format preference, and one posting barrier
       const hasIndustryInterestSelected =
         consultingChecked ||
         consumerRetailChecked ||
@@ -1259,19 +1260,51 @@ export default function QuestionnairePage() {
         travelTourismChecked ||
         urbanDevelopmentChecked ||
         usPoliticsChecked;
+        
+      // Check if at least one content creation format is selected
+      const hasContentFormatSelected =
+        sharingNewsChecked ||
+        writingExperiencesChecked ||
+        analyzingTrendsChecked ||
+        commentingPostsChecked ||
+        howToContentChecked ||
+        eventTakeawaysChecked ||
+        personalAnecdoteChecked ||
+        digitalCommunitiesChecked ||
+        otherContentFormatChecked;
+        
+      // Check if at least one posting barrier is selected
+      const hasPostingBarrierSelected =
+        unsureWhatToSayChecked ||
+        fearOfJudgmentChecked ||
+        timeManagementChecked ||
+        dontKnowHowToStartChecked ||
+        unclearProfessionalVoiceChecked ||
+        otherBarrierChecked;
 
       // Show toast for missing fields
-      if (!hasIndustryInterestSelected || !hasSocietalInterestSelected) {
+      if (!hasIndustryInterestSelected || !hasSocietalInterestSelected || 
+          !hasContentFormatSelected || !hasPostingBarrierSelected) {
+        let missingField = "";
+        if (!hasIndustryInterestSelected) {
+          missingField = "Please select at least one industry interest";
+        } else if (!hasSocietalInterestSelected) {
+          missingField = "Please select at least one societal interest";
+        } else if (!hasContentFormatSelected) {
+          missingField = "Please select at least one content format that feels natural to you";
+        } else if (!hasPostingBarrierSelected) {
+          missingField = "Please select at least one posting barrier";
+        }
+        
         toast({
           title: "Required Fields Missing",
-          description: !hasIndustryInterestSelected
-            ? "Please select at least one industry interest"
-            : "Please select at least one societal interest",
+          description: missingField,
           variant: "destructive",
         });
       }
 
-      return hasIndustryInterestSelected && hasSocietalInterestSelected;
+      return hasIndustryInterestSelected && hasSocietalInterestSelected && 
+             hasContentFormatSelected && hasPostingBarrierSelected;
     } else if (currentStep === 5) {
       // Step 5: Require career goals and industry connections percentage
       // Note that file upload is NOT required
