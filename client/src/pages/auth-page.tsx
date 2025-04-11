@@ -5,7 +5,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
@@ -647,6 +647,10 @@ export default function AuthPage() {
       {/* Forgot Password Dialog */}
       <Dialog open={showForgotPassword} onOpenChange={setShowForgotPassword}>
         <DialogContent className="sm:max-w-md">
+          <DialogTitle className="text-left sr-only">Forgot Password</DialogTitle>
+          <DialogDescription className="sr-only">
+            Reset your password by providing your email address
+          </DialogDescription>
           <ForgotPasswordForm onBack={() => setShowForgotPassword(false)} />
         </DialogContent>
       </Dialog>

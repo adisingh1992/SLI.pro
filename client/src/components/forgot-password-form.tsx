@@ -8,7 +8,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Loader2, ArrowLeft, Mail, KeyRound } from "lucide-react";
+import { Loader2, ArrowLeft, Mail, KeyRound, ExternalLink } from "lucide-react";
 
 // Reset request schema
 const resetRequestSchema = z.object({
@@ -70,11 +70,14 @@ export default function ForgotPasswordForm({ onBack }: ForgotPasswordFormProps) 
       });
       
       // In a real application with email sending, we'd just display a message
-      // For our demo, we'll use the token returned in the response to move to the reset form
+      // For our demo, we'll just show the success message, but not automatically 
+      // move to the reset form - the user needs to click on a link in their email
       if (data.resetToken) {
         setResetToken(data.resetToken);
+        // We'll keep this for easy testing, but not automatically set the step
         resetForm.setValue("token", data.resetToken);
-        setStep("reset");
+        // Don't automatically advance to the reset step
+        // setStep("reset");
       }
     },
     onError: (error: Error) => {
@@ -178,6 +181,23 @@ export default function ForgotPasswordForm({ onBack }: ForgotPasswordFormProps) 
               )}
               Send Reset Link
             </Button>
+            
+            {resetToken && (
+              <div className="mt-4 p-4 bg-gray-50 rounded-md border border-gray-200">
+                <p className="text-sm text-gray-600 mb-2">
+                  In a real application, an email would be sent to your address. For demonstration purposes, you can use this button to simulate clicking the reset link in your email:
+                </p>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setStep("reset")}
+                  className="w-full mt-2"
+                >
+                  <ExternalLink className="mr-2 h-4 w-4" />
+                  Simulate Clicking Reset Link
+                </Button>
+              </div>
+            )}
           </form>
         </Form>
       ) : (
