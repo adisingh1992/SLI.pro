@@ -130,6 +130,16 @@ export const insertDocumentSchema = createInsertSchema(documents).omit({
   uploadedAt: true,
 });
 
+// Password reset tokens
+export const passwordResets = pgTable("password_resets", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().references(() => users.id),
+  token: text("token").notNull().unique(),
+  expiresAt: timestamp("expires_at").notNull(),
+  used: boolean("used").default(false).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
 // Extended user schema with profile data
 export const questionnaires = pgTable("questionnaires", {
   id: serial("id").primaryKey(),
@@ -152,8 +162,15 @@ export const insertQuestionnaireSchema = createInsertSchema(questionnaires).omit
   updatedAt: true,
 });
 
+export const insertPasswordResetSchema = createInsertSchema(passwordResets).omit({
+  id: true,
+  createdAt: true,
+});
+
 export type InsertQuestionnaire = z.infer<typeof insertQuestionnaireSchema>;
 export type Questionnaire = typeof questionnaires.$inferSelect;
+export type PasswordReset = typeof passwordResets.$inferSelect;
+export type InsertPasswordReset = z.infer<typeof insertPasswordResetSchema>;
 
 export type InsertDocument = z.infer<typeof insertDocumentSchema>;
 export type Document = typeof documents.$inferSelect;

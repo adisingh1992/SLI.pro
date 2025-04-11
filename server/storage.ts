@@ -7,6 +7,7 @@ import {
   profiles, type Profile, type InsertProfile,
   questionnaires, type Questionnaire, type InsertQuestionnaire,
   documents, type Document, type InsertDocument,
+  passwordResets, type PasswordReset, type InsertPasswordReset,
   type UpdateUser, type UpdateProfile, type UserProfile
 } from "@shared/schema";
 import session from "express-session";
@@ -20,6 +21,7 @@ export interface IStorage {
   getUserByUsername(username: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
   updateUser(id: number, data: UpdateUser): Promise<User | undefined>;
+  updateUserPassword(id: number, password: string): Promise<User | undefined>;
   
   // Experience operations
   getExperiences(userId: number): Promise<Experience[]>;
@@ -63,6 +65,11 @@ export interface IStorage {
   createQuestionnaire(questionnaire: InsertQuestionnaire): Promise<Questionnaire>;
   updateQuestionnaire(userId: number, questionnaire: Partial<InsertQuestionnaire>): Promise<Questionnaire | undefined>;
   
+  // Password reset operations
+  createPasswordReset(passwordReset: InsertPasswordReset): Promise<PasswordReset>;
+  getPasswordResetByToken(token: string): Promise<PasswordReset | undefined>;
+  markPasswordResetAsUsed(id: number): Promise<PasswordReset | undefined>;
+  
   // User profile operations
   getUserProfile(userId: number): Promise<UserProfile | undefined>;
 
@@ -79,6 +86,7 @@ export class MemStorage implements IStorage {
   private profiles: Map<number, Profile>;
   private questionnaires: Map<number, Questionnaire>;
   private documents: Map<number, Document>;
+  private passwordResets: Map<number, PasswordReset>;
   
   private userId: number;
   private experienceId: number;
@@ -88,6 +96,7 @@ export class MemStorage implements IStorage {
   private profileId: number;
   private questionnaireId: number;
   private documentId: number;
+  private passwordResetId: number;
   
   sessionStore: session.SessionStore;
 
@@ -100,6 +109,7 @@ export class MemStorage implements IStorage {
     this.profiles = new Map();
     this.questionnaires = new Map();
     this.documents = new Map();
+    this.passwordResets = new Map();
     
     this.userId = 1;
     this.experienceId = 1;
@@ -109,6 +119,7 @@ export class MemStorage implements IStorage {
     this.profileId = 1;
     this.questionnaireId = 1;
     this.documentId = 1;
+    this.passwordResetId = 1;
     
     this.sessionStore = new MemoryStore({
       checkPeriod: 86400000,
