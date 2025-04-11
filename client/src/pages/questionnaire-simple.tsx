@@ -474,6 +474,30 @@ export default function QuestionnairePage() {
       });
     },
   });
+  
+  // Save questionnaire as draft mutation
+  const saveAsDraftMutation = useMutation({
+    mutationFn: async (data: any) => {
+      const response = await apiRequest("POST", "/api/questionnaire/draft", data);
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "Draft Saved",
+        description:
+          "Your questionnaire has been saved as a draft. You can return to complete it later.",
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/user/profile"] });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description:
+          "There was a problem saving your draft. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
 
   // Initialize form data from user profile if available
   React.useEffect(() => {
