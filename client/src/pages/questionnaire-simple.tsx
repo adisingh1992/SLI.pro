@@ -1306,24 +1306,21 @@ export default function QuestionnairePage() {
       return hasIndustryInterestSelected && hasSocietalInterestSelected && 
              hasContentFormatSelected && hasPostingBarrierSelected;
     } else if (currentStep === 5) {
-      // Step 5: Require career goals and industry connections percentage
-      // Note that file upload is NOT required
-      const hasCareerGoals = careerGoals.trim() !== "";
+      // Step 5: Only require industry connections percentage
+      // Career goals and file upload are NOT required
       const hasConnectionsPercentage =
         industryConnectionsPercentage !== undefined;
 
       // Show toast for missing fields
-      if (!hasCareerGoals || !hasConnectionsPercentage) {
+      if (!hasConnectionsPercentage) {
         toast({
           title: "Required Fields Missing",
-          description: !hasCareerGoals
-            ? "Please describe your career goals"
-            : "Please select your LinkedIn connections percentage",
+          description: "Please select your LinkedIn connections percentage",
           variant: "destructive",
         });
       }
 
-      return hasCareerGoals && hasConnectionsPercentage;
+      return hasConnectionsPercentage;
     }
     return false;
   };
@@ -4228,8 +4225,7 @@ export default function QuestionnairePage() {
                   className="text-gray-700 font-medium block mb-2"
                 >
                   Beyond your immediate next job, what are your career goals
-                  within the next 2-5 years?{" "}
-                  <span className="text-red-500">*</span>
+                  within the next 2-5 years?
                 </Label>
                 <p className="text-sm text-gray-500 mb-3">
                   What roles, industries, or impact do you want to have?
