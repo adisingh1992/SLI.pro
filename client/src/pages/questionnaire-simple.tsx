@@ -1209,23 +1209,31 @@ export default function QuestionnairePage() {
         academicPapersChecked ||
         neverPublishedChecked ||
         (otherPublishedContentChecked && otherPublishedContent.trim() !== "");
-        
+
       const hasContentComfortSelected = contentCreationComfort !== null;
 
       // Show toast for missing fields
-      if (!hasBrandingChallengeSelected || !hasPublishedContentSelected || !hasContentComfortSelected) {
+      if (
+        !hasBrandingChallengeSelected ||
+        !hasPublishedContentSelected ||
+        !hasContentComfortSelected
+      ) {
         toast({
           title: "Required Fields Missing",
           description: !hasBrandingChallengeSelected
             ? "Please select at least one branding challenge"
             : !hasPublishedContentSelected
-            ? "Please select at least one type of content you've published"
-            : "Please rate your comfort level with creating professional content",
+              ? "Please select at least one type of content you've published"
+              : "Please rate your comfort level with creating professional content",
           variant: "destructive",
         });
       }
 
-      return hasBrandingChallengeSelected && hasPublishedContentSelected && hasContentComfortSelected;
+      return (
+        hasBrandingChallengeSelected &&
+        hasPublishedContentSelected &&
+        hasContentComfortSelected
+      );
     } else if (currentStep === 4) {
       // Step 4: Require at least one industry interest, one societal interest,
       // one content creation format preference, and one posting barrier
@@ -1260,7 +1268,7 @@ export default function QuestionnairePage() {
         travelTourismChecked ||
         urbanDevelopmentChecked ||
         usPoliticsChecked;
-        
+
       // Check if at least one content creation format is selected
       const hasContentFormatSelected =
         sharingNewsChecked ||
@@ -1272,7 +1280,7 @@ export default function QuestionnairePage() {
         personalAnecdoteChecked ||
         digitalCommunitiesChecked ||
         otherContentFormatChecked;
-        
+
       // Check if at least one posting barrier is selected
       const hasPostingBarrierSelected =
         unsureWhatToSayChecked ||
@@ -1283,19 +1291,24 @@ export default function QuestionnairePage() {
         otherBarrierChecked;
 
       // Show toast for missing fields
-      if (!hasIndustryInterestSelected || !hasSocietalInterestSelected || 
-          !hasContentFormatSelected || !hasPostingBarrierSelected) {
+      if (
+        !hasIndustryInterestSelected ||
+        !hasSocietalInterestSelected ||
+        !hasContentFormatSelected ||
+        !hasPostingBarrierSelected
+      ) {
         let missingField = "";
         if (!hasIndustryInterestSelected) {
           missingField = "Please select at least one industry interest";
         } else if (!hasSocietalInterestSelected) {
           missingField = "Please select at least one societal interest";
         } else if (!hasContentFormatSelected) {
-          missingField = "Please select at least one content format that feels natural to you";
+          missingField =
+            "Please select at least one content format that feels natural to you";
         } else if (!hasPostingBarrierSelected) {
           missingField = "Please select at least one posting barrier";
         }
-        
+
         toast({
           title: "Required Fields Missing",
           description: missingField,
@@ -1303,8 +1316,12 @@ export default function QuestionnairePage() {
         });
       }
 
-      return hasIndustryInterestSelected && hasSocietalInterestSelected && 
-             hasContentFormatSelected && hasPostingBarrierSelected;
+      return (
+        hasIndustryInterestSelected &&
+        hasSocietalInterestSelected &&
+        hasContentFormatSelected &&
+        hasPostingBarrierSelected
+      );
     } else if (currentStep === 5) {
       // Step 5: Only require industry connections percentage
       // Career goals and file upload are NOT required
@@ -1960,7 +1977,7 @@ export default function QuestionnairePage() {
                 : currentStep === 4
                   ? "Please select at least one industry interest."
                   : currentStep === 5
-                    ? "Please fill in your career goals and select a percentage of connections in your target industry."
+                    ? "Please select a percentage of connections in your target industry."
                     : "Please complete all required fields before proceeding.",
         variant: "destructive",
       });
@@ -2887,8 +2904,7 @@ export default function QuestionnairePage() {
                 htmlFor="contentComfort"
                 className="text-gray-700 font-medium block mb-2"
               >
-                Content Creation Comfort{" "}
-                <span className="text-red-500">*</span>
+                Content Creation Comfort <span className="text-red-500">*</span>
               </Label>
               <p className="text-sm text-gray-500 mb-3">
                 How comfortable are you with creating professional content?
@@ -3576,8 +3592,7 @@ export default function QuestionnairePage() {
               <div className="mb-6">
                 <Label className="text-gray-700 font-medium block mb-3">
                   What holds you back from posting more frequently? (Select all
-                  that apply){" "}
-                  <span className="text-red-500">*</span>
+                  that apply) <span className="text-red-500">*</span>
                 </Label>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                   <div className="flex items-center space-x-2">
@@ -4526,14 +4541,25 @@ export default function QuestionnairePage() {
       <div className="container py-10 px-4 sm:px-6 lg:px-8 max-w-5xl mx-auto">
         <Card className="border-none shadow-md">
           <CardHeader className="bg-gradient-to-r from-[#6c8083] to-[#bed6d1] text-white rounded-t-lg">
-            <CardTitle className="text-2xl font-bold">
-              Initial Questionnaire
-            </CardTitle>
-            <CardDescription className="text-white opacity-90">
-              {userProfile?.questionnaire
-                ? "Review or update your career insights to receive personalized guidance."
-                : "Last step! Help us understand your career journey and aspirations so we can provide personalized guidance."}
-            </CardDescription>
+            <div className="flex justify-between items-center">
+              <div>
+                <CardTitle className="text-2xl font-bold">
+                  Initial Questionnaire
+                </CardTitle>
+                <CardDescription className="text-white opacity-90">
+                  {userProfile?.questionnaire
+                    ? "Review or update your career insights to receive personalized guidance."
+                    : "Last step! Help us understand your career journey and aspirations so we can provide personalized guidance."}
+                </CardDescription>
+              </div>
+              <Button 
+                variant="outline" 
+                className="bg-white text-[#6c8083] hover:bg-gray-100 hover:text-[#4c5c5e]"
+                onClick={() => navigate("/")}
+              >
+                Back to Home
+              </Button>
+            </div>
           </CardHeader>
           <CardContent className="p-6 lg:p-8">
             {/* Progress indicator */}
