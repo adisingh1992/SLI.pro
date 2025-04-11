@@ -181,23 +181,6 @@ export default function ForgotPasswordForm({ onBack }: ForgotPasswordFormProps) 
               )}
               Send Reset Link
             </Button>
-            
-            {resetToken && (
-              <div className="mt-4 p-4 bg-gray-50 rounded-md border border-gray-200">
-                <p className="text-sm text-gray-600 mb-2">
-                  In a real application, an email would be sent to your address. For demonstration purposes, you can use this button to simulate clicking the reset link in your email:
-                </p>
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => setStep("reset")}
-                  className="w-full mt-2"
-                >
-                  <ExternalLink className="mr-2 h-4 w-4" />
-                  Simulate Clicking Reset Link
-                </Button>
-              </div>
-            )}
           </form>
         </Form>
       ) : (
