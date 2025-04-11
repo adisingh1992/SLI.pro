@@ -1190,7 +1190,7 @@ export default function QuestionnairePage() {
 
       return hasLinkedInUrl;
     } else if (currentStep === 3) {
-      // Step 3: Require at least one branding challenge and published content
+      // Step 3: Require branding challenges, published content, and content creation comfort
       const hasBrandingChallengeSelected =
         consistentNarrativeChecked ||
         valuePropositionChecked ||
@@ -1209,19 +1209,23 @@ export default function QuestionnairePage() {
         academicPapersChecked ||
         neverPublishedChecked ||
         (otherPublishedContentChecked && otherPublishedContent.trim() !== "");
+        
+      const hasContentComfortSelected = contentCreationComfort !== null;
 
       // Show toast for missing fields
-      if (!hasBrandingChallengeSelected || !hasPublishedContentSelected) {
+      if (!hasBrandingChallengeSelected || !hasPublishedContentSelected || !hasContentComfortSelected) {
         toast({
           title: "Required Fields Missing",
           description: !hasBrandingChallengeSelected
             ? "Please select at least one branding challenge"
-            : "Please select at least one type of content you've published",
+            : !hasPublishedContentSelected
+            ? "Please select at least one type of content you've published"
+            : "Please rate your comfort level with creating professional content",
           variant: "destructive",
         });
       }
 
-      return hasBrandingChallengeSelected && hasPublishedContentSelected;
+      return hasBrandingChallengeSelected && hasPublishedContentSelected && hasContentComfortSelected;
     } else if (currentStep === 4) {
       // Step 4: Require at least one industry interest and one societal interest
       const hasIndustryInterestSelected =
@@ -2104,7 +2108,8 @@ export default function QuestionnairePage() {
                 htmlFor="aspirations"
                 className="text-gray-700 font-medium block mb-2"
               >
-                Branding and Content Creation
+                Branding and Content Creation{" "}
+                <span className="text-red-500">*</span>
               </Label>
               <p className="text-sm text-gray-500 mb-3">
                 What are your biggest professional branding challenges? (Check
@@ -2254,7 +2259,8 @@ export default function QuestionnairePage() {
                 htmlFor="publishedContent"
                 className="text-gray-700 font-medium block mb-2"
               >
-                Published Digital Content
+                Published Digital Content{" "}
+                <span className="text-red-500">*</span>
               </Label>
               <p className="text-sm text-gray-500 mb-3">
                 Have you published digital professional content before? (Check
@@ -2851,7 +2857,8 @@ export default function QuestionnairePage() {
                 htmlFor="contentComfort"
                 className="text-gray-700 font-medium block mb-2"
               >
-                Content Creation Comfort
+                Content Creation Comfort{" "}
+                <span className="text-red-500">*</span>
               </Label>
               <p className="text-sm text-gray-500 mb-3">
                 How comfortable are you with creating professional content?
