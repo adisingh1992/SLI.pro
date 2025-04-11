@@ -9,7 +9,14 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { useLocation } from "wouter";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
 import { useState, useEffect } from "react";
 import { Loader2, UserPlus, LogIn } from "lucide-react";
 import sliProLogo from "@/assets/sliPro-logos_aqua.png";
@@ -22,25 +29,41 @@ const loginSchema = z.object({
 });
 
 // Registration schema with extended validation
-const registerSchema = z.object({
-  firstName: z.string().min(1, "First name is required"),
-  lastName: z.string().min(1, "Last name is required"),
-  username: z.string().email("Please enter a valid email"),
-  phoneNumber: z.string().min(1, "Phone number is required").refine(val => /^[+]?[(]?[0-9]{3}[)]?[-\s.]?[0-9]{3}[-\s.]?[0-9]{4,6}$/.test(val), {
-    message: "Please enter a valid phone number",
-  }),
-  password: z.string()
-    .min(8, "Password must be at least 8 characters")
-    .refine(pwd => /\d/.test(pwd), "Password must contain at least one number")
-    .refine(pwd => /[!@#$%^&*(),.?":{}|<>]/.test(pwd), "Password must contain at least one special character"),
-  confirmPassword: z.string(),
-  termsAgreement: z.boolean().refine(val => val === true, {
-    message: "You must accept the terms",
-  }),
-}).refine(data => data.password === data.confirmPassword, {
-  message: "Passwords do not match",
-  path: ["confirmPassword"],
-});
+const registerSchema = z
+  .object({
+    firstName: z.string().min(1, "First name is required"),
+    lastName: z.string().min(1, "Last name is required"),
+    username: z.string().email("Please enter a valid email"),
+    phoneNumber: z
+      .string()
+      .min(1, "Phone number is required")
+      .refine(
+        (val) =>
+          /^[+]?[(]?[0-9]{3}[)]?[-\s.]?[0-9]{3}[-\s.]?[0-9]{4,6}$/.test(val),
+        {
+          message: "Please enter a valid phone number",
+        },
+      ),
+    password: z
+      .string()
+      .min(8, "Password must be at least 8 characters")
+      .refine(
+        (pwd) => /\d/.test(pwd),
+        "Password must contain at least one number",
+      )
+      .refine(
+        (pwd) => /[!@#$%^&*(),.?":{}|<>]/.test(pwd),
+        "Password must contain at least one special character",
+      ),
+    confirmPassword: z.string(),
+    termsAgreement: z.boolean().refine((val) => val === true, {
+      message: "You must accept the terms",
+    }),
+  })
+  .refine((data) => data.password === data.confirmPassword, {
+    message: "Passwords do not match",
+    path: ["confirmPassword"],
+  });
 
 type LoginFormValues = z.infer<typeof loginSchema>;
 type RegisterFormValues = z.infer<typeof registerSchema>;
@@ -80,7 +103,7 @@ export default function AuthPage() {
       navigate("/");
     }
   }, [user, navigate]);
-  
+
   if (user) {
     return null;
   }
@@ -114,23 +137,23 @@ export default function AuthPage() {
           <div className="flex justify-between h-16">
             <div className="flex">
               <div className="flex-shrink-0 flex items-center">
-                <img 
-                  src={sliProLogo} 
-                  alt="SLI.pro Logo" 
-                  className="h-10 w-auto" 
+                <img
+                  src={sliProLogo}
+                  alt="SLI.pro Logo"
+                  className="h-10 w-auto"
                 />
               </div>
             </div>
             <div className="flex items-center">
-              <Button 
-                variant="link" 
+              <Button
+                variant="link"
                 className="text-[#0077B5] hover:text-[#005885] font-medium px-4 py-2"
                 onClick={() => setActiveTab("login")}
               >
                 Log In
               </Button>
-              <Button 
-                variant="outline" 
+              <Button
+                variant="outline"
                 className="ml-3 text-[#0077B5] border-[#0077B5] hover:bg-[#0077B5] hover:bg-opacity-10 font-medium"
                 onClick={() => setActiveTab("signup")}
               >
@@ -146,16 +169,20 @@ export default function AuthPage() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-stretch min-h-[600px]">
           {/* Left Column - Authentication Forms */}
           <div className="slide-in h-full flex flex-col">
-            <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full h-full flex flex-col">
+            <Tabs
+              value={activeTab}
+              onValueChange={setActiveTab}
+              className="w-full h-full flex flex-col"
+            >
               <TabsList className="mb-8 w-full border-b border-gray-200 bg-transparent p-0 flex">
-                <TabsTrigger 
-                  value="login" 
+                <TabsTrigger
+                  value="login"
                   className="relative py-4 px-6 data-[state=active]:bg-transparent data-[state=active]:text-[#0077B5] font-medium text-gray-600 hover:text-[#0077B5] rounded-none border-b-2 border-transparent data-[state=active]:border-[#0077B5] transition-all"
                 >
                   Log In
                 </TabsTrigger>
-                <TabsTrigger 
-                  value="signup" 
+                <TabsTrigger
+                  value="signup"
                   className="relative py-4 px-6 data-[state=active]:bg-transparent data-[state=active]:text-[#0077B5] font-medium text-gray-600 hover:text-[#0077B5] rounded-none border-b-2 border-transparent data-[state=active]:border-[#0077B5] transition-all"
                 >
                   Sign Up
@@ -163,20 +190,31 @@ export default function AuthPage() {
               </TabsList>
 
               {/* Login Form */}
-              <TabsContent value="login" className="mt-0 flex-grow flex flex-col">
+              <TabsContent
+                value="login"
+                className="mt-0 flex-grow flex flex-col"
+              >
                 <Card className="border-none shadow-card h-full flex flex-col">
                   <CardContent className="p-6 md:p-8 h-full">
                     <div className="flex flex-col h-full">
-                      <h2 className="text-2xl font-medium text-[#333333] mb-6">Log in to your SLI.pro account</h2>
+                      <h2 className="text-2xl font-medium text-[#333333] mb-6">
+                        Log in to your SLI.pro account
+                      </h2>
                       {loginMutation.error && (
                         <div className="mb-6 p-3 bg-red-50 border border-red-200 rounded-md">
                           <p className="text-[#E34240] text-sm">
-                            {loginMutation.error.message === "401: " ? "Invalid email or password. Please try again." : (loginMutation.error.message || "An error occurred during login. Please try again.")}
+                            {loginMutation.error.message === "401: "
+                              ? "Invalid email or password. Please try again."
+                              : loginMutation.error.message ||
+                                "An error occurred during login. Please try again."}
                           </p>
                         </div>
                       )}
                       <Form {...loginForm}>
-                        <form onSubmit={loginForm.handleSubmit(onLoginSubmit)} className="space-y-6 flex-grow flex flex-col">
+                        <form
+                          onSubmit={loginForm.handleSubmit(onLoginSubmit)}
+                          className="space-y-6 flex-grow flex flex-col"
+                        >
                           <FormField
                             control={loginForm.control}
                             name="username"
@@ -237,7 +275,10 @@ export default function AuthPage() {
                               )}
                             />
                             <div>
-                              <a href="#" className="text-sm font-medium text-[#0077B5] hover:text-opacity-90">
+                              <a
+                                href="#"
+                                className="text-sm font-medium text-[#0077B5] hover:text-opacity-90"
+                              >
                                 Forgot password?
                               </a>
                             </div>
@@ -263,20 +304,32 @@ export default function AuthPage() {
               </TabsContent>
 
               {/* Signup Form */}
-              <TabsContent value="signup" className="mt-0 flex-grow flex flex-col">
+              <TabsContent
+                value="signup"
+                className="mt-0 flex-grow flex flex-col"
+              >
                 <Card className="border-none shadow-card h-full flex flex-col">
                   <CardContent className="p-6 md:p-8 h-full">
                     <div className="flex flex-col h-full">
-                      <h2 className="text-2xl font-medium text-[#333333] mb-6">Create your SLI.pro account</h2>
-                      {registerMutation.error && !registerMutation.error.message.includes("Username already exists") && (
-                        <div className="mb-6 p-3 bg-red-50 border border-red-200 rounded-md">
-                          <p className="text-[#E34240] text-sm">
-                            {registerMutation.error.message || "An error occurred during registration. Please try again."}
-                          </p>
-                        </div>
-                      )}
+                      <h2 className="text-2xl font-medium text-[#333333] mb-6">
+                        Create your SLI.pro account
+                      </h2>
+                      {registerMutation.error &&
+                        !registerMutation.error.message.includes(
+                          "Username already exists",
+                        ) && (
+                          <div className="mb-6 p-3 bg-red-50 border border-red-200 rounded-md">
+                            <p className="text-[#E34240] text-sm">
+                              {registerMutation.error.message ||
+                                "An error occurred during registration. Please try again."}
+                            </p>
+                          </div>
+                        )}
                       <Form {...registerForm}>
-                        <form onSubmit={registerForm.handleSubmit(onRegisterSubmit)} className="space-y-6 flex-grow flex flex-col">
+                        <form
+                          onSubmit={registerForm.handleSubmit(onRegisterSubmit)}
+                          className="space-y-6 flex-grow flex flex-col"
+                        >
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <FormField
                               control={registerForm.control}
@@ -333,11 +386,16 @@ export default function AuthPage() {
                                   />
                                 </FormControl>
                                 <FormMessage className="text-[#E34240]" />
-                                {registerMutation.error && registerMutation.error.message.includes("Username already exists") && (
-                                  <div className="text-[#E34240] text-sm mt-1">
-                                    This email address is already registered. Please try logging in or use a different email.
-                                  </div>
-                                )}
+                                {registerMutation.error &&
+                                  registerMutation.error.message.includes(
+                                    "Username already exists",
+                                  ) && (
+                                    <div className="text-[#E34240] text-sm mt-1">
+                                      This email address is already registered.
+                                      Please try logging in or use a different
+                                      email.
+                                    </div>
+                                  )}
                               </FormItem>
                             )}
                           />
@@ -379,7 +437,8 @@ export default function AuthPage() {
                                   />
                                 </FormControl>
                                 <div className="mt-1 text-sm text-gray-500">
-                                  Must be at least 8 characters with a number and a special character
+                                  Must be at least 8 characters with a number
+                                  and a special character
                                 </div>
                                 <FormMessage className="text-[#E34240]" />
                               </FormItem>
@@ -420,7 +479,20 @@ export default function AuthPage() {
                                 </FormControl>
                                 <div>
                                   <FormLabel className="text-sm text-[#333333] cursor-pointer leading-tight">
-                                    I agree to the <a href="#" className="text-[#0077B5] hover:text-opacity-90">Terms of Service</a> and <a href="#" className="text-[#0077B5] hover:text-opacity-90">Privacy Policy</a>
+                                    I agree to the{" "}
+                                    <a
+                                      href="#"
+                                      className="text-[#0077B5] hover:text-opacity-90"
+                                    >
+                                      Terms of Service
+                                    </a>{" "}
+                                    and{" "}
+                                    <a
+                                      href="#"
+                                      className="text-[#0077B5] hover:text-opacity-90"
+                                    >
+                                      Privacy Policy
+                                    </a>
                                   </FormLabel>
                                   <FormMessage className="text-[#E34240] block" />
                                 </div>
@@ -452,37 +524,118 @@ export default function AuthPage() {
           {/* Right Column - Hero Section */}
           <div className="p-8 bg-[#0077B5] rounded-lg text-white hidden md:flex md:flex-col h-full">
             <div>
-              <h1 className="text-3xl font-bold mb-4">Manage Your Professional Profile with SLI.pro</h1>
-              <p className="mb-6">Create a compelling professional profile that showcases your skills, experience, and achievements. Stand out to recruiters and expand your professional network.</p>
+              <h1 className="text-3xl font-bold mb-4">
+                Shape How the Professional World Knows You
+              </h1>
+              <p className="mb-6">
+                In a world where digital profiles and AI shape first
+                impressions, your presence isn't just a profile – it's your
+                professional identity. The question is: are you actively shaping
+                what you’re known for?
+              </p>
+
+              <p className="mb-6">
+                LinkedIn's own research confirms that optimized professional
+                presence delivers:
+              </p>
+
               <ul className="space-y-4">
                 <li className="flex items-center">
-                  <svg className="h-5 w-5 mr-2 flex-shrink-0" viewBox="0 0 20 20" fill="currentColor">
-                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                  <svg
+                    className="h-5 w-5 mr-2 flex-shrink-0"
+                    viewBox="0 0 20 20"
+                    fill="currentColor"
+                  >
+                    <path
+                      fillRule="evenodd"
+                      d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                      clipRule="evenodd"
+                    />
                   </svg>
-                  <span>Build a professional online presence</span>
+                  <span>
+                    Expanded Opportunities: 2.7x higher likelihood of recruiter
+                    discovery
+                  </span>
                 </li>
                 <li className="flex items-center">
-                  <svg className="h-5 w-5 mr-2 flex-shrink-0" viewBox="0 0 20 20" fill="currentColor">
-                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                  <svg
+                    className="h-5 w-5 mr-2 flex-shrink-0"
+                    viewBox="0 0 20 20"
+                    fill="currentColor"
+                  >
+                    <path
+                      fillRule="evenodd"
+                      d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                      clipRule="evenodd"
+                    />
                   </svg>
-                  <span>Showcase your skills and experience</span>
+                  <span>
+                    Increased Visibility: 300% more profile visibility
+                  </span>
                 </li>
                 <li className="flex items-center">
-                  <svg className="h-5 w-5 mr-2 flex-shrink-0" viewBox="0 0 20 20" fill="currentColor">
-                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                  <svg
+                    className="h-5 w-5 mr-2 flex-shrink-0"
+                    viewBox="0 0 20 20"
+                    fill="currentColor"
+                  >
+                    <path
+                      fillRule="evenodd"
+                      d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                      clipRule="evenodd"
+                    />
                   </svg>
-                  <span>Manage your professional information</span>
+                  <span>
+                    More Possibilities: 3x more industry-relevant opportunities
+                  </span>
                 </li>
                 <li className="flex items-center">
-                  <svg className="h-5 w-5 mr-2 flex-shrink-0" viewBox="0 0 20 20" fill="currentColor">
-                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                  <svg
+                    className="h-5 w-5 mr-2 flex-shrink-0"
+                    viewBox="0 0 20 20"
+                    fill="currentColor"
+                  >
+                    <path
+                      fillRule="evenodd"
+                      d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                      clipRule="evenodd"
+                    />
                   </svg>
-                  <span>Keep your profile up-to-date easily</span>
+                  <span>Network Growth: 40% more meaningful connections</span>
+                </li>
+                <li className="flex items-center">
+                  <svg
+                    className="h-5 w-5 mr-2 flex-shrink-0"
+                    viewBox="0 0 20 20"
+                    fill="currentColor"
+                  >
+                    <path
+                      fillRule="evenodd"
+                      d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                      clipRule="evenodd"
+                    />
+                  </svg>
+                  <span>
+                    Thought Leadership: 4x increase in content recognition
+                  </span>
+                </li>
+                <li className="flex items-center">
+                  <svg
+                    className="h-5 w-5 mr-2 flex-shrink-0"
+                    viewBox="0 0 20 20"
+                    fill="currentColor"
+                  >
+                    <path
+                      fillRule="evenodd"
+                      d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                      clipRule="evenodd"
+                    />
+                  </svg>
+                  <span>
+                    Established Value: Enhanced professional credibility
+                  </span>
                 </li>
               </ul>
-            </div>
-            <div className="mt-auto pt-8 text-sm opacity-80">
-              <p>Join thousands of professionals who trust SLI.pro to manage their professional identity online.</p>
             </div>
           </div>
         </div>
