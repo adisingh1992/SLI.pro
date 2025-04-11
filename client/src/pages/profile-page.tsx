@@ -33,10 +33,10 @@ export default function ProfilePage() {
   useEffect(() => {
     // Check if we have a tab parameter in the URL
     const urlParams = new URLSearchParams(window.location.search);
-    const tabParam = urlParams.get('tab');
-    
+    const tabParam = urlParams.get("tab");
+
     // If tab parameter exists and is valid, set it as active tab
-    if (tabParam === 'documents' || tabParam === 'profile') {
+    if (tabParam === "documents" || tabParam === "profile") {
       setActiveTab(tabParam);
     }
   }, [location]);
@@ -101,10 +101,10 @@ export default function ProfilePage() {
                 <Button
                   onClick={() => navigate("/")}
                   variant="outline"
-                  className="bg-white/10 border-white/20 hover:bg-white/20 text-white"
+                  className="bg-white/10 border-[#6c8083] hover:bg-white/20 text-white"
                 >
-                  <Home className="h-4 w-4 mr-2" />
-                  Home Page
+                  <Home className="h-4 w-4 mr-2 text-[#6c8083]" />
+                  <span className="text-[#6c8083]">Home Page</span>
                 </Button>
               </div>
             </div>
@@ -113,8 +113,8 @@ export default function ProfilePage() {
           {/* Profile Content */}
           <div className="p-6 border-t border-gray-200">
             <div className="max-w-4xl mx-auto">
-              <Tabs 
-                value={activeTab} 
+              <Tabs
+                value={activeTab}
                 onValueChange={setActiveTab}
                 className="mb-8"
               >

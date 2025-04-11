@@ -4495,7 +4495,7 @@ export default function QuestionnairePage() {
     <div className="bg-gray-50 min-h-screen">
       <div className="container py-10 px-4 sm:px-6 lg:px-8 max-w-5xl mx-auto">
         <Card className="border-none shadow-md">
-          <CardHeader className="bg-gradient-to-r from-[#bed6d1] to-[#dcede9] text-white rounded-t-lg">
+          <CardHeader className="bg-gradient-to-r from-[#6c8083] to-[#bed6d1] text-white rounded-t-lg">
             <CardTitle className="text-2xl font-bold">
               Initial Questionnaire
             </CardTitle>

@@ -87,13 +87,13 @@ export default function AuthPage() {
   const registerForm = useForm<RegisterFormValues>({
     resolver: zodResolver(registerSchema),
     defaultValues: {
-      firstName: "",
-      lastName: "",
-      username: "",
-      phoneNumber: "",
-      password: "",
-      confirmPassword: "",
-      termsAgreement: false,
+      firstName: "Aditya",
+      lastName: "Singh",
+      username: "aditya@cooeyhealth.com",
+      phoneNumber: "9044872133",
+      password: "@lec177fig600",
+      confirmPassword: "@lec177fig600",
+      termsAgreement: true,
     },
   });
 
@@ -147,14 +147,14 @@ export default function AuthPage() {
             <div className="flex items-center">
               <Button
                 variant="link"
-                className="text-[#bed6d1] hover:text-[#6c8083] font-medium px-4 py-2"
+                className="text-[#6c8083] hover:text-[#6c8083] font-medium px-4 py-2"
                 onClick={() => setActiveTab("login")}
               >
                 Log In
               </Button>
               <Button
                 variant="outline"
-                className="ml-3 text-[#bed6d1] border-[#bed6d1] hover:bg-[#bed6d1] hover:bg-opacity-10 font-medium"
+                className="ml-3 text-[#6c8083] border-[#bed6d1] hover:bg-[#bed6d1] hover:bg-opacity-10 font-medium"
                 onClick={() => setActiveTab("signup")}
               >
                 Sign Up
@@ -177,13 +177,13 @@ export default function AuthPage() {
               <TabsList className="mb-8 w-full border-b border-gray-200 bg-transparent p-0 flex">
                 <TabsTrigger
                   value="login"
-                  className="relative py-4 px-6 data-[state=active]:bg-transparent data-[state=active]:text-[#bed6d1] font-medium text-gray-600 hover:text-[#bed6d1] rounded-none border-b-2 border-transparent data-[state=active]:border-[#bed6d1] transition-all"
+                  className="relative py-4 px-6 data-[state=active]:bg-transparent data-[state=active]:text-[#6c8083] font-medium text-gray-600 hover:text-[#6c8083] rounded-none border-b-2 border-transparent data-[state=active]:border-[#6c8083] transition-all"
                 >
                   Log In
                 </TabsTrigger>
                 <TabsTrigger
                   value="signup"
-                  className="relative py-4 px-6 data-[state=active]:bg-transparent data-[state=active]:text-[#bed6d1] font-medium text-gray-600 hover:text-[#bed6d1] rounded-none border-b-2 border-transparent data-[state=active]:border-[#bed6d1] transition-all"
+                  className="relative py-4 px-6 data-[state=active]:bg-transparent data-[state=active]:text-[#6c8083] font-medium text-gray-600 hover:text-[#6c8083] rounded-none border-b-2 border-transparent data-[state=active]:border-[#6c8083] transition-all"
                 >
                   Sign Up
                 </TabsTrigger>
@@ -221,7 +221,7 @@ export default function AuthPage() {
                             render={({ field }) => (
                               <FormItem>
                                 <FormLabel className="text-gray-700 text-sm font-medium mb-1 block">
-                                  Email address
+                                  Email Address
                                 </FormLabel>
                                 <FormControl>
                                   <Input
@@ -269,7 +269,7 @@ export default function AuthPage() {
                                     />
                                   </FormControl>
                                   <FormLabel className="text-sm text-[#333333] cursor-pointer leading-none">
-                                    Remember me
+                                    Remember Me
                                   </FormLabel>
                                 </FormItem>
                               )}
@@ -277,9 +277,9 @@ export default function AuthPage() {
                             <div>
                               <a
                                 href="#"
-                                className="text-sm font-medium text-[#bed6d1] hover:text-opacity-90"
+                                className="text-sm font-medium text-[#6c8083] hover:text-opacity-90"
                               >
-                                Forgot password?
+                                Forgot Password?
                               </a>
                             </div>
                           </div>
@@ -337,7 +337,7 @@ export default function AuthPage() {
                               render={({ field }) => (
                                 <FormItem>
                                   <FormLabel className="text-gray-700 text-sm font-medium mb-1 block">
-                                    First name
+                                    First Name
                                   </FormLabel>
                                   <FormControl>
                                     <Input
@@ -356,7 +356,7 @@ export default function AuthPage() {
                               render={({ field }) => (
                                 <FormItem>
                                   <FormLabel className="text-gray-700 text-sm font-medium mb-1 block">
-                                    Last name
+                                    Last Name
                                   </FormLabel>
                                   <FormControl>
                                     <Input
@@ -376,7 +376,7 @@ export default function AuthPage() {
                             render={({ field }) => (
                               <FormItem>
                                 <FormLabel className="text-gray-700 text-sm font-medium mb-1 block">
-                                  Email address
+                                  Email Address
                                 </FormLabel>
                                 <FormControl>
                                   <Input
@@ -406,7 +406,7 @@ export default function AuthPage() {
                             render={({ field }) => (
                               <FormItem>
                                 <FormLabel className="text-gray-700 text-sm font-medium mb-1 block">
-                                  Phone number
+                                  Phone Number
                                 </FormLabel>
                                 <FormControl>
                                   <Input
@@ -451,7 +451,7 @@ export default function AuthPage() {
                             render={({ field }) => (
                               <FormItem>
                                 <FormLabel className="text-gray-700 text-sm font-medium mb-1 block">
-                                  Confirm password
+                                  Confirm Password
                                 </FormLabel>
                                 <FormControl>
                                   <Input
@@ -482,14 +482,14 @@ export default function AuthPage() {
                                     I agree to the{" "}
                                     <a
                                       href="#"
-                                      className="text-[#bed6d1] hover:text-opacity-90"
+                                      className="text-[#6c8083] hover:text-opacity-90"
                                     >
                                       Terms of Service
                                     </a>{" "}
                                     and{" "}
                                     <a
                                       href="#"
-                                      className="text-[#bed6d1] hover:text-opacity-90"
+                                      className="text-[#6c8083] hover:text-opacity-90"
                                     >
                                       Privacy Policy
                                     </a>
@@ -522,7 +522,7 @@ export default function AuthPage() {
           </div>
 
           {/* Right Column - Hero Section */}
-          <div className="p-8 bg-[#bed6d1] rounded-lg text-white hidden md:flex md:flex-col h-full">
+          <div className="p-8 bg-[#6c8083] rounded-lg text-white hidden md:flex md:flex-col h-full">
             <div>
               <h1 className="text-3xl font-bold mb-4">
                 Shape How the Professional World Knows You
