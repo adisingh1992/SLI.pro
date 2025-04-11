@@ -5,10 +5,12 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { useLocation } from "wouter";
+import ForgotPasswordForm from "@/components/forgot-password-form";
 import {
   Form,
   FormControl,
@@ -70,6 +72,7 @@ type RegisterFormValues = z.infer<typeof registerSchema>;
 
 export default function AuthPage() {
   const [activeTab, setActiveTab] = useState("login");
+  const [showForgotPassword, setShowForgotPassword] = useState(false);
   const { user, loginMutation, registerMutation } = useAuth();
   const [_, navigate] = useLocation();
 
@@ -275,12 +278,13 @@ export default function AuthPage() {
                               )}
                             />
                             <div>
-                              <a
-                                href="#"
+                              <button
+                                type="button"
+                                onClick={() => setShowForgotPassword(true)}
                                 className="text-sm font-medium text-[#6c8083] hover:text-opacity-90"
                               >
                                 Forgot Password?
-                              </a>
+                              </button>
                             </div>
                           </div>
 
@@ -640,6 +644,12 @@ export default function AuthPage() {
           </div>
         </div>
       </main>
+      {/* Forgot Password Dialog */}
+      <Dialog open={showForgotPassword} onOpenChange={setShowForgotPassword}>
+        <DialogContent className="sm:max-w-md">
+          <ForgotPasswordForm onBack={() => setShowForgotPassword(false)} />
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

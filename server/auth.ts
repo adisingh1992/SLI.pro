@@ -5,7 +5,7 @@ import session from "express-session";
 import { scrypt, randomBytes, timingSafeEqual } from "crypto";
 import { promisify } from "util";
 import { storage } from "./storage";
-import { User as SelectUser, insertUserSchema } from "@shared/schema";
+import { User as SelectUser, insertUserSchema, insertPasswordResetSchema } from "@shared/schema";
 import { z } from "zod";
 
 declare global {
@@ -167,6 +167,103 @@ export function setupAuth(app: Express) {
       
       const { password, ...profileWithoutPassword } = userProfile;
       res.json(profileWithoutPassword);
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  // Password reset request
+  const forgotPasswordSchema = z.object({
+    username: z.string().email("Please enter a valid email")
+  });
+
+  app.post("/api/forgot-password", async (req, res, next) => {
+    try {
+      const validationResult = forgotPasswordSchema.safeParse(req.body);
+      if (!validationResult.success) {
+        return res.status(400).json({ 
+          message: "Validation error", 
+          errors: validationResult.error.errors 
+        });
+      }
+
+      const { username } = validationResult.data;
+      const user = await storage.getUserByUsername(username);
+      
+      // Even if the user is not found, we return success to prevent user enumeration
+      if (!user) {
+        return res.status(200).json({ 
+          message: "If an account with that email exists, a password reset link has been sent." 
+        });
+      }
+
+      // Generate a random token
+      const token = randomBytes(32).toString('hex');
+      
+      // Set expiration to 1 hour from now
+      const expiresAt = new Date();
+      expiresAt.setHours(expiresAt.getHours() + 1);
+      
+      // Create password reset token
+      await storage.createPasswordReset({
+        userId: user.id,
+        token,
+        expiresAt,
+        used: false
+      });
+
+      // In a real app, we would send an email with the reset link
+      // For now, we'll just return the token in the response
+      res.status(200).json({ 
+        message: "If an account with that email exists, a password reset link has been sent.",
+        // The following would NOT be included in a production app, but is useful for testing
+        resetToken: token
+      });
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  // Reset password
+  const resetPasswordSchema = z.object({
+    token: z.string(),
+    password: z.string().min(8, "Password must be at least 8 characters")
+      .refine(pwd => /\d/.test(pwd), "Password must contain at least one number")
+      .refine(pwd => /[!@#$%^&*(),.?":{}|<>]/.test(pwd), "Password must contain at least one special character"),
+    confirmPassword: z.string()
+  }).refine(data => data.password === data.confirmPassword, {
+    message: "Passwords do not match",
+    path: ["confirmPassword"]
+  });
+
+  app.post("/api/reset-password", async (req, res, next) => {
+    try {
+      const validationResult = resetPasswordSchema.safeParse(req.body);
+      if (!validationResult.success) {
+        return res.status(400).json({ 
+          message: "Validation error", 
+          errors: validationResult.error.errors 
+        });
+      }
+
+      const { token, password } = validationResult.data;
+      
+      // Find the reset token
+      const passwordReset = await storage.getPasswordResetByToken(token);
+      if (!passwordReset) {
+        return res.status(400).json({ message: "Invalid or expired reset token" });
+      }
+
+      // Hash the new password
+      const hashedPassword = await hashPassword(password);
+      
+      // Update the user's password
+      await storage.updateUserPassword(passwordReset.userId, hashedPassword);
+      
+      // Mark the token as used
+      await storage.markPasswordResetAsUsed(passwordReset.id);
+      
+      res.status(200).json({ message: "Password has been reset successfully" });
     } catch (error) {
       next(error);
     }

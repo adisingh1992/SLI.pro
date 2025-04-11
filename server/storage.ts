@@ -364,6 +364,43 @@ export class MemStorage implements IStorage {
       documents
     };
   }
+  
+  // Password reset methods
+  async updateUserPassword(id: number, password: string): Promise<User | undefined> {
+    const user = await this.getUser(id);
+    if (!user) return undefined;
+    
+    const updatedUser = { ...user, password };
+    this.users.set(id, updatedUser);
+    return updatedUser;
+  }
+  
+  async createPasswordReset(passwordReset: InsertPasswordReset): Promise<PasswordReset> {
+    const id = this.passwordResetId++;
+    const newPasswordReset: PasswordReset = { 
+      ...passwordReset, 
+      id,
+      createdAt: new Date(),
+      used: false
+    };
+    this.passwordResets.set(id, newPasswordReset);
+    return newPasswordReset;
+  }
+  
+  async getPasswordResetByToken(token: string): Promise<PasswordReset | undefined> {
+    return Array.from(this.passwordResets.values()).find(
+      (reset) => reset.token === token && !reset.used && reset.expiresAt > new Date()
+    );
+  }
+  
+  async markPasswordResetAsUsed(id: number): Promise<PasswordReset | undefined> {
+    const passwordReset = this.passwordResets.get(id);
+    if (!passwordReset) return undefined;
+    
+    const updatedReset = { ...passwordReset, used: true };
+    this.passwordResets.set(id, updatedReset);
+    return updatedReset;
+  }
 }
 
 export const storage = new MemStorage();
