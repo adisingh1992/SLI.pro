@@ -62,9 +62,9 @@ export default function HomePage() {
           </p>
           
           {/* Career Development Questionnaire Section */}
-          <div className={userProfile?.questionnaire ? "bg-[#f0f7ff] border border-blue-200 rounded-lg p-6" : "bg-[#fff7f0] border border-orange-200 rounded-lg p-6"}>
+          <div className={userProfile?.questionnaire ? "bg-[#f5faf9] border border-[#dcede9] rounded-lg p-6" : "bg-[#fff7f0] border border-orange-200 rounded-lg p-6"}>
             <div className="flex items-start">
-              <div className={userProfile?.questionnaire ? "p-3 rounded-full bg-blue-100 text-[#bed6d1] mr-4" : "p-3 rounded-full bg-orange-100 text-orange-500 mr-4"}>
+              <div className={userProfile?.questionnaire ? "p-3 rounded-full bg-[#dcede9] text-[#bed6d1] mr-4" : "p-3 rounded-full bg-orange-100 text-orange-500 mr-4"}>
                 {userProfile?.questionnaire ? (
                   <CheckCircle className="h-6 w-6" />
                 ) : (
@@ -93,9 +93,9 @@ export default function HomePage() {
           
           {/* Profile View Section - Only visible when questionnaire is completed */}
           {userProfile?.questionnaire && (
-            <div className="mt-6 bg-[#f0f4ff] border border-indigo-200 rounded-lg p-6">
+            <div className="mt-6 bg-[#f5faf9] border border-[#dcede9] rounded-lg p-6">
               <div className="flex items-start">
-                <div className="p-3 rounded-full bg-indigo-100 text-indigo-600 mr-4">
+                <div className="p-3 rounded-full bg-[#dcede9] text-[#6c8083] mr-4">
                   <User className="h-6 w-6" />
                 </div>
                 <div className="flex-1">
@@ -107,7 +107,7 @@ export default function HomePage() {
                   </p>
                   <div className="flex flex-wrap gap-3">
                     <Button 
-                      className="flex items-center bg-indigo-600 hover:bg-indigo-700"
+                      className="flex items-center bg-[#bed6d1] hover:bg-[#6c8083]"
                       onClick={() => navigate("/profile")}
                     >
                       View Profile
@@ -115,7 +115,7 @@ export default function HomePage() {
                     </Button>
                     <Button 
                       variant="outline"
-                      className="flex items-center border-indigo-600 text-indigo-600 hover:bg-indigo-50"
+                      className="flex items-center border-[#bed6d1] text-[#6c8083] hover:bg-[#f5faf9]"
                       onClick={() => navigate("/profile?tab=documents")}
                     >
                       View Documents

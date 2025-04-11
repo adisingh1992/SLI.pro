@@ -394,11 +394,11 @@ const DocumentUpload = () => {
                               <div key={document.id} className="flex items-center justify-between border p-3 rounded-md">
                                 <div className="flex items-center space-x-3">
                                   {document.type === 'resume' ? (
-                                    <FileText className="h-8 w-8 text-blue-500" />
+                                    <FileText className="h-8 w-8 text-[#bed6d1]" />
                                   ) : document.type === 'linkedin' ? (
-                                    <FileText className="h-8 w-8 text-blue-500" />
+                                    <FileText className="h-8 w-8 text-[#bed6d1]" />
                                   ) : (
-                                    <File className="h-8 w-8 text-blue-500" />
+                                    <File className="h-8 w-8 text-[#bed6d1]" />
                                   )}
                                   <div>
                                     <h4 className="font-medium">{document.name}</h4>
@@ -447,16 +447,16 @@ const DocumentUpload = () => {
                             }
                             
                             return (
-                              <div key={document.id} className="flex items-center justify-between border border-blue-100 bg-blue-50 p-3 rounded-md">
+                              <div key={document.id} className="flex items-center justify-between border border-[#dcede9] bg-[#f5faf9] p-3 rounded-md">
                                 <div className="flex items-center space-x-3">
                                   {document.type === 'assessment-pdf' ? (
-                                    <FileText className="h-8 w-8 text-blue-500" />
+                                    <FileText className="h-8 w-8 text-[#bed6d1]" />
                                   ) : document.type === 'assessment-image' ? (
-                                    <Image className="h-8 w-8 text-blue-500" />
+                                    <Image className="h-8 w-8 text-[#bed6d1]" />
                                   ) : document.type === 'assessment-doc' ? (
-                                    <FileType className="h-8 w-8 text-blue-500" />
+                                    <FileType className="h-8 w-8 text-[#bed6d1]" />
                                   ) : (
-                                    <File className="h-8 w-8 text-blue-500" />
+                                    <File className="h-8 w-8 text-[#bed6d1]" />
                                   )}
                                   <div>
                                     <h4 className="font-medium">{document.name}</h4>
