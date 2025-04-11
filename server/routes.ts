@@ -351,6 +351,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const validationResult = insertQuestionnaireSchema.safeParse({
         ...req.body,
         userId: req.user.id,
+        isDraft: false, // When submitting the full questionnaire, it's not a draft
       });
       
       if (!validationResult.success) {
@@ -367,6 +368,40 @@ export async function registerRoutes(app: Express): Promise<Server> {
         res.json(questionnaire);
       } else {
         // Create new questionnaire
+        questionnaire = await storage.createQuestionnaire(validationResult.data);
+        res.status(201).json(questionnaire);
+      }
+    } catch (error) {
+      next(error);
+    }
+  });
+  
+  // Route for saving draft questionnaire
+  app.post("/api/questionnaire/draft", isAuthenticated, async (req, res, next) => {
+    try {
+      // Check if user already has a questionnaire
+      const existingQuestionnaire = await storage.getQuestionnaire(req.user.id);
+      
+      const validationResult = insertQuestionnaireSchema.safeParse({
+        ...req.body,
+        userId: req.user.id,
+        isDraft: true, // Mark as draft
+      });
+      
+      if (!validationResult.success) {
+        return res.status(400).json({
+          message: "Validation error",
+          errors: validationResult.error.errors,
+        });
+      }
+
+      let questionnaire;
+      if (existingQuestionnaire) {
+        // Update existing questionnaire
+        questionnaire = await storage.updateQuestionnaire(req.user.id, validationResult.data);
+        res.json(questionnaire);
+      } else {
+        // Create new questionnaire as draft
         questionnaire = await storage.createQuestionnaire(validationResult.data);
         res.status(201).json(questionnaire);
       }
