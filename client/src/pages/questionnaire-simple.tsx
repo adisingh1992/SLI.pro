@@ -1176,26 +1176,19 @@ export default function QuestionnairePage() {
 
       return hasIndustry && hasFunction;
     } else if (currentStep === 2) {
-      // Step 2: Require LinkedIn URL and at least one social media platform
+      // Step 2: Require only LinkedIn URL (social media platforms are optional now)
       const hasLinkedInUrl = background.trim() !== "";
-      const hasSocialMediaSelected =
-        twitterChecked ||
-        mediumChecked ||
-        blogChecked ||
-        (otherChecked && otherSocialMedia.trim() !== "");
 
       // Show toast for missing fields
-      if (!hasLinkedInUrl || !hasSocialMediaSelected) {
+      if (!hasLinkedInUrl) {
         toast({
-          title: "Required Fields Missing",
-          description: !hasLinkedInUrl
-            ? "Please enter your LinkedIn URL"
-            : "Please select at least one social media platform",
+          title: "Required Field Missing",
+          description: "Please enter your LinkedIn URL",
           variant: "destructive",
         });
       }
 
-      return hasLinkedInUrl && hasSocialMediaSelected;
+      return hasLinkedInUrl;
     } else if (currentStep === 3) {
       // Step 3: Require at least one branding challenge and published content
       const hasBrandingChallengeSelected =
@@ -2022,8 +2015,7 @@ export default function QuestionnairePage() {
                 htmlFor="goals"
                 className="text-gray-700 font-medium block mb-2"
               >
-                Other Professional Social Media Presence{" "}
-                <span className="text-red-500">*</span>
+                Other Professional Social Media Presence
               </Label>
               <p className="text-sm text-gray-500 mb-3">
                 Select the platforms where you have a professional presence
