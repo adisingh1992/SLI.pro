@@ -1443,6 +1443,170 @@ export default function QuestionnairePage() {
     }
   };
 
+  // Helper function to format branding details for API submission
+  const formatBrandingDetails = (
+    brandingChallenges: string[],
+    contentFormatPreferences: string[] = [],
+    postingBarriers: string[] = []
+  ) => {
+    // Start with existing aspirations if any
+    let brandingDetails = aspirations.trim() !== ""
+      ? `${aspirations}\n\nBranding challenges: ${brandingChallenges.join(", ")}`
+      : `Branding challenges: ${brandingChallenges.join(", ")}`;
+    
+    // Add content format preferences
+    if (contentFormatPreferences.length > 0) {
+      brandingDetails += `\n\nContent format preferences: ${contentFormatPreferences.join(", ")}`;
+    }
+    
+    // Add posting barriers
+    if (postingBarriers.length > 0) {
+      brandingDetails += `\n\nPosting barriers: ${postingBarriers.join(", ")}`;
+    }
+    
+    // Add published content
+    const publishedContent: string[] = [];
+    if (linkedInPostsChecked) publishedContent.push("LinkedIn posts");
+    if (blogArticlesChecked) publishedContent.push("Blog articles");
+    if (industryPresentationsChecked) publishedContent.push("Industry presentations");
+    if (academicPapersChecked) publishedContent.push("Academic papers");
+    if (neverPublishedChecked) publishedContent.push("Never published professional content");
+    if (otherPublishedContentChecked && otherPublishedContent.trim() !== "") {
+      publishedContent.push(`Other: ${otherPublishedContent.trim()}`);
+    }
+    brandingDetails += `\n\nPublished content: ${publishedContent.length > 0 ? publishedContent.join(", ") : "None"}`;
+    
+    // Add LinkedIn profile update timing
+    const profileUpdateTiming: string[] = [];
+    if (lastWeekChecked) profileUpdateTiming.push("Within the last week");
+    if (lastMonthChecked) profileUpdateTiming.push("Within the last month");
+    if (businessSchoolChecked) profileUpdateTiming.push("For / during business school");
+    if (careerCoachChecked) profileUpdateTiming.push("After I spoke with a career coach");
+    if (jobChangeChecked) profileUpdateTiming.push("When I last changed jobs");
+    if (cantRememberChecked) profileUpdateTiming.push("I can't remember");
+    if (neverUpdatedChecked) profileUpdateTiming.push("I've never really updated it beyond creating the profile");
+    if (otherUpdateTimeChecked && otherUpdateTime.trim() !== "") {
+      profileUpdateTiming.push(`Other: ${otherUpdateTime.trim()}`);
+    }
+    brandingDetails += `\n\nLinkedIn profile update timing: ${profileUpdateTiming.length > 0 ? profileUpdateTiming.join(", ") : "Not specified"}`;
+    
+    // Add Career goals
+    brandingDetails += `\n\nCareer goals: ${careerGoals.trim() !== "" ? careerGoals : "Not specified"}`;
+    
+    // Add Professional areas
+    brandingDetails += `\n\nProfessional areas for thought leadership: ${professionalAreas.trim() !== "" ? professionalAreas : "Not specified"}`;
+    
+    // Add Additional info
+    brandingDetails += `\n\nAdditional professional journey information: ${additionalInfo.trim() !== "" ? additionalInfo : "Not specified"}`;
+    
+    // Add industry connections percentage
+    brandingDetails += `\n\nLinkedIn connections percentage: ${industryConnectionsPercentage || "Not specified"}`;
+    
+    // Add other ratings and fields
+    brandingDetails += `\n\nBrand positioning rating: ${brandPositioningRating !== null ? brandPositioningRating : "Not specified"}`;
+    brandingDetails += `\n\nContent creation comfort: ${contentCreationComfort !== null ? contentCreationComfort : "Not specified"}`;
+    brandingDetails += `\n\nBrand optimization goals: ${brandOptimizationGoals.trim() !== "" ? brandOptimizationGoals : "Not specified"}`;
+    
+    return brandingDetails;
+  };
+
+  const handleSaveAsDraft = async () => {
+    // Prepare social media data (similar to handleSubmit but without validation)
+    const socialMediaOptions = [];
+    if (twitterChecked) socialMediaOptions.push("Twitter/X");
+    if (mediumChecked) socialMediaOptions.push("Medium");
+    if (blogChecked) socialMediaOptions.push("Personal blog/Website");
+    if (otherChecked && otherSocialMedia.trim() !== "") {
+      socialMediaOptions.push(`Other: ${otherSocialMedia.trim()}`);
+    }
+
+    // Update goals field to include selected social media options
+    const socialMediaDetails =
+      goals.trim() !== ""
+        ? `${goals}\n\nSelected platforms: ${socialMediaOptions.join(", ")}`
+        : `Selected platforms: ${socialMediaOptions.join(", ")}`;
+        
+    // Prepare branding challenges data
+    const brandingChallenges = [];
+    if (consistentNarrativeChecked)
+      brandingChallenges.push("Building a consistent professional narrative");
+    if (valuePropositionChecked)
+      brandingChallenges.push("Identifying my unique value proposition");
+    if (engagingContentChecked)
+      brandingChallenges.push("Creating engaging content");
+    if (findingTimeChecked)
+      brandingChallenges.push("Finding time to maintain online presence");
+    if (growingNetworkChecked)
+      brandingChallenges.push("Growing my professional network");
+    if (sharingInsightsChecked)
+      brandingChallenges.push("Sharing industry insights and work experiences");
+    if (engagingNetworkChecked)
+      brandingChallenges.push("Engaging with my professional network");
+    if (industryEventsChecked)
+      brandingChallenges.push("Participating in industry discussions and events");
+    if (otherBrandingChecked && otherBrandingChallenge.trim() !== "") {
+      brandingChallenges.push(`Other: ${otherBrandingChallenge.trim()}`);
+    }
+    
+    // Prepare content format preferences
+    const contentFormatPreferences = [];
+    if (sharingNewsChecked) contentFormatPreferences.push("Sharing industry news with your perspective");
+    if (writingExperiencesChecked) contentFormatPreferences.push("Writing about your learned experiences");
+    if (analyzingTrendsChecked) contentFormatPreferences.push("Analyzing trends");
+    if (commentingPostsChecked) contentFormatPreferences.push("Commenting on others' posts");
+    if (howToContentChecked) contentFormatPreferences.push("Creating how-to content");
+    if (eventTakeawaysChecked) contentFormatPreferences.push("Sharing event takeaways");
+    if (personalAnecdoteChecked) contentFormatPreferences.push("Personal anecdote");
+    if (digitalCommunitiesChecked) contentFormatPreferences.push("Digital communities");
+    if (otherContentFormatChecked && otherContentFormat.trim() !== "") {
+      contentFormatPreferences.push(`Other: ${otherContentFormat.trim()}`);
+    }
+    
+    // Prepare posting barriers
+    const postingBarriers = [];
+    if (unsureWhatToSayChecked) postingBarriers.push("Unsure what to say");
+    if (fearOfJudgmentChecked) postingBarriers.push("Fear of judgment");
+    if (timeManagementChecked) postingBarriers.push("Time management");
+    if (dontKnowHowToStartChecked) postingBarriers.push("Don't know how to start");
+    if (unclearProfessionalVoiceChecked) postingBarriers.push("Unclear on professional voice");
+    if (otherBarrierChecked && otherBarrier.trim() !== "") {
+      postingBarriers.push(`Other: ${otherBarrier.trim()}`);
+    }
+    
+    // Format branding details
+    const brandingDetails = formatBrandingDetails(
+      brandingChallenges,
+      contentFormatPreferences,
+      postingBarriers
+    );
+    
+    // Create form data for the draft
+    const formData = {
+      background, // LinkedIn URL
+      goals: socialMediaDetails, // Social media details
+      aspirations: brandingDetails, // Branding challenges and all other data
+      challenges: "", // No longer using this field
+      interests: "",
+      timeframe: `Industry: ${industry}, Function: ${jobFunction}`, // Store both industry and function
+      industry, // Current/Prior industry
+    };
+    
+    try {
+      await saveAsDraftMutation.mutateAsync(formData);
+      toast({
+        title: "Draft Saved",
+        description: "Your questionnaire draft has been saved successfully.",
+      });
+    } catch (error) {
+      console.error("Error saving draft:", error);
+      toast({
+        title: "Error",
+        description: "Failed to save draft. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+  
   const handleSubmit = async () => {
     if (validateCurrentStep()) {
       // First upload any assessment files
@@ -4642,27 +4806,44 @@ export default function QuestionnairePage() {
                   Previous
                 </Button>
 
-                {isLastStep ? (
+                <div className="flex gap-2">
+                  {/* Save as Draft button - always visible */}
                   <Button
                     type="button"
-                    onClick={handleSubmit}
-                    className="w-[120px] bg-[#bed6d1] hover:bg-[#6c8083]"
-                    disabled={questionnaireMutation.isPending}
+                    onClick={handleSaveAsDraft}
+                    className="w-[120px]"
+                    variant="outline"
+                    disabled={saveAsDraftMutation.isPending}
                   >
-                    {questionnaireMutation.isPending ? (
+                    {saveAsDraftMutation.isPending ? (
                       <Loader2 className="h-4 w-4 animate-spin mr-2" />
                     ) : null}
-                    Submit
+                    Save as Draft
                   </Button>
-                ) : (
-                  <Button
-                    type="button"
-                    onClick={nextStep}
-                    className="w-[120px] bg-[#bed6d1] hover:bg-[#6c8083]"
-                  >
-                    Next
-                  </Button>
-                )}
+                
+                  {/* Submit or Next button */}
+                  {isLastStep ? (
+                    <Button
+                      type="button"
+                      onClick={handleSubmit}
+                      className="w-[120px] bg-[#bed6d1] hover:bg-[#6c8083]"
+                      disabled={questionnaireMutation.isPending}
+                    >
+                      {questionnaireMutation.isPending ? (
+                        <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                      ) : null}
+                      Submit
+                    </Button>
+                  ) : (
+                    <Button
+                      type="button"
+                      onClick={nextStep}
+                      className="w-[120px] bg-[#bed6d1] hover:bg-[#6c8083]"
+                    >
+                      Next
+                    </Button>
+                  )}
+                </div>
               </div>
             </div>
           </CardContent>
