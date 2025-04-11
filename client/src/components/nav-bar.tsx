@@ -73,14 +73,14 @@ export default function NavBar() {
             <div className="flex items-center">
               <Button 
                 variant="ghost" 
-                className="text-[#0077B5]"
+                className="text-[#bed6d1]"
                 onClick={() => navigate("/auth")}
               >
                 Log In
               </Button>
               <Button 
                 variant="default" 
-                className="ml-4 bg-[#0077B5] hover:bg-opacity-90"
+                className="ml-4 bg-[#bed6d1] hover:bg-opacity-90"
                 onClick={() => navigate("/auth")}
               >
                 Sign Up

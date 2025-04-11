@@ -25,8 +25,8 @@ export default function UserAvatar({ firstName, lastName, size = "medium" }: Use
   };
 
   return (
-    <Avatar className={`${getSizeClasses()} bg-[#0077B5] text-white font-bold ${size === "large" ? "border-4 border-white" : ""}`}>
-      <AvatarFallback className="bg-[#0077B5] text-white">
+    <Avatar className={`${getSizeClasses()} bg-[#bed6d1] text-white font-bold ${size === "large" ? "border-4 border-white" : ""}`}>
+      <AvatarFallback className="bg-[#bed6d1] text-white">
         {getInitials()}
       </AvatarFallback>
     </Avatar>
