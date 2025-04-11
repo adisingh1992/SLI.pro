@@ -3394,7 +3394,8 @@ export default function QuestionnairePage() {
               <div className="mb-6">
                 <Label className="text-gray-700 font-medium block mb-3">
                   As you think about content creation, are there any formats
-                  that feel more natural to you? (Select all that apply)
+                  that feel more natural to you? (Select all that apply){" "}
+                  <span className="text-red-500">*</span>
                 </Label>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                   <div className="flex items-center space-x-2">
@@ -3545,7 +3546,8 @@ export default function QuestionnairePage() {
               <div className="mb-6">
                 <Label className="text-gray-700 font-medium block mb-3">
                   What holds you back from posting more frequently? (Select all
-                  that apply)
+                  that apply){" "}
+                  <span className="text-red-500">*</span>
                 </Label>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                   <div className="flex items-center space-x-2">
