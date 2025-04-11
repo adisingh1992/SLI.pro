@@ -147,14 +147,14 @@ export default function AuthPage() {
             <div className="flex items-center">
               <Button
                 variant="link"
-                className="text-[#0077B5] hover:text-[#005885] font-medium px-4 py-2"
+                className="text-[#bed6d1] hover:text-[#6c8083] font-medium px-4 py-2"
                 onClick={() => setActiveTab("login")}
               >
                 Log In
               </Button>
               <Button
                 variant="outline"
-                className="ml-3 text-[#0077B5] border-[#0077B5] hover:bg-[#0077B5] hover:bg-opacity-10 font-medium"
+                className="ml-3 text-[#bed6d1] border-[#bed6d1] hover:bg-[#bed6d1] hover:bg-opacity-10 font-medium"
                 onClick={() => setActiveTab("signup")}
               >
                 Sign Up
@@ -177,13 +177,13 @@ export default function AuthPage() {
               <TabsList className="mb-8 w-full border-b border-gray-200 bg-transparent p-0 flex">
                 <TabsTrigger
                   value="login"
-                  className="relative py-4 px-6 data-[state=active]:bg-transparent data-[state=active]:text-[#0077B5] font-medium text-gray-600 hover:text-[#0077B5] rounded-none border-b-2 border-transparent data-[state=active]:border-[#0077B5] transition-all"
+                  className="relative py-4 px-6 data-[state=active]:bg-transparent data-[state=active]:text-[#bed6d1] font-medium text-gray-600 hover:text-[#bed6d1] rounded-none border-b-2 border-transparent data-[state=active]:border-[#bed6d1] transition-all"
                 >
                   Log In
                 </TabsTrigger>
                 <TabsTrigger
                   value="signup"
-                  className="relative py-4 px-6 data-[state=active]:bg-transparent data-[state=active]:text-[#0077B5] font-medium text-gray-600 hover:text-[#0077B5] rounded-none border-b-2 border-transparent data-[state=active]:border-[#0077B5] transition-all"
+                  className="relative py-4 px-6 data-[state=active]:bg-transparent data-[state=active]:text-[#bed6d1] font-medium text-gray-600 hover:text-[#bed6d1] rounded-none border-b-2 border-transparent data-[state=active]:border-[#bed6d1] transition-all"
                 >
                   Sign Up
                 </TabsTrigger>
@@ -226,7 +226,7 @@ export default function AuthPage() {
                                 <FormControl>
                                   <Input
                                     {...field}
-                                    className="px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-[#0077B5]"
+                                    className="px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-[#bed6d1]"
                                     type="email"
                                   />
                                 </FormControl>
@@ -246,7 +246,7 @@ export default function AuthPage() {
                                 <FormControl>
                                   <Input
                                     {...field}
-                                    className="px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-[#0077B5]"
+                                    className="px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-[#bed6d1]"
                                     type="password"
                                   />
                                 </FormControl>
@@ -265,7 +265,7 @@ export default function AuthPage() {
                                     <Checkbox
                                       checked={field.value}
                                       onCheckedChange={field.onChange}
-                                      className="h-4 w-4 text-[#0077B5] focus:ring-[#0077B5]"
+                                      className="h-4 w-4 text-[#bed6d1] focus:ring-[#bed6d1]"
                                     />
                                   </FormControl>
                                   <FormLabel className="text-sm text-[#333333] cursor-pointer leading-none">
@@ -277,7 +277,7 @@ export default function AuthPage() {
                             <div>
                               <a
                                 href="#"
-                                className="text-sm font-medium text-[#0077B5] hover:text-opacity-90"
+                                className="text-sm font-medium text-[#bed6d1] hover:text-opacity-90"
                               >
                                 Forgot password?
                               </a>
@@ -286,7 +286,7 @@ export default function AuthPage() {
 
                           <Button
                             type="submit"
-                            className="w-full py-3 px-4 bg-[#0077B5] hover:bg-opacity-90 focus:ring-2 focus:ring-offset-2 focus:ring-[#0077B5]"
+                            className="w-full py-3 px-4 bg-[#bed6d1] hover:bg-opacity-90 focus:ring-2 focus:ring-offset-2 focus:ring-[#bed6d1]"
                             disabled={loginMutation.isPending}
                           >
                             {loginMutation.isPending ? (
@@ -342,7 +342,7 @@ export default function AuthPage() {
                                   <FormControl>
                                     <Input
                                       {...field}
-                                      className="px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-[#0077B5]"
+                                      className="px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-[#bed6d1]"
                                     />
                                   </FormControl>
                                   <FormMessage className="text-[#E34240]" />
@@ -361,7 +361,7 @@ export default function AuthPage() {
                                   <FormControl>
                                     <Input
                                       {...field}
-                                      className="px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-[#0077B5]"
+                                      className="px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-[#bed6d1]"
                                     />
                                   </FormControl>
                                   <FormMessage className="text-[#E34240]" />
@@ -381,7 +381,7 @@ export default function AuthPage() {
                                 <FormControl>
                                   <Input
                                     {...field}
-                                    className="px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-[#0077B5]"
+                                    className="px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-[#bed6d1]"
                                     type="email"
                                   />
                                 </FormControl>
@@ -411,7 +411,7 @@ export default function AuthPage() {
                                 <FormControl>
                                   <Input
                                     {...field}
-                                    className="px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-[#0077B5]"
+                                    className="px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-[#bed6d1]"
                                     type="tel"
                                     placeholder="(123) 456-7890"
                                   />
@@ -432,7 +432,7 @@ export default function AuthPage() {
                                 <FormControl>
                                   <Input
                                     {...field}
-                                    className="px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-[#0077B5]"
+                                    className="px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-[#bed6d1]"
                                     type="password"
                                   />
                                 </FormControl>
@@ -456,7 +456,7 @@ export default function AuthPage() {
                                 <FormControl>
                                   <Input
                                     {...field}
-                                    className="px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-[#0077B5]"
+                                    className="px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-[#bed6d1]"
                                     type="password"
                                   />
                                 </FormControl>
@@ -474,7 +474,7 @@ export default function AuthPage() {
                                   <Checkbox
                                     checked={field.value}
                                     onCheckedChange={field.onChange}
-                                    className="h-4 w-4 text-[#0077B5] focus:ring-[#0077B5]"
+                                    className="h-4 w-4 text-[#bed6d1] focus:ring-[#bed6d1]"
                                   />
                                 </FormControl>
                                 <div>
@@ -482,14 +482,14 @@ export default function AuthPage() {
                                     I agree to the{" "}
                                     <a
                                       href="#"
-                                      className="text-[#0077B5] hover:text-opacity-90"
+                                      className="text-[#bed6d1] hover:text-opacity-90"
                                     >
                                       Terms of Service
                                     </a>{" "}
                                     and{" "}
                                     <a
                                       href="#"
-                                      className="text-[#0077B5] hover:text-opacity-90"
+                                      className="text-[#bed6d1] hover:text-opacity-90"
                                     >
                                       Privacy Policy
                                     </a>
@@ -502,7 +502,7 @@ export default function AuthPage() {
 
                           <Button
                             type="submit"
-                            className="w-full py-3 px-4 bg-[#0077B5] hover:bg-opacity-90 focus:ring-2 focus:ring-offset-2 focus:ring-[#0077B5]"
+                            className="w-full py-3 px-4 bg-[#bed6d1] hover:bg-opacity-90 focus:ring-2 focus:ring-offset-2 focus:ring-[#bed6d1]"
                             disabled={registerMutation.isPending}
                           >
                             {registerMutation.isPending ? (
@@ -522,7 +522,7 @@ export default function AuthPage() {
           </div>
 
           {/* Right Column - Hero Section */}
-          <div className="p-8 bg-[#0077B5] rounded-lg text-white hidden md:flex md:flex-col h-full">
+          <div className="p-8 bg-[#bed6d1] rounded-lg text-white hidden md:flex md:flex-col h-full">
             <div>
               <h1 className="text-3xl font-bold mb-4">
                 Shape How the Professional World Knows You
