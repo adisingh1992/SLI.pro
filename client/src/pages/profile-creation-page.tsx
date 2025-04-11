@@ -104,7 +104,7 @@ export default function ProfileCreationPage() {
       <main className="flex-1 max-w-7xl mx-auto px-4 sm:px-6 py-8">
         <div className="bg-white shadow-card rounded-lg overflow-hidden">
           <div className="p-6 border-b border-gray-200">
-            <h2 className="text-2xl font-medium text-[#333333]">Complete Your SLIPro Profile</h2>
+            <h2 className="text-2xl font-medium text-[#333333]">Complete Your SLI.pro Profile</h2>
             <p className="mt-1 text-gray-500">Please provide the following information to set up your professional profile</p>
           </div>
           

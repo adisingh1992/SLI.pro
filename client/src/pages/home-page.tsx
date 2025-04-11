@@ -58,7 +58,7 @@ export default function HomePage() {
             Welcome, {user?.firstName}!
           </h1>
           <p className="text-gray-600 mb-6">
-            From here you can view and manage your professional profile on SLIPro.
+            From here you can view and manage your professional profile on SLI.pro.
           </p>
           
           {/* Career Development Questionnaire Section */}
