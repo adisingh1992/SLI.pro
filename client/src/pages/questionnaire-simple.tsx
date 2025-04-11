@@ -1597,6 +1597,8 @@ export default function QuestionnairePage() {
         title: "Draft Saved",
         description: "Your questionnaire draft has been saved successfully.",
       });
+      // Redirect to home page after saving draft
+      navigate("/");
     } catch (error) {
       console.error("Error saving draft:", error);
       toast({

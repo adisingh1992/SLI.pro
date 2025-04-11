@@ -74,7 +74,9 @@ export default function HomePage() {
           <div
             className={
               userProfile?.questionnaire
-                ? "bg-[#f5faf9] border border-[#dcede9] rounded-lg p-6"
+                ? userProfile.questionnaire.isDraft
+                  ? "bg-[#fffbeb] border border-amber-200 rounded-lg p-6"
+                  : "bg-[#f5faf9] border border-[#dcede9] rounded-lg p-6"
                 : "bg-[#fff7f0] border border-orange-200 rounded-lg p-6"
             }
           >
@@ -82,37 +84,48 @@ export default function HomePage() {
               <div
                 className={
                   userProfile?.questionnaire
-                    ? "p-3 rounded-full bg-[#dcede9] text-[#bed6d1] mr-4"
+                    ? userProfile.questionnaire.isDraft
+                      ? "p-3 rounded-full bg-amber-100 text-amber-600 mr-4"
+                      : "p-3 rounded-full bg-[#dcede9] text-[#bed6d1] mr-4"
                     : "p-3 rounded-full bg-orange-100 text-orange-500 mr-4"
                 }
               >
-                {userProfile?.questionnaire ? (
-                  <CheckCircle className="h-6 w-6" />
-                ) : (
-                  <FileQuestion className="h-6 w-6" />
-                )}
+                {userProfile?.questionnaire 
+                  ? userProfile.questionnaire.isDraft 
+                    ? <FileQuestion className="h-6 w-6" />
+                    : <CheckCircle className="h-6 w-6" />
+                  : <FileQuestion className="h-6 w-6" />
+                }
               </div>
               <div className="flex-1">
                 <h2 className="text-lg font-medium text-[#333333] mb-2">
                   {userProfile?.questionnaire
-                    ? "Initial Questionnaire Completed"
+                    ? userProfile.questionnaire.isDraft
+                      ? "Questionnaire Draft Saved"
+                      : "Initial Questionnaire Completed"
                     : "Complete the Professional Branding Assessment"}
                 </h2>
                 <p className="text-gray-600 mb-4">
                   {userProfile?.questionnaire
-                    ? "Thank you for completing the questionnaire. This information helps us understand your professional goals and aspirations better."
+                    ? userProfile.questionnaire.isDraft
+                      ? "You have a saved draft of your questionnaire. Continue where you left off to complete your professional branding assessment."
+                      : "Thank you for completing the questionnaire. This information helps us understand your professional goals and aspirations better."
                     : "This comprehensive assessment helps customize your personal branding strategy and provide information to shape your Single Lasting Impression (SLI). The assessment will take ~5 minutes to complete"}
                 </p>
                 <Button
                   className={
                     userProfile?.questionnaire
-                      ? "flex items-center bg-[#bed6d1] hover:bg-opacity-90"
+                      ? userProfile.questionnaire.isDraft
+                        ? "flex items-center bg-amber-500 hover:bg-amber-600"
+                        : "flex items-center bg-[#bed6d1] hover:bg-opacity-90"
                       : "flex items-center bg-orange-500 hover:bg-opacity-90"
                   }
                   onClick={() => navigate("/questionnaire")}
                 >
                   {userProfile?.questionnaire
-                    ? "Review Questionnaire"
+                    ? userProfile.questionnaire.isDraft
+                      ? "Continue Questionnaire"
+                      : "Review Questionnaire"
                     : "Start Questionnaire"}
                   <ArrowRight className="ml-2 h-4 w-4" />
                 </Button>
@@ -120,7 +133,7 @@ export default function HomePage() {
             </div>
           </div>
 
-          {/* Profile View Section - Only visible when questionnaire is completed */}
+          {/* Profile View Section - Only visible when questionnaire is present (completed or draft) */}
           {userProfile?.questionnaire && (
             <div className="mt-6 bg-[#f5faf9] border border-[#dcede9] rounded-lg p-6">
               <div className="flex items-start">
@@ -134,7 +147,10 @@ export default function HomePage() {
                   <p className="text-gray-600 mb-4">
                     Review and manage your professional profile details and
                     uploaded documents. Your profile reflects information from
-                    your completed questionnaire.
+                    {userProfile.questionnaire.isDraft 
+                      ? " your draft questionnaire."
+                      : " your completed questionnaire."
+                    }
                   </p>
                   <div className="flex flex-wrap gap-3">
                     <Button
@@ -170,7 +186,9 @@ export default function HomePage() {
                 </h2>
                 <p className="text-gray-600 mb-4">
                   {userProfile?.questionnaire
-                    ? "Book a one-on-one coaching session to discuss your career goals, get personalized advice, and develop strategies for professional growth."
+                    ? userProfile.questionnaire.isDraft
+                      ? "Complete your questionnaire to unlock the ability to schedule a coaching session."
+                      : "Book a one-on-one coaching session to discuss your career goals, get personalized advice, and develop strategies for professional growth."
                     : "Complete the initial questionnaire first to unlock the ability to schedule a coaching session."}
                 </p>
                 <Button
@@ -178,12 +196,12 @@ export default function HomePage() {
                   onClick={() =>
                     window.open("https://calendly.com/dcara-sli/haas", "_blank")
                   }
-                  disabled={!userProfile?.questionnaire}
+                  disabled={!userProfile?.questionnaire || userProfile?.questionnaire?.isDraft}
                 >
                   Schedule Coaching Session
                   <ArrowRight className="ml-2 h-4 w-4" />
                 </Button>
-                {!userProfile?.questionnaire && (
+                {(!userProfile?.questionnaire || userProfile?.questionnaire?.isDraft) && (
                   <p className="text-sm text-gray-500 italic mt-2">
                     <span className="text-orange-500 font-medium">*</span> You
                     must complete the questionnaire before scheduling a coaching
