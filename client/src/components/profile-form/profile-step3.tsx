@@ -168,13 +168,13 @@ export default function ProfileStep3({
               value={skillInput}
               onChange={(e) => setSkillInput(e.target.value)}
               onKeyPress={handleSkillKeyPress}
-              className="block w-full px-4 py-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#0077B5] focus:ring-opacity-50"
+              className="block w-full px-4 py-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#bed6d1] focus:ring-opacity-50"
               placeholder="Add a skill (e.g. JavaScript, Project Management)"
             />
             <Button
               type="button"
               onClick={handleAddSkill}
-              className="absolute inset-y-0 right-0 px-4 flex items-center bg-[#0077B5] text-white rounded-r-md hover:bg-opacity-90 focus:outline-none"
+              className="absolute inset-y-0 right-0 px-4 flex items-center bg-[#bed6d1] text-white rounded-r-md hover:bg-opacity-90 focus:outline-none"
             >
               Add
             </Button>
@@ -185,12 +185,12 @@ export default function ProfileStep3({
               userProfile.skills.map((skill) => (
                 <div
                   key={skill.id}
-                  className="inline-flex items-center px-3 py-1 rounded-full text-sm bg-[#70B5F9] bg-opacity-20 text-[#0077B5]"
+                  className="inline-flex items-center px-3 py-1 rounded-full text-sm bg-[#dcede9] bg-opacity-20 text-[#bed6d1]"
                 >
                   <span>{skill.name}</span>
                   <button
                     type="button"
-                    className="ml-1 text-[#0077B5] focus:outline-none"
+                    className="ml-1 text-[#bed6d1] focus:outline-none"
                     onClick={() => handleDeleteSkill(skill.id)}
                   >
                     <X className="h-4 w-4" />
@@ -243,7 +243,7 @@ export default function ProfileStep3({
           <Button
             type="button"
             variant="outline"
-            className="mt-2 px-4 py-2 border border-[#0077B5] text-[#0077B5] rounded-md hover:bg-[#0077B5] hover:bg-opacity-10 focus:outline-none"
+            className="mt-2 px-4 py-2 border border-[#bed6d1] text-[#bed6d1] rounded-md hover:bg-[#bed6d1] hover:bg-opacity-10 focus:outline-none"
             onClick={handleAddLanguage}
           >
             Add Language
@@ -288,7 +288,7 @@ export default function ProfileStep3({
         </Button>
         <Button
           type="button"
-          className="px-6 py-3 bg-[#0077B5] hover:bg-opacity-90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#0077B5]"
+          className="px-6 py-3 bg-[#bed6d1] hover:bg-opacity-90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#bed6d1]"
           onClick={handleCompleteProfile}
           disabled={isSubmitting}
         >

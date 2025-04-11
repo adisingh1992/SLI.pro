@@ -57,7 +57,7 @@ export default function ProfilePage() {
       <div className="min-h-screen bg-[#F5F5F5] flex flex-col">
         <NavBar />
         <div className="flex-1 flex items-center justify-center">
-          <Loader2 className="h-8 w-8 animate-spin text-[#0077B5]" />
+          <Loader2 className="h-8 w-8 animate-spin text-[#bed6d1]" />
           <span className="ml-2 text-[#333333]">Loading your profile...</span>
         </div>
       </div>
@@ -84,7 +84,7 @@ export default function ProfilePage() {
         <div className="bg-white shadow-card rounded-lg overflow-hidden">
           {/* Profile Header */}
           <div className="relative">
-            <div className="bg-gradient-to-r from-[#0077B5] to-[#70B5F9] p-6">
+            <div className="bg-gradient-to-r from-[#bed6d1] to-[#dcede9] p-6">
               <div className="flex items-center justify-between">
                 <div className="flex items-center">
                   <UserAvatar
@@ -175,7 +175,7 @@ export default function ProfilePage() {
                             <Button
                               onClick={() => navigate("/questionnaire")}
                               variant="outline"
-                              className="px-3 py-1 h-auto text-sm border-[#0077B5] text-[#0077B5] hover:bg-[#0077B5] hover:text-white"
+                              className="px-3 py-1 h-auto text-sm border-[#bed6d1] text-[#bed6d1] hover:bg-[#bed6d1] hover:text-white"
                             >
                               <Edit className="h-3 w-3 mr-1" />
                               Edit
@@ -184,9 +184,9 @@ export default function ProfilePage() {
 
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             {userProfile.questionnaire.background && (
-                              <div className="border-l-2 border-[#0077B5] pl-4 py-1">
+                              <div className="border-l-2 border-[#bed6d1] pl-4 py-1">
                                 <h3 className="font-medium text-[#333333] flex items-center">
-                                  <Clipboard className="h-4 w-4 mr-2 text-[#0077B5]" />
+                                  <Clipboard className="h-4 w-4 mr-2 text-[#bed6d1]" />
                                   Professional Background
                                 </h3>
                                 <p className="mt-1 text-gray-700 text-sm">
@@ -196,9 +196,9 @@ export default function ProfilePage() {
                             )}
 
                             {userProfile.questionnaire.timeframe && (
-                              <div className="border-l-2 border-[#0077B5] pl-4 py-1">
+                              <div className="border-l-2 border-[#bed6d1] pl-4 py-1">
                                 <h3 className="font-medium text-[#333333] flex items-center">
-                                  <Clock className="h-4 w-4 mr-2 text-[#0077B5]" />
+                                  <Clock className="h-4 w-4 mr-2 text-[#bed6d1]" />
                                   Current Industry & Function
                                 </h3>
                                 <p className="mt-1 text-gray-700 text-sm">
@@ -208,9 +208,9 @@ export default function ProfilePage() {
                             )}
 
                             {userProfile.questionnaire.goals && (
-                              <div className="border-l-2 border-[#0077B5] pl-4 py-1">
+                              <div className="border-l-2 border-[#bed6d1] pl-4 py-1">
                                 <h3 className="font-medium text-[#333333] flex items-center">
-                                  <Target className="h-4 w-4 mr-2 text-[#0077B5]" />
+                                  <Target className="h-4 w-4 mr-2 text-[#bed6d1]" />
                                   Career Goals
                                 </h3>
                                 <p className="mt-1 text-gray-700 text-sm">
@@ -220,9 +220,9 @@ export default function ProfilePage() {
                             )}
 
                             {userProfile.questionnaire.aspirations && (
-                              <div className="border-l-2 border-[#0077B5] pl-4 py-1">
+                              <div className="border-l-2 border-[#bed6d1] pl-4 py-1">
                                 <h3 className="font-medium text-[#333333] flex items-center">
-                                  <BookText className="h-4 w-4 mr-2 text-[#0077B5]" />
+                                  <BookText className="h-4 w-4 mr-2 text-[#bed6d1]" />
                                   Professional Aspirations
                                 </h3>
                                 <p className="mt-1 text-gray-700 text-sm">
@@ -242,7 +242,7 @@ export default function ProfilePage() {
                     <div>
                       <div className="mb-8 bg-white rounded-lg p-6 shadow-sm">
                         <div className="flex items-center mb-4">
-                          <FileText className="h-6 w-6 mr-2 text-[#0077B5]" />
+                          <FileText className="h-6 w-6 mr-2 text-[#bed6d1]" />
                           <h2 className="text-xl font-medium text-[#333333]">
                             My Documents
                           </h2>

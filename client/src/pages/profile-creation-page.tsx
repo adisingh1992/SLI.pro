@@ -83,7 +83,7 @@ export default function ProfileCreationPage() {
       <div className="min-h-screen bg-[#F5F5F5] flex flex-col">
         <NavBar />
         <div className="flex-1 flex items-center justify-center">
-          <Loader2 className="h-8 w-8 animate-spin text-[#0077B5]" />
+          <Loader2 className="h-8 w-8 animate-spin text-[#bed6d1]" />
           <span className="ml-2 text-[#333333]">Loading your profile...</span>
         </div>
       </div>
@@ -114,7 +114,7 @@ export default function ProfileCreationPage() {
               <div className="w-full">
                 <div className="flex mb-2 items-center justify-between">
                   <div>
-                    <span className="text-xs font-semibold inline-block py-1 px-2 uppercase rounded-full text-[#0077B5] bg-[#0077B5] bg-opacity-10">
+                    <span className="text-xs font-semibold inline-block py-1 px-2 uppercase rounded-full text-[#bed6d1] bg-[#bed6d1] bg-opacity-10">
                       Step {currentStep} of 3: {
                         currentStep === 1 ? "Basic Information" :
                         currentStep === 2 ? "Experience & Education" :
@@ -123,14 +123,14 @@ export default function ProfileCreationPage() {
                     </span>
                   </div>
                   <div className="text-right">
-                    <span className="text-xs font-semibold inline-block text-[#0077B5]">
+                    <span className="text-xs font-semibold inline-block text-[#bed6d1]">
                       {currentStep === 1 ? "33%" : currentStep === 2 ? "66%" : "100%"}
                     </span>
                   </div>
                 </div>
                 <div className="overflow-hidden h-2 mb-1 text-xs flex rounded bg-gray-200">
                   <div 
-                    className="shadow-none flex flex-col text-center whitespace-nowrap text-white justify-center bg-[#0077B5] transition-all duration-500"
+                    className="shadow-none flex flex-col text-center whitespace-nowrap text-white justify-center bg-[#bed6d1] transition-all duration-500"
                     style={{ width: currentStep === 1 ? "33%" : currentStep === 2 ? "66%" : "100%" }}
                   ></div>
                 </div>

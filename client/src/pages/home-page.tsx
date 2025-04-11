@@ -42,7 +42,7 @@ export default function HomePage() {
       <div className="min-h-screen bg-[#F5F5F5] flex flex-col">
         <NavBar />
         <div className="flex-1 flex items-center justify-center">
-          <Loader2 className="h-8 w-8 animate-spin text-[#0077B5]" />
+          <Loader2 className="h-8 w-8 animate-spin text-[#bed6d1]" />
           <span className="ml-2 text-[#333333]">Loading your profile...</span>
         </div>
       </div>
@@ -64,7 +64,7 @@ export default function HomePage() {
           {/* Career Development Questionnaire Section */}
           <div className={userProfile?.questionnaire ? "bg-[#f0f7ff] border border-blue-200 rounded-lg p-6" : "bg-[#fff7f0] border border-orange-200 rounded-lg p-6"}>
             <div className="flex items-start">
-              <div className={userProfile?.questionnaire ? "p-3 rounded-full bg-blue-100 text-[#0077B5] mr-4" : "p-3 rounded-full bg-orange-100 text-orange-500 mr-4"}>
+              <div className={userProfile?.questionnaire ? "p-3 rounded-full bg-blue-100 text-[#bed6d1] mr-4" : "p-3 rounded-full bg-orange-100 text-orange-500 mr-4"}>
                 {userProfile?.questionnaire ? (
                   <CheckCircle className="h-6 w-6" />
                 ) : (
@@ -81,7 +81,7 @@ export default function HomePage() {
                     : 'Take a few minutes to complete our career development questionnaire. This will help us understand your professional goals and provide better guidance.'}
                 </p>
                 <Button 
-                  className={userProfile?.questionnaire ? "flex items-center bg-[#0077B5] hover:bg-opacity-90" : "flex items-center bg-orange-500 hover:bg-opacity-90"}
+                  className={userProfile?.questionnaire ? "flex items-center bg-[#bed6d1] hover:bg-opacity-90" : "flex items-center bg-orange-500 hover:bg-opacity-90"}
                   onClick={() => navigate("/questionnaire")}
                 >
                   {userProfile?.questionnaire ? 'Review Questionnaire' : 'Start Questionnaire'}

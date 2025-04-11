@@ -86,7 +86,7 @@ export default function ProfileStep1({
                 <FormControl>
                   <Input
                     {...field}
-                    className="block w-full px-4 py-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#0077B5] focus:ring-opacity-50"
+                    className="block w-full px-4 py-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#bed6d1] focus:ring-opacity-50"
                     placeholder="e.g. Senior Software Engineer at Tech Corp"
                   />
                 </FormControl>
@@ -107,7 +107,7 @@ export default function ProfileStep1({
                   <Textarea
                     {...field}
                     rows={4}
-                    className="block w-full px-4 py-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#0077B5] focus:ring-opacity-50"
+                    className="block w-full px-4 py-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#bed6d1] focus:ring-opacity-50"
                     placeholder="Write a short bio about yourself"
                   />
                 </FormControl>
@@ -130,7 +130,7 @@ export default function ProfileStep1({
                 <FormControl>
                   <Input
                     {...field}
-                    className="block w-full px-4 py-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#0077B5] focus:ring-opacity-50"
+                    className="block w-full px-4 py-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#bed6d1] focus:ring-opacity-50"
                     placeholder="e.g. San Francisco, CA"
                   />
                 </FormControl>
@@ -142,7 +142,7 @@ export default function ProfileStep1({
           <div className="mt-8 flex justify-end">
             <Button
               type="submit"
-              className="px-6 py-3 bg-[#0077B5] hover:bg-opacity-90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#0077B5]"
+              className="px-6 py-3 bg-[#bed6d1] hover:bg-opacity-90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#bed6d1]"
               disabled={isSubmitting}
             >
               {isSubmitting ? (

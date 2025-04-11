@@ -269,7 +269,7 @@ export default function ProfileStep2({
                       <Button 
                         variant="ghost" 
                         size="sm"
-                        className="text-[#0077B5] hover:text-opacity-80"
+                        className="text-[#bed6d1] hover:text-opacity-80"
                         onClick={() => handleEditExperience(experience)}
                       >
                         <Edit className="h-4 w-4" />
@@ -297,7 +297,7 @@ export default function ProfileStep2({
             <DialogTrigger asChild>
               <Button 
                 variant="outline"
-                className="mt-2 flex items-center text-[#0077B5] border-[#0077B5] hover:text-opacity-80"
+                className="mt-2 flex items-center text-[#bed6d1] border-[#bed6d1] hover:text-opacity-80"
               >
                 <Plus className="h-5 w-5 mr-1" />
                 Add Work Experience
@@ -422,7 +422,7 @@ export default function ProfileStep2({
                     </Button>
                     <Button 
                       type="submit"
-                      className="bg-[#0077B5] hover:bg-opacity-90"
+                      className="bg-[#bed6d1] hover:bg-opacity-90"
                       disabled={isSubmittingExp}
                     >
                       {isSubmittingExp ? (
@@ -462,7 +462,7 @@ export default function ProfileStep2({
                       <Button 
                         variant="ghost" 
                         size="sm"
-                        className="text-[#0077B5] hover:text-opacity-80"
+                        className="text-[#bed6d1] hover:text-opacity-80"
                         onClick={() => handleEditEducation(edu)}
                       >
                         <Edit className="h-4 w-4" />
@@ -490,7 +490,7 @@ export default function ProfileStep2({
             <DialogTrigger asChild>
               <Button 
                 variant="outline"
-                className="mt-2 flex items-center text-[#0077B5] border-[#0077B5] hover:text-opacity-80"
+                className="mt-2 flex items-center text-[#bed6d1] border-[#bed6d1] hover:text-opacity-80"
               >
                 <Plus className="h-5 w-5 mr-1" />
                 Add Education
@@ -595,7 +595,7 @@ export default function ProfileStep2({
                     </Button>
                     <Button 
                       type="submit"
-                      className="bg-[#0077B5] hover:bg-opacity-90"
+                      className="bg-[#bed6d1] hover:bg-opacity-90"
                       disabled={isSubmittingEdu}
                     >
                       {isSubmittingEdu ? (
@@ -626,7 +626,7 @@ export default function ProfileStep2({
         </Button>
         <Button 
           type="button"
-          className="px-6 py-3 bg-[#0077B5] hover:bg-opacity-90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#0077B5]"
+          className="px-6 py-3 bg-[#bed6d1] hover:bg-opacity-90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#bed6d1]"
           onClick={onNext}
         >
           Continue to Skills

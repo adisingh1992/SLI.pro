@@ -438,7 +438,7 @@ export default function QuestionnairePage() {
   if (profileLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <Loader2 className="h-8 w-8 animate-spin text-[#0077B5]" />
+        <Loader2 className="h-8 w-8 animate-spin text-[#bed6d1]" />
       </div>
     );
   }
@@ -447,7 +447,7 @@ export default function QuestionnairePage() {
     <div className="bg-gray-50 min-h-screen">
       <div className="container py-10 px-4 sm:px-6 lg:px-8 max-w-5xl mx-auto">
         <Card className="border-none shadow-md">
-          <CardHeader className="bg-gradient-to-r from-[#0077B5] to-[#70B5F9] text-white rounded-t-lg">
+          <CardHeader className="bg-gradient-to-r from-[#bed6d1] to-[#dcede9] text-white rounded-t-lg">
             <CardTitle className="text-2xl font-bold">Career Development Questionnaire</CardTitle>
             <CardDescription className="text-white opacity-90">
               Help us understand your career journey and aspirations so we can provide personalized guidance.
@@ -462,7 +462,7 @@ export default function QuestionnairePage() {
                     <div
                       className={`w-10 h-10 rounded-full flex items-center justify-center mb-2 ${
                         index + 1 === currentStep
-                          ? "bg-[#0077B5] text-white"
+                          ? "bg-[#bed6d1] text-white"
                           : index + 1 < currentStep
                           ? "bg-green-500 text-white"
                           : "bg-gray-200 text-gray-500"
@@ -488,7 +488,7 @@ export default function QuestionnairePage() {
               </div>
               <div className="mt-2 h-1 bg-gray-200 w-full rounded-full overflow-hidden">
                 <div
-                  className="h-full bg-[#0077B5] transition-all duration-300 ease-in-out"
+                  className="h-full bg-[#bed6d1] transition-all duration-300 ease-in-out"
                   style={{ width: `${(currentStep / totalSteps) * 100}%` }}
                 ></div>
               </div>
@@ -513,7 +513,7 @@ export default function QuestionnairePage() {
                     <Button 
                       type="button"
                       onClick={form.handleSubmit(onSubmit)}
-                      className="w-[120px] bg-[#0077B5] hover:bg-[#006097]"
+                      className="w-[120px] bg-[#bed6d1] hover:bg-[#6c8083]"
                       disabled={questionnaireMutation.isPending}
                     >
                       {questionnaireMutation.isPending ? (
@@ -525,7 +525,7 @@ export default function QuestionnairePage() {
                     <Button 
                       type="button" 
                       onClick={nextStep} 
-                      className="w-[120px] bg-[#0077B5] hover:bg-[#006097]"
+                      className="w-[120px] bg-[#bed6d1] hover:bg-[#6c8083]"
                     >
                       Next
                     </Button>
