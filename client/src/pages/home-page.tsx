@@ -185,36 +185,36 @@ export default function HomePage() {
                   <h2 className="text-lg font-medium text-[#333333] mb-2">
                     Upload the Following Documents and Information
                   </h2>
-                  <div className="text-gray-600 mb-4 space-y-4">
-                    <div className="space-y-3">
-                      <div className="flex items-center">
-                        <span className="font-medium">1:</span>
-                        <span className="ml-2">Most Recent Resume</span>
+                  <div className="text-gray-600 mb-4">
+                    <ul className="space-y-4">
+                      <li className="flex items-center gap-2">
+                        <div className="bg-blue-100 text-blue-700 rounded-full h-5 w-5 flex items-center justify-center text-xs font-bold">1</div>
+                        <span>Most Recent Resume</span>
                         {userProfile.documents?.some(doc => doc.type === 'resume') && (
-                          <CheckCircle className="ml-2 h-4 w-4 text-green-600" />
+                          <CheckCircle className="h-4 w-4 text-green-600" />
                         )}
-                      </div>
+                      </li>
                       
-                      <div>
-                        <div className="flex items-center">
-                          <span className="font-medium">2:</span>
-                          <span className="ml-2">Current LinkedIn Profile PDF</span>
+                      <li className="space-y-2">
+                        <div className="flex items-center gap-2">
+                          <div className="bg-blue-100 text-blue-700 rounded-full h-5 w-5 flex items-center justify-center text-xs font-bold">2</div>
+                          <span>Current LinkedIn Profile PDF</span>
                           {userProfile.documents?.some(doc => doc.type === 'linkedin') && (
-                            <CheckCircle className="ml-2 h-4 w-4 text-green-600" />
+                            <CheckCircle className="h-4 w-4 text-green-600" />
                           )}
                         </div>
-                        <div className="ml-6 mt-1 text-sm text-gray-600">
-                          <div className="flex items-baseline">
-                            <span className="font-medium text-xs">2a:</span>
-                            <span className="ml-1">On your profile, below your headline click "Resources"</span>
-                          </div>
-                          <div className="flex items-baseline">
-                            <span className="font-medium text-xs">2b:</span>
-                            <span className="ml-1">Save to PDF</span>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
+                        <ul className="ml-7 space-y-1">
+                          <li className="flex items-center text-sm gap-1.5">
+                            <div className="bg-blue-50 text-blue-700 rounded-full h-4 w-4 flex items-center justify-center text-xs font-bold">a</div>
+                            <span>On your profile, below your headline click "Resources"</span>
+                          </li>
+                          <li className="flex items-center text-sm gap-1.5">
+                            <div className="bg-blue-50 text-blue-700 rounded-full h-4 w-4 flex items-center justify-center text-xs font-bold">b</div>
+                            <span>Save to PDF</span>
+                          </li>
+                        </ul>
+                      </li>
+                    </ul>
                   </div>
                   <Button
                     variant="outline"
