@@ -3159,11 +3159,11 @@ export default function QuestionnairePage() {
                 What do you hope to gain from optimizing your professional
                 brand?
               </p>
-              <Textarea
+              <Input
                 id="brandOptimizationGoals"
                 value={brandOptimizationGoals}
                 onChange={(e) => setBrandOptimizationGoals(e.target.value)}
-                className="min-h-[120px] resize-y w-full"
+                className="w-full"
                 placeholder="Describe your goals for your professional brand..."
               />
             </div>
@@ -3615,11 +3615,11 @@ export default function QuestionnairePage() {
                   etc. An example might be: AI/ML applications in healthcare
                   delivery, ESG integration in private equity
                 </p>
-                <Textarea
+                <Input
                   id="professionalAreas"
                   value={professionalAreas}
                   onChange={(e) => setProfessionalAreas(e.target.value)}
-                  className="min-h-[120px] resize-y w-full"
+                  className="w-full"
                   placeholder="Describe your professional focus areas..."
                 />
               </div>
@@ -4435,11 +4435,11 @@ export default function QuestionnairePage() {
                 <p className="text-sm text-gray-500 mb-3">
                   What roles, industries, or impact do you want to have?
                 </p>
-                <Textarea
+                <Input
                   id="careerGoals"
                   value={careerGoals}
                   onChange={(e) => setCareerGoals(e.target.value)}
-                  className="min-h-[120px] resize-y w-full"
+                  className="w-full"
                   placeholder="Describe your career goals..."
                 />
               </div>
@@ -4699,11 +4699,11 @@ export default function QuestionnairePage() {
                   Please provide any additional information that might be
                   relevant
                 </p>
-                <Textarea
+                <Input
                   id="additionalInfo"
                   value={additionalInfo}
                   onChange={(e) => setAdditionalInfo(e.target.value)}
-                  className="min-h-[150px] resize-y w-full"
+                  className="w-full"
                   placeholder="Share any additional thoughts, experiences, or information about your professional journey that you'd like us to know..."
                 />
               </div>
