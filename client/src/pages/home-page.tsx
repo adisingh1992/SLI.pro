@@ -173,6 +173,41 @@ export default function HomePage() {
               </div>
             </div>
           )}
+          
+          {/* Document Upload Section - Only visible when questionnaire is completed */}
+          {userProfile?.questionnaire && !userProfile.questionnaire.isDraft && (
+            <div className="mt-6 bg-[#f7f9ff] border border-blue-100 rounded-lg p-6">
+              <div className="flex items-start">
+                <div className="p-3 rounded-full bg-blue-100 text-blue-600 mr-4">
+                  <FileText className="h-6 w-6" />
+                </div>
+                <div className="flex-1">
+                  <h2 className="text-lg font-medium text-[#333333] mb-2">
+                    Upload the Following Documents and Information
+                  </h2>
+                  <p className="text-gray-600 mb-4">
+                    <ol className="list-decimal pl-5 space-y-2">
+                      <li>Most Recent Resume</li>
+                      <li>Current LinkedIn Profile PDF
+                        <ul className="list-disc pl-5 pt-1 space-y-1">
+                          <li className="text-sm">On your profile, below your headline click "Resources"</li>
+                          <li className="text-sm">Save to PDF</li>
+                        </ul>
+                      </li>
+                    </ol>
+                  </p>
+                  <Button
+                    variant="outline"
+                    className="flex items-center border-blue-300 text-blue-700 hover:bg-blue-50"
+                    onClick={() => navigate("/profile?tab=documents")}
+                  >
+                    Upload Documents
+                    <FileText className="ml-2 h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Coaching Session Section */}
           <div className="mt-6 bg-[#f0fff7] border border-green-200 rounded-lg p-6">
