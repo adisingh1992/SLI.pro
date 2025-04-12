@@ -31,6 +31,10 @@ export default function HomePage() {
     queryKey: ["/api/user/profile"],
     enabled: !!user,
   });
+  
+  // Check if user has uploaded the required documents (resume and linkedin profile)
+  const hasRequiredDocuments = userProfile?.documents?.some(doc => doc.type === 'resume') &&
+                               userProfile?.documents?.some(doc => doc.type === 'linkedin');
 
   useEffect(() => {
     if (isError && error) {
@@ -133,47 +137,6 @@ export default function HomePage() {
             </div>
           </div>
 
-          {/* Profile View Section - Only visible when questionnaire is present (completed or draft) */}
-          {userProfile?.questionnaire && (
-            <div className="mt-6 bg-[#f5faf9] border border-[#dcede9] rounded-lg p-6">
-              <div className="flex items-start">
-                <div className="p-3 rounded-full bg-[#dcede9] text-[#6c8083] mr-4">
-                  <User className="h-6 w-6" />
-                </div>
-                <div className="flex-1">
-                  <h2 className="text-lg font-medium text-[#333333] mb-2">
-                    Your Professional Profile
-                  </h2>
-                  <p className="text-gray-600 mb-4">
-                    Review and manage your professional profile details and
-                    uploaded documents. Your profile reflects information from
-                    {userProfile.questionnaire.isDraft === true
-                      ? " your draft questionnaire."
-                      : " your completed questionnaire."
-                    }
-                  </p>
-                  <div className="flex flex-wrap gap-3">
-                    <Button
-                      className="flex items-center bg-[#bed6d1] hover:bg-[#6c8083]"
-                      onClick={() => navigate("/profile")}
-                    >
-                      View Profile
-                      <ArrowRight className="ml-2 h-4 w-4" />
-                    </Button>
-                    <Button
-                      variant="outline"
-                      className="flex items-center border-[#bed6d1] text-[#6c8083] hover:bg-[#f5faf9]"
-                      onClick={() => navigate("/profile?tab=documents")}
-                    >
-                      View Documents
-                      <FileText className="ml-2 h-4 w-4" />
-                    </Button>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-          
           {/* Document Upload Section - Only visible when questionnaire is completed */}
           {userProfile?.questionnaire && userProfile.questionnaire.isDraft !== true && (
             <div className="mt-6 bg-[#f7f9ff] border border-blue-100 rounded-lg p-6">
@@ -228,6 +191,47 @@ export default function HomePage() {
               </div>
             </div>
           )}
+          
+          {/* Profile View Section - Only visible when questionnaire is present (completed or draft) */}
+          {userProfile?.questionnaire && (
+            <div className="mt-6 bg-[#f5faf9] border border-[#dcede9] rounded-lg p-6">
+              <div className="flex items-start">
+                <div className="p-3 rounded-full bg-[#dcede9] text-[#6c8083] mr-4">
+                  <User className="h-6 w-6" />
+                </div>
+                <div className="flex-1">
+                  <h2 className="text-lg font-medium text-[#333333] mb-2">
+                    Your Professional Profile
+                  </h2>
+                  <p className="text-gray-600 mb-4">
+                    Review and manage your professional profile details and
+                    uploaded documents. Your profile reflects information from
+                    {userProfile.questionnaire.isDraft === true
+                      ? " your draft questionnaire."
+                      : " your completed questionnaire."
+                    }
+                  </p>
+                  <div className="flex flex-wrap gap-3">
+                    <Button
+                      className="flex items-center bg-[#bed6d1] hover:bg-[#6c8083]"
+                      onClick={() => navigate("/profile")}
+                    >
+                      View Profile
+                      <ArrowRight className="ml-2 h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="outline"
+                      className="flex items-center border-[#bed6d1] text-[#6c8083] hover:bg-[#f5faf9]"
+                      onClick={() => navigate("/profile?tab=documents")}
+                    >
+                      View Documents
+                      <FileText className="ml-2 h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Coaching Session Section */}
           <div className="mt-6 bg-[#f0fff7] border border-green-200 rounded-lg p-6">
@@ -243,7 +247,9 @@ export default function HomePage() {
                   {userProfile?.questionnaire
                     ? (userProfile.questionnaire.isDraft === true)
                       ? "Complete your questionnaire to unlock the ability to schedule a coaching session."
-                      : "Book a one-on-one coaching session to discuss your career goals, get personalized advice, and develop strategies for professional growth."
+                      : !hasRequiredDocuments 
+                        ? "Upload your required documents (Resume and LinkedIn Profile) before scheduling a coaching session."
+                        : "Book a one-on-one coaching session to discuss your career goals, get personalized advice, and develop strategies for professional growth."
                     : "Complete the initial questionnaire first to unlock the ability to schedule a coaching session."}
                 </p>
                 <Button
@@ -251,16 +257,22 @@ export default function HomePage() {
                   onClick={() =>
                     window.open("https://calendly.com/dcara-sli/haas", "_blank")
                   }
-                  disabled={!userProfile?.questionnaire || (userProfile?.questionnaire?.isDraft === true)}
+                  disabled={!userProfile?.questionnaire || (userProfile?.questionnaire?.isDraft === true) || !hasRequiredDocuments}
                 >
                   Schedule Coaching Session
                   <ArrowRight className="ml-2 h-4 w-4" />
                 </Button>
-                {(!userProfile?.questionnaire || (userProfile?.questionnaire?.isDraft === true)) && (
+                {(
+                  !userProfile?.questionnaire || 
+                  (userProfile?.questionnaire?.isDraft === true) || 
+                  !hasRequiredDocuments
+                ) && (
                   <p className="text-sm text-gray-500 italic mt-2">
                     <span className="text-orange-500 font-medium">*</span> You
-                    must complete the questionnaire before scheduling a coaching
-                    session
+                    must {!userProfile?.questionnaire ? "complete the questionnaire" : 
+                         (userProfile?.questionnaire?.isDraft === true) ? "complete the questionnaire" : 
+                         !hasRequiredDocuments ? "upload your Resume and LinkedIn Profile" : ""}
+                    {" "}before scheduling a coaching session
                   </p>
                 )}
               </div>
