@@ -137,8 +137,8 @@ export default function HomePage() {
             </div>
           </div>
 
-          {/* Document Upload Section - Only visible when questionnaire is completed */}
-          {userProfile?.questionnaire && userProfile.questionnaire.isDraft !== true && (
+          {/* Document Upload Section - Only visible when questionnaire is completed and not all required documents are uploaded */}
+          {userProfile?.questionnaire && userProfile.questionnaire.isDraft !== true && !hasRequiredDocuments && (
             <div className="mt-6 bg-[#f7f9ff] border border-blue-100 rounded-lg p-6">
               <div className="flex items-start">
                 <div className="p-3 rounded-full bg-blue-100 text-blue-600 mr-4">
@@ -185,6 +185,33 @@ export default function HomePage() {
                     onClick={() => navigate("/profile?tab=documents")}
                   >
                     Upload Documents
+                    <FileText className="ml-2 h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+            </div>
+          )}
+          
+          {/* Document Success Section - Visible when all required documents are uploaded */}
+          {userProfile?.questionnaire && userProfile.questionnaire.isDraft !== true && hasRequiredDocuments && (
+            <div className="mt-6 bg-[#f0fff7] border border-green-200 rounded-lg p-6">
+              <div className="flex items-start">
+                <div className="p-3 rounded-full bg-green-100 text-green-600 mr-4">
+                  <CheckCircle className="h-6 w-6" />
+                </div>
+                <div className="flex-1">
+                  <h2 className="text-lg font-medium text-[#333333] mb-2">
+                    Documents Successfully Uploaded
+                  </h2>
+                  <p className="text-gray-600 mb-4">
+                    Thank you for uploading your resume and LinkedIn profile. Your professional documents have been received and are ready for review.
+                  </p>
+                  <Button
+                    variant="outline"
+                    className="flex items-center border-green-300 text-green-700 hover:bg-green-50"
+                    onClick={() => navigate("/profile?tab=documents")}
+                  >
+                    View Your Documents
                     <FileText className="ml-2 h-4 w-4" />
                   </Button>
                 </div>
