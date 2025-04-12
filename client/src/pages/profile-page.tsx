@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { UserProfile } from "@shared/schema";
 import { useToast } from "@/hooks/use-toast";
 import { useLocation } from "wouter";
+import { scrollToTop } from "@/lib/utils";
 import {
   Loader2,
   Edit,

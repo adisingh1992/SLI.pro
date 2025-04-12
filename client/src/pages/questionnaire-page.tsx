@@ -13,6 +13,7 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useLocation } from "wouter";
 import { Loader2, CheckCircle } from "lucide-react";
+import { scrollToTop } from "@/lib/utils";
 
 // Industry options array
 const INDUSTRY_OPTIONS = [
@@ -158,6 +159,7 @@ export default function QuestionnairePage() {
       });
       // Navigate to profile page after successful submission
       setTimeout(() => {
+        scrollToTop();
         navigate("/profile");
       }, 1500);
     },

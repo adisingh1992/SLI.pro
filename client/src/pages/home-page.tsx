@@ -251,7 +251,10 @@ export default function HomePage() {
                   <div className="flex flex-wrap gap-3">
                     <Button
                       className="flex items-center bg-[#bed6d1] hover:bg-[#6c8083]"
-                      onClick={() => navigate("/profile")}
+                      onClick={() => {
+                        scrollToTop();
+                        navigate("/profile");
+                      }}
                     >
                       View Profile
                       <ArrowRight className="ml-2 h-4 w-4" />
@@ -259,7 +262,10 @@ export default function HomePage() {
                     <Button
                       variant="outline"
                       className="flex items-center border-[#bed6d1] text-[#6c8083] hover:bg-[#f5faf9]"
-                      onClick={() => navigate("/profile?tab=documents")}
+                      onClick={() => {
+                        scrollToTop();
+                        navigate("/profile?tab=documents");
+                      }}
                     >
                       View Documents
                       <FileText className="ml-2 h-4 w-4" />
