@@ -3,7 +3,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
 import { toast } from "@/hooks/use-toast";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -17,12 +17,12 @@ export default function QuestionnairePage() {
   const totalSteps = 3;
   
   // Refs for form fields to maintain independent values
-  const backgroundRef = useRef<HTMLTextAreaElement>(null);
-  const goalsRef = useRef<HTMLTextAreaElement>(null);
-  const aspirationsRef = useRef<HTMLTextAreaElement>(null);
-  const challengesRef = useRef<HTMLTextAreaElement>(null);
-  const interestsRef = useRef<HTMLTextAreaElement>(null);
-  const timeframeRef = useRef<HTMLTextAreaElement>(null);
+  const backgroundRef = useRef<HTMLInputElement>(null);
+  const goalsRef = useRef<HTMLInputElement>(null);
+  const aspirationsRef = useRef<HTMLInputElement>(null);
+  const challengesRef = useRef<HTMLInputElement>(null);
+  const interestsRef = useRef<HTMLInputElement>(null);
+  const timeframeRef = useRef<HTMLInputElement>(null);
 
   // State to track if current step fields are valid
   const [isCurrentStepValid, setIsCurrentStepValid] = useState(false);
@@ -165,11 +165,11 @@ export default function QuestionnairePage() {
               <p className="text-sm text-gray-500 mb-3">
                 Tell us about your professional journey so far. What roles have you held and in which industries?
               </p>
-              <Textarea
+              <Input
                 id="background"
                 ref={backgroundRef}
                 onChange={handleInputChange}
-                className="min-h-[120px] resize-y w-full"
+                className="w-full"
                 placeholder="Share your professional background and experience..."
               />
             </div>
@@ -181,11 +181,11 @@ export default function QuestionnairePage() {
               <p className="text-sm text-gray-500 mb-3">
                 What are your short-term and long-term career objectives?
               </p>
-              <Textarea
+              <Input
                 id="goals"
                 ref={goalsRef}
                 onChange={handleInputChange}
-                className="min-h-[120px] resize-y w-full"
+                className="w-full"
                 placeholder="Describe your career goals..."
               />
             </div>
@@ -201,11 +201,11 @@ export default function QuestionnairePage() {
               <p className="text-sm text-gray-500 mb-3">
                 What do you hope to achieve in your career? What impact do you want to make?
               </p>
-              <Textarea
+              <Input
                 id="aspirations"
                 ref={aspirationsRef}
                 onChange={handleInputChange}
-                className="min-h-[120px] resize-y w-full"
+                className="w-full"
                 placeholder="Describe your professional aspirations..."
               />
             </div>
@@ -217,11 +217,11 @@ export default function QuestionnairePage() {
               <p className="text-sm text-gray-500 mb-3">
                 What obstacles or challenges are you currently facing in your career?
               </p>
-              <Textarea
+              <Input
                 id="challenges"
                 ref={challengesRef}
                 onChange={handleInputChange}
-                className="min-h-[120px] resize-y w-full"
+                className="w-full"
                 placeholder="Describe the challenges you're facing..."
               />
             </div>
@@ -237,11 +237,11 @@ export default function QuestionnairePage() {
               <p className="text-sm text-gray-500 mb-3">
                 What areas, technologies, or disciplines are you most interested in?
               </p>
-              <Textarea
+              <Input
                 id="interests"
                 ref={interestsRef}
                 onChange={handleInputChange}
-                className="min-h-[120px] resize-y w-full"
+                className="w-full"
                 placeholder="Share your professional interests..."
               />
             </div>
@@ -253,11 +253,11 @@ export default function QuestionnairePage() {
               <p className="text-sm text-gray-500 mb-3">
                 What is your timeframe for achieving your next career milestone? Are you looking for immediate changes or planning for the future?
               </p>
-              <Textarea
+              <Input
                 id="timeframe"
                 ref={timeframeRef}
                 onChange={handleInputChange}
-                className="min-h-[120px] resize-y w-full"
+                className="w-full"
                 placeholder="Describe your timeframe..."
               />
             </div>

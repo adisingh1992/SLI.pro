@@ -2327,11 +2327,11 @@ export default function QuestionnairePage() {
                 )}
               </div>
 
-              <Textarea
+              <Input
                 id="goals"
                 value={goals}
                 onChange={(e) => setGoals(e.target.value)}
-                className="min-h-[80px] resize-y w-full mt-4"
+                className="w-full mt-4"
                 placeholder="Add any additional details about your social media presence..."
               />
             </div>
