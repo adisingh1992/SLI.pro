@@ -185,17 +185,28 @@ export default function HomePage() {
                   <h2 className="text-lg font-medium text-[#333333] mb-2">
                     Upload the Following Documents and Information
                   </h2>
-                  <p className="text-gray-600 mb-4">
+                  <div className="text-gray-600 mb-4">
                     <ol className="list-decimal pl-5 space-y-2">
-                      <li>Most Recent Resume</li>
-                      <li>Current LinkedIn Profile PDF
+                      <li className="flex items-center">
+                        <span>Most Recent Resume</span>
+                        {userProfile.documents?.some(doc => doc.type === 'resume') && (
+                          <CheckCircle className="ml-2 h-4 w-4 text-green-600" />
+                        )}
+                      </li>
+                      <li>
+                        <div className="flex items-center">
+                          <span>Current LinkedIn Profile PDF</span>
+                          {userProfile.documents?.some(doc => doc.type === 'linkedin') && (
+                            <CheckCircle className="ml-2 h-4 w-4 text-green-600" />
+                          )}
+                        </div>
                         <ul className="list-disc pl-5 pt-1 space-y-1">
                           <li className="text-sm">On your profile, below your headline click "Resources"</li>
                           <li className="text-sm">Save to PDF</li>
                         </ul>
                       </li>
                     </ol>
-                  </p>
+                  </div>
                   <Button
                     variant="outline"
                     className="flex items-center border-blue-300 text-blue-700 hover:bg-blue-50"
@@ -221,7 +232,7 @@ export default function HomePage() {
                 </h2>
                 <p className="text-gray-600 mb-4">
                   {userProfile?.questionnaire
-                    ? userProfile.questionnaire.isDraft
+                    ? (userProfile.questionnaire.isDraft === true)
                       ? "Complete your questionnaire to unlock the ability to schedule a coaching session."
                       : "Book a one-on-one coaching session to discuss your career goals, get personalized advice, and develop strategies for professional growth."
                     : "Complete the initial questionnaire first to unlock the ability to schedule a coaching session."}
@@ -231,12 +242,12 @@ export default function HomePage() {
                   onClick={() =>
                     window.open("https://calendly.com/dcara-sli/haas", "_blank")
                   }
-                  disabled={!userProfile?.questionnaire || userProfile?.questionnaire?.isDraft}
+                  disabled={!userProfile?.questionnaire || (userProfile?.questionnaire?.isDraft === true)}
                 >
                   Schedule Coaching Session
                   <ArrowRight className="ml-2 h-4 w-4" />
                 </Button>
-                {(!userProfile?.questionnaire || userProfile?.questionnaire?.isDraft) && (
+                {(!userProfile?.questionnaire || (userProfile?.questionnaire?.isDraft === true)) && (
                   <p className="text-sm text-gray-500 italic mt-2">
                     <span className="text-orange-500 font-medium">*</span> You
                     must complete the questionnaire before scheduling a coaching
