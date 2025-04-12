@@ -74,7 +74,7 @@ export default function HomePage() {
           <div
             className={
               userProfile?.questionnaire
-                ? userProfile.questionnaire.isDraft
+                ? userProfile.questionnaire.isDraft === true
                   ? "bg-[#fffbeb] border border-amber-200 rounded-lg p-6"
                   : "bg-[#f5faf9] border border-[#dcede9] rounded-lg p-6"
                 : "bg-[#fff7f0] border border-orange-200 rounded-lg p-6"
@@ -84,14 +84,14 @@ export default function HomePage() {
               <div
                 className={
                   userProfile?.questionnaire
-                    ? userProfile.questionnaire.isDraft
+                    ? userProfile.questionnaire.isDraft === true
                       ? "p-3 rounded-full bg-amber-100 text-amber-600 mr-4"
                       : "p-3 rounded-full bg-[#dcede9] text-[#bed6d1] mr-4"
                     : "p-3 rounded-full bg-orange-100 text-orange-500 mr-4"
                 }
               >
                 {userProfile?.questionnaire 
-                  ? userProfile.questionnaire.isDraft 
+                  ? userProfile.questionnaire.isDraft === true
                     ? <FileQuestion className="h-6 w-6" />
                     : <CheckCircle className="h-6 w-6" />
                   : <FileQuestion className="h-6 w-6" />
@@ -100,14 +100,14 @@ export default function HomePage() {
               <div className="flex-1">
                 <h2 className="text-lg font-medium text-[#333333] mb-2">
                   {userProfile?.questionnaire
-                    ? userProfile.questionnaire.isDraft
+                    ? userProfile.questionnaire.isDraft === true
                       ? "Questionnaire Draft Saved"
                       : "Initial Questionnaire Completed"
                     : "Complete the Professional Branding Assessment"}
                 </h2>
                 <p className="text-gray-600 mb-4">
                   {userProfile?.questionnaire
-                    ? userProfile.questionnaire.isDraft
+                    ? userProfile.questionnaire.isDraft === true
                       ? "You have a saved draft of your questionnaire. Continue where you left off to complete your professional branding assessment."
                       : "Thank you for completing the questionnaire. This information helps us understand your professional goals and aspirations better."
                     : "This comprehensive assessment helps customize your personal branding strategy and provide information to shape your Single Lasting Impression (SLI). The assessment will take ~5 minutes to complete"}
@@ -115,7 +115,7 @@ export default function HomePage() {
                 <Button
                   className={
                     userProfile?.questionnaire
-                      ? userProfile.questionnaire.isDraft
+                      ? userProfile.questionnaire.isDraft === true
                         ? "flex items-center bg-amber-500 hover:bg-amber-600"
                         : "flex items-center bg-[#bed6d1] hover:bg-opacity-90"
                       : "flex items-center bg-orange-500 hover:bg-opacity-90"
@@ -123,7 +123,7 @@ export default function HomePage() {
                   onClick={() => navigate("/questionnaire")}
                 >
                   {userProfile?.questionnaire
-                    ? userProfile.questionnaire.isDraft
+                    ? userProfile.questionnaire.isDraft === true
                       ? "Continue Questionnaire"
                       : "Review Questionnaire"
                     : "Start Questionnaire"}
@@ -147,7 +147,7 @@ export default function HomePage() {
                   <p className="text-gray-600 mb-4">
                     Review and manage your professional profile details and
                     uploaded documents. Your profile reflects information from
-                    {userProfile.questionnaire.isDraft 
+                    {userProfile.questionnaire.isDraft === true
                       ? " your draft questionnaire."
                       : " your completed questionnaire."
                     }
@@ -175,7 +175,7 @@ export default function HomePage() {
           )}
           
           {/* Document Upload Section - Only visible when questionnaire is completed */}
-          {userProfile?.questionnaire && !userProfile.questionnaire.isDraft && (
+          {userProfile?.questionnaire && userProfile.questionnaire.isDraft !== true && (
             <div className="mt-6 bg-[#f7f9ff] border border-blue-100 rounded-lg p-6">
               <div className="flex items-start">
                 <div className="p-3 rounded-full bg-blue-100 text-blue-600 mr-4">
