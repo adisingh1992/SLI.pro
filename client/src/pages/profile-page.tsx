@@ -74,6 +74,7 @@ export default function ProfilePage() {
   }
 
   if (!userProfile) {
+    scrollToTop();
     navigate("/profile/create");
     return null;
   }
@@ -100,7 +101,10 @@ export default function ProfilePage() {
                   </div>
                 </div>
                 <Button
-                  onClick={() => navigate("/")}
+                  onClick={() => {
+                    scrollToTop();
+                    navigate("/");
+                  }}
                   variant="outline"
                   className="bg-white/10 border-[#6c8083] hover:bg-white/20 text-white"
                 >
@@ -174,7 +178,10 @@ export default function ProfilePage() {
                               Career Development Summary
                             </h2>
                             <Button
-                              onClick={() => navigate("/questionnaire")}
+                              onClick={() => {
+                                scrollToTop();
+                                navigate("/questionnaire");
+                              }}
                               variant="outline"
                               className="px-3 py-1 h-auto text-sm border-[#bed6d1] text-[#bed6d1] hover:bg-[#bed6d1] hover:text-white"
                             >
