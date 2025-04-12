@@ -15,6 +15,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { useEffect } from "react";
 import NavBar from "@/components/nav-bar";
+import { scrollToTop } from "@/lib/utils";
 
 export default function HomePage() {
   const { user } = useAuth();
@@ -124,7 +125,10 @@ export default function HomePage() {
                         : "flex items-center bg-[#bed6d1] hover:bg-opacity-90"
                       : "flex items-center bg-orange-500 hover:bg-opacity-90"
                   }
-                  onClick={() => navigate("/questionnaire")}
+                  onClick={() => {
+                    scrollToTop();
+                    navigate("/questionnaire");
+                  }}
                 >
                   {userProfile?.questionnaire
                     ? userProfile.questionnaire.isDraft === true
@@ -182,7 +186,10 @@ export default function HomePage() {
                   <Button
                     variant="outline"
                     className="flex items-center border-blue-300 text-blue-700 hover:bg-blue-50"
-                    onClick={() => navigate("/profile?tab=documents")}
+                    onClick={() => {
+                      scrollToTop();
+                      navigate("/profile?tab=documents");
+                    }}
                   >
                     Upload Documents
                     <FileText className="ml-2 h-4 w-4" />
@@ -209,7 +216,10 @@ export default function HomePage() {
                   <Button
                     variant="outline"
                     className="flex items-center border-green-300 text-green-700 hover:bg-green-50"
-                    onClick={() => navigate("/profile?tab=documents")}
+                    onClick={() => {
+                      scrollToTop();
+                      navigate("/profile?tab=documents");
+                    }}
                   >
                     View Your Documents
                     <FileText className="ml-2 h-4 w-4" />
