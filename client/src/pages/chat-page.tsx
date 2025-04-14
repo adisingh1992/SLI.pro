@@ -51,6 +51,8 @@ export default function ChatPage() {
   const [mentionedBusinessSchool, setMentionedBusinessSchool] = useState(false);
   // Track if the business school question has been asked
   const [askedBusinessSchoolQuestion, setAskedBusinessSchoolQuestion] = useState(false);
+  // Track if the "Continue" button should be shown
+  const [showContinueButton, setShowContinueButton] = useState(false);
   
   // Reference for auto scrolling
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -398,29 +400,15 @@ End by thanking them for their time and explaining that this information will he
         const determineNextQuestion = () => {
           // If we're at question 3 (index 2) and business school was mentioned but not yet asked about
           if (currentQuestionNumber === 3 && mentionedBusinessSchool && !askedBusinessSchoolQuestion) {
-            // Ask the business school specific question
-            setTimeout(() => {
-              setMessageHistory(prevHistory => [
-                ...prevHistory,
-                { role: "assistant", content: businessSchoolQuestion }
-              ]);
-              setAskedBusinessSchoolQuestion(true);
-            }, 1000);
+            // Add a button for the user to explicitly continue the conversation
+            setShowContinueButton(true);
             return;
           }
           
           // If we still have standard questions to ask
           if (currentQuestionNumber > 0 && currentQuestionNumber < guidedQuestions.length) {
-            setTimeout(() => {
-              // Add the next question to the message history
-              setMessageHistory(prevHistory => [
-                ...prevHistory,
-                { role: "assistant", content: guidedQuestions[currentQuestionNumber] }
-              ]);
-              
-              // Increment the question counter
-              setCurrentQuestionNumber(currentQuestionNumber + 1);
-            }, 1000); // Small delay for better UX
+            // Add a button for the user to explicitly continue the conversation
+            setShowContinueButton(true);
           }
         };
         
@@ -486,6 +474,35 @@ End by thanking them for their time and explaining that this information will he
       prompt: newPromptContent,
       systemPrompt: newPromptSystemPrompt || undefined,
     });
+  };
+  
+  // Handle continue button click to show the next question
+  const handleContinueClick = () => {
+    // Hide the continue button
+    setShowContinueButton(false);
+    
+    // If we're at question 3 (index 2) and business school was mentioned but not yet asked about
+    if (currentQuestionNumber === 3 && mentionedBusinessSchool && !askedBusinessSchoolQuestion) {
+      // Ask the business school specific question
+      setMessageHistory(prevHistory => [
+        ...prevHistory,
+        { role: "assistant", content: businessSchoolQuestion }
+      ]);
+      setAskedBusinessSchoolQuestion(true);
+      return;
+    }
+    
+    // If we still have standard questions to ask
+    if (currentQuestionNumber > 0 && currentQuestionNumber < guidedQuestions.length) {
+      // Add the next question to the message history
+      setMessageHistory(prevHistory => [
+        ...prevHistory,
+        { role: "assistant", content: guidedQuestions[currentQuestionNumber] }
+      ]);
+      
+      // Increment the question counter
+      setCurrentQuestionNumber(currentQuestionNumber + 1);
+    }
   };
 
   return (
@@ -681,6 +698,18 @@ End by thanking them for their time and explaining that this information will he
                         {isLoading && (
                           <div className="flex justify-center py-4">
                             <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                          </div>
+                        )}
+                        
+                        {/* Show Continue button when it's time for the next question */}
+                        {showContinueButton && !activeConversationId && (
+                          <div className="flex justify-center mt-6 mb-2">
+                            <Button 
+                              onClick={handleContinueClick}
+                              className="bg-primary hover:bg-primary/90"
+                            >
+                              Continue to Next Question
+                            </Button>
                           </div>
                         )}
                         
