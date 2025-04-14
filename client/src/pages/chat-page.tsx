@@ -489,11 +489,7 @@ End by thanking them for their time and explaining that this information will he
   };
 
   return (
-    <div className="container mx-auto py-6">
-      <div className="flex justify-center items-center mb-8">
-        <h1 className="text-3xl font-bold">SLI.pro Assistant</h1>
-      </div>
-
+    <div className="container mx-auto">
       <div className="grid grid-cols-1 gap-6">
         {/* Chat area */}
         <div className="col-span-1">
@@ -512,7 +508,7 @@ End by thanking them for their time and explaining that this information will he
               <CardDescription>
                 {activeConversationId
                   ? "Continue your conversation with SLI.pro"
-                  : "Let's prepare for your upcoming coaching session"}
+                  : "Please answer a few questions before scheduling your coaching session"}
               </CardDescription>
             </CardHeader>
             <CardContent className="flex-grow overflow-y-auto">
