@@ -365,9 +365,16 @@ End by thanking them for their time and explaining that this information will he
         contextIntro += "Documents Uploaded:\n\n";
         userProfile.documents.forEach(doc => {
           contextIntro += `--- DOCUMENT: ${doc.name} (${doc.type}) ---\n`;
-          // Include the full document content
-          if (doc.content) {
-            contextIntro += `${doc.content}\n`;
+          // Include the full document content from fileData
+          if (doc.fileData) {
+            try {
+              // Attempt to decode if it's base64 encoded (assuming it's text, not binary)
+              const fileContent = doc.fileData;
+              contextIntro += `${fileContent}\n`;
+            } catch (error) {
+              // If we can't parse it, at least note that the document exists
+              contextIntro += `[Document content available but in a format that cannot be displayed directly]\n`;
+            }
           }
           contextIntro += "--- END DOCUMENT ---\n\n";
         });
