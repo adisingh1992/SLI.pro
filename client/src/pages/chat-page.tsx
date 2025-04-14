@@ -61,7 +61,12 @@ I'd love to understand any specific challenges or opportunities you're facing ri
     `Let's build on that with the next question:
 
 2. What motivated you to invest in professional branding at this particular moment in your career?
-What outcomes are you hoping to achieve from this process?`
+What outcomes are you hoping to achieve from this process?`,
+    
+    `Thanks for walking through that with me. Let's shift gears just a bit:
+
+3. Looking ahead, which functional area do you see yourself best fitting into?
+Would you say it's still primarily product/engineering, or do you see overlap with areas like operations, leadership, or something else entirely?`
   ];
 
   // Get all predefined prompts
