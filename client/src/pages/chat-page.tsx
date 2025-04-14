@@ -46,8 +46,11 @@ export default function ChatPage() {
     queryKey: ["/api/chat/prompts"],
     queryFn: async () => {
       try {
-        const response = await apiRequest<ChatPrompt[]>("/api/chat/prompts");
-        return response;
+        const response = await fetch("/api/chat/prompts", {
+          credentials: "include"
+        });
+        if (!response.ok) throw new Error(response.statusText);
+        return await response.json();
       } catch (error) {
         console.error("Error fetching prompts:", error);
         return [];
@@ -60,8 +63,11 @@ export default function ChatPage() {
     queryKey: ["/api/chat/conversations"],
     queryFn: async () => {
       try {
-        const response = await apiRequest("/api/chat/conversations");
-        return response;
+        const response = await fetch("/api/chat/conversations", {
+          credentials: "include"
+        });
+        if (!response.ok) throw new Error(response.statusText);
+        return await response.json();
       } catch (error) {
         console.error("Error fetching conversations:", error);
         return [];
@@ -75,8 +81,11 @@ export default function ChatPage() {
     queryFn: async () => {
       if (!activeConversationId) return null;
       try {
-        const response = await apiRequest(`/api/chat/conversations/${activeConversationId}`);
-        return response;
+        const response = await fetch(`/api/chat/conversations/${activeConversationId}`, {
+          credentials: "include"
+        });
+        if (!response.ok) throw new Error(response.statusText);
+        return await response.json();
       } catch (error) {
         console.error("Error fetching conversation:", error);
         return null;
@@ -88,10 +97,14 @@ export default function ChatPage() {
   // Create a new conversation
   const createConversationMutation = useMutation({
     mutationFn: async (title: string) => {
-      return await apiRequest("/api/chat/conversations", {
+      const response = await fetch("/api/chat/conversations", {
         method: "POST",
-        data: { title },
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ title }),
+        credentials: "include"
       });
+      if (!response.ok) throw new Error(response.statusText);
+      return await response.json();
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["/api/chat/conversations"] });
@@ -310,14 +323,14 @@ export default function ChatPage() {
               ) : (
                 <>
                   <Select
-                    value={selectedPromptId?.toString() || ""}
-                    onValueChange={(value) => setSelectedPromptId(parseInt(value) || null)}
+                    value={selectedPromptId?.toString() || "0"}
+                    onValueChange={(value) => setSelectedPromptId(value === "0" ? null : parseInt(value))}
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Select a prompt" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">No prompt</SelectItem>
+                      <SelectItem value="0">No prompt</SelectItem>
                       {prompts.map((prompt) => (
                         <SelectItem key={prompt.id} value={prompt.id.toString()}>
                           {prompt.title}
