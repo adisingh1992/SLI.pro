@@ -284,7 +284,7 @@ export default function HomePage() {
               </div>
               <div className="flex-1">
                 <h2 className="text-lg font-medium text-[#333333] mb-2">
-                  Personal Coaching Session
+                  Schedule your Strategy Session
                 </h2>
                 <p className="text-gray-600 mb-4">
                   {userProfile?.questionnaire
@@ -292,7 +292,7 @@ export default function HomePage() {
                       ? "Complete your questionnaire to unlock the ability to schedule a coaching session."
                       : !hasRequiredDocuments 
                         ? "Upload your required documents (Resume and LinkedIn Profile) before scheduling a coaching session."
-                        : "Book a one-on-one coaching session to discuss your career goals, get personalized advice, and develop strategies for professional growth."
+                        : "Book a session to sharpen your positioning and stand out in a crowded market with clarity and confidence. If you're ready to own your space and attract the right audience, let's get started."
                     : "Complete the initial questionnaire first to unlock the ability to schedule a coaching session."}
                 </p>
                 <Button
