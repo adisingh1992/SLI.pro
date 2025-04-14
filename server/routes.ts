@@ -1,4 +1,4 @@
-import type { Express } from "express";
+import type { Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { setupAuth } from "./auth";
@@ -11,7 +11,11 @@ import {
   updateProfileSchema,
   insertQuestionnaireSchema,
   insertDocumentSchema,
+  insertChatPromptSchema,
+  insertChatConversationSchema,
+  insertChatMessageSchema,
 } from "@shared/schema";
+import { Anthropic } from "@anthropic-ai/sdk";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Set up authentication routes
@@ -514,6 +518,370 @@ export async function registerRoutes(app: Express): Promise<Server> {
       await storage.deleteDocument(documentId);
       res.sendStatus(204);
     } catch (error) {
+      next(error);
+    }
+  });
+
+  // Chat prompts routes
+  app.get("/api/chat/prompts", isAuthenticated, async (req, res, next) => {
+    try {
+      const prompts = await storage.getChatPrompts();
+      res.json(prompts);
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  app.get("/api/chat/prompts/:id", isAuthenticated, async (req, res, next) => {
+    try {
+      const promptId = parseInt(req.params.id);
+      const prompt = await storage.getChatPrompt(promptId);
+      
+      if (!prompt) {
+        return res.status(404).json({ message: "Chat prompt not found" });
+      }
+      
+      res.json(prompt);
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  app.post("/api/chat/prompts", isAuthenticated, async (req, res, next) => {
+    try {
+      const validationResult = insertChatPromptSchema.safeParse(req.body);
+      
+      if (!validationResult.success) {
+        return res.status(400).json({
+          message: "Validation error",
+          errors: validationResult.error.errors,
+        });
+      }
+
+      const prompt = await storage.createChatPrompt(validationResult.data);
+      res.status(201).json(prompt);
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  app.put("/api/chat/prompts/:id", isAuthenticated, async (req, res, next) => {
+    try {
+      const promptId = parseInt(req.params.id);
+      const prompt = await storage.getChatPrompt(promptId);
+      
+      if (!prompt) {
+        return res.status(404).json({ message: "Chat prompt not found" });
+      }
+      
+      const validationResult = insertChatPromptSchema.partial().safeParse(req.body);
+      if (!validationResult.success) {
+        return res.status(400).json({
+          message: "Validation error",
+          errors: validationResult.error.errors,
+        });
+      }
+      
+      const updatedPrompt = await storage.updateChatPrompt(promptId, validationResult.data);
+      res.json(updatedPrompt);
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  app.delete("/api/chat/prompts/:id", isAuthenticated, async (req, res, next) => {
+    try {
+      const promptId = parseInt(req.params.id);
+      const prompt = await storage.getChatPrompt(promptId);
+      
+      if (!prompt) {
+        return res.status(404).json({ message: "Chat prompt not found" });
+      }
+      
+      await storage.deleteChatPrompt(promptId);
+      res.sendStatus(204);
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  // Chat conversations routes
+  app.get("/api/chat/conversations", isAuthenticated, async (req, res, next) => {
+    try {
+      const conversations = await storage.getChatConversations(req.user.id);
+      res.json(conversations);
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  app.get("/api/chat/conversations/:id", isAuthenticated, async (req, res, next) => {
+    try {
+      const conversationId = parseInt(req.params.id);
+      const conversation = await storage.getChatConversation(conversationId);
+      
+      if (!conversation) {
+        return res.status(404).json({ message: "Conversation not found" });
+      }
+      
+      if (conversation.userId !== req.user.id) {
+        return res.status(403).json({ message: "Unauthorized" });
+      }
+      
+      const conversationWithMessages = await storage.getChatConversationWithMessages(conversationId);
+      res.json(conversationWithMessages);
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  app.post("/api/chat/conversations", isAuthenticated, async (req, res, next) => {
+    try {
+      const validationResult = insertChatConversationSchema.safeParse({
+        ...req.body,
+        userId: req.user.id,
+      });
+      
+      if (!validationResult.success) {
+        return res.status(400).json({
+          message: "Validation error",
+          errors: validationResult.error.errors,
+        });
+      }
+
+      const conversation = await storage.createChatConversation(validationResult.data);
+      res.status(201).json(conversation);
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  app.put("/api/chat/conversations/:id", isAuthenticated, async (req, res, next) => {
+    try {
+      const conversationId = parseInt(req.params.id);
+      const conversation = await storage.getChatConversation(conversationId);
+      
+      if (!conversation) {
+        return res.status(404).json({ message: "Conversation not found" });
+      }
+      
+      if (conversation.userId !== req.user.id) {
+        return res.status(403).json({ message: "Unauthorized" });
+      }
+      
+      const validationResult = insertChatConversationSchema.partial().safeParse(req.body);
+      if (!validationResult.success) {
+        return res.status(400).json({
+          message: "Validation error",
+          errors: validationResult.error.errors,
+        });
+      }
+      
+      const updatedConversation = await storage.updateChatConversation(conversationId, validationResult.data);
+      res.json(updatedConversation);
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  app.delete("/api/chat/conversations/:id", isAuthenticated, async (req, res, next) => {
+    try {
+      const conversationId = parseInt(req.params.id);
+      const conversation = await storage.getChatConversation(conversationId);
+      
+      if (!conversation) {
+        return res.status(404).json({ message: "Conversation not found" });
+      }
+      
+      if (conversation.userId !== req.user.id) {
+        return res.status(403).json({ message: "Unauthorized" });
+      }
+      
+      await storage.deleteChatConversation(conversationId);
+      res.sendStatus(204);
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  // Chat messages routes
+  app.get("/api/chat/conversations/:id/messages", isAuthenticated, async (req, res, next) => {
+    try {
+      const conversationId = parseInt(req.params.id);
+      const conversation = await storage.getChatConversation(conversationId);
+      
+      if (!conversation) {
+        return res.status(404).json({ message: "Conversation not found" });
+      }
+      
+      if (conversation.userId !== req.user.id) {
+        return res.status(403).json({ message: "Unauthorized" });
+      }
+      
+      const messages = await storage.getChatMessages(conversationId);
+      res.json(messages);
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  app.post("/api/chat/conversations/:id/messages", isAuthenticated, async (req, res, next) => {
+    try {
+      const conversationId = parseInt(req.params.id);
+      const conversation = await storage.getChatConversation(conversationId);
+      
+      if (!conversation) {
+        return res.status(404).json({ message: "Conversation not found" });
+      }
+      
+      if (conversation.userId !== req.user.id) {
+        return res.status(403).json({ message: "Unauthorized" });
+      }
+      
+      const validationResult = insertChatMessageSchema.safeParse({
+        ...req.body,
+        conversationId,
+      });
+      
+      if (!validationResult.success) {
+        return res.status(400).json({
+          message: "Validation error",
+          errors: validationResult.error.errors,
+        });
+      }
+
+      const message = await storage.createChatMessage(validationResult.data);
+      
+      // If the message is from the user, generate a response using Claude
+      if (validationResult.data.role === 'user') {
+        try {
+          // Check if ANTHROPIC_API_KEY is available
+          if (!process.env.ANTHROPIC_API_KEY) {
+            return res.status(500).json({ 
+              message: "Claude API key is not configured. Please set the ANTHROPIC_API_KEY environment variable."
+            });
+          }
+          
+          // Get all messages in the conversation
+          const messages = await storage.getChatMessages(conversationId);
+          
+          // Format messages for Claude API
+          const messageHistory = messages.map(msg => ({
+            role: msg.role,
+            content: msg.content
+          }));
+          
+          // Optional system prompt
+          let systemPrompt = "You are a helpful assistant answering questions about professional development, career advancement, and resume building.";
+          
+          // Create Anthropic client
+          const anthropic = new Anthropic({
+            apiKey: process.env.ANTHROPIC_API_KEY
+          });
+          
+          // Call Claude API
+          const response = await anthropic.messages.create({
+            model: "claude-3-opus-20240229",
+            system: systemPrompt,
+            messages: messageHistory,
+            max_tokens: 1000
+          });
+          
+          // Save assistant response to database
+          const assistantMessage = await storage.createChatMessage({
+            conversationId,
+            role: 'assistant',
+            content: response.content[0].text
+          });
+          
+          // Return both user message and Claude response
+          res.status(201).json({
+            userMessage: message,
+            assistantMessage: assistantMessage
+          });
+        } catch (apiError) {
+          console.error("Claude API error:", apiError);
+          // Store the user message even if Claude API fails
+          res.status(201).json({
+            userMessage: message,
+            error: "Failed to generate assistant response"
+          });
+        }
+      } else {
+        // For non-user messages, just return the created message
+        res.status(201).json(message);
+      }
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  // Claude direct communication endpoint with predefined prompts
+  app.post("/api/chat/claude", isAuthenticated, async (req, res, next) => {
+    try {
+      // Check if ANTHROPIC_API_KEY is available
+      if (!process.env.ANTHROPIC_API_KEY) {
+        return res.status(500).json({ 
+          message: "Claude API key is not configured. Please set the ANTHROPIC_API_KEY environment variable."
+        });
+      }
+      
+      // Validate request body
+      const requestSchema = z.object({
+        promptId: z.number().optional(),
+        message: z.string(),
+        customSystemPrompt: z.string().optional()
+      });
+      
+      const validationResult = requestSchema.safeParse(req.body);
+      if (!validationResult.success) {
+        return res.status(400).json({
+          message: "Validation error",
+          errors: validationResult.error.errors,
+        });
+      }
+      
+      const { promptId, message, customSystemPrompt } = validationResult.data;
+      
+      // Get the prompt if promptId is provided
+      let systemPrompt = customSystemPrompt || "You are a helpful assistant answering questions about professional development, career advancement, and resume building.";
+      let promptContent = "";
+      
+      if (promptId) {
+        const prompt = await storage.getChatPrompt(promptId);
+        if (!prompt) {
+          return res.status(404).json({ message: "Prompt not found" });
+        }
+        
+        if (prompt.systemPrompt) {
+          systemPrompt = prompt.systemPrompt;
+        }
+        
+        promptContent = prompt.prompt;
+      }
+      
+      // Create Anthropic client
+      const anthropic = new Anthropic({
+        apiKey: process.env.ANTHROPIC_API_KEY
+      });
+      
+      // Format the user message
+      const userMessage = promptContent ? `${promptContent}\n\nUser input: ${message}` : message;
+      
+      // Call Claude API
+      const response = await anthropic.messages.create({
+        model: "claude-3-opus-20240229",
+        system: systemPrompt,
+        messages: [{ role: "user", content: userMessage }],
+        max_tokens: 2000
+      });
+      
+      // Return Claude response
+      res.json({
+        response: response.content[0].text
+      });
+    } catch (error) {
+      console.error("Claude API error:", error);
       next(error);
     }
   });
