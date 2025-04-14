@@ -31,6 +31,7 @@ import { ChatPrompt } from "@shared/schema";
 export default function ChatPage() {
   const { user } = useAuth();
   const [message, setMessage] = useState("");
+  const [sentMessage, setSentMessage] = useState("");
   const [selectedPromptId, setSelectedPromptId] = useState<number | null>(null);
   const [isCreatingConversation, setIsCreatingConversation] = useState(false);
   const [activeConversationId, setActiveConversationId] = useState<number | null>(null);
@@ -370,7 +371,7 @@ End by thanking them for their time and explaining that this information will he
       
       // Check if the user mentioned business school in their message or response
       const checkForBusinessSchool = () => {
-        const lowerMessage = message.toLowerCase();
+        const lowerMessage = sentMessage.toLowerCase();
         const lowerResponse = data.response.toLowerCase();
         return (
           lowerMessage.includes("business school") || 
@@ -388,7 +389,7 @@ End by thanking them for their time and explaining that this information will he
       // Update the message history with user message and Claude's response
       setMessageHistory(prevHistory => [
         ...prevHistory,
-        { role: "user", content: message },
+        { role: "user", content: sentMessage },
         { role: "assistant", content: data.response }
       ]);
       
@@ -440,15 +441,24 @@ End by thanking them for their time and explaining that this information will he
     event.preventDefault();
     if (!message.trim()) return;
 
+    // Store current message value before clearing it
+    const currentMessage = message;
+    
+    // Store message in state variable to display in UI while clearing input
+    setSentMessage(currentMessage);
+    
+    // Clear the input immediately for better user experience
+    setMessage("");
+
     if (activeConversationId) {
       addMessageMutation.mutate({
         conversationId: activeConversationId,
-        content: message,
+        content: currentMessage,
       });
     } else {
       // Direct Claude API call with selected prompt
       callClaudeMutation.mutate({
-        message,
+        message: currentMessage,
         promptId: selectedPromptId || undefined,
       });
     }
@@ -665,7 +675,7 @@ End by thanking them for their time and explaining that this information will he
                                 )}
                                 <div className="mx-2 p-3 rounded-lg shadow-sm bg-primary text-primary-foreground">
                                   <div className="whitespace-pre-wrap break-words">
-                                    {formatMessageWithLinks(message, true)}
+                                    {formatMessageWithLinks(sentMessage, true)}
                                   </div>
                                 </div>
                               </div>
