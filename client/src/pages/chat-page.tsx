@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
 import {
@@ -51,6 +51,9 @@ export default function ChatPage() {
   // Track if the business school question has been asked
   const [askedBusinessSchoolQuestion, setAskedBusinessSchoolQuestion] = useState(false);
   
+  // Reference for auto scrolling
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+  
   // Predefined conversation flow questions
   const guidedQuestions = [
     `Hi there! I'm SLI.pro's Assistant. Thanks so much for taking the time to chat today.
@@ -91,9 +94,9 @@ Thank you for your time, and we look forward to working with you!`
   // Default system prompt for SLI.pro coaching assistant
   const defaultSystemPrompt = `You are a professional branding consultant for SLI.pro, conducting a preliminary conversation with a client before their coaching session. Your goal is to gather essential information that will maximize the effectiveness of their upcoming coaching call.
   
-Keep your tone warm and conversational, ask one question at a time, and respond thoughtfully to their answers. Avoid sounding like a scripted survey or AI-generated text.
+Keep your tone warm and conversational, ask one question at a time, and respond thoughtfully to their answers. Keep all responses very concise - no more than 4-5 lines. Avoid sounding like a scripted survey or AI-generated text.
 
-After gathering insights about their current situation, motivations, and functional direction, summarize what you've learned and ask if they'd like to add anything else that would be helpful for their coach to know before their session.
+After gathering insights about their current situation, motivations, and functional direction, briefly summarize what you've learned and ask if they'd like to add anything else that would be helpful for their coach to know before their session.
 
 End by thanking them for their time and explaining that this information will help make their coaching session more productive.`;
 
@@ -277,6 +280,13 @@ End by thanking them for their time and explaining that this information will he
     }
   }, [activeConversationId, conversationInitiated, guidedQuestions, prompts]);
   
+  // Auto-scroll to the bottom when messages are added
+  useEffect(() => {
+    if (messagesEndRef.current) {
+      messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
+    }
+  }, [messageHistory, activeConversation]);
+  
   // Direct Claude API call with selected prompt
   const callClaudeMutation = useMutation({
     mutationFn: async ({
@@ -424,148 +434,9 @@ End by thanking them for their time and explaining that this information will he
     <div className="container mx-auto py-6">
       <h1 className="text-3xl font-bold mb-8">Chat with Claude AI</h1>
 
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        {/* Left sidebar */}
-        <div className="md:col-span-1">
-          <Card>
-            <CardHeader>
-              <CardTitle>Conversations</CardTitle>
-              <CardDescription>Start or continue a conversation</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <Button
-                variant="outline"
-                className="w-full justify-start"
-                onClick={() => {
-                  setActiveConversationId(null);
-                  setClaudeResponse(null);
-                  setMessageHistory([]); // Reset message history for new chat
-                  setConversationInitiated(false); // Reset conversation initialization
-                  setCurrentQuestionNumber(0); // Reset question counter
-                  setMentionedBusinessSchool(false); // Reset business school flag
-                  setAskedBusinessSchoolQuestion(false); // Reset business school question flag
-                }}
-              >
-                <Plus className="mr-2 h-4 w-4" />
-                New Chat
-              </Button>
-
-              {conversationsLoading ? (
-                <div className="flex items-center justify-center py-4">
-                  <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-                </div>
-              ) : (
-                <ScrollArea className="h-[300px]">
-                  <div className="space-y-2">
-                    {conversations.map((conversation) => (
-                      <Button
-                        key={conversation.id}
-                        variant={
-                          activeConversationId === conversation.id ? "default" : "ghost"
-                        }
-                        className="w-full justify-start"
-                        onClick={() => setActiveConversationId(conversation.id)}
-                      >
-                        <MessageSquare className="mr-2 h-4 w-4" />
-                        {conversation.title}
-                      </Button>
-                    ))}
-                  </div>
-                </ScrollArea>
-              )}
-            </CardContent>
-          </Card>
-
-          <Card className="mt-6">
-            <CardHeader>
-              <CardTitle>Prompts</CardTitle>
-              <CardDescription>Pre-defined prompts for Claude</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {promptsLoading ? (
-                <div className="flex items-center justify-center py-4">
-                  <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-                </div>
-              ) : (
-                <>
-                  <Select
-                    value={selectedPromptId?.toString() || "0"}
-                    onValueChange={(value) => setSelectedPromptId(value === "0" ? null : parseInt(value))}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select a prompt" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="0">No prompt</SelectItem>
-                      {prompts.map((prompt) => (
-                        <SelectItem key={prompt.id} value={prompt.id.toString()}>
-                          {prompt.title}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-
-                  <Button
-                    variant="outline"
-                    className="w-full"
-                    onClick={() => setIsAddingPrompt(!isAddingPrompt)}
-                  >
-                    {isAddingPrompt ? "Cancel" : "Add New Prompt"}
-                  </Button>
-
-                  {isAddingPrompt && (
-                    <form onSubmit={handleCreatePrompt} className="space-y-3 mt-3">
-                      <div>
-                        <Label htmlFor="prompt-title">Prompt Title</Label>
-                        <Input
-                          id="prompt-title"
-                          value={newPromptTitle}
-                          onChange={(e) => setNewPromptTitle(e.target.value)}
-                          placeholder="Enter prompt title"
-                          required
-                        />
-                      </div>
-                      <div>
-                        <Label htmlFor="prompt-content">Prompt Content</Label>
-                        <Textarea
-                          id="prompt-content"
-                          value={newPromptContent}
-                          onChange={(e) => setNewPromptContent(e.target.value)}
-                          placeholder="Enter the prompt content here..."
-                          rows={4}
-                          required
-                        />
-                      </div>
-                      <div>
-                        <Label htmlFor="system-prompt">System Prompt (Optional)</Label>
-                        <Textarea
-                          id="system-prompt"
-                          value={newPromptSystemPrompt}
-                          onChange={(e) => setNewPromptSystemPrompt(e.target.value)}
-                          placeholder="Enter system prompt (optional)"
-                          rows={3}
-                        />
-                      </div>
-                      <Button
-                        type="submit"
-                        className="w-full"
-                        disabled={createPromptMutation.isPending}
-                      >
-                        {createPromptMutation.isPending && (
-                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        )}
-                        Save Prompt
-                      </Button>
-                    </form>
-                  )}
-                </>
-              )}
-            </CardContent>
-          </Card>
-        </div>
-
+      <div className="grid grid-cols-1 gap-6">
         {/* Chat area */}
-        <div className="md:col-span-3">
+        <div className="col-span-1">
           <Card className="h-full flex flex-col">
             <CardHeader>
               <CardTitle>
@@ -631,6 +502,7 @@ End by thanking them for their time and explaining that this information will he
                           </div>
                         </div>
                       ))}
+                      <div ref={messagesEndRef} />
                     </div>
                   ) : (
                     <div className="flex items-center justify-center h-full text-muted-foreground">
@@ -745,6 +617,9 @@ End by thanking them for their time and explaining that this information will he
                             <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
                           </div>
                         )}
+                        
+                        {/* Invisible element at the end to enable auto-scrolling */}
+                        <div ref={messagesEndRef} />
                       </>
                     )}
                   </div>
