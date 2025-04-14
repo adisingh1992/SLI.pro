@@ -38,6 +38,18 @@ export default function NavBar() {
                 className="h-10 w-auto" 
               />
             </div>
+            {user && (
+              <div className="ml-10 flex items-center space-x-4">
+                <Button 
+                  variant="ghost" 
+                  className="flex items-center space-x-2"
+                  onClick={() => navigate("/chat")}
+                >
+                  <MessageSquare className="h-4 w-4" />
+                  <span>Chat</span>
+                </Button>
+              </div>
+            )}
           </div>
           
           {user ? (

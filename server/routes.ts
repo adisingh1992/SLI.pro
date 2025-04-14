@@ -767,7 +767,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           
           // Format messages for Claude API
           const messageHistory = messages.map(msg => ({
-            role: msg.role,
+            role: msg.role === 'user' ? 'user' : 'assistant' as const,
             content: msg.content
           }));
           
@@ -791,7 +791,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const assistantMessage = await storage.createChatMessage({
             conversationId,
             role: 'assistant',
-            content: response.content[0].text
+            content: response.content[0].type === 'text' ? response.content[0].text : 'Unable to display response'
           });
           
           // Return both user message and Claude response
@@ -872,13 +872,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const response = await anthropic.messages.create({
         model: "claude-3-opus-20240229",
         system: systemPrompt,
-        messages: [{ role: "user", content: userMessage }],
+        messages: [{ role: "user" as const, content: userMessage }],
         max_tokens: 2000
       });
       
       // Return Claude response
       res.json({
-        response: response.content[0].text
+        response: response.content[0].type === 'text' ? response.content[0].text : 'Unable to display response'
       });
     } catch (error) {
       console.error("Claude API error:", error);
