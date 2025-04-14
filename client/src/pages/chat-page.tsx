@@ -432,7 +432,24 @@ End by thanking them for their time and explaining that this information will he
 
   return (
     <div className="container mx-auto py-6">
-      <h1 className="text-3xl font-bold mb-8">Chat with Claude AI</h1>
+      <div className="flex justify-between items-center mb-8">
+        <h1 className="text-3xl font-bold">Chat with Claude AI</h1>
+        <Button
+          variant="outline"
+          onClick={() => {
+            setActiveConversationId(null);
+            setClaudeResponse(null);
+            setMessageHistory([]); // Reset message history for new chat
+            setConversationInitiated(false); // Reset conversation initialization
+            setCurrentQuestionNumber(0); // Reset question counter
+            setMentionedBusinessSchool(false); // Reset business school flag
+            setAskedBusinessSchoolQuestion(false); // Reset business school question flag
+          }}
+        >
+          <Plus className="mr-2 h-4 w-4" />
+          New Chat
+        </Button>
+      </div>
 
       <div className="grid grid-cols-1 gap-6">
         {/* Chat area */}
