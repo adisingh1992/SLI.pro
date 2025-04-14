@@ -314,6 +314,24 @@ End by thanking them for their time and explaining that this information will he
     }
   }, [prompts, createPromptMutation, defaultSystemPrompt]);
 
+  // Get user profile information
+  const { data: userProfile } = useQuery({
+    queryKey: ["/api/user/profile"],
+    queryFn: async () => {
+      try {
+        const response = await fetch("/api/user/profile", {
+          credentials: "include"
+        });
+        if (!response.ok) throw new Error(response.statusText);
+        return await response.json();
+      } catch (error) {
+        console.error("Error fetching user profile:", error);
+        return null;
+      }
+    },
+    enabled: !!user, // Only fetch if user is logged in
+  });
+
   // Initialize the guided conversation when the chat page loads
   useEffect(() => {
     // Only initialize if in "New Chat" mode and conversation hasn't started yet
@@ -324,12 +342,53 @@ End by thanking them for their time and explaining that this information will he
         setSelectedPromptId(sliProPrompt.id);
       }
       
-      // Add first question as assistant message to history
-      setMessageHistory([{ role: "assistant", content: guidedQuestions[0] }]);
+      // Prepare context information for Claude
+      let contextIntro = "";
+      
+      // Add user information if available
+      if (user) {
+        contextIntro += `User: ${user.firstName} ${user.lastName}\n\n`;
+      }
+      
+      // Add questionnaire information if available
+      if (userProfile?.questionnaire) {
+        const q = userProfile.questionnaire;
+        contextIntro += "Questionnaire Responses:\n";
+        if (q.industry) contextIntro += `- Industry: ${q.industry}\n`;
+        if (q.background) contextIntro += `- Background: ${q.background}\n`;
+        if (q.goals) contextIntro += `- Goals: ${q.goals}\n`;
+        if (q.aspirations) contextIntro += `- Aspirations: ${q.aspirations}\n`;
+        if (q.challenges) contextIntro += `- Challenges: ${q.challenges}\n`;
+        if (q.interests) contextIntro += `- Interests: ${q.interests}\n`;
+        if (q.timeframe) contextIntro += `- Timeframe: ${q.timeframe}\n`;
+        contextIntro += "\n";
+      }
+      
+      // Add documents information if available
+      if (userProfile?.documents && userProfile.documents.length > 0) {
+        contextIntro += "Documents Uploaded:\n";
+        userProfile.documents.forEach(doc => {
+          contextIntro += `- ${doc.name} (${doc.type})\n`;
+        });
+        contextIntro += "\n";
+      }
+      
+      // Add first question as assistant message to history with context
+      if (contextIntro) {
+        // Create a hidden system message with context
+        setMessageHistory([
+          { role: "system", content: contextIntro }, // This won't be displayed to the user
+          { role: "assistant", content: guidedQuestions[0] }
+        ]);
+      } else {
+        // Just add the first question if no context is available
+        setMessageHistory([{ role: "assistant", content: guidedQuestions[0] }]);
+      }
+      
       setConversationInitiated(true);
       setCurrentQuestionNumber(1); // Set to first question
     }
-  }, [activeConversationId, conversationInitiated, guidedQuestions, prompts]);
+  }, [activeConversationId, conversationInitiated, guidedQuestions, prompts, user, userProfile]);
   
   // Auto-scroll to the bottom when messages are added
   useEffect(() => {
@@ -612,8 +671,8 @@ End by thanking them for their time and explaining that this information will he
                       )
                     ) : (
                       <>
-                        {/* Display all messages from history */}
-                        {messageHistory.map((msg, index) => (
+                        {/* Display all messages from history (except system messages) */}
+                        {messageHistory.filter(msg => msg.role !== "system").map((msg, index) => (
                           <div
                             key={index}
                             className={`flex ${
@@ -708,7 +767,7 @@ End by thanking them for their time and explaining that this information will he
                               onClick={handleContinueClick}
                               className="bg-primary hover:bg-primary/90"
                             >
-                              Continue to Next Question
+                              Move on to next section
                             </Button>
                           </div>
                         )}
