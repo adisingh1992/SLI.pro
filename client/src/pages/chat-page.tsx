@@ -127,10 +127,14 @@ export default function ChatPage() {
   // Create a new chat prompt
   const createPromptMutation = useMutation({
     mutationFn: async (promptData: { title: string; prompt: string; systemPrompt?: string }) => {
-      return await apiRequest("/api/chat/prompts", {
+      const response = await fetch("/api/chat/prompts", {
         method: "POST",
-        data: promptData,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(promptData),
+        credentials: "include"
       });
+      if (!response.ok) throw new Error(response.statusText);
+      return await response.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/chat/prompts"] });
@@ -161,10 +165,14 @@ export default function ChatPage() {
       conversationId: number;
       content: string;
     }) => {
-      return await apiRequest(`/api/chat/conversations/${conversationId}/messages`, {
+      const response = await fetch(`/api/chat/conversations/${conversationId}/messages`, {
         method: "POST",
-        data: { role: "user", content },
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ role: "user", content }),
+        credentials: "include"
       });
+      if (!response.ok) throw new Error(response.statusText);
+      return await response.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({
@@ -192,14 +200,17 @@ export default function ChatPage() {
     }) => {
       setIsLoading(true);
       try {
-        const response = await apiRequest("/api/chat/claude", {
+        const response = await fetch("/api/chat/claude", {
           method: "POST",
-          data: {
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
             message,
             promptId,
-          },
+          }),
+          credentials: "include"
         });
-        return response;
+        if (!response.ok) throw new Error(response.statusText);
+        return await response.json();
       } finally {
         setIsLoading(false);
       }
