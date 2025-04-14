@@ -454,17 +454,22 @@ End by thanking them for their time and explaining that this information will he
       <div className="grid grid-cols-1 gap-6">
         {/* Chat area */}
         <div className="col-span-1">
-          <Card className="h-full flex flex-col">
-            <CardHeader>
-              <CardTitle>
+          <Card className="h-full flex flex-col shadow-lg border-2">
+            <CardHeader className="bg-gradient-to-r from-primary/10 to-primary/5">
+              <CardTitle className="flex items-center gap-2">
+                <Avatar className="h-8 w-8 bg-primary text-white">
+                  <AvatarFallback>
+                    <Bot size={16} />
+                  </AvatarFallback>
+                </Avatar>
                 {activeConversationId
                   ? activeConversation?.title || "Loading conversation..."
-                  : "New Chat"}
+                  : "SLI.pro Assistant"}
               </CardTitle>
               <CardDescription>
                 {activeConversationId
                   ? "Continue your conversation with Claude"
-                  : "Start a new conversation with Claude"}
+                  : "Let's prepare for your upcoming coaching session"}
               </CardDescription>
             </CardHeader>
             <CardContent className="flex-grow overflow-y-auto">
@@ -505,13 +510,34 @@ End by thanking them for their time and explaining that this information will he
                               </Avatar>
                             )}
                             <div
-                              className={`mx-2 p-3 rounded-lg ${
+                              className={`mx-2 p-3 rounded-lg shadow-sm ${
                                 msg.role === "user"
                                   ? "bg-primary text-primary-foreground"
                                   : "bg-muted"
                               }`}
                             >
-                              <p className="whitespace-pre-wrap break-words">{msg.content}</p>
+                              <div className="whitespace-pre-wrap break-words">
+                                {msg.content.includes("https://calendly.com") ? (
+                                  <div>
+                                    {msg.content.split("https://")[0]}
+                                    <a 
+                                      href={"https://" + msg.content.split("https://")[1].split(" ")[0]} 
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className={`${
+                                        msg.role === "user" 
+                                          ? "text-blue-100 hover:text-white underline" 
+                                          : "text-blue-600 hover:text-blue-800 underline"
+                                      }`}
+                                    >
+                                      {"https://" + msg.content.split("https://")[1].split(" ")[0]}
+                                    </a>
+                                    {msg.content.split("https://")[1].split(" ").slice(1).join(" ")}
+                                  </div>
+                                ) : (
+                                  msg.content
+                                )}
+                              </div>
                               <p className="text-xs opacity-70 mt-1">
                                 {new Date(msg.createdAt).toLocaleTimeString()}
                               </p>
@@ -581,13 +607,30 @@ End by thanking them for their time and explaining that this information will he
                                 </Avatar>
                               )}
                               <div
-                                className={`mx-2 p-3 rounded-lg ${
+                                className={`mx-2 p-3 rounded-lg shadow-sm ${
                                   msg.role === "user"
                                     ? "bg-primary text-primary-foreground"
                                     : "bg-muted"
                                 }`}
                               >
-                                <p className="whitespace-pre-wrap break-words">{msg.content}</p>
+                                <div className="whitespace-pre-wrap break-words">
+                                  {msg.content.includes("https://calendly.com") ? (
+                                    <div>
+                                      {msg.content.split("https://")[0]}
+                                      <a 
+                                        href={"https://" + msg.content.split("https://")[1].split(" ")[0]} 
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="text-blue-600 hover:text-blue-800 underline"
+                                      >
+                                        {"https://" + msg.content.split("https://")[1].split(" ")[0]}
+                                      </a>
+                                      {msg.content.split("https://")[1].split(" ").slice(1).join(" ")}
+                                    </div>
+                                  ) : (
+                                    msg.content
+                                  )}
+                                </div>
                               </div>
                             </div>
                           </div>
@@ -606,8 +649,8 @@ End by thanking them for their time and explaining that this information will he
                                     size="small"
                                   />
                                 )}
-                                <div className="mx-2 p-3 rounded-lg bg-primary text-primary-foreground">
-                                  <p className="whitespace-pre-wrap break-words">{message}</p>
+                                <div className="mx-2 p-3 rounded-lg shadow-sm bg-primary text-primary-foreground">
+                                  <div className="whitespace-pre-wrap break-words">{message}</div>
                                 </div>
                               </div>
                             </div>
@@ -620,8 +663,25 @@ End by thanking them for their time and explaining that this information will he
                                     <Bot size={16} />
                                   </AvatarFallback>
                                 </Avatar>
-                                <div className="mx-2 p-3 rounded-lg bg-muted">
-                                  <p className="whitespace-pre-wrap break-words">{claudeResponse}</p>
+                                <div className="mx-2 p-3 rounded-lg shadow-sm bg-muted">
+                                  <div className="whitespace-pre-wrap break-words">
+                                    {claudeResponse && claudeResponse.includes("https://calendly.com") ? (
+                                      <div>
+                                        {claudeResponse.split("https://")[0]}
+                                        <a 
+                                          href={"https://" + claudeResponse.split("https://")[1].split(" ")[0]} 
+                                          target="_blank"
+                                          rel="noopener noreferrer"
+                                          className="text-blue-600 hover:text-blue-800 underline"
+                                        >
+                                          {"https://" + claudeResponse.split("https://")[1].split(" ")[0]}
+                                        </a>
+                                        {claudeResponse.split("https://")[1].split(" ").slice(1).join(" ")}
+                                      </div>
+                                    ) : (
+                                      claudeResponse
+                                    )}
+                                  </div>
                                 </div>
                               </div>
                             </div>
@@ -643,42 +703,61 @@ End by thanking them for their time and explaining that this information will he
                 )}
               </ScrollArea>
             </CardContent>
-            <CardFooter>
-              <form onSubmit={handleSendMessage} className="w-full flex space-x-2">
-                <Input
-                  value={message}
-                  onChange={(e) => setMessage(e.target.value)}
-                  placeholder="Type your message..."
-                  disabled={addMessageMutation.isPending || callClaudeMutation.isPending}
-                />
-                <Button
-                  type="submit"
-                  disabled={
-                    !message.trim() ||
-                    addMessageMutation.isPending ||
-                    callClaudeMutation.isPending
-                  }
-                >
-                  {(addMessageMutation.isPending || callClaudeMutation.isPending) ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <Send className="h-4 w-4" />
-                  )}
-                </Button>
-                {!activeConversationId && claudeResponse && (
+            <CardFooter className="border-t pt-4">
+              <form onSubmit={handleSendMessage} className="w-full flex flex-col space-y-3">
+                <div className="relative">
+                  <Textarea
+                    value={message}
+                    onChange={(e) => setMessage(e.target.value)}
+                    placeholder="Type your message..."
+                    disabled={addMessageMutation.isPending || callClaudeMutation.isPending}
+                    className="min-h-[80px] resize-none pr-12"
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && !e.shiftKey) {
+                        e.preventDefault();
+                        if (message.trim()) {
+                          handleSendMessage(e);
+                        }
+                      }
+                    }}
+                  />
                   <Button
-                    type="button"
-                    variant="outline"
-                    onClick={handleCreateConversation}
-                    disabled={isCreatingConversation}
+                    type="submit"
+                    size="icon"
+                    className="absolute bottom-2 right-2"
+                    disabled={
+                      !message.trim() ||
+                      addMessageMutation.isPending ||
+                      callClaudeMutation.isPending
+                    }
                   >
-                    {isCreatingConversation ? (
+                    {(addMessageMutation.isPending || callClaudeMutation.isPending) ? (
                       <Loader2 className="h-4 w-4 animate-spin" />
                     ) : (
-                      "Save as Conversation"
+                      <Send className="h-4 w-4" />
                     )}
                   </Button>
-                )}
+                </div>
+                
+                <div className="flex justify-between items-center text-xs text-muted-foreground">
+                  <p>Press Shift+Enter for a new line</p>
+                  
+                  {!activeConversationId && claudeResponse && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={handleCreateConversation}
+                      disabled={isCreatingConversation}
+                    >
+                      {isCreatingConversation ? (
+                        <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                      ) : (
+                        "Save as Conversation"
+                      )}
+                    </Button>
+                  )}
+                </div>
               </form>
             </CardFooter>
           </Card>
