@@ -46,28 +46,56 @@ export default function ChatPage() {
   const [conversationInitiated, setConversationInitiated] = useState(false);
   // Track the current question number in the guided conversation
   const [currentQuestionNumber, setCurrentQuestionNumber] = useState(0);
+  // Track if the user mentioned business school to ask the business school specific question
+  const [mentionedBusinessSchool, setMentionedBusinessSchool] = useState(false);
+  // Track if the business school question has been asked
+  const [askedBusinessSchoolQuestion, setAskedBusinessSchoolQuestion] = useState(false);
   
   // Predefined conversation flow questions
   const guidedQuestions = [
-    `Hi there! I'm SLI.pro—thanks so much for taking the time to chat today.
+    `Hi there! I'm SLI.pro's Assistant. Thanks so much for taking the time to chat today.
 
 Before your upcoming coaching session, I'd love to ask you a few questions to help us make the most of your time with your coach. These will give us a clearer picture of where you are right now and where you'd like to go, so we can tailor the session to what matters most to you.
 
 Let's start here:
 
-1. Could you share more about your current professional situation?
-I'd love to understand any specific challenges or opportunities you're facing right now.`,
+1. Could you share more about your current professional situation? I'd like to understand any specific challenges or opportunities you're facing right now.`,
     
-    `Let's build on that with the next question:
+    `Thank you for sharing that. Now for my next question:
 
-2. What motivated you to invest in professional branding at this particular moment in your career?
-What outcomes are you hoping to achieve from this process?`,
+2. What motivated you to invest in professional branding at this particular moment in your career? What outcomes are you hoping to achieve?`,
     
-    `Thanks for walking through that with me. Let's shift gears just a bit:
+    `That's very helpful to understand. For my next question:
 
-3. Looking ahead, which functional area do you see yourself best fitting into?
-Would you say it's still primarily product/engineering, or do you see overlap with areas like operations, leadership, or something else entirely?`
+3. Looking ahead, which functional area do you see yourself best fitting into? (For example: operations, marketing, sales, finance, product, or something else entirely)`,
+    
+    `Thank you for all your thoughtful responses. Let me summarize what I've learned about:
+
+- Your current professional situation
+- Your motivations for investing in personal branding now
+- Your target functional direction
+
+Is there anything else you'd like to add that would be helpful for your coach to know before your session?`,
+    
+    `You've done a great job sharing your background and goals. This information will help make your coaching session much more productive.
+
+To move forward with scheduling your session, please use this link:
+https://calendly.com/dcara-sli/haas
+
+Thank you for your time, and we look forward to working with you!`
   ];
+  
+  // Additional question for business school
+  const businessSchoolQuestion = `I noticed from your background that you're pursuing business school. What specifically motivated you to pursue business school now, and how do you see it fitting into your longer-term career trajectory?`;
+  
+  // Default system prompt for SLI.pro coaching assistant
+  const defaultSystemPrompt = `You are a professional branding consultant for SLI.pro, conducting a preliminary conversation with a client before their coaching session. Your goal is to gather essential information that will maximize the effectiveness of their upcoming coaching call.
+  
+Keep your tone warm and conversational, ask one question at a time, and respond thoughtfully to their answers. Avoid sounding like a scripted survey or AI-generated text.
+
+After gathering insights about their current situation, motivations, and functional direction, summarize what you've learned and ask if they'd like to add anything else that would be helpful for their coach to know before their session.
+
+End by thanking them for their time and explaining that this information will help make their coaching session more productive.`;
 
   // Get all predefined prompts
   const { data: prompts = [], isLoading: promptsLoading } = useQuery({
@@ -152,17 +180,6 @@ Would you say it's still primarily product/engineering, or do you see overlap wi
     },
   });
 
-  // Initialize the guided conversation when the chat page loads
-  useEffect(() => {
-    // Only initialize if in "New Chat" mode and conversation hasn't started yet
-    if (!activeConversationId && !conversationInitiated && guidedQuestions.length > 0) {
-      // Add first question as assistant message to history
-      setMessageHistory([{ role: "assistant", content: guidedQuestions[0] }]);
-      setConversationInitiated(true);
-      setCurrentQuestionNumber(1); // Set to first question
-    }
-  }, [activeConversationId, conversationInitiated, guidedQuestions]);
-  
   // Create a new chat prompt
   const createPromptMutation = useMutation({
     mutationFn: async (promptData: { title: string; prompt: string; systemPrompt?: string }) => {
@@ -228,6 +245,38 @@ Would you say it's still primarily product/engineering, or do you see overlap wi
     },
   });
 
+  // Check if SLI.pro system prompt already exists in database
+  useEffect(() => {
+    if (prompts.length > 0) {
+      const sliProPrompt = prompts.find(p => p.title === "SLI.pro");
+      if (!sliProPrompt) {
+        // Create the default SLI.pro prompt
+        createPromptMutation.mutate({
+          title: "SLI.pro",
+          prompt: "Act as a professional branding consultant for SLI.pro",
+          systemPrompt: defaultSystemPrompt
+        });
+      }
+    }
+  }, [prompts, createPromptMutation, defaultSystemPrompt]);
+
+  // Initialize the guided conversation when the chat page loads
+  useEffect(() => {
+    // Only initialize if in "New Chat" mode and conversation hasn't started yet
+    if (!activeConversationId && !conversationInitiated && guidedQuestions.length > 0) {
+      // Find the SLI.pro prompt ID to use as default
+      const sliProPrompt = prompts.find(p => p.title === "SLI.pro");
+      if (sliProPrompt) {
+        setSelectedPromptId(sliProPrompt.id);
+      }
+      
+      // Add first question as assistant message to history
+      setMessageHistory([{ role: "assistant", content: guidedQuestions[0] }]);
+      setConversationInitiated(true);
+      setCurrentQuestionNumber(1); // Set to first question
+    }
+  }, [activeConversationId, conversationInitiated, guidedQuestions, prompts]);
+  
   // Direct Claude API call with selected prompt
   const callClaudeMutation = useMutation({
     mutationFn: async ({
@@ -261,6 +310,23 @@ Would you say it's still primarily product/engineering, or do you see overlap wi
     onSuccess: (data) => {
       setClaudeResponse(data.response);
       
+      // Check if the user mentioned business school in their message or response
+      const checkForBusinessSchool = () => {
+        const lowerMessage = message.toLowerCase();
+        const lowerResponse = data.response.toLowerCase();
+        return (
+          lowerMessage.includes("business school") || 
+          lowerMessage.includes("mba") || 
+          lowerResponse.includes("business school") || 
+          lowerResponse.includes("mba")
+        );
+      };
+      
+      // Set flag if business school is mentioned
+      if (checkForBusinessSchool()) {
+        setMentionedBusinessSchool(true);
+      }
+      
       // Update the message history with user message and Claude's response
       setMessageHistory(prevHistory => [
         ...prevHistory,
@@ -268,19 +334,38 @@ Would you say it's still primarily product/engineering, or do you see overlap wi
         { role: "assistant", content: data.response }
       ]);
       
-      // Progress to the next question in the guided conversation if available
-      if (!activeConversationId && currentQuestionNumber > 0 && currentQuestionNumber < guidedQuestions.length) {
-        // After user responds and gets a reply to question 1, send question 2
-        setTimeout(() => {
-          // Add the next question to the message history
-          setMessageHistory(prevHistory => [
-            ...prevHistory,
-            { role: "assistant", content: guidedQuestions[currentQuestionNumber] }
-          ]);
+      if (!activeConversationId) {
+        // Determine which question to ask next
+        const determineNextQuestion = () => {
+          // If we're at question 3 (index 2) and business school was mentioned but not yet asked about
+          if (currentQuestionNumber === 3 && mentionedBusinessSchool && !askedBusinessSchoolQuestion) {
+            // Ask the business school specific question
+            setTimeout(() => {
+              setMessageHistory(prevHistory => [
+                ...prevHistory,
+                { role: "assistant", content: businessSchoolQuestion }
+              ]);
+              setAskedBusinessSchoolQuestion(true);
+            }, 1000);
+            return;
+          }
           
-          // Increment the question counter
-          setCurrentQuestionNumber(currentQuestionNumber + 1);
-        }, 1000); // Small delay for better UX
+          // If we still have standard questions to ask
+          if (currentQuestionNumber > 0 && currentQuestionNumber < guidedQuestions.length) {
+            setTimeout(() => {
+              // Add the next question to the message history
+              setMessageHistory(prevHistory => [
+                ...prevHistory,
+                { role: "assistant", content: guidedQuestions[currentQuestionNumber] }
+              ]);
+              
+              // Increment the question counter
+              setCurrentQuestionNumber(currentQuestionNumber + 1);
+            }, 1000); // Small delay for better UX
+          }
+        };
+        
+        determineNextQuestion();
       }
     },
     onError: (error: Error) => {
@@ -357,6 +442,8 @@ Would you say it's still primarily product/engineering, or do you see overlap wi
                   setMessageHistory([]); // Reset message history for new chat
                   setConversationInitiated(false); // Reset conversation initialization
                   setCurrentQuestionNumber(0); // Reset question counter
+                  setMentionedBusinessSchool(false); // Reset business school flag
+                  setAskedBusinessSchoolQuestion(false); // Reset business school question flag
                 }}
               >
                 <Plus className="mr-2 h-4 w-4" />
