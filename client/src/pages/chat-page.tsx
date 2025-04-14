@@ -105,7 +105,7 @@ export default function ChatPage() {
   
   // Predefined conversation flow questions
   const guidedQuestions = [
-    `Hi there! I'm SLI.pro's Assistant. Thanks so much for taking the time to chat today.
+    `Hi there! I'm SLI.pro. Thanks so much for taking the time to chat today.
 
 Before your upcoming coaching session, I'd love to ask you a few questions to help us make the most of your time with your coach. These will give us a clearer picture of where you are right now and where you'd like to go, so we can tailor the session to what matters most to you.
 
@@ -490,23 +490,8 @@ End by thanking them for their time and explaining that this information will he
 
   return (
     <div className="container mx-auto py-6">
-      <div className="flex justify-between items-center mb-8">
-        <h1 className="text-3xl font-bold">Chat with Claude AI</h1>
-        <Button
-          variant="outline"
-          onClick={() => {
-            setActiveConversationId(null);
-            setClaudeResponse(null);
-            setMessageHistory([]); // Reset message history for new chat
-            setConversationInitiated(false); // Reset conversation initialization
-            setCurrentQuestionNumber(0); // Reset question counter
-            setMentionedBusinessSchool(false); // Reset business school flag
-            setAskedBusinessSchoolQuestion(false); // Reset business school question flag
-          }}
-        >
-          <Plus className="mr-2 h-4 w-4" />
-          New Chat
-        </Button>
+      <div className="flex justify-center items-center mb-8">
+        <h1 className="text-3xl font-bold">SLI.pro Assistant</h1>
       </div>
 
       <div className="grid grid-cols-1 gap-6">
@@ -522,11 +507,11 @@ End by thanking them for their time and explaining that this information will he
                 </Avatar>
                 {activeConversationId
                   ? activeConversation?.title || "Loading conversation..."
-                  : "SLI.pro Assistant"}
+                  : "SLI.pro"}
               </CardTitle>
               <CardDescription>
                 {activeConversationId
-                  ? "Continue your conversation with Claude"
+                  ? "Continue your conversation with SLI.pro"
                   : "Let's prepare for your upcoming coaching session"}
               </CardDescription>
             </CardHeader>
@@ -603,14 +588,11 @@ End by thanking them for their time and explaining that this information will he
                           <div className="text-center space-y-4">
                             <Bot className="h-16 w-16 mx-auto text-muted-foreground" />
                             <p className="text-xl">
-                              {selectedPromptId
-                                ? "Selected prompt: " +
-                                  prompts.find((p) => p.id === selectedPromptId)?.title
-                                : "Ask Claude anything"}
+                              Welcome to your SLI.pro coaching preparation
                             </p>
-                            <p>
-                              Claude is an AI assistant developed by Anthropic that can help answer
-                              questions, provide insights, and assist with various tasks.
+                            <p className="mt-2">
+                              I'm your professional branding consultant. I'll help prepare for your 
+                              coaching session by discussing your career goals and professional experience.
                             </p>
                           </div>
                         </div>
