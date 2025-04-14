@@ -879,11 +879,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Include message history if available
       if (messageHistory && messageHistory.length > 0) {
-        // Convert message history to Claude's expected format
-        messagesForClaude = messageHistory.map(msg => ({
-          role: msg.role === 'user' ? 'user' : 'assistant' as const,
-          content: msg.content
-        }));
+        // Extract any system messages first
+        const systemMessages = messageHistory.filter(msg => msg.role === 'system');
+        if (systemMessages.length > 0) {
+          // Combine all system messages and add to the main system prompt
+          const systemContent = systemMessages.map(msg => msg.content).join('\n\n');
+          systemPrompt = `${systemPrompt}\n\n${systemContent}`;
+        }
+        
+        // Convert regular message history to Claude's expected format (only user and assistant messages)
+        messagesForClaude = messageHistory
+          .filter(msg => msg.role === 'user' || msg.role === 'assistant')
+          .map(msg => ({
+            role: msg.role === 'user' ? 'user' : 'assistant' as const,
+            content: msg.content
+          }));
       }
       
       // Add the current message
