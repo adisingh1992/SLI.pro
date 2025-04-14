@@ -830,7 +830,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const requestSchema = z.object({
         promptId: z.number().optional(),
         message: z.string(),
-        customSystemPrompt: z.string().optional()
+        customSystemPrompt: z.string().optional(),
+        messageHistory: z.array(
+          z.object({
+            role: z.string(),
+            content: z.string()
+          })
+        ).optional()
       });
       
       const validationResult = requestSchema.safeParse(req.body);
@@ -841,7 +847,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
       
-      const { promptId, message, customSystemPrompt } = validationResult.data;
+      const { promptId, message, customSystemPrompt, messageHistory = [] } = validationResult.data;
       
       // Get the prompt if promptId is provided
       let systemPrompt = customSystemPrompt || "You are a helpful assistant answering questions about professional development, career advancement, and resume building.";
@@ -865,14 +871,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
         apiKey: process.env.ANTHROPIC_API_KEY
       });
       
-      // Format the user message
-      const userMessage = promptContent ? `${promptContent}\n\nUser input: ${message}` : message;
+      // Format the user message for the current request
+      const formattedUserMessage = promptContent ? `${promptContent}\n\nUser input: ${message}` : message;
       
-      // Call Claude API
+      // Prepare messages array for Claude API
+      let messagesForClaude: Array<{role: 'user' | 'assistant', content: string}> = [];
+      
+      // Include message history if available
+      if (messageHistory && messageHistory.length > 0) {
+        // Convert message history to Claude's expected format
+        messagesForClaude = messageHistory.map(msg => ({
+          role: msg.role === 'user' ? 'user' : 'assistant' as const,
+          content: msg.content
+        }));
+      }
+      
+      // Add the current message
+      messagesForClaude.push({ 
+        role: 'user' as const, 
+        content: formattedUserMessage 
+      });
+      
+      // Call Claude API with conversation history
       const response = await anthropic.messages.create({
         model: "claude-3-opus-20240229",
         system: systemPrompt,
-        messages: [{ role: "user" as const, content: userMessage }],
+        messages: messagesForClaude,
         max_tokens: 2000
       });
       

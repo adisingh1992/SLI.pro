@@ -40,6 +40,8 @@ export default function ChatPage() {
   const [isAddingPrompt, setIsAddingPrompt] = useState(false);
   const [claudeResponse, setClaudeResponse] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  // Track message history for context preservation in direct Claude conversations
+  const [messageHistory, setMessageHistory] = useState<Array<{role: string, content: string}>>([]);
 
   // Get all predefined prompts
   const { data: prompts = [], isLoading: promptsLoading } = useQuery({
@@ -200,12 +202,16 @@ export default function ChatPage() {
     }) => {
       setIsLoading(true);
       try {
+        // Add the current message to history for context tracking
+        const currentMessageHistory = [...messageHistory];
+        
         const response = await fetch("/api/chat/claude", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             message,
             promptId,
+            messageHistory: currentMessageHistory, // Send the conversation history
           }),
           credentials: "include"
         });
@@ -217,6 +223,13 @@ export default function ChatPage() {
     },
     onSuccess: (data) => {
       setClaudeResponse(data.response);
+      
+      // Update the message history with user message and Claude's response
+      setMessageHistory(prevHistory => [
+        ...prevHistory,
+        { role: "user", content: message },
+        { role: "assistant", content: data.response }
+      ]);
     },
     onError: (error: Error) => {
       console.error("Claude API error:", error);
@@ -289,6 +302,7 @@ export default function ChatPage() {
                 onClick={() => {
                   setActiveConversationId(null);
                   setClaudeResponse(null);
+                  setMessageHistory([]); // Reset message history for new chat
                 }}
               >
                 <Plus className="mr-2 h-4 w-4" />
@@ -484,7 +498,7 @@ export default function ChatPage() {
                   )
                 ) : (
                   <div className="space-y-4">
-                    {!claudeResponse ? (
+                    {messageHistory.length === 0 && !claudeResponse ? (
                       isLoading ? (
                         <div className="flex items-center justify-center h-full mt-20">
                           <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
@@ -508,35 +522,88 @@ export default function ChatPage() {
                       )
                     ) : (
                       <>
-                        {/* User message */}
-                        <div className="flex justify-end">
-                          <div className="flex items-start max-w-[80%] flex-row-reverse">
-                            {user && (
-                              <UserAvatar
-                                firstName={user.firstName}
-                                lastName={user.lastName}
-                                size="small"
-                              />
-                            )}
-                            <div className="mx-2 p-3 rounded-lg bg-primary text-primary-foreground">
-                              <p className="whitespace-pre-wrap break-words">{message}</p>
+                        {/* Display all messages from history */}
+                        {messageHistory.map((msg, index) => (
+                          <div
+                            key={index}
+                            className={`flex ${
+                              msg.role === "user" ? "justify-end" : "justify-start"
+                            }`}
+                          >
+                            <div
+                              className={`flex items-start max-w-[80%] ${
+                                msg.role === "user" ? "flex-row-reverse" : ""
+                              }`}
+                            >
+                              {msg.role === "user" ? (
+                                user && (
+                                  <UserAvatar
+                                    firstName={user.firstName}
+                                    lastName={user.lastName}
+                                    size="small"
+                                  />
+                                )
+                              ) : (
+                                <Avatar className="h-8 w-8 bg-primary text-white">
+                                  <AvatarFallback>
+                                    <Bot size={16} />
+                                  </AvatarFallback>
+                                </Avatar>
+                              )}
+                              <div
+                                className={`mx-2 p-3 rounded-lg ${
+                                  msg.role === "user"
+                                    ? "bg-primary text-primary-foreground"
+                                    : "bg-muted"
+                                }`}
+                              >
+                                <p className="whitespace-pre-wrap break-words">{msg.content}</p>
+                              </div>
                             </div>
                           </div>
-                        </div>
+                        ))}
+                        
+                        {/* Show current message and response if available but not yet in history */}
+                        {claudeResponse && messageHistory.length === 0 && (
+                          <>
+                            {/* User message */}
+                            <div className="flex justify-end">
+                              <div className="flex items-start max-w-[80%] flex-row-reverse">
+                                {user && (
+                                  <UserAvatar
+                                    firstName={user.firstName}
+                                    lastName={user.lastName}
+                                    size="small"
+                                  />
+                                )}
+                                <div className="mx-2 p-3 rounded-lg bg-primary text-primary-foreground">
+                                  <p className="whitespace-pre-wrap break-words">{message}</p>
+                                </div>
+                              </div>
+                            </div>
 
-                        {/* Claude response */}
-                        <div className="flex justify-start">
-                          <div className="flex items-start max-w-[80%]">
-                            <Avatar className="h-8 w-8 bg-primary text-white">
-                              <AvatarFallback>
-                                <Bot size={16} />
-                              </AvatarFallback>
-                            </Avatar>
-                            <div className="mx-2 p-3 rounded-lg bg-muted">
-                              <p className="whitespace-pre-wrap break-words">{claudeResponse}</p>
+                            {/* Claude response */}
+                            <div className="flex justify-start">
+                              <div className="flex items-start max-w-[80%]">
+                                <Avatar className="h-8 w-8 bg-primary text-white">
+                                  <AvatarFallback>
+                                    <Bot size={16} />
+                                  </AvatarFallback>
+                                </Avatar>
+                                <div className="mx-2 p-3 rounded-lg bg-muted">
+                                  <p className="whitespace-pre-wrap break-words">{claudeResponse}</p>
+                                </div>
+                              </div>
                             </div>
+                          </>
+                        )}
+                        
+                        {/* Show loading indicator during API call */}
+                        {isLoading && (
+                          <div className="flex justify-center py-4">
+                            <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
                           </div>
-                        </div>
+                        )}
                       </>
                     )}
                   </div>
