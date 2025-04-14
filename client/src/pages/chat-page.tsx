@@ -54,6 +54,54 @@ export default function ChatPage() {
   // Reference for auto scrolling
   const messagesEndRef = useRef<HTMLDivElement>(null);
   
+  // Function to format message content with clickable links
+  const formatMessageWithLinks = (content: string, isUserMessage: boolean = false) => {
+    // Regex to match URLs
+    const urlRegex = /(https?:\/\/[^\s]+)/g;
+    
+    if (!content || typeof content !== 'string' || !content.match(urlRegex)) {
+      return content;
+    }
+    
+    const parts = [];
+    let lastIndex = 0;
+    let match;
+    
+    // Find all URLs in the content and make them clickable
+    while ((match = urlRegex.exec(content)) !== null) {
+      // Add text before the URL
+      if (match.index > lastIndex) {
+        parts.push(content.substring(lastIndex, match.index));
+      }
+      
+      // Add the URL as a link
+      const url = match[0];
+      parts.push(
+        <a
+          key={match.index}
+          href={url}
+          target="_blank"
+          rel="noopener noreferrer"
+          className={isUserMessage 
+            ? "text-blue-100 hover:text-white underline" 
+            : "text-blue-600 hover:text-blue-800 underline"
+          }
+        >
+          {url}
+        </a>
+      );
+      
+      lastIndex = match.index + url.length;
+    }
+    
+    // Add any remaining text
+    if (lastIndex < content.length) {
+      parts.push(content.substring(lastIndex));
+    }
+    
+    return <>{parts}</>;
+  };
+  
   // Predefined conversation flow questions
   const guidedQuestions = [
     `Hi there! I'm SLI.pro's Assistant. Thanks so much for taking the time to chat today.
@@ -517,26 +565,7 @@ End by thanking them for their time and explaining that this information will he
                               }`}
                             >
                               <div className="whitespace-pre-wrap break-words">
-                                {msg.content.includes("https://calendly.com") ? (
-                                  <div>
-                                    {msg.content.split("https://")[0]}
-                                    <a 
-                                      href={"https://" + msg.content.split("https://")[1].split(" ")[0]} 
-                                      target="_blank"
-                                      rel="noopener noreferrer"
-                                      className={`${
-                                        msg.role === "user" 
-                                          ? "text-blue-100 hover:text-white underline" 
-                                          : "text-blue-600 hover:text-blue-800 underline"
-                                      }`}
-                                    >
-                                      {"https://" + msg.content.split("https://")[1].split(" ")[0]}
-                                    </a>
-                                    {msg.content.split("https://")[1].split(" ").slice(1).join(" ")}
-                                  </div>
-                                ) : (
-                                  msg.content
-                                )}
+{formatMessageWithLinks(msg.content, msg.role === "user")}
                               </div>
                               <p className="text-xs opacity-70 mt-1">
                                 {new Date(msg.createdAt).toLocaleTimeString()}
@@ -614,22 +643,7 @@ End by thanking them for their time and explaining that this information will he
                                 }`}
                               >
                                 <div className="whitespace-pre-wrap break-words">
-                                  {msg.content.includes("https://calendly.com") ? (
-                                    <div>
-                                      {msg.content.split("https://")[0]}
-                                      <a 
-                                        href={"https://" + msg.content.split("https://")[1].split(" ")[0]} 
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        className="text-blue-600 hover:text-blue-800 underline"
-                                      >
-                                        {"https://" + msg.content.split("https://")[1].split(" ")[0]}
-                                      </a>
-                                      {msg.content.split("https://")[1].split(" ").slice(1).join(" ")}
-                                    </div>
-                                  ) : (
-                                    msg.content
-                                  )}
+                                  {formatMessageWithLinks(msg.content, msg.role === "user")}
                                 </div>
                               </div>
                             </div>
@@ -650,7 +664,9 @@ End by thanking them for their time and explaining that this information will he
                                   />
                                 )}
                                 <div className="mx-2 p-3 rounded-lg shadow-sm bg-primary text-primary-foreground">
-                                  <div className="whitespace-pre-wrap break-words">{message}</div>
+                                  <div className="whitespace-pre-wrap break-words">
+                                    {formatMessageWithLinks(message, true)}
+                                  </div>
                                 </div>
                               </div>
                             </div>
@@ -665,22 +681,7 @@ End by thanking them for their time and explaining that this information will he
                                 </Avatar>
                                 <div className="mx-2 p-3 rounded-lg shadow-sm bg-muted">
                                   <div className="whitespace-pre-wrap break-words">
-                                    {claudeResponse && claudeResponse.includes("https://calendly.com") ? (
-                                      <div>
-                                        {claudeResponse.split("https://")[0]}
-                                        <a 
-                                          href={"https://" + claudeResponse.split("https://")[1].split(" ")[0]} 
-                                          target="_blank"
-                                          rel="noopener noreferrer"
-                                          className="text-blue-600 hover:text-blue-800 underline"
-                                        >
-                                          {"https://" + claudeResponse.split("https://")[1].split(" ")[0]}
-                                        </a>
-                                        {claudeResponse.split("https://")[1].split(" ").slice(1).join(" ")}
-                                      </div>
-                                    ) : (
-                                      claudeResponse
-                                    )}
+                                    {formatMessageWithLinks(claudeResponse || '', false)}
                                   </div>
                                 </div>
                               </div>
