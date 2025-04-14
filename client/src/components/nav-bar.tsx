@@ -8,7 +8,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { LogOut, User, MessageSquare, ChevronDown } from "lucide-react";
+import { LogOut, User, ChevronDown } from "lucide-react";
 import UserAvatar from "@/components/user-avatar";
 import sliProLogo from "@/assets/sliPro-logos_aqua.png";
 
@@ -38,18 +38,7 @@ export default function NavBar() {
                 className="h-10 w-auto" 
               />
             </div>
-            {user && (
-              <div className="ml-10 flex items-center space-x-4">
-                <Button 
-                  variant="ghost" 
-                  className="flex items-center space-x-2"
-                  onClick={() => navigate("/chat")}
-                >
-                  <MessageSquare className="h-4 w-4" />
-                  <span>Chat</span>
-                </Button>
-              </div>
-            )}
+            {/* Chat button removed as requested */}
           </div>
           
           {user ? (

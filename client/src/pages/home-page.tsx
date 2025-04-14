@@ -297,9 +297,10 @@ export default function HomePage() {
                 </p>
                 <Button
                   className="flex items-center bg-green-600 hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
-                  onClick={() =>
-                    window.open("https://calendly.com/dcara-sli/haas", "_blank")
-                  }
+                  onClick={() => {
+                    scrollToTop();
+                    navigate("/chat");
+                  }}
                   disabled={!userProfile?.questionnaire || (userProfile?.questionnaire?.isDraft === true) || !hasRequiredDocuments}
                 >
                   Schedule Coaching Session
