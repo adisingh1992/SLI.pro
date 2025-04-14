@@ -115,13 +115,9 @@ Let's start here:
 
 1. Could you share more about your current professional situation? I'd like to understand any specific challenges or opportunities you're facing right now.`,
     
-    `Thank you for sharing that. Now for my next question:
-
-2. What motivated you to invest in professional branding at this particular moment in your career? What outcomes are you hoping to achieve?`,
+    `2. What motivated you to invest in professional branding at this particular moment in your career? What outcomes are you hoping to achieve?`,
     
-    `That's very helpful to understand. For my next question:
-
-3. Looking ahead, which functional area do you see yourself best fitting into? (For example: operations, marketing, sales, finance, product, or something else entirely)`,
+    `3. Looking ahead, which functional area do you see yourself best fitting into? (For example: operations, marketing, sales, finance, product, or something else entirely)`,
     
     `Thank you for all your thoughtful responses. Let me summarize what I've learned about:
 
@@ -364,13 +360,17 @@ End by thanking them for their time and explaining that this information will he
         contextIntro += "\n";
       }
       
-      // Add documents information if available
+      // Add documents information with full content if available
       if (userProfile?.documents && userProfile.documents.length > 0) {
-        contextIntro += "Documents Uploaded:\n";
+        contextIntro += "Documents Uploaded:\n\n";
         userProfile.documents.forEach(doc => {
-          contextIntro += `- ${doc.name} (${doc.type})\n`;
+          contextIntro += `--- DOCUMENT: ${doc.name} (${doc.type}) ---\n`;
+          // Include the full document content
+          if (doc.content) {
+            contextIntro += `${doc.content}\n`;
+          }
+          contextIntro += "--- END DOCUMENT ---\n\n";
         });
-        contextIntro += "\n";
       }
       
       // Add first question as assistant message to history with context
