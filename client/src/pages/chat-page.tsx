@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
 import {
@@ -42,6 +42,27 @@ export default function ChatPage() {
   const [isLoading, setIsLoading] = useState(false);
   // Track message history for context preservation in direct Claude conversations
   const [messageHistory, setMessageHistory] = useState<Array<{role: string, content: string}>>([]);
+  // Track whether the bot has initiated the conversation
+  const [conversationInitiated, setConversationInitiated] = useState(false);
+  // Track the current question number in the guided conversation
+  const [currentQuestionNumber, setCurrentQuestionNumber] = useState(0);
+  
+  // Predefined conversation flow questions
+  const guidedQuestions = [
+    `Hi there! I'm SLI.pro—thanks so much for taking the time to chat today.
+
+Before your upcoming coaching session, I'd love to ask you a few questions to help us make the most of your time with your coach. These will give us a clearer picture of where you are right now and where you'd like to go, so we can tailor the session to what matters most to you.
+
+Let's start here:
+
+1. Could you share more about your current professional situation?
+I'd love to understand any specific challenges or opportunities you're facing right now.`,
+    
+    `Let's build on that with the next question:
+
+2. What motivated you to invest in professional branding at this particular moment in your career?
+What outcomes are you hoping to achieve from this process?`
+  ];
 
   // Get all predefined prompts
   const { data: prompts = [], isLoading: promptsLoading } = useQuery({
@@ -126,6 +147,17 @@ export default function ChatPage() {
     },
   });
 
+  // Initialize the guided conversation when the chat page loads
+  useEffect(() => {
+    // Only initialize if in "New Chat" mode and conversation hasn't started yet
+    if (!activeConversationId && !conversationInitiated && guidedQuestions.length > 0) {
+      // Add first question as assistant message to history
+      setMessageHistory([{ role: "assistant", content: guidedQuestions[0] }]);
+      setConversationInitiated(true);
+      setCurrentQuestionNumber(1); // Set to first question
+    }
+  }, [activeConversationId, conversationInitiated, guidedQuestions]);
+  
   // Create a new chat prompt
   const createPromptMutation = useMutation({
     mutationFn: async (promptData: { title: string; prompt: string; systemPrompt?: string }) => {
@@ -230,6 +262,21 @@ export default function ChatPage() {
         { role: "user", content: message },
         { role: "assistant", content: data.response }
       ]);
+      
+      // Progress to the next question in the guided conversation if available
+      if (!activeConversationId && currentQuestionNumber > 0 && currentQuestionNumber < guidedQuestions.length) {
+        // After user responds and gets a reply to question 1, send question 2
+        setTimeout(() => {
+          // Add the next question to the message history
+          setMessageHistory(prevHistory => [
+            ...prevHistory,
+            { role: "assistant", content: guidedQuestions[currentQuestionNumber] }
+          ]);
+          
+          // Increment the question counter
+          setCurrentQuestionNumber(currentQuestionNumber + 1);
+        }, 1000); // Small delay for better UX
+      }
     },
     onError: (error: Error) => {
       console.error("Claude API error:", error);
@@ -303,6 +350,8 @@ export default function ChatPage() {
                   setActiveConversationId(null);
                   setClaudeResponse(null);
                   setMessageHistory([]); // Reset message history for new chat
+                  setConversationInitiated(false); // Reset conversation initialization
+                  setCurrentQuestionNumber(0); // Reset question counter
                 }}
               >
                 <Plus className="mr-2 h-4 w-4" />
