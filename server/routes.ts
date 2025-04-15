@@ -739,7 +739,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 content: `Here is the user profile information and conversation history for analysis:\n\n${profileContext}\n\nCONVERSATION TRANSCRIPT:\n${conversationText}`
               }
             ],
-            max_tokens: 4096,
+            max_tokens: 2048,
             temperature: 0.2, // Lower temperature for more consistent extraction
           });
           
@@ -1072,7 +1072,7 @@ This summary is based on the available conversation history and profile informat
             model: "claude-3-opus-20240229",
             system: systemPrompt,
             messages: messageHistory,
-            max_tokens: 1000
+            max_tokens: 500
           });
           
           // Save assistant response to database
@@ -1131,7 +1131,7 @@ This summary is based on the available conversation history and profile informat
       const { promptId, message, customSystemPrompt, messageHistory = [] } = validationResult.data;
       
       // Get the prompt if promptId is provided
-      let systemPrompt = customSystemPrompt || "You are a helpful assistant answering questions about professional development, career advancement, and resume building.";
+      let systemPrompt = customSystemPrompt || "You are a helpful assistant answering questions about professional development, career advancement, and resume building. Keep your responses concise and half as long as you would normally provide. Be direct and avoid lengthy explanations.";
       let promptContent = "";
       
       if (promptId) {
@@ -1191,7 +1191,7 @@ This summary is based on the available conversation history and profile informat
             model: "claude-3-opus-20240229", // Using Claude 3 Opus for optimal performance
             system: systemPrompt,
             messages: messagesForClaude,
-            max_tokens: 4096, // Increased to 4096 for comprehensive responses
+            max_tokens: 2048, // Increased to 4096 for comprehensive responses
             temperature: 0.4, // Set to 0.4 for consistent but natural responses
             stream: false // Using non-streaming for compatibility
           });
@@ -1284,7 +1284,7 @@ This summary is based on the available conversation history and profile informat
       const { promptId, message, customSystemPrompt, messageHistory = [] } = validationResult.data;
       
       // Get the prompt if promptId is provided
-      let systemPrompt = customSystemPrompt || "You are a helpful assistant answering questions about professional development, career advancement, and resume building.";
+      let systemPrompt = customSystemPrompt || "You are a helpful assistant answering questions about professional development, career advancement, and resume building. Keep your responses concise and half as long as you would normally provide. Be direct and avoid lengthy explanations.";
       let promptContent = "";
       
       if (promptId) {
@@ -1346,7 +1346,7 @@ This summary is based on the available conversation history and profile informat
             model: "claude-3-opus-20240229", // Using Claude 3 Opus for optimal performance
             system: systemPrompt,
             messages: messagesForClaude,
-            max_tokens: 4096, // Increased to 4096 for comprehensive responses
+            max_tokens: 2048, // Increased to 4096 for comprehensive responses
             temperature: 0.4, // Set to 0.4 for consistent but natural responses
             stream: true
           });
