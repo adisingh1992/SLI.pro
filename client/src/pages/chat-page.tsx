@@ -450,11 +450,12 @@ Remember: You must complete each phase thoroughly before moving to the next one.
     }
   }, [
     activeConversationId,
-    callClaudeMutation,
     conversationInitiated,
     prompts,
     user,
     userProfile,
+    selectedPromptId,
+    callClaudeMutationRef,
   ]);
 
   // Auto-scroll to the bottom when messages are added
@@ -464,10 +465,8 @@ Remember: You must complete each phase thoroughly before moving to the next one.
     }
   }, [messageHistory, activeConversation]);
   
-  // Store mutation function in ref to avoid circular dependencies
-  useEffect(() => {
-    callClaudeMutationRef.current = callClaudeMutation.mutate;
-  }, [callClaudeMutation.mutate]);
+  // Define the mutation ref first
+  const callClaudeMutationRef = useRef<any>(null);
 
   // State for streaming response
   const [isStreaming, setIsStreaming] = useState(false);
@@ -475,9 +474,6 @@ Remember: You must complete each phase thoroughly before moving to the next one.
 
   // State for structured summary
   const [showStructuredSummary, setShowStructuredSummary] = useState(false);
-
-  // Define the callClaudeMutation ahead of where it's used to avoid circular dependencies
-  const callClaudeMutationRef = useRef<any>(null);
 
   // Enhanced Claude API call with streaming support
   const callClaudeMutation = useMutation({
