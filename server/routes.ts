@@ -816,7 +816,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Claude direct communication endpoint with predefined prompts
+  // Claude direct communication endpoint with predefined prompts (non-streaming)
   app.post("/api/chat/claude", isAuthenticated, async (req, res, next) => {
     try {
       // Check if ANTHROPIC_API_KEY is available
@@ -902,12 +902,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         content: formattedUserMessage 
       });
       
-      // Call Claude API with conversation history
+      // Call Claude API with conversation history and optimized parameters
       const response = await anthropic.messages.create({
-        model: "claude-3-opus-20240229",
+        model: "claude-3-opus-20240229", // Using Claude 3 Opus for optimal performance
         system: systemPrompt,
         messages: messagesForClaude,
-        max_tokens: 2000
+        max_tokens: 4096, // Increased to 4096 for comprehensive responses
+        temperature: 0.4, // Set to 0.4 for consistent but natural responses
+        stream: false // Using non-streaming for compatibility
       });
       
       // Return Claude response
@@ -917,6 +919,142 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Claude API error:", error);
       next(error);
+    }
+  });
+  
+  // Claude streaming communication endpoint
+  app.post("/api/chat/claude/stream", isAuthenticated, async (req, res, next) => {
+    try {
+      // Check if ANTHROPIC_API_KEY is available
+      if (!process.env.ANTHROPIC_API_KEY) {
+        return res.status(500).json({ 
+          message: "Claude API key is not configured. Please set the ANTHROPIC_API_KEY environment variable."
+        });
+      }
+      
+      // Set appropriate headers for SSE
+      res.setHeader('Content-Type', 'text/event-stream');
+      res.setHeader('Cache-Control', 'no-cache');
+      res.setHeader('Connection', 'keep-alive');
+      
+      // Validate request body
+      const requestSchema = z.object({
+        promptId: z.number().optional(),
+        message: z.string(),
+        customSystemPrompt: z.string().optional(),
+        messageHistory: z.array(
+          z.object({
+            role: z.string(),
+            content: z.string()
+          })
+        ).optional()
+      });
+      
+      const validationResult = requestSchema.safeParse(req.body);
+      if (!validationResult.success) {
+        res.write(`data: ${JSON.stringify({ error: "Validation error" })}\n\n`);
+        res.end();
+        return;
+      }
+      
+      const { promptId, message, customSystemPrompt, messageHistory = [] } = validationResult.data;
+      
+      // Get the prompt if promptId is provided
+      let systemPrompt = customSystemPrompt || "You are a helpful assistant answering questions about professional development, career advancement, and resume building.";
+      let promptContent = "";
+      
+      if (promptId) {
+        const prompt = await storage.getChatPrompt(promptId);
+        if (!prompt) {
+          res.write(`data: ${JSON.stringify({ error: "Prompt not found" })}\n\n`);
+          res.end();
+          return;
+        }
+        
+        if (prompt.systemPrompt) {
+          systemPrompt = prompt.systemPrompt;
+        }
+        
+        promptContent = prompt.prompt;
+      }
+      
+      // Create Anthropic client
+      const anthropic = new Anthropic({
+        apiKey: process.env.ANTHROPIC_API_KEY
+      });
+      
+      // Format the user message for the current request
+      const formattedUserMessage = promptContent ? `${promptContent}\n\nUser input: ${message}` : message;
+      
+      // Prepare messages array for Claude API
+      let messagesForClaude: Array<{role: 'user' | 'assistant', content: string}> = [];
+      
+      // Include message history if available
+      if (messageHistory && messageHistory.length > 0) {
+        // Extract any system messages first
+        const systemMessages = messageHistory.filter(msg => msg.role === 'system');
+        if (systemMessages.length > 0) {
+          // Combine all system messages and add to the main system prompt
+          const systemContent = systemMessages.map(msg => msg.content).join('\n\n');
+          systemPrompt = `${systemPrompt}\n\n${systemContent}`;
+        }
+        
+        // Convert regular message history to Claude's expected format (only user and assistant messages)
+        messagesForClaude = messageHistory
+          .filter(msg => msg.role === 'user' || msg.role === 'assistant')
+          .map(msg => ({
+            role: msg.role === 'user' ? 'user' : 'assistant' as const,
+            content: msg.content
+          }));
+      }
+      
+      // Add the current message
+      messagesForClaude.push({ 
+        role: 'user' as const, 
+        content: formattedUserMessage 
+      });
+      
+      // Call Claude API with streaming
+      const stream = await anthropic.messages.create({
+        model: "claude-3-opus-20240229", // Using Claude 3 Opus for optimal performance
+        system: systemPrompt,
+        messages: messagesForClaude,
+        max_tokens: 4096, // Increased to 4096 for comprehensive responses
+        temperature: 0.4, // Set to 0.4 for consistent but natural responses
+        stream: true
+      });
+      
+      // Variable to accumulate the full response
+      let fullResponse = '';
+      
+      // Process the stream events
+      for await (const part of stream) {
+        // Check for content block delta type
+        if (part.type === 'content_block_delta') {
+          // Add the content delta to the full response
+          if (part.delta.text) {
+            fullResponse += part.delta.text;
+            res.write(`data: ${JSON.stringify({ 
+              chunk: part.delta.text,
+              fullResponse: fullResponse,
+              isComplete: false
+            })}\n\n`);
+          }
+        }
+      }
+      
+      // Send completion event and full response
+      res.write(`data: ${JSON.stringify({ 
+        chunk: '',
+        fullResponse: fullResponse,
+        isComplete: true
+      })}\n\n`);
+      
+      res.end();
+    } catch (error) {
+      console.error("Claude streaming API error:", error);
+      res.write(`data: ${JSON.stringify({ error: "Error generating response" })}\n\n`);
+      res.end();
     }
   });
 

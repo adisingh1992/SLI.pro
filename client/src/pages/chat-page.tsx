@@ -401,34 +401,107 @@ End by thanking them for their time and explaining that this information will he
     }
   }, [messageHistory, activeConversation]);
   
-  // Direct Claude API call with selected prompt
+  // State for streaming response
+  const [isStreaming, setIsStreaming] = useState(false);
+  const [streamingResponse, setStreamingResponse] = useState('');
+  
+  // Enhanced Claude API call with streaming support
   const callClaudeMutation = useMutation({
     mutationFn: async ({
       message,
       promptId,
+      useStreaming = true, // Default to streaming for better UX
     }: {
       message: string;
       promptId?: number;
+      useStreaming?: boolean;
     }) => {
       setIsLoading(true);
       try {
         // Add the current message to history for context tracking
         const currentMessageHistory = [...messageHistory];
         
-        const response = await fetch("/api/chat/claude", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            message,
-            promptId,
-            messageHistory: currentMessageHistory, // Send the conversation history
-          }),
-          credentials: "include"
-        });
-        if (!response.ok) throw new Error(response.statusText);
-        return await response.json();
+        if (useStreaming) {
+          // Use streaming API endpoint for natural conversation flow
+          setIsStreaming(true);
+          setStreamingResponse('');
+          
+          // Set up EventSource for server-sent events
+          const response = await fetch("/api/chat/claude/stream", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              message,
+              promptId,
+              messageHistory: currentMessageHistory,
+            }),
+            credentials: "include"
+          });
+          
+          if (!response.ok) throw new Error(response.statusText);
+          const reader = response.body?.getReader();
+          if (!reader) throw new Error("Failed to get stream reader");
+          
+          const decoder = new TextDecoder();
+          let fullResponse = '';
+          
+          // Process streaming response
+          let buffer = "";
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            
+            buffer += decoder.decode(value, { stream: true });
+            
+            // Process SSE format: data: {...}\n\n
+            const lines = buffer.split("\n\n");
+            buffer = lines.pop() || "";
+            
+            for (const line of lines) {
+              if (line.startsWith("data: ")) {
+                try {
+                  const eventData = JSON.parse(line.slice(6));
+                  
+                  if (eventData.error) {
+                    throw new Error(eventData.error);
+                  }
+                  
+                  if (eventData.chunk) {
+                    fullResponse = eventData.fullResponse;
+                    setStreamingResponse(fullResponse);
+                  }
+                  
+                  if (eventData.isComplete) {
+                    // Streaming complete, return the accumulated response
+                    return { response: fullResponse };
+                  }
+                } catch (e) {
+                  console.error("Error parsing SSE data:", e);
+                }
+              }
+            }
+          }
+          
+          // If we get here, the stream has ended without a completion event
+          return { response: fullResponse };
+        } else {
+          // Use regular (non-streaming) API endpoint for compatibility
+          const response = await fetch("/api/chat/claude", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              message,
+              promptId,
+              messageHistory: currentMessageHistory, // Send the conversation history
+            }),
+            credentials: "include"
+          });
+          if (!response.ok) throw new Error(response.statusText);
+          return await response.json();
+        }
       } finally {
         setIsLoading(false);
+        setIsStreaming(false);
       }
     },
     onSuccess: (data) => {
@@ -719,7 +792,7 @@ End by thanking them for their time and explaining that this information will he
                         ))}
                         
                         {/* Show current message and response if available but not yet in history */}
-                        {claudeResponse && messageHistory.length === 0 && (
+                        {(claudeResponse || (isStreaming && streamingResponse)) && messageHistory.length === 0 && (
                           <>
                             {/* User message */}
                             <div className="flex justify-end">
@@ -739,7 +812,7 @@ End by thanking them for their time and explaining that this information will he
                               </div>
                             </div>
 
-                            {/* Claude response */}
+                            {/* Claude response - either final or streaming */}
                             <div className="flex justify-start">
                               <div className="flex items-start max-w-[80%]">
                                 <Avatar className="h-8 w-8 bg-primary text-white">
@@ -749,7 +822,16 @@ End by thanking them for their time and explaining that this information will he
                                 </Avatar>
                                 <div className="mx-2 p-3 rounded-lg shadow-sm bg-muted">
                                   <div className="whitespace-pre-wrap break-words">
-                                    {formatMessageWithLinks(claudeResponse || '', false)}
+                                    {isStreaming ? (
+                                      // Streaming response with cursor effect
+                                      <>
+                                        {formatMessageWithLinks(streamingResponse, false)}
+                                        <span className="animate-pulse">▌</span>
+                                      </>
+                                    ) : (
+                                      // Final response
+                                      formatMessageWithLinks(claudeResponse || '', false)
+                                    )}
                                   </div>
                                 </div>
                               </div>
