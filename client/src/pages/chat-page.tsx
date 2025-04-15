@@ -59,13 +59,8 @@ export default function ChatPage() {
   const [conversationInitiated, setConversationInitiated] = useState(false);
   // Track the current question number in the guided conversation
   const [currentQuestionNumber, setCurrentQuestionNumber] = useState(0);
-  // Track if the user mentioned business school to ask the business school specific question
-  const [mentionedBusinessSchool, setMentionedBusinessSchool] = useState(false);
-  // Track if the business school question has been asked
-  const [askedBusinessSchoolQuestion, setAskedBusinessSchoolQuestion] =
-    useState(false);
-  // Track if the "Continue" button should be shown
-  const [showContinueButton, setShowContinueButton] = useState(false);
+  // Track if the structured summary button should be shown
+  const [showSummaryButton, setShowSummaryButton] = useState(false);
 
   // Reference for auto scrolling
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -344,7 +339,7 @@ Wrap up by summarizing key insights, explaining how these will inform their coac
   // Check if SLI.pro system prompt already exists in database
   useEffect(() => {
     if (prompts.length > 0) {
-      const sliProPrompt = prompts.find((p) => p.title === "SLI.pro");
+      const sliProPrompt = prompts.find((p: ChatPrompt) => p.title === "SLI.pro");
       if (!sliProPrompt) {
         // Create the default SLI.pro prompt
         createPromptMutation.mutate({
@@ -383,7 +378,7 @@ Wrap up by summarizing key insights, explaining how these will inform their coac
       guidedQuestions.length > 0
     ) {
       // Find the SLI.pro prompt ID to use as default
-      const sliProPrompt = prompts.find((p) => p.title === "SLI.pro");
+      const sliProPrompt = prompts.find((p: ChatPrompt) => p.title === "SLI.pro");
       if (sliProPrompt) {
         setSelectedPromptId(sliProPrompt.id);
       }
@@ -567,21 +562,21 @@ Wrap up by summarizing key insights, explaining how these will inform their coac
     onSuccess: (data) => {
       setClaudeResponse(data.response);
 
-      // Check if the user mentioned business school in their message or response
-      const checkForBusinessSchool = () => {
-        const lowerMessage = sentMessage.toLowerCase();
+      // Check if we're near the end of the conversation to offer structured summary
+      const checkForConversationEnd = () => {
         const lowerResponse = data.response.toLowerCase();
         return (
-          lowerMessage.includes("business school") ||
-          lowerMessage.includes("mba") ||
-          lowerResponse.includes("business school") ||
-          lowerResponse.includes("mba")
+          lowerResponse.includes("summary") ||
+          lowerResponse.includes("wrap up") ||
+          lowerResponse.includes("next steps") ||
+          lowerResponse.includes("thank you for your time") ||
+          lowerResponse.includes("coaching session")
         );
       };
 
-      // Set flag if business school is mentioned
-      if (checkForBusinessSchool()) {
-        setMentionedBusinessSchool(true);
+      // Offer structured summary if we detect the conversation is concluding
+      if (checkForConversationEnd()) {
+        setShowSummaryButton(true);
       }
 
       // Update the message history with user message and Claude's response
@@ -591,32 +586,7 @@ Wrap up by summarizing key insights, explaining how these will inform their coac
         { role: "assistant", content: data.response },
       ]);
 
-      if (!activeConversationId) {
-        // Determine which question to ask next
-        const determineNextQuestion = () => {
-          // If we're at question 3 (index 2) and business school was mentioned but not yet asked about
-          if (
-            currentQuestionNumber === 3 &&
-            mentionedBusinessSchool &&
-            !askedBusinessSchoolQuestion
-          ) {
-            // Add a button for the user to explicitly continue the conversation
-            setShowContinueButton(true);
-            return;
-          }
-
-          // If we still have standard questions to ask
-          if (
-            currentQuestionNumber > 0 &&
-            currentQuestionNumber < guidedQuestions.length
-          ) {
-            // Add a button for the user to explicitly continue the conversation
-            setShowContinueButton(true);
-          }
-        };
-
-        determineNextQuestion();
-      }
+      // No need to determine next questions since we're using a free-flowing conversation
     },
     onError: (error: Error) => {
       console.error("Claude API error:", error);
@@ -679,47 +649,16 @@ Wrap up by summarizing key insights, explaining how these will inform their coac
     });
   };
 
-  // Handle continue button click to show the next question
-  const handleContinueClick = () => {
-    // Hide the continue button
-    setShowContinueButton(false);
-
-    // If we're at question 3 (index 2) and business school was mentioned but not yet asked about
-    if (
-      currentQuestionNumber === 3 &&
-      mentionedBusinessSchool &&
-      !askedBusinessSchoolQuestion
-    ) {
-      // Ask the business school specific question
-      setMessageHistory((prevHistory) => [
-        ...prevHistory,
-        { role: "assistant", content: businessSchoolQuestion },
-      ]);
-      setAskedBusinessSchoolQuestion(true);
-      return;
-    }
-
-    // If we still have standard questions to ask
-    if (
-      currentQuestionNumber > 0 &&
-      currentQuestionNumber < guidedQuestions.length
-    ) {
-      // Add the next question to the message history
-      setMessageHistory((prevHistory) => [
-        ...prevHistory,
-        { role: "assistant", content: guidedQuestions[currentQuestionNumber] },
-      ]);
-
-      // Increment the question counter
-      setCurrentQuestionNumber(currentQuestionNumber + 1);
-
-      // Check if this is the last question (final message in the sequence)
-      // We use currentQuestionNumber + 1 because we just incremented it above
-      if (currentQuestionNumber + 1 >= guidedQuestions.length) {
-        // Automatically generate structured summary when reaching the end of conversation
-        generateStructuredSummary();
-      }
-    }
+  // Handle button click to generate structured summary at user's request
+  const handleSummaryClick = () => {
+    // Hide the summary button
+    setShowSummaryButton(false);
+    
+    // Show the structured summary component
+    setShowStructuredSummary(true);
+    
+    // Generate and save the structured summary
+    generateStructuredSummary();
   };
 
   // Function to automatically generate and save structured summary
@@ -985,14 +924,14 @@ Wrap up by summarizing key insights, explaining how these will inform their coac
                           </div>
                         )}
 
-                        {/* Show Continue button when it's time for the next question */}
-                        {showContinueButton && !activeConversationId && (
+                        {/* Show Summary button when the conversation reaches a logical end point */}
+                        {showSummaryButton && !activeConversationId && (
                           <div className="flex justify-center mt-6 mb-2">
                             <Button
-                              onClick={handleContinueClick}
+                              onClick={handleSummaryClick}
                               className="bg-primary hover:bg-primary/90"
                             >
-                              Move on to next section
+                              Generate Structured Summary
                             </Button>
                           </div>
                         )}
