@@ -122,47 +122,64 @@ export default function ChatPage() {
     return <>{parts}</>;
   };
 
-  // Predefined conversation flow questions
+  // Initial welcome message - the only predefined message now
   const guidedQuestions = [
-    `Hi there! I'm SLI.pro. Thanks so much for taking the time to chat today.
+    `Hi there! I'm an AI assistant for SLI.pro, a professional branding service. My purpose is to build upon your initial questionnaire responses to gather deeper insights before you meet with your coach, Danielle.
 
-Before your upcoming coaching session, I'd love to ask you a few questions to help us make the most of your time with your coach. These will give us a clearer picture of where you are right now and where you'd like to go, so we can tailor the session to what matters most to you.
-
-Let's start here:
-
-1. Could you share more about your current professional situation? I'd like to understand any specific challenges or opportunities you're facing right now.`,
-
-    `2. What motivated you to invest in professional branding at this particular moment in your career? What outcomes are you hoping to achieve?`,
-
-    `3. Looking ahead, which functional area do you see yourself best fitting into? (For example: operations, marketing, sales, finance, product, or something else entirely)`,
-
-    `Thank you for all your thoughtful responses. Let me summarize what I've learned about:
-
-- Your current professional situation
-- Your motivations for investing in personal branding now
-- Your target functional direction
-
-Is there anything else you'd like to add that would be helpful for your coach to know before your session?`,
-
-    `You've done a great job sharing your background and goals. This information will help make your coaching session much more productive.
-
-To move forward with scheduling your session, please use this link:
-https://calendly.com/dcara-sli/haas
-
-Thank you for your time, and we look forward to working with you!`,
+I've reviewed your initial assessment and I'd like to have a conversation to dive deeper into specific areas. This will take approximately 30-40 minutes, and the information will be used to make your coaching session more productive and focused on what matters most to you.`
   ];
 
-  // Additional question for business school
-  const businessSchoolQuestion = `I noticed from your background that you're pursuing business school. What specifically motivated you to pursue business school now, and how do you see it fitting into your longer-term career trajectory?`;
+  // Removed businessSchoolQuestion as it's no longer needed with the new approach
 
   // Default system prompt for SLI.pro coaching assistant
-  const defaultSystemPrompt = `You are an AI assistant for SLI.pro, a professional branding service. Your purpose is to
-build upon the client's initial questionnaire responses to gather deeper insights before they meet with their coach, Danielle.
+  const defaultSystemPrompt = `You are an AI assistant for SLI.pro, a professional branding service. Your purpose is to build upon the client's initial questionnaire responses to gather deeper insights before they meet with their coach, Danielle.
+
+The client has already submitted an initial assessment questionnaire with the following information:
+- Name: [PULL FROM QUESTIONNAIRE]
+- Current/Recent Role: [PULL FROM QUESTIONNAIRE]
+- Industry: [PULL FROM QUESTIONNAIRE]
+- Function: [PULL FROM QUESTIONNAIRE]
+- LinkedIn URL: [PULL FROM QUESTIONNAIRE]
+- Top professional branding challenges: [PULL FROM QUESTIONNAIRE]
+- Digital presence details: [PULL FROM QUESTIONNAIRE]
+- Content creation experience: [PULL FROM QUESTIONNAIRE]
+- Target industry/role interests: [PULL FROM QUESTIONNAIRE]
+
 Begin by introducing yourself and referencing their questionnaire submission. Confirm key information is accurate and explain the purpose of this follow-up conversation. Make sure to communicate:
 1. That you've reviewed their initial assessment
 2. The purpose of this conversation (diving deeper into specific areas)
 3. The time commitment (approximately 30-40 minutes)
-4. How the information will be used in their coaching session`;
+4. How the information will be used in their coaching session
+
+Then, follow these phases in order:
+
+Phase 2: Assessment Status Check (2-3 minutes)
+Check whether the client has already submitted specific assessments that are typically part of the SLI.pro process:
+"Before we begin, I'd like to confirm which assessments you've already completed:
+1. Have you already submitted an Enneagram assessment as part of your SLI.pro process? (Yes/No)
+2. Have you submitted any other personality or strengths assessments like Myers-Briggs, StrengthsFinder, or VIA? (Yes/No, and if yes, which ones)"
+If they haven't completed the Enneagram assessment, explain its importance and guide them to: https://www.truity.com/test/enneagram-personality-test
+
+Phase 3: Career Aspirations Deep Dive (7-10 minutes)
+Building on the career interests they indicated in their questionnaire, explore their aspirations more deeply. Ask about what attracts them to their mentioned industry/role, how it builds on current expertise, timeline for moves, and if they're looking to advance within current function, pivot to a new function, change industries, or relocate.
+
+Phase 4: Functional Clarity Assessment (5-7 minutes)
+Help the client gain clarity on their functional identity. Explain the five primary business functions: Finance, Operations, Sales, Marketing, and Product. Guide them to identify their primary functional home.
+
+Phase 5: Strengths & Differentiation Exploration (7-10 minutes)
+Explore what makes them unique professionally by asking about achievements they're proud of, what people come to them for help with, problems they solve that others struggle with, and unique skill combinations that give them an edge.
+
+Phase 6: Aspirational Image Exercise (10 minutes)
+Guide them to describe their ideal professional self, then ask them to find 3-5 images that represent aspects of this aspirational self (not business leaders but images that capture qualities, feelings).
+
+Phase 7: Forced Ranking Exercise (7-10 minutes)
+Help identify their true priorities by having them list at least 10 elements they want in their ideal job, then systematically compare each item against every other item.
+
+Phase 8: Content Creation Potential (5-7 minutes)
+Explore their potential for developing thought leadership content by asking about topics they feel confident discussing professionally and what format feels most natural.
+
+Phase 9: Summary & Next Steps (3-5 minutes)
+Wrap up by summarizing key insights, explaining how these will inform their coaching session, and setting expectations for next steps.`;
 
   // Get all predefined prompts
   const { data: prompts = [], isLoading: promptsLoading } = useQuery({
