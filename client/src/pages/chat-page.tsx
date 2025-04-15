@@ -57,8 +57,6 @@ export default function ChatPage() {
   >([]);
   // Track whether the bot has initiated the conversation
   const [conversationInitiated, setConversationInitiated] = useState(false);
-  // Track the current question number in the guided conversation
-  const [currentQuestionNumber, setCurrentQuestionNumber] = useState(0);
   // Track if the structured summary button should be shown
   const [showSummaryButton, setShowSummaryButton] = useState(false);
 
@@ -117,14 +115,7 @@ export default function ChatPage() {
     return <>{parts}</>;
   };
 
-  // Initial welcome message - the only predefined message now
-  const guidedQuestions = [
-    `Hi there! I'm an AI assistant for SLI.pro, a professional branding service. My purpose is to build upon your initial questionnaire responses to gather deeper insights before you meet with your coach, Danielle.
-
-I've reviewed your initial assessment and I'd like to have a conversation to dive deeper into specific areas. This will take approximately 30-40 minutes, and the information will be used to make your coaching session more productive and focused on what matters most to you.`
-  ];
-
-  // Removed businessSchoolQuestion as it's no longer needed with the new approach
+  // Removed guided questions as they're no longer needed with the new approach
 
   // Default system prompt for SLI.pro coaching assistant
   const defaultSystemPrompt = `You are an AI assistant for SLI.pro, a professional branding service. Your purpose is to build upon the client's initial questionnaire responses to gather deeper insights before they meet with their coach, Danielle.
@@ -401,13 +392,12 @@ Remember: You must complete each phase thoroughly before moving to the next one.
     enabled: !!user, // Only fetch if user is logged in
   });
 
-  // Initialize the guided conversation when the chat page loads
+  // Initialize the conversation when the chat page loads with context but let Claude start the conversation
   useEffect(() => {
     // Only initialize if in "New Chat" mode and conversation hasn't started yet
     if (
       !activeConversationId &&
-      !conversationInitiated &&
-      guidedQuestions.length > 0
+      !conversationInitiated
     ) {
       // Find the SLI.pro prompt ID to use as default
       const sliProPrompt = prompts.find((p: ChatPrompt) => p.title === "SLI.pro");
@@ -437,42 +427,20 @@ Remember: You must complete each phase thoroughly before moving to the next one.
         contextIntro += "\n";
       }
 
-      // Add documents information with full content if available
-      // if (userProfile?.documents && userProfile.documents.length > 0) {
-      //   contextIntro += "Documents Uploaded:\n\n";
-      //   userProfile.documents.forEach(doc => {
-      //     contextIntro += `--- DOCUMENT: ${doc.name} (${doc.type}) ---\n`;
-      //     // Include the full document content from fileData (without trying to decode)
-      //     if (doc.fileData) {
-      //       const fileContent = doc.fileData;
-      //       contextIntro += `${fileContent}\n`;
-      //     } else {
-      //       // If no content is available, at least note that the document exists
-      //       contextIntro += `[Document content not available]\n`;
-      //     }
-      //     contextIntro += "--- END DOCUMENT ---\n\n";
-      //   });
-      // }
-
-      // Add first question as assistant message to history with context
+      // Just add the system context message, and let the AI initiate the conversation
+      // when the user sends their first message
       if (contextIntro) {
         // Create a hidden system message with context
         setMessageHistory([
           { role: "system", content: contextIntro }, // This won't be displayed to the user
-          { role: "assistant", content: guidedQuestions[0] },
         ]);
-      } else {
-        // Just add the first question if no context is available
-        setMessageHistory([{ role: "assistant", content: guidedQuestions[0] }]);
       }
 
       setConversationInitiated(true);
-      setCurrentQuestionNumber(1); // Set to first question
     }
   }, [
     activeConversationId,
     conversationInitiated,
-    guidedQuestions,
     prompts,
     user,
     userProfile,
