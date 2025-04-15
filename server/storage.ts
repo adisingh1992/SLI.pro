@@ -11,6 +11,7 @@ import {
   chatPrompts, type ChatPrompt, type InsertChatPrompt,
   chatConversations, type ChatConversation, type InsertChatConversation,
   chatMessages, type ChatMessage, type InsertChatMessage,
+  structuredSummaries, type StructuredSummary, type InsertStructuredSummary,
   type UpdateUser, type UpdateProfile, type UserProfile
 } from "@shared/schema";
 import session from "express-session";

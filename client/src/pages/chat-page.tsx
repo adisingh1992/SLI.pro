@@ -642,6 +642,43 @@ End by thanking them for their time and explaining that this information will he
       
       // Increment the question counter
       setCurrentQuestionNumber(currentQuestionNumber + 1);
+      
+      // Check if this is the last question (final message in the sequence)
+      // We use currentQuestionNumber + 1 because we just incremented it above
+      if (currentQuestionNumber + 1 >= guidedQuestions.length) {
+        // Automatically generate structured summary when reaching the end of conversation
+        generateStructuredSummary();
+      }
+    }
+  };
+  
+  // Function to automatically generate and save structured summary
+  const generateStructuredSummary = async () => {
+    if (!user || messageHistory.length === 0) return;
+    
+    try {
+      // Call the structured summary API endpoint
+      const response = await fetch("/api/chat/structured-summary", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          conversationId: activeConversationId,
+          messageHistory,
+          userProfile,
+          saveToDatabase: true // Flag to indicate we want to save the summary to the database
+        }),
+        credentials: "include"
+      });
+      
+      if (!response.ok) {
+        throw new Error("Failed to generate structured summary");
+      }
+      
+      // No need to show the summary or update UI since we're just saving it
+      console.log("Successfully generated and saved structured summary");
+    } catch (error) {
+      console.error("Error generating structured summary:", error);
+      // We don't show an error toast since this happens in the background
     }
   };
 
