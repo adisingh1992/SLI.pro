@@ -38,6 +38,11 @@ import { ChatPrompt } from "@shared/schema";
 
 export default function ChatPage() {
   const { user } = useAuth();
+  
+  // Define refs at the top of the component to avoid reference issues
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const callClaudeMutationRef = useRef<any>(null);
+  
   const [message, setMessage] = useState("");
   const [sentMessage, setSentMessage] = useState("");
   const [selectedPromptId, setSelectedPromptId] = useState<number | null>(null);
@@ -60,8 +65,7 @@ export default function ChatPage() {
   // Track if the structured summary button should be shown
   const [showSummaryButton, setShowSummaryButton] = useState(false);
 
-  // Reference for auto scrolling
-  const messagesEndRef = useRef<HTMLDivElement>(null);
+  // messagesEndRef is already defined at the top of the component
 
   // Function to format message content with clickable links
   const formatMessageWithLinks = (
@@ -458,15 +462,14 @@ Remember: You must complete each phase thoroughly before moving to the next one.
     callClaudeMutationRef,
   ]);
 
+  // callClaudeMutationRef is already defined at the top of the component
+  
   // Auto-scroll to the bottom when messages are added
   useEffect(() => {
     if (messagesEndRef.current) {
       messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
     }
   }, [messageHistory, activeConversation]);
-  
-  // Define the mutation ref first
-  const callClaudeMutationRef = useRef<any>(null);
 
   // State for streaming response
   const [isStreaming, setIsStreaming] = useState(false);
@@ -624,6 +627,11 @@ Remember: You must complete each phase thoroughly before moving to the next one.
       });
     },
   });
+  
+  // Update the reference after callClaudeMutation is defined
+  useEffect(() => {
+    callClaudeMutationRef.current = callClaudeMutation.mutate;
+  }, [callClaudeMutation.mutate]);
 
   const handleSendMessage = async (event: React.FormEvent) => {
     event.preventDefault();
