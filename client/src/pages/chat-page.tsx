@@ -899,20 +899,6 @@ End by thanking them for their time and explaining that this information will he
                           </div>
                         )}
                         
-                        {/* Show Generate Structured Summary button at the end of the conversation */}
-                        {currentQuestionNumber >= guidedQuestions.length - 1 && (
-                          <div className="flex justify-center mt-6 mb-2">
-                            <Button 
-                              onClick={() => setShowStructuredSummary(true)}
-                              variant="outline"
-                              className="flex items-center gap-2"
-                            >
-                              <FileDigit size={16} />
-                              Generate Structured Summary
-                            </Button>
-                          </div>
-                        )}
-                        
                         {/* Display the structured summary when requested */}
                         {showStructuredSummary && (
                           <div className="mt-6 mb-2">
