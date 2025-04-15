@@ -1060,7 +1060,7 @@ This summary is based on the available conversation history and profile informat
           }));
           
           // Optional system prompt
-          let systemPrompt = "You are a helpful assistant answering questions about professional development, career advancement, and resume building.";
+          let systemPrompt = "You are a helpful assistant answering questions about professional development, career advancement, and resume building. Keep your responses concise and half as long as you would normally provide. Be direct and avoid lengthy explanations.";
           
           // Create Anthropic client
           const anthropic = new Anthropic({
