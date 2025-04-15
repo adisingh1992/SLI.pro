@@ -617,7 +617,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
             content: z.string()
           })
         ).optional(),
-        userProfile: z.any().optional() // User profile data containing questionnaire responses
+        userProfile: z.any().optional(), // User profile data containing questionnaire responses
+        saveToDatabase: z.boolean().optional() // Flag to indicate if summary should be saved to DB
       });
       
       const validationResult = requestSchema.safeParse(req.body);
@@ -628,7 +629,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
       
-      const { conversationId, messageHistory = [], userProfile } = validationResult.data;
+      const { conversationId, messageHistory = [], userProfile, saveToDatabase = false } = validationResult.data;
       
       // Prepare context from user profile if available
       let profileContext = "";
@@ -742,9 +743,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
             temperature: 0.2, // Lower temperature for more consistent extraction
           });
           
+          // Extract the summary text
+          const summaryText = response.content[0].type === 'text' ? response.content[0].text : 'Unable to generate structured summary';
+          
+          // Save the summary to the database if requested and we have a valid conversation ID
+          if (saveToDatabase && conversationId && req.user) {
+            try {
+              await storage.createStructuredSummary({
+                userId: req.user.id,
+                conversationId,
+                summary: summaryText
+              });
+              console.log(`Saved structured summary for conversation ${conversationId} to database`);
+            } catch (saveError) {
+              console.error("Error saving structured summary to database:", saveError);
+              // Continue to return the summary even if saving fails
+            }
+          }
+          
           // Return Claude's structured analysis
           return res.json({
-            structuredSummary: response.content[0].type === 'text' ? response.content[0].text : 'Unable to generate structured summary'
+            structuredSummary: summaryText
           });
         } catch (apiError) {
           console.error("Error calling Claude API:", apiError);
@@ -813,11 +832,63 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
 This summary is based on the available conversation history and profile information. Some sections contain reasonable interpretations where explicit information wasn't provided.`;
 
+      // Save the mock summary to the database if requested and we have a valid conversation ID
+      if (saveToDatabase && conversationId && req.user) {
+        try {
+          await storage.createStructuredSummary({
+            userId: req.user.id,
+            conversationId,
+            summary: mockSummary
+          });
+          console.log(`Saved mock structured summary for conversation ${conversationId} to database`);
+        } catch (saveError) {
+          console.error("Error saving mock structured summary to database:", saveError);
+          // Continue to return the summary even if saving fails
+        }
+      }
+
       res.json({
         structuredSummary: mockSummary
       });
     } catch (error) {
       console.error("Error generating structured summary:", error);
+      next(error);
+    }
+  });
+
+  // Structured summaries routes
+  app.get("/api/structured-summaries", isAuthenticated, async (req, res, next) => {
+    try {
+      const summaries = await storage.getStructuredSummaries(req.user.id);
+      res.json(summaries);
+    } catch (error) {
+      next(error);
+    }
+  });
+  
+  app.get("/api/structured-summaries/conversation/:id", isAuthenticated, async (req, res, next) => {
+    try {
+      const conversationId = parseInt(req.params.id);
+      
+      // First check if the conversation exists and belongs to the user
+      const conversation = await storage.getChatConversation(conversationId);
+      if (!conversation) {
+        return res.status(404).json({ message: "Conversation not found" });
+      }
+      
+      if (conversation.userId !== req.user.id) {
+        return res.status(403).json({ message: "Unauthorized" });
+      }
+      
+      // Then get the structured summary for this conversation
+      const summary = await storage.getStructuredSummaryByConversation(conversationId);
+      
+      if (!summary) {
+        return res.status(404).json({ message: "No structured summary found for this conversation" });
+      }
+      
+      res.json(summary);
+    } catch (error) {
       next(error);
     }
   });
