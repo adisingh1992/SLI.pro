@@ -94,6 +94,12 @@ export interface IStorage {
   // Chat message operations
   getChatMessages(conversationId: number): Promise<ChatMessage[]>;
   createChatMessage(message: InsertChatMessage): Promise<ChatMessage>;
+  
+  // Structured summary operations
+  getStructuredSummaries(userId: number): Promise<StructuredSummary[]>;
+  getStructuredSummary(id: number): Promise<StructuredSummary | undefined>;
+  getStructuredSummaryByConversation(conversationId: number): Promise<StructuredSummary | undefined>;
+  createStructuredSummary(summary: InsertStructuredSummary): Promise<StructuredSummary>;
 
   // Session store
   sessionStore: session.SessionStore;
@@ -112,6 +118,7 @@ export class MemStorage implements IStorage {
   private chatPrompts: Map<number, ChatPrompt>;
   private chatConversations: Map<number, ChatConversation>;
   private chatMessages: Map<number, ChatMessage>;
+  private structuredSummaries: Map<number, StructuredSummary>;
   
   private userId: number;
   private experienceId: number;
@@ -125,6 +132,7 @@ export class MemStorage implements IStorage {
   private chatPromptId: number;
   private chatConversationId: number;
   private chatMessageId: number;
+  private structuredSummaryId: number;
   
   sessionStore: session.SessionStore;
 
@@ -141,6 +149,7 @@ export class MemStorage implements IStorage {
     this.chatPrompts = new Map();
     this.chatConversations = new Map();
     this.chatMessages = new Map();
+    this.structuredSummaries = new Map();
     
     this.userId = 1;
     this.experienceId = 1;
@@ -154,6 +163,7 @@ export class MemStorage implements IStorage {
     this.chatPromptId = 1;
     this.chatConversationId = 1;
     this.chatMessageId = 1;
+    this.structuredSummaryId = 1;
     
     this.sessionStore = new MemoryStore({
       checkPeriod: 86400000,
@@ -548,6 +558,33 @@ export class MemStorage implements IStorage {
     };
     this.chatMessages.set(id, newMessage);
     return newMessage;
+  }
+
+  // Structured summary methods
+  async getStructuredSummaries(userId: number): Promise<StructuredSummary[]> {
+    return Array.from(this.structuredSummaries.values())
+      .filter(summary => summary.userId === userId)
+      .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime()); // Newest first
+  }
+
+  async getStructuredSummary(id: number): Promise<StructuredSummary | undefined> {
+    return this.structuredSummaries.get(id);
+  }
+
+  async getStructuredSummaryByConversation(conversationId: number): Promise<StructuredSummary | undefined> {
+    return Array.from(this.structuredSummaries.values())
+      .find(summary => summary.conversationId === conversationId);
+  }
+
+  async createStructuredSummary(summary: InsertStructuredSummary): Promise<StructuredSummary> {
+    const id = this.structuredSummaryId++;
+    const newSummary: StructuredSummary = {
+      ...summary,
+      id,
+      createdAt: new Date()
+    };
+    this.structuredSummaries.set(id, newSummary);
+    return newSummary;
   }
 }
 

@@ -201,6 +201,14 @@ export const chatMessages = pgTable("chat_messages", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
+export const structuredSummaries = pgTable("structured_summaries", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().references(() => users.id),
+  conversationId: integer("conversation_id").notNull().references(() => chatConversations.id),
+  summary: text("summary").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
 // Insert schemas for chats
 export const insertChatPromptSchema = createInsertSchema(chatPrompts).omit({
   id: true,
@@ -219,13 +227,20 @@ export const insertChatMessageSchema = createInsertSchema(chatMessages).omit({
   createdAt: true,
 });
 
+export const insertStructuredSummarySchema = createInsertSchema(structuredSummaries).omit({
+  id: true,
+  createdAt: true,
+});
+
 // Types for chats
 export type InsertChatPrompt = z.infer<typeof insertChatPromptSchema>;
 export type InsertChatConversation = z.infer<typeof insertChatConversationSchema>;
 export type InsertChatMessage = z.infer<typeof insertChatMessageSchema>;
+export type InsertStructuredSummary = z.infer<typeof insertStructuredSummarySchema>;
 export type ChatPrompt = typeof chatPrompts.$inferSelect;
 export type ChatConversation = typeof chatConversations.$inferSelect;
 export type ChatMessage = typeof chatMessages.$inferSelect;
+export type StructuredSummary = typeof structuredSummaries.$inferSelect;
 
 export type UserProfile = User & {
   experiences?: Experience[];
