@@ -427,19 +427,30 @@ Remember: You must complete each phase thoroughly before moving to the next one.
         contextIntro += "\n";
       }
 
-      // Just add the system context message, and let the AI initiate the conversation
-      // when the user sends their first message
+      // Add the system context message and trigger Claude to initiate the conversation
       if (contextIntro) {
         // Create a hidden system message with context
         setMessageHistory([
           { role: "system", content: contextIntro }, // This won't be displayed to the user
         ]);
+        
+        // Automatically trigger Claude to respond with the first message
+        setTimeout(() => {
+          // Use an empty first message to trigger Claude to start the conversation
+          if (callClaudeMutationRef.current) {
+            callClaudeMutationRef.current({
+              message: "Hi",
+              promptId: selectedPromptId || undefined,
+            });
+          }
+        }, 500); // Short delay to ensure state is updated
       }
 
       setConversationInitiated(true);
     }
   }, [
     activeConversationId,
+    callClaudeMutation,
     conversationInitiated,
     prompts,
     user,
@@ -452,6 +463,11 @@ Remember: You must complete each phase thoroughly before moving to the next one.
       messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
     }
   }, [messageHistory, activeConversation]);
+  
+  // Store mutation function in ref to avoid circular dependencies
+  useEffect(() => {
+    callClaudeMutationRef.current = callClaudeMutation.mutate;
+  }, [callClaudeMutation.mutate]);
 
   // State for streaming response
   const [isStreaming, setIsStreaming] = useState(false);
@@ -459,6 +475,9 @@ Remember: You must complete each phase thoroughly before moving to the next one.
 
   // State for structured summary
   const [showStructuredSummary, setShowStructuredSummary] = useState(false);
+
+  // Define the callClaudeMutation ahead of where it's used to avoid circular dependencies
+  const callClaudeMutationRef = useRef<any>(null);
 
   // Enhanced Claude API call with streaming support
   const callClaudeMutation = useMutation({
@@ -579,12 +598,24 @@ Remember: You must complete each phase thoroughly before moving to the next one.
         setShowSummaryButton(true);
       }
 
-      // Update the message history with user message and Claude's response
-      setMessageHistory((prevHistory) => [
-        ...prevHistory,
-        { role: "user", content: sentMessage },
-        { role: "assistant", content: data.response },
-      ]);
+      // Update the message history with user message (if any) and Claude's response
+      setMessageHistory((prevHistory) => {
+        // Only add the user message if there was actually a message sent by the user
+        // This is to handle the auto-generated first message where we don't want to show "Hi"
+        if (sentMessage) {
+          return [
+            ...prevHistory,
+            { role: "user", content: sentMessage },
+            { role: "assistant", content: data.response },
+          ];
+        } else {
+          // For the first automated message, just add Claude's response
+          return [
+            ...prevHistory,
+            { role: "assistant", content: data.response },
+          ];
+        }
+      });
 
       // No need to determine next questions since we're using a free-flowing conversation
     },
@@ -861,26 +892,28 @@ Remember: You must complete each phase thoroughly before moving to the next one.
                           (isStreaming && streamingResponse)) &&
                           messageHistory.length === 0 && (
                             <>
-                              {/* User message */}
-                              <div className="flex justify-end">
-                                <div className="flex items-start max-w-[80%] flex-row-reverse">
-                                  {user && (
-                                    <UserAvatar
-                                      firstName={user.firstName}
-                                      lastName={user.lastName}
-                                      size="small"
-                                    />
-                                  )}
-                                  <div className="mx-2 p-3 rounded-lg shadow-sm bg-primary text-primary-foreground">
-                                    <div className="whitespace-pre-wrap break-words">
-                                      {formatMessageWithLinks(
-                                        sentMessage,
-                                        true,
-                                      )}
+                              {/* User message - only show if there's an actual user message */}
+                              {sentMessage && (
+                                <div className="flex justify-end">
+                                  <div className="flex items-start max-w-[80%] flex-row-reverse">
+                                    {user && (
+                                      <UserAvatar
+                                        firstName={user.firstName}
+                                        lastName={user.lastName}
+                                        size="small"
+                                      />
+                                    )}
+                                    <div className="mx-2 p-3 rounded-lg shadow-sm bg-primary text-primary-foreground">
+                                      <div className="whitespace-pre-wrap break-words">
+                                        {formatMessageWithLinks(
+                                          sentMessage,
+                                          true,
+                                        )}
+                                      </div>
                                     </div>
                                   </div>
                                 </div>
-                              </div>
+                              )}
 
                               {/* Claude response - either final or streaming */}
                               <div className="flex justify-start">
