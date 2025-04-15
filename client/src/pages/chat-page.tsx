@@ -725,7 +725,7 @@ Wrap up by summarizing key insights, explaining how these will inform their coac
                   ) : activeConversation?.messages &&
                     activeConversation.messages.length > 0 ? (
                     <div className="space-y-4">
-                      {activeConversation.messages.map((msg) => (
+                      {activeConversation.messages.map((msg: any) => (
                         <div
                           key={msg.id}
                           className={`flex ${
