@@ -604,6 +604,157 @@ export async function registerRoutes(app: Express): Promise<Server> {
       next(error);
     }
   });
+  
+  // Generate structured client information summary from conversation
+  app.post("/api/chat/structured-summary", isAuthenticated, async (req, res, next) => {
+    try {
+      // Check if ANTHROPIC_API_KEY is available
+      if (!process.env.ANTHROPIC_API_KEY) {
+        return res.status(500).json({ 
+          message: "Claude API key is not configured. Please set the ANTHROPIC_API_KEY environment variable."
+        });
+      }
+      
+      // Validate request body
+      const requestSchema = z.object({
+        conversationId: z.number().optional(),
+        messageHistory: z.array(
+          z.object({
+            role: z.string(),
+            content: z.string()
+          })
+        ).optional(),
+        userProfile: z.any().optional() // User profile data containing questionnaire responses
+      });
+      
+      const validationResult = requestSchema.safeParse(req.body);
+      if (!validationResult.success) {
+        return res.status(400).json({
+          message: "Validation error",
+          errors: validationResult.error.errors,
+        });
+      }
+      
+      const { conversationId, messageHistory = [], userProfile } = validationResult.data;
+      
+      // Prepare context from user profile if available
+      let profileContext = "";
+      if (userProfile) {
+        profileContext = `
+        User Profile Information:
+        - Name: ${userProfile.firstName} ${userProfile.lastName}
+        - Username/Email: ${userProfile.username}
+        ${userProfile.profile ? `- Headline: ${userProfile.profile.headline || 'N/A'}` : ''}
+        ${userProfile.profile ? `- Bio: ${userProfile.profile.bio || 'N/A'}` : ''}
+        ${userProfile.profile ? `- Location: ${userProfile.profile.location || 'N/A'}` : ''}
+        `;
+        
+        // Add questionnaire data if available
+        if (userProfile.questionnaire) {
+          profileContext += `
+          Questionnaire Responses:
+          - Industry: ${userProfile.questionnaire.industry || 'Not provided'}
+          - Background: ${userProfile.questionnaire.background || 'Not provided'}
+          - Goals: ${userProfile.questionnaire.goals || 'Not provided'}
+          - Aspirations: ${userProfile.questionnaire.aspirations || 'Not provided'}
+          - Challenges: ${userProfile.questionnaire.challenges || 'Not provided'}
+          - Interests: ${userProfile.questionnaire.interests || 'Not provided'}
+          - Timeframe: ${userProfile.questionnaire.timeframe || 'Not provided'}
+          `;
+        }
+        
+        // Add experience data if available
+        if (userProfile.experiences && userProfile.experiences.length > 0) {
+          profileContext += "\nWork Experience:\n";
+          userProfile.experiences.forEach((exp, index) => {
+            profileContext += `
+            ${index + 1}. ${exp.title} at ${exp.company}
+            - Duration: ${exp.startDate} to ${exp.current ? 'Present' : exp.endDate || 'Not specified'}
+            - Description: ${exp.description || 'Not provided'}
+            `;
+          });
+        }
+        
+        // Add education data if available
+        if (userProfile.education && userProfile.education.length > 0) {
+          profileContext += "\nEducation:\n";
+          userProfile.education.forEach((edu, index) => {
+            profileContext += `
+            ${index + 1}. ${edu.degree} from ${edu.institution}
+            - Years: ${edu.startYear} to ${edu.endYear || 'Not specified'}
+            - Description: ${edu.description || 'Not provided'}
+            `;
+          });
+        }
+        
+        // Add skills data if available
+        if (userProfile.skills && userProfile.skills.length > 0) {
+          profileContext += "\nSkills: " + userProfile.skills.map(s => s.name).join(", ") + "\n";
+        }
+        
+        // Add languages data if available
+        if (userProfile.languages && userProfile.languages.length > 0) {
+          profileContext += "\nLanguages: " + userProfile.languages.map(l => `${l.name} (${l.proficiency})`).join(", ") + "\n";
+        }
+      }
+      
+      // Get conversation history if conversationId is provided
+      let messagesForAnalysis: Array<{role: string, content: string}> = [];
+      
+      if (conversationId) {
+        const conversation = await storage.getChatConversationWithMessages(conversationId);
+        if (conversation) {
+          messagesForAnalysis = conversation.messages.map(msg => ({
+            role: msg.role,
+            content: msg.content
+          }));
+        }
+      } else if (messageHistory.length > 0) {
+        messagesForAnalysis = messageHistory;
+      }
+      
+      if (messagesForAnalysis.length === 0) {
+        return res.status(400).json({
+          message: "No conversation data provided. Please provide either conversationId or messageHistory."
+        });
+      }
+      
+      // Import the structured extraction prompt
+      const { structuredExtractionPrompt } = await import('./templates/structured-extraction-prompt');
+      
+      // Format the conversation for analysis
+      const conversationText = messagesForAnalysis
+        .map(msg => `${msg.role.toUpperCase()}: ${msg.content}`)
+        .join('\n\n');
+      
+      // Create Anthropic client
+      const anthropic = new Anthropic({
+        apiKey: process.env.ANTHROPIC_API_KEY
+      });
+      
+      // Call Claude API for structured information extraction
+      const response = await anthropic.messages.create({
+        model: "claude-3-opus-20240229",
+        system: structuredExtractionPrompt,
+        messages: [
+          { 
+            role: 'user',
+            content: `Here is the user profile information and conversation history for analysis:\n\n${profileContext}\n\nCONVERSATION TRANSCRIPT:\n${conversationText}`
+          }
+        ],
+        max_tokens: 4096,
+        temperature: 0.2, // Lower temperature for more consistent extraction
+      });
+      
+      // Return Claude's structured analysis
+      res.json({
+        structuredSummary: response.content[0].type === 'text' ? response.content[0].text : 'Unable to generate structured summary'
+      });
+    } catch (error) {
+      console.error("Error generating structured summary:", error);
+      next(error);
+    }
+  });
 
   // Chat conversations routes
   app.get("/api/chat/conversations", isAuthenticated, async (req, res, next) => {
