@@ -17,7 +17,8 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import UserAvatar from "@/components/user-avatar";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Loader2, Send, Plus, MessageSquare, Bot } from "lucide-react";
+import { Loader2, Send, Plus, MessageSquare, Bot, FileDigit } from "lucide-react";
+import StructuredSummary from "@/components/structured-summary";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Select,
@@ -404,6 +405,9 @@ End by thanking them for their time and explaining that this information will he
   // State for streaming response
   const [isStreaming, setIsStreaming] = useState(false);
   const [streamingResponse, setStreamingResponse] = useState('');
+  
+  // State for structured summary
+  const [showStructuredSummary, setShowStructuredSummary] = useState(false);
   
   // Enhanced Claude API call with streaming support
   const callClaudeMutation = useMutation({
@@ -855,6 +859,31 @@ End by thanking them for their time and explaining that this information will he
                             >
                               Move on to next section
                             </Button>
+                          </div>
+                        )}
+                        
+                        {/* Show Generate Structured Summary button at the end of the conversation */}
+                        {currentQuestionNumber >= guidedQuestions.length - 1 && (
+                          <div className="flex justify-center mt-6 mb-2">
+                            <Button 
+                              onClick={() => setShowStructuredSummary(true)}
+                              variant="outline"
+                              className="flex items-center gap-2"
+                            >
+                              <FileDigit size={16} />
+                              Generate Structured Summary
+                            </Button>
+                          </div>
+                        )}
+                        
+                        {/* Display the structured summary when requested */}
+                        {showStructuredSummary && (
+                          <div className="mt-6 mb-2">
+                            <StructuredSummary 
+                              messageHistory={messageHistory}
+                              userProfile={userProfile}
+                              onClose={() => setShowStructuredSummary(false)}
+                            />
                           </div>
                         )}
                         
