@@ -1,6 +1,5 @@
 import { useAuth } from "@/hooks/use-auth";
 import { useLocation } from "wouter";
-import { useNavigation } from "@/hooks/use-navigation";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -15,11 +14,7 @@ import sliProLogo from "@/assets/sliPro-logos_aqua.png";
 
 export default function NavBar() {
   const { user, logoutMutation } = useAuth();
-  const [location] = useLocation();
-  const { navigate } = useNavigation();
-  
-  // Check if we're on the chat page - navigation handler will be managed differently there
-  const isOnChatPage = location === '/chat';
+  const [location, navigate] = useLocation();
 
   const handleLogout = () => {
     logoutMutation.mutate();

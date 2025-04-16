@@ -11,7 +11,6 @@ import QuestionnairePage from "@/pages/questionnaire-simple";
 import ChatPage from "@/pages/chat-page";
 import SummaryPage from "@/pages/summary-page";
 import { AuthProvider } from "@/hooks/use-auth";
-import { NavigationProvider } from "@/hooks/use-navigation";
 import { ProtectedRoute } from "@/lib/protected-route";
 
 function Router() {
@@ -34,10 +33,8 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
-        <NavigationProvider>
-          <Router />
-          <Toaster />
-        </NavigationProvider>
+        <Router />
+        <Toaster />
       </AuthProvider>
     </QueryClientProvider>
   );
