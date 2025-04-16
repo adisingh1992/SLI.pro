@@ -11,7 +11,10 @@ import {
   updateProfileSchema,
   insertQuestionnaireSchema,
   insertDocumentSchema,
+  insertConversationSchema,
+  insertMessageSchema,
 } from "@shared/schema";
+import { generateClaudeResponse, generateStreamingClaudeResponse } from "./claude";
 
 
 export async function registerRoutes(app: Express): Promise<Server> {

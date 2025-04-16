@@ -74,11 +74,20 @@ export interface IStorage {
   
   // User profile operations
   getUserProfile(userId: number): Promise<UserProfile | undefined>;
-
-
+  
+  // Conversation operations
+  getConversations(userId: number): Promise<Conversation[]>;
+  getConversation(id: number): Promise<Conversation | undefined>;
+  createConversation(conversation: InsertConversation): Promise<Conversation>;
+  updateConversation(id: number, title: string): Promise<Conversation | undefined>;
+  deleteConversation(id: number): Promise<void>;
+  
+  // Message operations
+  getMessages(conversationId: number): Promise<Message[]>;
+  createMessage(message: InsertMessage): Promise<Message>;
 
   // Session store
-  sessionStore: session.SessionStore;
+  sessionStore: session.Store;
 }
 
 export class MemStorage implements IStorage {
@@ -91,6 +100,8 @@ export class MemStorage implements IStorage {
   private questionnaires: Map<number, Questionnaire>;
   private documents: Map<number, Document>;
   private passwordResets: Map<number, PasswordReset>;
+  private conversations: Map<number, Conversation>;
+  private messages: Map<number, Message>;
   
   private userId: number;
   private experienceId: number;
@@ -101,8 +112,10 @@ export class MemStorage implements IStorage {
   private questionnaireId: number;
   private documentId: number;
   private passwordResetId: number;
+  private conversationId: number;
+  private messageId: number;
   
-  sessionStore: session.SessionStore;
+  sessionStore: session.Store;
 
   constructor() {
     this.users = new Map();
@@ -114,6 +127,8 @@ export class MemStorage implements IStorage {
     this.questionnaires = new Map();
     this.documents = new Map();
     this.passwordResets = new Map();
+    this.conversations = new Map();
+    this.messages = new Map();
     
     this.userId = 1;
     this.experienceId = 1;
@@ -124,6 +139,8 @@ export class MemStorage implements IStorage {
     this.questionnaireId = 1;
     this.documentId = 1;
     this.passwordResetId = 1;
+    this.conversationId = 1;
+    this.messageId = 1;
     
     this.sessionStore = new MemoryStore({
       checkPeriod: 86400000,
@@ -356,6 +373,7 @@ export class MemStorage implements IStorage {
     const profile = await this.getProfile(userId);
     const questionnaire = await this.getQuestionnaire(userId);
     const documents = await this.getDocuments(userId);
+    const conversations = await this.getConversations(userId);
     
     return {
       ...user,
@@ -365,7 +383,8 @@ export class MemStorage implements IStorage {
       languages,
       profile,
       questionnaire,
-      documents
+      documents,
+      conversations
     };
   }
   
@@ -406,7 +425,77 @@ export class MemStorage implements IStorage {
     return updatedReset;
   }
   
-
+  // Conversation methods
+  async getConversations(userId: number): Promise<Conversation[]> {
+    return Array.from(this.conversations.values())
+      .filter(conversation => conversation.userId === userId)
+      .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
+  }
+  
+  async getConversation(id: number): Promise<Conversation | undefined> {
+    return this.conversations.get(id);
+  }
+  
+  async createConversation(conversation: InsertConversation): Promise<Conversation> {
+    const id = this.conversationId++;
+    const newConversation: Conversation = {
+      ...conversation,
+      id,
+      createdAt: new Date(),
+      updatedAt: new Date()
+    };
+    this.conversations.set(id, newConversation);
+    return newConversation;
+  }
+  
+  async updateConversation(id: number, title: string): Promise<Conversation | undefined> {
+    const conversation = await this.getConversation(id);
+    if (!conversation) return undefined;
+    
+    const updatedConversation = {
+      ...conversation,
+      title,
+      updatedAt: new Date()
+    };
+    this.conversations.set(id, updatedConversation);
+    return updatedConversation;
+  }
+  
+  async deleteConversation(id: number): Promise<void> {
+    // Delete all messages in the conversation first
+    const messages = await this.getMessages(id);
+    messages.forEach(message => {
+      this.messages.delete(message.id);
+    });
+    
+    // Then delete the conversation
+    this.conversations.delete(id);
+  }
+  
+  // Message methods
+  async getMessages(conversationId: number): Promise<Message[]> {
+    return Array.from(this.messages.values())
+      .filter(message => message.conversationId === conversationId)
+      .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+  }
+  
+  async createMessage(message: InsertMessage): Promise<Message> {
+    const id = this.messageId++;
+    const newMessage: Message = {
+      ...message,
+      id,
+      createdAt: new Date()
+    };
+    this.messages.set(id, newMessage);
+    
+    // Update the conversation's updatedAt timestamp
+    const conversation = await this.getConversation(message.conversationId);
+    if (conversation) {
+      await this.updateConversation(conversation.id, conversation.title);
+    }
+    
+    return newMessage;
+  }
 }
 
 export const storage = new MemStorage();
