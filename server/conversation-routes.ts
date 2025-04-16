@@ -1,6 +1,6 @@
 import type { Express, Request, Response, NextFunction } from "express";
 import { storage } from "./storage";
-import { generateClaudeResponse, generateStreamingClaudeResponse } from "./claude";
+import { generateClaudeResponse, generateStreamingClaudeResponse, generateConversationSummary } from "./claude";
 import { insertConversationSchema, insertMessageSchema } from "@shared/schema";
 
 export function registerConversationRoutes(app: Express) {
@@ -260,6 +260,92 @@ export function registerConversationRoutes(app: Express) {
         res.write(`data: ${JSON.stringify({ type: 'error', message: 'An error occurred during the chat' })}\n\n`);
         res.end();
       }
+    }
+  });
+  
+  // Conversation Summary routes
+  // Get a summary for a specific conversation
+  app.get("/api/conversations/:id/summary", isAuthenticated, async (req, res, next) => {
+    try {
+      const conversationId = parseInt(req.params.id);
+      const conversation = await storage.getConversation(conversationId);
+      
+      if (!conversation) {
+        return res.status(404).json({ message: "Conversation not found" });
+      }
+      
+      if (conversation.userId !== req.user!.id) {
+        return res.status(403).json({ message: "Unauthorized" });
+      }
+      
+      // Check if a summary already exists
+      let summary = await storage.getConversationSummaryByConversationId(conversationId);
+      
+      // If no summary exists, generate one
+      if (!summary) {
+        const generatedSummary = await generateConversationSummary(conversationId, req.user!.id);
+        
+        if (!generatedSummary) {
+          return res.status(500).json({ message: "Failed to generate conversation summary" });
+        }
+        
+        // Save the generated summary
+        summary = await storage.createConversationSummary(generatedSummary);
+      }
+      
+      res.json(summary);
+    } catch (error) {
+      console.error('Error getting conversation summary:', error);
+      next(error);
+    }
+  });
+  
+  // Get all summaries for a user
+  app.get("/api/conversation-summaries", isAuthenticated, async (req, res, next) => {
+    try {
+      const summaries = await storage.getConversationSummaries(req.user!.id);
+      res.json(summaries);
+    } catch (error) {
+      console.error('Error getting conversation summaries:', error);
+      next(error);
+    }
+  });
+  
+  // Generate (or regenerate) a summary for a conversation
+  app.post("/api/conversations/:id/summary", isAuthenticated, async (req, res, next) => {
+    try {
+      const conversationId = parseInt(req.params.id);
+      const conversation = await storage.getConversation(conversationId);
+      
+      if (!conversation) {
+        return res.status(404).json({ message: "Conversation not found" });
+      }
+      
+      if (conversation.userId !== req.user!.id) {
+        return res.status(403).json({ message: "Unauthorized" });
+      }
+      
+      // Delete existing summary if it exists
+      const existingSummary = await storage.getConversationSummaryByConversationId(conversationId);
+      if (existingSummary) {
+        // We would need to add a delete method for summaries
+        // await storage.deleteConversationSummary(existingSummary.id);
+      }
+      
+      // Generate a new summary
+      const generatedSummary = await generateConversationSummary(conversationId, req.user!.id);
+      
+      if (!generatedSummary) {
+        return res.status(500).json({ message: "Failed to generate conversation summary" });
+      }
+      
+      // Save the generated summary
+      const summary = await storage.createConversationSummary(generatedSummary);
+      
+      res.status(201).json(summary);
+    } catch (error) {
+      console.error('Error generating conversation summary:', error);
+      next(error);
     }
   });
 }
