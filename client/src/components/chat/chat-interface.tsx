@@ -23,16 +23,51 @@ export function ChatInterface() {
     streamingResponse
   } = useConversation();
   
+  // Track all messages, including those from the API and streaming
+  const [allMessages, setAllMessages] = useState<Array<{id?: number; content: string; role: 'user' | 'assistant'; isStreaming?: boolean}>>([]);
+  
   const [showNewChatDialog, setShowNewChatDialog] = useState(false);
   const [newChatTitle, setNewChatTitle] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const isMobile = useIsMobile();
   const [showSidebar, setShowSidebar] = useState(!isMobile);
 
-  // Scroll to bottom when messages change or streaming occurs
+  // Update all messages when conversation or streaming changes
+  useEffect(() => {
+    if (currentConversation && currentConversation.messages) {
+      // Preserve fixed IDs from the API
+      setAllMessages(currentConversation.messages.map(message => ({
+        id: message.id,
+        content: message.content,
+        role: message.role as 'user' | 'assistant'
+      })));
+    }
+  }, [currentConversation]);
+  
+  // Add streaming message to the allMessages array
+  useEffect(() => {
+    if (isProcessing && streamingResponse) {
+      // Check if we already have a streaming message at the end
+      if (allMessages.length > 0 && allMessages[allMessages.length - 1].isStreaming) {
+        // Update the existing streaming message
+        setAllMessages(prev => [
+          ...prev.slice(0, prev.length - 1),
+          { content: streamingResponse, role: 'assistant', isStreaming: true }
+        ]);
+      } else {
+        // Add a new streaming message
+        setAllMessages(prev => [
+          ...prev,
+          { content: streamingResponse, role: 'assistant', isStreaming: true }
+        ]);
+      }
+    }
+  }, [streamingResponse, isProcessing, allMessages]);
+
+  // Scroll to bottom when messages change
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [currentConversation?.messages, streamingResponse]);
+  }, [allMessages]);
 
   // Hide sidebar on mobile by default
   useEffect(() => {
@@ -123,6 +158,13 @@ export function ChatInterface() {
 
   const handleSendMessage = async (content: string) => {
     try {
+      // Always add the user message to our local messages state immediately
+      // This ensures it doesn't disappear even if there's an API error
+      setAllMessages(prev => [
+        ...prev,
+        { content, role: 'user' }
+      ]);
+      
       // Make sure we have a current conversation before sending
       if (!currentConversation || !currentConversation.conversation) {
         // If we have conversations but none selected, select the first one
@@ -199,28 +241,18 @@ export function ChatInterface() {
             </div>
           ) : (
             <div className="space-y-4">
-              {currentConversation?.messages?.length > 0 ? (
-                currentConversation.messages.map((message) => (
+              {allMessages.length > 0 ? (
+                allMessages.map((message, index) => (
                   <ChatMessage
-                    key={message.id}
+                    key={message.id || `temp-message-${index}`}
                     content={message.content}
                     role={message.role}
+                    isStreaming={message.isStreaming}
                   />
                 ))
               ) : (
                 <div className="text-center text-muted-foreground py-8">
                   <p>This conversation is empty. Start by sending a message.</p>
-                </div>
-              )}
-              
-              {/* Streaming message if active */}
-              {isProcessing && streamingResponse && (
-                <div className="streaming-message">
-                  <ChatMessage
-                    content={streamingResponse}
-                    role="assistant"
-                    isStreaming={true}
-                  />
                 </div>
               )}
               
