@@ -47,34 +47,22 @@ export const ConversationProvider = ({ children }: { children: ReactNode }) => {
   // Fetch all conversations
   const { data: conversations, isLoading: isLoadingConversations, error: conversationsError } = useQuery({
     queryKey: ['/api/conversations'],
-    queryFn: async () => {
-      const response = await fetch('/api/conversations');
-      if (!response.ok) {
-        throw new Error('Failed to fetch conversations');
-      }
-      return response.json();
-    },
+    // Using the default queryFn from the queryClient which knows how to handle the URL
     enabled: true,
   });
 
   // Fetch current conversation with messages
   const { data: currentConversation, isLoading: isLoadingMessages, error: messagesError } = useQuery({
     queryKey: ['/api/conversations', currentConversationId],
-    queryFn: async () => {
-      if (!currentConversationId) return null;
-      const response = await fetch(`/api/conversations/${currentConversationId}`);
-      if (!response.ok) {
-        throw new Error('Failed to fetch conversation messages');
-      }
-      return response.json();
-    },
+    // Using the default queryFn which will hit `/api/conversations/${currentConversationId}`
     enabled: !!currentConversationId,
   });
 
   // Create a new conversation
   const createConversationMutation = useMutation({
     mutationFn: async (title: string) => {
-      return apiRequest('/api/conversations', 'POST', { title });
+      const response = await apiRequest('/api/conversations', 'POST', { title });
+      return response as Conversation;
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['/api/conversations'] });
@@ -192,8 +180,8 @@ export const ConversationProvider = ({ children }: { children: ReactNode }) => {
   return (
     <ConversationContext.Provider
       value={{
-        conversations: conversations || [],
-        currentConversation: currentConversation || null,
+        conversations: Array.isArray(conversations) ? conversations : [],
+        currentConversation: currentConversation as ConversationWithMessages || null,
         isLoadingConversations,
         isLoadingMessages,
         error: conversationsError || messagesError || null,
