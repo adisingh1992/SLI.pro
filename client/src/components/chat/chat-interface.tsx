@@ -47,9 +47,6 @@ export function ChatInterface() {
   
   // Keep track of conversation completion status
   const [hasGeneratedSummary, setHasGeneratedSummary] = useState(false);
-  
-  // State to control the display of calendly link
-  const [showCalendlyLink, setShowCalendlyLink] = useState(false);
 
   // Keep track of the last seen conversation ID to prevent data loss
   const lastConversationIdRef = useRef<number | null>(null);
@@ -70,8 +67,7 @@ export function ChatInterface() {
       // Reset summary generation status for the new conversation
       setHasGeneratedSummary(false);
       
-      // Reset Calendly link visibility for the new conversation
-      setShowCalendlyLink(false);
+
 
       // If we're not actively streaming, replace all messages
       if (!isProcessing) {
@@ -144,8 +140,7 @@ export function ChatInterface() {
         // Mark as generated so we don't try again
         setHasGeneratedSummary(true);
         
-        // Show the Calendly link
-        setShowCalendlyLink(true);
+
         
         // Call the API to generate a summary
         const response = await fetch(`/api/conversations/${currentConversation.conversation.id}/summary`, {
@@ -347,6 +342,18 @@ export function ChatInterface() {
               {currentConversation?.conversation?.title || "SLI.pro"}
             </h2>
           </div>
+          
+          {/* Schedule button always visible in header */}
+          {currentConversation && currentConversation.conversation && (
+            <a 
+              href="https://calendly.com/dcara-sli/haas" 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors"
+            >
+              Schedule Coaching Session
+            </a>
+          )}
         </div>
 
         {/* Messages area */}
@@ -380,23 +387,6 @@ export function ChatInterface() {
                   <p>SLI.pro is thinking, please wait..</p>
                 </div>
               )}
-
-              {/* Calendly link for scheduling coaching sessions */}
-              {showCalendlyLink && (
-                <div className="my-8 p-6 border rounded-lg bg-blue-50 text-center">
-                  <h3 className="text-xl font-semibold mb-2">Schedule a Coaching Session</h3>
-                  <p className="mb-4">Thank you for completing your assessment. To take the next step in your professional branding journey, schedule a coaching session with our experts.</p>
-                  <a 
-                    href="https://calendly.com/dcara-sli/haas" 
-                    target="_blank" 
-                    rel="noopener noreferrer"
-                    className="inline-block px-6 py-3 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-colors"
-                  >
-                    Schedule Now
-                  </a>
-                </div>
-              )}
-              
               <div ref={messagesEndRef} />
             </div>
           )}
