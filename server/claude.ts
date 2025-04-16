@@ -145,9 +145,9 @@ function extractContentCreation(aspirations: string): string {
 // Method to generate a response using Claude
 export async function generateClaudeResponse(
   userId: number,
-  messages: { role: string; content: string }[],
+  messages: { role: 'user' | 'assistant'; content: string }[],
   userProfileData: any
-) {
+): Promise<string> {
   try {
     const systemPrompt = getSystemPrompt(userProfileData);
     
@@ -161,7 +161,15 @@ export async function generateClaudeResponse(
       temperature: 0.5,
     });
     
-    return response.content;
+    // Return the text content from the response
+    if (response.content && response.content.length > 0) {
+      const textContent = response.content.filter(item => item.type === 'text');
+      if (textContent.length > 0 && 'text' in textContent[0]) {
+        return textContent[0].text;
+      }
+    }
+    
+    return "Sorry, I wasn't able to generate a response.";
   } catch (error) {
     log(`Error calling Claude API: ${error}`, 'claude');
     throw new Error(`Failed to generate response: ${error}`);
@@ -171,10 +179,10 @@ export async function generateClaudeResponse(
 // Method to generate a streaming response using Claude
 export async function generateStreamingClaudeResponse(
   userId: number,
-  messages: { role: string; content: string }[],
+  messages: { role: 'user' | 'assistant'; content: string }[],
   userProfileData: any,
   onChunk: (chunk: string) => void
-) {
+): Promise<void> {
   try {
     const systemPrompt = getSystemPrompt(userProfileData);
     
@@ -190,7 +198,10 @@ export async function generateStreamingClaudeResponse(
     });
     
     for await (const chunk of stream) {
-      if (chunk.type === 'content_block_delta' && chunk.delta.text) {
+      if (chunk.type === 'content_block_delta' && 
+          chunk.delta && 
+          'text' in chunk.delta && 
+          chunk.delta.text) {
         onChunk(chunk.delta.text);
       }
     }
