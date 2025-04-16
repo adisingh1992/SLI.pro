@@ -61,8 +61,9 @@ export const ConversationProvider = ({ children }: { children: ReactNode }) => {
   // Create a new conversation
   const createConversationMutation = useMutation({
     mutationFn: async (title: string) => {
-      const response = await apiRequest('/api/conversations', 'POST', { title });
-      return response as Conversation;
+      const response = await apiRequest('POST', '/api/conversations', { title });
+      const data = await response.json();
+      return data as Conversation;
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['/api/conversations'] });
@@ -76,7 +77,8 @@ export const ConversationProvider = ({ children }: { children: ReactNode }) => {
   // Send a message and get non-streaming response
   const sendMessageMutation = useMutation({
     mutationFn: async ({ conversationId, content }: { conversationId: number, content: string }) => {
-      return apiRequest(`/api/conversations/${conversationId}/messages`, 'POST', { content });
+      const response = await apiRequest('POST', `/api/conversations/${conversationId}/messages`, { content });
+      return response.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/conversations', currentConversationId] });
@@ -92,14 +94,14 @@ export const ConversationProvider = ({ children }: { children: ReactNode }) => {
     setStreamingResponse('');
     
     try {
-      // First, create a new EventSource connection
+      // We need to use fetch directly instead of apiRequest for streaming
       const response = await fetch(`/api/conversations/${conversationId}/messages/stream`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({ content }),
-        credentials: 'same-origin'
+        credentials: 'include' // Use include to ensure credentials are sent
       });
       
       if (!response.body) {
@@ -165,25 +167,17 @@ export const ConversationProvider = ({ children }: { children: ReactNode }) => {
 
   // Create a new conversation
   const createConversation = async (title: string) => {
+    if (!title.trim()) {
+      throw new Error('Conversation title cannot be empty');
+    }
+    
     try {
-      const response = await fetch('/api/conversations', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ title }),
-        credentials: 'same-origin'
-      });
-      
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`Failed to create conversation: ${response.status} ${errorText}`);
-      }
-      
-      const data = await response.json();
+      // Using the apiRequest function with correct parameter order
+      const response = await apiRequest('POST', '/api/conversations', { title });
+      const data = await response.json() as Conversation;
       queryClient.invalidateQueries({ queryKey: ['/api/conversations'] });
       setCurrentConversationId(data.id);
-      return data as Conversation;
+      return data;
     } catch (error) {
       console.error('Error creating conversation:', error);
       throw error;
