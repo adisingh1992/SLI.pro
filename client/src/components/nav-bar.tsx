@@ -15,10 +15,20 @@ import sliProLogo from "@/assets/sliPro-logos_aqua.png";
 export default function NavBar() {
   const { user, logoutMutation } = useAuth();
   const [location, navigate] = useLocation();
+  
+  // Check if we're on the chat page - navigation handler will be managed differently there
+  const isOnChatPage = location === '/chat';
 
   const handleLogout = () => {
     logoutMutation.mutate();
     navigate("/auth");
+  };
+  
+  // We'll use this function to navigate - it respects the custom navigation in ChatPage
+  const navigateTo = (path: string) => {
+    // If navigation event happens within the ChatPage component, 
+    // the click handler there will take care of showing the confirmation dialog if needed
+    navigate(path);
   };
 
   const getInitials = () => {
@@ -31,7 +41,7 @@ export default function NavBar() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between h-16">
           <div className="flex">
-            <div className="flex-shrink-0 flex items-center cursor-pointer" onClick={() => navigate("/")}>
+            <div className="flex-shrink-0 flex items-center cursor-pointer" onClick={() => navigateTo("/")}>
               <img 
                 src={sliProLogo} 
                 alt="SLI.pro Logo" 
@@ -58,15 +68,15 @@ export default function NavBar() {
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-48">
-                  <DropdownMenuItem onClick={() => navigate("/profile")} className="cursor-pointer">
+                  <DropdownMenuItem onClick={() => navigateTo("/profile")} className="cursor-pointer">
                     <User className="mr-2 h-4 w-4" />
                     <span>View Profile</span>
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => navigate("/chat")} className="cursor-pointer">
+                  <DropdownMenuItem onClick={() => navigateTo("/chat")} className="cursor-pointer">
                     <MessageSquare className="mr-2 h-4 w-4" />
                     <span>AI Assistant</span>
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => navigate("/summaries")} className="cursor-pointer">
+                  <DropdownMenuItem onClick={() => navigateTo("/summaries")} className="cursor-pointer">
                     <FileText className="mr-2 h-4 w-4" />
                     <span>Conversation Summaries</span>
                   </DropdownMenuItem>
