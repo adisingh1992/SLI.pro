@@ -298,8 +298,10 @@ export default function HomePage() {
                 <Button
                   className="flex items-center bg-green-600 hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
                   onClick={() => {
-                    scrollToTop();
-                    navigate("/chat");
+                    toast({
+                      title: "Coming Soon",
+                      description: "The coaching session scheduling feature is currently under development.",
+                    });
                   }}
                   disabled={!userProfile?.questionnaire || (userProfile?.questionnaire?.isDraft === true) || !hasRequiredDocuments}
                 >
