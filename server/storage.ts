@@ -8,10 +8,6 @@ import {
   questionnaires, type Questionnaire, type InsertQuestionnaire,
   documents, type Document, type InsertDocument,
   passwordResets, type PasswordReset, type InsertPasswordReset,
-  chatPrompts, type ChatPrompt, type InsertChatPrompt,
-  chatConversations, type ChatConversation, type InsertChatConversation,
-  chatMessages, type ChatMessage, type InsertChatMessage,
-  structuredSummaries, type StructuredSummary, type InsertStructuredSummary,
   type UpdateUser, type UpdateProfile, type UserProfile
 } from "@shared/schema";
 import session from "express-session";
@@ -77,30 +73,7 @@ export interface IStorage {
   // User profile operations
   getUserProfile(userId: number): Promise<UserProfile | undefined>;
 
-  // Chat prompt operations
-  getChatPrompts(): Promise<ChatPrompt[]>;
-  getChatPrompt(id: number): Promise<ChatPrompt | undefined>;
-  createChatPrompt(prompt: InsertChatPrompt): Promise<ChatPrompt>;
-  updateChatPrompt(id: number, prompt: Partial<InsertChatPrompt>): Promise<ChatPrompt | undefined>;
-  deleteChatPrompt(id: number): Promise<void>;
-  
-  // Chat conversation operations
-  getChatConversations(userId: number): Promise<ChatConversation[]>;
-  getChatConversation(id: number): Promise<ChatConversation | undefined>;
-  getChatConversationWithMessages(id: number): Promise<(ChatConversation & { messages: ChatMessage[] }) | undefined>;
-  createChatConversation(conversation: InsertChatConversation): Promise<ChatConversation>;
-  updateChatConversation(id: number, conversation: Partial<InsertChatConversation>): Promise<ChatConversation | undefined>;
-  deleteChatConversation(id: number): Promise<void>;
-  
-  // Chat message operations
-  getChatMessages(conversationId: number): Promise<ChatMessage[]>;
-  createChatMessage(message: InsertChatMessage): Promise<ChatMessage>;
-  
-  // Structured summary operations
-  getStructuredSummaries(userId: number): Promise<StructuredSummary[]>;
-  getStructuredSummary(id: number): Promise<StructuredSummary | undefined>;
-  getStructuredSummaryByConversation(conversationId: number): Promise<StructuredSummary | undefined>;
-  createStructuredSummary(summary: InsertStructuredSummary): Promise<StructuredSummary>;
+
 
   // Session store
   sessionStore: session.SessionStore;
@@ -116,10 +89,6 @@ export class MemStorage implements IStorage {
   private questionnaires: Map<number, Questionnaire>;
   private documents: Map<number, Document>;
   private passwordResets: Map<number, PasswordReset>;
-  private chatPrompts: Map<number, ChatPrompt>;
-  private chatConversations: Map<number, ChatConversation>;
-  private chatMessages: Map<number, ChatMessage>;
-  private structuredSummaries: Map<number, StructuredSummary>;
   
   private userId: number;
   private experienceId: number;
@@ -130,10 +99,6 @@ export class MemStorage implements IStorage {
   private questionnaireId: number;
   private documentId: number;
   private passwordResetId: number;
-  private chatPromptId: number;
-  private chatConversationId: number;
-  private chatMessageId: number;
-  private structuredSummaryId: number;
   
   sessionStore: session.SessionStore;
 
@@ -147,10 +112,6 @@ export class MemStorage implements IStorage {
     this.questionnaires = new Map();
     this.documents = new Map();
     this.passwordResets = new Map();
-    this.chatPrompts = new Map();
-    this.chatConversations = new Map();
-    this.chatMessages = new Map();
-    this.structuredSummaries = new Map();
     
     this.userId = 1;
     this.experienceId = 1;
@@ -161,10 +122,6 @@ export class MemStorage implements IStorage {
     this.questionnaireId = 1;
     this.documentId = 1;
     this.passwordResetId = 1;
-    this.chatPromptId = 1;
-    this.chatConversationId = 1;
-    this.chatMessageId = 1;
-    this.structuredSummaryId = 1;
     
     this.sessionStore = new MemoryStore({
       checkPeriod: 86400000,
@@ -447,146 +404,7 @@ export class MemStorage implements IStorage {
     return updatedReset;
   }
   
-  // Chat prompt methods
-  async getChatPrompts(): Promise<ChatPrompt[]> {
-    return Array.from(this.chatPrompts.values());
-  }
-  
-  async getChatPrompt(id: number): Promise<ChatPrompt | undefined> {
-    return this.chatPrompts.get(id);
-  }
-  
-  async createChatPrompt(prompt: InsertChatPrompt): Promise<ChatPrompt> {
-    const id = this.chatPromptId++;
-    const newPrompt: ChatPrompt = {
-      ...prompt,
-      id,
-      createdAt: new Date(),
-      updatedAt: new Date()
-    };
-    this.chatPrompts.set(id, newPrompt);
-    return newPrompt;
-  }
-  
-  async updateChatPrompt(id: number, prompt: Partial<InsertChatPrompt>): Promise<ChatPrompt | undefined> {
-    const existingPrompt = await this.getChatPrompt(id);
-    if (!existingPrompt) return undefined;
-    
-    const updatedPrompt: ChatPrompt = {
-      ...existingPrompt,
-      ...prompt,
-      updatedAt: new Date()
-    };
-    this.chatPrompts.set(id, updatedPrompt);
-    return updatedPrompt;
-  }
-  
-  async deleteChatPrompt(id: number): Promise<void> {
-    this.chatPrompts.delete(id);
-  }
-  
-  // Chat conversation methods
-  async getChatConversations(userId: number): Promise<ChatConversation[]> {
-    return Array.from(this.chatConversations.values()).filter(
-      (conversation) => conversation.userId === userId
-    );
-  }
-  
-  async getChatConversation(id: number): Promise<ChatConversation | undefined> {
-    return this.chatConversations.get(id);
-  }
-  
-  async getChatConversationWithMessages(id: number): Promise<(ChatConversation & { messages: ChatMessage[] }) | undefined> {
-    const conversation = await this.getChatConversation(id);
-    if (!conversation) return undefined;
-    
-    const messages = await this.getChatMessages(id);
-    
-    return {
-      ...conversation,
-      messages
-    };
-  }
-  
-  async createChatConversation(conversation: InsertChatConversation): Promise<ChatConversation> {
-    const id = this.chatConversationId++;
-    const newConversation: ChatConversation = {
-      ...conversation,
-      id,
-      createdAt: new Date(),
-      updatedAt: new Date()
-    };
-    this.chatConversations.set(id, newConversation);
-    return newConversation;
-  }
-  
-  async updateChatConversation(id: number, conversation: Partial<InsertChatConversation>): Promise<ChatConversation | undefined> {
-    const existingConversation = await this.getChatConversation(id);
-    if (!existingConversation) return undefined;
-    
-    const updatedConversation: ChatConversation = {
-      ...existingConversation,
-      ...conversation,
-      updatedAt: new Date()
-    };
-    this.chatConversations.set(id, updatedConversation);
-    return updatedConversation;
-  }
-  
-  async deleteChatConversation(id: number): Promise<void> {
-    // Delete all messages in this conversation first
-    const messages = await this.getChatMessages(id);
-    for (const message of messages) {
-      this.chatMessages.delete(message.id);
-    }
-    // Then delete the conversation itself
-    this.chatConversations.delete(id);
-  }
-  
-  // Chat message methods
-  async getChatMessages(conversationId: number): Promise<ChatMessage[]> {
-    return Array.from(this.chatMessages.values())
-      .filter((message) => message.conversationId === conversationId)
-      .sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
-  }
-  
-  async createChatMessage(message: InsertChatMessage): Promise<ChatMessage> {
-    const id = this.chatMessageId++;
-    const newMessage: ChatMessage = {
-      ...message,
-      id,
-      createdAt: new Date()
-    };
-    this.chatMessages.set(id, newMessage);
-    return newMessage;
-  }
 
-  // Structured summary methods
-  async getStructuredSummaries(userId: number): Promise<StructuredSummary[]> {
-    return Array.from(this.structuredSummaries.values())
-      .filter(summary => summary.userId === userId)
-      .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime()); // Newest first
-  }
-
-  async getStructuredSummary(id: number): Promise<StructuredSummary | undefined> {
-    return this.structuredSummaries.get(id);
-  }
-
-  async getStructuredSummaryByConversation(conversationId: number): Promise<StructuredSummary | undefined> {
-    return Array.from(this.structuredSummaries.values())
-      .find(summary => summary.conversationId === conversationId);
-  }
-
-  async createStructuredSummary(summary: InsertStructuredSummary): Promise<StructuredSummary> {
-    const id = this.structuredSummaryId++;
-    const newSummary: StructuredSummary = {
-      ...summary,
-      id,
-      createdAt: new Date()
-    };
-    this.structuredSummaries.set(id, newSummary);
-    return newSummary;
-  }
 }
 
 export const storage = new MemStorage();

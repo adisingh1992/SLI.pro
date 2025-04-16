@@ -175,72 +175,9 @@ export type InsertPasswordReset = z.infer<typeof insertPasswordResetSchema>;
 export type InsertDocument = z.infer<typeof insertDocumentSchema>;
 export type Document = typeof documents.$inferSelect;
 
-// Chat prompts and conversations
-export const chatPrompts = pgTable("chat_prompts", {
-  id: serial("id").primaryKey(),
-  title: text("title").notNull(),
-  prompt: text("prompt").notNull(),
-  systemPrompt: text("system_prompt"),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-  updatedAt: timestamp("updated_at").defaultNow().notNull(),
-});
 
-export const chatConversations = pgTable("chat_conversations", {
-  id: serial("id").primaryKey(),
-  userId: integer("user_id").notNull().references(() => users.id),
-  title: text("title").notNull().default("New Conversation"),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-  updatedAt: timestamp("updated_at").defaultNow().notNull(),
-});
 
-export const chatMessages = pgTable("chat_messages", {
-  id: serial("id").primaryKey(),
-  conversationId: integer("conversation_id").notNull().references(() => chatConversations.id),
-  role: text("role").notNull(), // 'user', 'assistant', or 'system'
-  content: text("content").notNull(),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-});
 
-export const structuredSummaries = pgTable("structured_summaries", {
-  id: serial("id").primaryKey(),
-  userId: integer("user_id").notNull().references(() => users.id),
-  conversationId: integer("conversation_id").notNull().references(() => chatConversations.id),
-  summary: text("summary").notNull(),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-});
-
-// Insert schemas for chats
-export const insertChatPromptSchema = createInsertSchema(chatPrompts).omit({
-  id: true,
-  createdAt: true,
-  updatedAt: true,
-});
-
-export const insertChatConversationSchema = createInsertSchema(chatConversations).omit({
-  id: true,
-  createdAt: true,
-  updatedAt: true,
-});
-
-export const insertChatMessageSchema = createInsertSchema(chatMessages).omit({
-  id: true,
-  createdAt: true,
-});
-
-export const insertStructuredSummarySchema = createInsertSchema(structuredSummaries).omit({
-  id: true,
-  createdAt: true,
-});
-
-// Types for chats
-export type InsertChatPrompt = z.infer<typeof insertChatPromptSchema>;
-export type InsertChatConversation = z.infer<typeof insertChatConversationSchema>;
-export type InsertChatMessage = z.infer<typeof insertChatMessageSchema>;
-export type InsertStructuredSummary = z.infer<typeof insertStructuredSummarySchema>;
-export type ChatPrompt = typeof chatPrompts.$inferSelect;
-export type ChatConversation = typeof chatConversations.$inferSelect;
-export type ChatMessage = typeof chatMessages.$inferSelect;
-export type StructuredSummary = typeof structuredSummaries.$inferSelect;
 
 export type UserProfile = User & {
   experiences?: Experience[];
@@ -250,5 +187,4 @@ export type UserProfile = User & {
   profile?: Profile;
   questionnaire?: Questionnaire;
   documents?: Document[];
-  chatConversations?: (ChatConversation & { messages: ChatMessage[] })[];
 };
