@@ -67,8 +67,6 @@ export function ChatInterface() {
       // Reset summary generation status for the new conversation
       setHasGeneratedSummary(false);
       
-
-
       // If we're not actively streaming, replace all messages
       if (!isProcessing) {
         console.log(
