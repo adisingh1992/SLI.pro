@@ -1,0 +1,169 @@
+import React, { useEffect, useRef, useState } from 'react';
+import { useConversation } from '@/hooks/use-conversation';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Separator } from '@/components/ui/separator';
+import { ChatMessage } from './chat-message';
+import { ChatInput } from './chat-input';
+import { ConversationList } from './conversation-list';
+import { useIsMobile } from '@/hooks/use-mobile';
+
+export function ChatInterface() {
+  const { 
+    conversations,
+    currentConversation,
+    isLoadingConversations,
+    isLoadingMessages,
+    createConversation,
+    setCurrentConversation,
+    sendMessage,
+    isProcessing,
+    streamingResponse
+  } = useConversation();
+  
+  const [showNewChatDialog, setShowNewChatDialog] = useState(false);
+  const [newChatTitle, setNewChatTitle] = useState('');
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const isMobile = useIsMobile();
+  const [showSidebar, setShowSidebar] = useState(!isMobile);
+
+  // Scroll to bottom when messages change or streaming occurs
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [currentConversation?.messages, streamingResponse]);
+
+  // Hide sidebar on mobile by default
+  useEffect(() => {
+    setShowSidebar(!isMobile);
+  }, [isMobile]);
+
+  const handleCreateConversation = async () => {
+    if (newChatTitle.trim()) {
+      await createConversation(newChatTitle);
+      setNewChatTitle('');
+      setShowNewChatDialog(false);
+    }
+  };
+
+  const handleSendMessage = async (content: string) => {
+    if (!currentConversation) {
+      // If no conversation exists, create one first
+      setNewChatTitle('New chat');
+      setShowNewChatDialog(true);
+      return;
+    }
+    
+    try {
+      await sendMessage(content);
+    } catch (error) {
+      console.error('Error sending message:', error);
+    }
+  };
+
+  return (
+    <div className="flex h-full border rounded-lg overflow-hidden">
+      {/* Conversation sidebar */}
+      {showSidebar && (
+        <div className="w-64 border-r h-full flex-shrink-0">
+          <ConversationList
+            conversations={conversations}
+            activeConversationId={currentConversation?.conversation?.id || null}
+            onSelectConversation={setCurrentConversation}
+            onNewConversation={() => setShowNewChatDialog(true)}
+          />
+        </div>
+      )}
+
+      {/* Main chat area */}
+      <div className="flex-1 flex flex-col h-full">
+        {/* Chat header */}
+        <div className="p-4 border-b flex justify-between items-center">
+          <div className="flex items-center">
+            {isMobile && (
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                onClick={() => setShowSidebar(!showSidebar)}
+                className="mr-2"
+              >
+                ☰
+              </Button>
+            )}
+            <h2 className="text-xl font-semibold">
+              {currentConversation?.conversation?.title || 'New Conversation'}
+            </h2>
+          </div>
+        </div>
+
+        {/* Messages area */}
+        <ScrollArea className="flex-1 p-4">
+          {isLoadingMessages ? (
+            <div className="h-full flex items-center justify-center">
+              <p className="text-muted-foreground">Loading messages...</p>
+            </div>
+          ) : !currentConversation ? (
+            <div className="h-full flex flex-col items-center justify-center">
+              <p className="text-muted-foreground mb-4">No conversation selected</p>
+              <Button onClick={() => setShowNewChatDialog(true)}>Start a new conversation</Button>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {currentConversation.messages.map((message) => (
+                <ChatMessage
+                  key={message.id}
+                  content={message.content}
+                  role={message.role}
+                />
+              ))}
+              
+              {/* Streaming message if active */}
+              {isProcessing && streamingResponse && (
+                <ChatMessage
+                  content={streamingResponse}
+                  role="assistant"
+                  isStreaming={true}
+                />
+              )}
+              
+              <div ref={messagesEndRef} />
+            </div>
+          )}
+        </ScrollArea>
+
+        {/* Input area */}
+        <ChatInput 
+          onSendMessage={handleSendMessage} 
+          isDisabled={isProcessing || isLoadingMessages}
+        />
+      </div>
+
+      {/* New conversation dialog */}
+      <Dialog open={showNewChatDialog} onOpenChange={setShowNewChatDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>New Conversation</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Input
+                placeholder="Enter conversation title"
+                value={newChatTitle}
+                onChange={(e) => setNewChatTitle(e.target.value)}
+              />
+            </div>
+          </div>
+          <div className="flex justify-end gap-2">
+            <Button variant="outline" onClick={() => setShowNewChatDialog(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleCreateConversation}>
+              Create
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}
