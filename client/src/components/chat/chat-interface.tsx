@@ -32,17 +32,35 @@ export function ChatInterface() {
   const isMobile = useIsMobile();
   const [showSidebar, setShowSidebar] = useState(!isMobile);
 
-  // Update all messages when conversation or streaming changes
+  // Keep track of the last seen conversation ID to prevent data loss
+  const lastConversationIdRef = useRef<number | null>(null);
+  
+  // Update all messages when conversation changes, but preserve streaming state
   useEffect(() => {
     if (currentConversation && currentConversation.messages) {
-      // Preserve fixed IDs from the API
-      setAllMessages(currentConversation.messages.map(message => ({
-        id: message.id,
-        content: message.content,
-        role: message.role as 'user' | 'assistant'
-      })));
+      const conversationId = currentConversation.conversation?.id;
+      
+      // Skip initial load or if it's the same conversation
+      if (lastConversationIdRef.current === conversationId) {
+        return;
+      }
+      
+      // Different conversation was loaded, update ref
+      lastConversationIdRef.current = conversationId;
+      
+      // If we're not actively streaming, replace all messages
+      if (!isProcessing) {
+        console.log("Replacing all messages with conversation data", conversationId);
+        setAllMessages(currentConversation.messages.map(message => ({
+          id: message.id,
+          content: message.content,
+          role: message.role as 'user' | 'assistant'
+        })));
+      } else {
+        console.log("Not replacing messages while processing", isProcessing);
+      }
     }
-  }, [currentConversation]);
+  }, [currentConversation, isProcessing]);
   
   // Add streaming message to the allMessages array
   useEffect(() => {

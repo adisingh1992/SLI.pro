@@ -178,13 +178,16 @@ export const ConversationProvider = ({ children }: { children: ReactNode }) => {
       // Keep streaming visible for a moment so user can read it
       // Even if we refresh data, we'll show this message until then
       
-      // Only after delay, mark as not processing
+      // Keep the streaming message on screen for a second before loading saved messages
       setTimeout(() => {
+        // First set processing to false so the streaming UI element is retained
         setIsProcessing(false);
         
-        // If final message was saved properly, refresh conversation data
+        // Then wait to reload conversation data - this gives users time to read the message
         if (finalMessageSaved) {
-          queryClient.invalidateQueries({ queryKey: ['/api/conversations', currentConversationId] });
+          setTimeout(() => {
+            queryClient.invalidateQueries({ queryKey: ['/api/conversations', currentConversationId] });
+          }, 1500);
         }
       }, 500);
     }
