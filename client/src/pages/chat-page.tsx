@@ -22,12 +22,38 @@ function ChatPageContent() {
 
   // Override the window navigation to show our confirmation dialog when needed
   useEffect(() => {
-    // Handle browser's beforeunload event (closing tab/window)
+    // Handle browser's beforeunload event (closing tab/window/reloading)
     const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      // Check if we have an active conversation or processing
       if (isProcessing || (currentConversation && currentConversation.messages.length > 0)) {
+        // Standard approach to show browser's built-in confirmation dialog
         e.preventDefault();
-        e.returnValue = '';
-        return '';
+        
+        // Required for older browsers
+        const confirmationMessage = 'You have an active conversation. Are you sure you want to leave?';
+        e.returnValue = confirmationMessage;
+        
+        // This message will be shown in some browsers (like Chrome)
+        return confirmationMessage;
+      }
+    };
+
+    // Handle browser's back/forward navigation
+    const handlePopState = (e: PopStateEvent) => {
+      if (isProcessing || (currentConversation && currentConversation.messages.length > 0)) {
+        // This will prevent the automatic navigation
+        e.preventDefault();
+        
+        // Save the current URL so we can restore it
+        const currentUrl = window.location.pathname;
+        
+        // Show confirmation dialog
+        setShowExitDialog(true);
+        
+        // Push the current URL back to the history to cancel the navigation
+        window.history.pushState(null, '', currentUrl);
+        
+        return false;
       }
     };
 
@@ -51,10 +77,16 @@ function ChatPageContent() {
 
     // Add event listeners
     window.addEventListener('beforeunload', handleBeforeUnload);
+    window.addEventListener('popstate', handlePopState);
     document.addEventListener('click', handleLinkClick, true);
+    
+    // Save the current history state when the component mounts
+    const currentUrl = window.location.pathname;
+    window.history.replaceState({ chatPage: true }, '', currentUrl);
     
     return () => {
       window.removeEventListener('beforeunload', handleBeforeUnload);
+      window.removeEventListener('popstate', handlePopState);
       document.removeEventListener('click', handleLinkClick, true);
     };
   }, [currentConversation, isProcessing, navigate]);
@@ -62,7 +94,11 @@ function ChatPageContent() {
   // Handle confirmation dialog responses
   const handleConfirm = () => {
     if (pendingPath) {
+      // If we have a stored path, navigate to it
       navigate(pendingPath);
+    } else {
+      // This was likely a back button press, go back in browser history
+      window.history.back();
     }
     setShowExitDialog(false);
     setPendingPath(null);
