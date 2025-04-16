@@ -27,10 +27,7 @@ export default function ConversationSummaryView({ id }: { id: number }) {
   // Function to generate/regenerate a summary
   const regenerateSummary = async () => {
     try {
-      await apiRequest({
-        url: `/api/conversations/${id}/summary`,
-        method: 'POST',
-      });
+      await apiRequest('POST', `/api/conversations/${id}/summary`);
       refetch();
     } catch (error) {
       console.error('Error regenerating summary:', error);

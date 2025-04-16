@@ -8,7 +8,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { LogOut, User, ChevronDown, MessageSquare } from "lucide-react";
+import { LogOut, User, ChevronDown, MessageSquare, FileText } from "lucide-react";
 import UserAvatar from "@/components/user-avatar";
 import sliProLogo from "@/assets/sliPro-logos_aqua.png";
 
@@ -65,6 +65,10 @@ export default function NavBar() {
                   <DropdownMenuItem onClick={() => navigate("/chat")} className="cursor-pointer">
                     <MessageSquare className="mr-2 h-4 w-4" />
                     <span>AI Assistant</span>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => navigate("/summaries")} className="cursor-pointer">
+                    <FileText className="mr-2 h-4 w-4" />
+                    <span>Conversation Summaries</span>
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={handleLogout} className="cursor-pointer text-red-500">
