@@ -24,7 +24,7 @@ export default function ChatPage() {
   }
 
   return (
-    <div className="container mx-auto py-8 h-[calc(100vh-8rem)]">
+    <div className="container mx-auto h-[calc(100vh-1rem)]">
       <ConversationProvider>
         <ChatInterface />
       </ConversationProvider>

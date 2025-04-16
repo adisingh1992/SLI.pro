@@ -10,6 +10,7 @@ import {
   passwordResets, type PasswordReset, type InsertPasswordReset,
   conversations, type Conversation, type InsertConversation,
   messages, type Message, type InsertMessage,
+  conversationSummaries, type ConversationSummary, type InsertConversationSummary,
   type UpdateUser, type UpdateProfile, type UserProfile
 } from "@shared/schema";
 import session from "express-session";
@@ -85,6 +86,12 @@ export interface IStorage {
   // Message operations
   getMessages(conversationId: number): Promise<Message[]>;
   createMessage(message: InsertMessage): Promise<Message>;
+  
+  // Conversation Summary operations
+  getConversationSummary(id: number): Promise<ConversationSummary | undefined>;
+  getConversationSummaryByConversationId(conversationId: number): Promise<ConversationSummary | undefined>;
+  getConversationSummaries(userId: number): Promise<ConversationSummary[]>;
+  createConversationSummary(summary: InsertConversationSummary): Promise<ConversationSummary>;
 
   // Session store
   sessionStore: session.Store;
@@ -102,6 +109,7 @@ export class MemStorage implements IStorage {
   private passwordResets: Map<number, PasswordReset>;
   private conversations: Map<number, Conversation>;
   private messages: Map<number, Message>;
+  private conversationSummaries: Map<number, ConversationSummary>;
   
   private userId: number;
   private experienceId: number;
@@ -114,6 +122,7 @@ export class MemStorage implements IStorage {
   private passwordResetId: number;
   private conversationId: number;
   private messageId: number;
+  private conversationSummaryId: number;
   
   sessionStore: session.Store;
 
@@ -129,6 +138,7 @@ export class MemStorage implements IStorage {
     this.passwordResets = new Map();
     this.conversations = new Map();
     this.messages = new Map();
+    this.conversationSummaries = new Map();
     
     this.userId = 1;
     this.experienceId = 1;
@@ -141,6 +151,7 @@ export class MemStorage implements IStorage {
     this.passwordResetId = 1;
     this.conversationId = 1;
     this.messageId = 1;
+    this.conversationSummaryId = 1;
     
     this.sessionStore = new MemoryStore({
       checkPeriod: 86400000,
@@ -495,6 +506,34 @@ export class MemStorage implements IStorage {
     }
     
     return newMessage;
+  }
+  
+  // Conversation Summary methods
+  async getConversationSummary(id: number): Promise<ConversationSummary | undefined> {
+    return this.conversationSummaries.get(id);
+  }
+  
+  async getConversationSummaryByConversationId(conversationId: number): Promise<ConversationSummary | undefined> {
+    return Array.from(this.conversationSummaries.values()).find(
+      (summary) => summary.conversationId === conversationId
+    );
+  }
+  
+  async getConversationSummaries(userId: number): Promise<ConversationSummary[]> {
+    return Array.from(this.conversationSummaries.values())
+      .filter(summary => summary.userId === userId)
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  }
+  
+  async createConversationSummary(summary: InsertConversationSummary): Promise<ConversationSummary> {
+    const id = this.conversationSummaryId++;
+    const newSummary: ConversationSummary = {
+      ...summary,
+      id,
+      createdAt: new Date()
+    };
+    this.conversationSummaries.set(id, newSummary);
+    return newSummary;
   }
 }
 

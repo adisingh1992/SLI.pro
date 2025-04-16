@@ -212,6 +212,72 @@ export type InsertMessage = z.infer<typeof insertMessageSchema>;
 export type Conversation = typeof conversations.$inferSelect;
 export type Message = typeof messages.$inferSelect;
 
+export const conversationSummaries = pgTable("conversation_summaries", {
+  id: serial("id").primaryKey(),
+  conversationId: integer("conversation_id").notNull().references(() => conversations.id, { onDelete: 'cascade' }),
+  userId: integer("user_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
+  basicInfo: jsonb("basic_info").$type<{
+    name?: string;
+    currentRole?: string;
+    industry?: string;
+    yearsOfExperience?: string;
+    targetTimeline?: string;
+  }>().notNull(),
+  functionalCategorization: jsonb("functional_categorization").$type<{
+    primaryFunction?: string;
+    secondaryFunction?: string;
+    levelOfCertainty?: number;
+    keyStrengths?: string[];
+  }>().notNull(),
+  careerTransition: jsonb("career_transition").$type<{
+    currentState?: string;
+    desiredState?: string;
+    transitionType?: string;
+    complexityRating?: number;
+    primaryMotivation?: string;
+  }>().notNull(),
+  strengthsAndPositioning: jsonb("strengths_and_positioning").$type<{
+    keyStrengths?: string[];
+    areasForDevelopment?: string[];
+    valueProposition?: string;
+    achievementExamples?: string[];
+    comfortWithSelfPromotion?: number;
+  }>().notNull(),
+  digitalPresence: jsonb("digital_presence").$type<{
+    linkedInActivity?: string;
+    contentCreationExperience?: string;
+    barriers?: string;
+    networkingApproach?: string;
+    postingFrequency?: string;
+  }>().notNull(),
+  psychologyAndMotivation: jsonb("psychology_and_motivation").$type<{
+    enneagramType?: string;
+    assessmentResults?: string;
+    topPriorities?: string[];
+    aspirationalThemes?: string[];
+    notableQuotes?: string[];
+    motivationalDrivers?: string[];
+  }>().notNull(),
+  contentStrategy: jsonb("content_strategy").$type<{
+    confidentTopics?: string[];
+    preferredFormats?: string[];
+    creationBarriers?: string;
+    suggestedInitialTopic?: string;
+  }>().notNull(),
+  recommendations: jsonb("recommendations").$type<{
+    sliDirections?: string[];
+    iceBucketMoments?: string[];
+    contentStrategyDirections?: string[];
+    specialConsiderations?: string;
+  }>().notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const insertConversationSummarySchema = createInsertSchema(conversationSummaries);
+
+export type InsertConversationSummary = z.infer<typeof insertConversationSummarySchema>;
+export type ConversationSummary = typeof conversationSummaries.$inferSelect;
+
 export type UserProfile = User & {
   experiences?: Experience[];
   education?: Education[];
@@ -221,4 +287,5 @@ export type UserProfile = User & {
   questionnaire?: Questionnaire;
   documents?: Document[];
   conversations?: Conversation[];
+  conversationSummaries?: ConversationSummary[];
 };
