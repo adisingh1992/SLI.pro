@@ -41,43 +41,77 @@ export function ChatInterface() {
   
   // Auto-initiate conversation on component mount - using a ref to prevent multiple executions
   const hasInitiatedRef = useRef(false);
+  const hasAutoSentRef = useRef(false);
   
+  // First effect: Initialize or select a conversation
   useEffect(() => {
-    const initiateConversation = async () => {
+    const initializeConversation = async () => {
       try {
-        // Only run once and only if we need to create a conversation
-        if (!hasInitiatedRef.current && !isLoadingConversations) {
-          hasInitiatedRef.current = true;
-          
-          // If conversations exist but none is selected, select the first one
-          if (conversations.length > 0 && !currentConversation) {
-            setCurrentConversation(conversations[0].id);
-            return;
-          }
-          
-          // If no conversations exist at all, create a new one
-          if (conversations.length === 0) {
-            console.log("Creating new initial conversation");
-            const newConversation = await createConversation('New chat');
-            
-            // Send an initial welcome message
-            if (newConversation && newConversation.id) {
-              setTimeout(() => {
-                sendMessage("Hello! I'm Claude, your professional branding assistant. How can I help you today?");
-              }, 1000);
-            }
-          }
+        if (hasInitiatedRef.current) return;
+        
+        // Skip if conversations are still loading
+        if (isLoadingConversations) return;
+        
+        console.log("Checking if we need to initialize a conversation");
+        hasInitiatedRef.current = true;
+        
+        // If conversations exist but none is selected, select the first one
+        if (conversations.length > 0) {
+          console.log("Selecting first conversation:", conversations[0].id);
+          setCurrentConversation(conversations[0].id);
+          return;
+        }
+        
+        // If no conversations exist, create one
+        if (conversations.length === 0) {
+          console.log("Creating a new initial conversation");
+          await createConversation('New chat');
+          // The queryClient invalidation will trigger the conversations to reload
         }
       } catch (error) {
-        console.error("Failed to auto-initiate conversation:", error);
+        console.error("Failed to initialize conversation:", error);
       }
     };
-
-    // Only run if all data is loaded and we haven't initiated yet
-    if (!isLoadingConversations && !hasInitiatedRef.current) {
-      initiateConversation();
+    
+    initializeConversation();
+  }, [isLoadingConversations, conversations, createConversation, setCurrentConversation]);
+  
+  // Second effect: Send a welcome message after conversation is selected/created
+  useEffect(() => {
+    const sendWelcomeMessage = async () => {
+      try {
+        // Only send welcome message if we have a valid conversation and haven't sent one yet
+        if (hasAutoSentRef.current || !currentConversation || !currentConversation.conversation) {
+          return;
+        }
+        
+        // Only send if the conversation is empty (no messages yet)
+        if (currentConversation.messages.length === 0) {
+          console.log("Sending welcome message to conversation:", currentConversation.conversation.id);
+          hasAutoSentRef.current = true;
+          
+          // Small delay to ensure UI is ready
+          setTimeout(async () => {
+            try {
+              await sendMessage("Hello! I'm Claude, your professional branding assistant. How can I help you today?");
+            } catch (err) {
+              console.error("Error sending welcome message:", err);
+            }
+          }, 1000);
+        } else {
+          // If there are already messages, mark as sent
+          hasAutoSentRef.current = true;
+        }
+      } catch (error) {
+        console.error("Failed to send welcome message:", error);
+      }
+    };
+    
+    // Only try to send welcome if the conversation is loaded and not loading
+    if (!isLoadingMessages && currentConversation) {
+      sendWelcomeMessage();
     }
-  }, [isLoadingConversations, conversations, currentConversation, createConversation, sendMessage, setCurrentConversation]);
+  }, [currentConversation, isLoadingMessages, sendMessage]);
 
   const handleCreateConversation = async () => {
     if (newChatTitle.trim()) {
@@ -181,11 +215,13 @@ export function ChatInterface() {
               
               {/* Streaming message if active */}
               {isProcessing && streamingResponse && (
-                <ChatMessage
-                  content={streamingResponse}
-                  role="assistant"
-                  isStreaming={true}
-                />
+                <div className="streaming-message">
+                  <ChatMessage
+                    content={streamingResponse}
+                    role="assistant"
+                    isStreaming={true}
+                  />
+                </div>
               )}
               
               <div ref={messagesEndRef} />

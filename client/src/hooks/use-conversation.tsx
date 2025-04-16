@@ -103,8 +103,10 @@ export const ConversationProvider = ({ children }: { children: ReactNode }) => {
 
   // Send a message with streaming response
   const sendStreamingMessage = useCallback(async (conversationId: number, content: string) => {
+    // Start streaming process
     setIsProcessing(true);
     setStreamingResponse('');
+    let finalMessageSaved = false;
     
     try {
       // We need to use fetch directly instead of apiRequest for streaming
@@ -155,9 +157,9 @@ export const ConversationProvider = ({ children }: { children: ReactNode }) => {
               if (eventData.type === 'chunk') {
                 setStreamingResponse(prev => prev + eventData.content);
               } else if (eventData.type === 'completed') {
-                // Event stream is complete, we'll invalidate queries after a delay
-                // to ensure messages stay visible and the backend has saved the response
-                console.log('Stream completed, will refresh data shortly');
+                // Event stream is complete, mark as saved
+                finalMessageSaved = true;
+                console.log('Stream completed, all data saved on server');
               } else if (eventData.type === 'error') {
                 console.error('Error from server:', eventData.message);
               }
@@ -173,13 +175,18 @@ export const ConversationProvider = ({ children }: { children: ReactNode }) => {
     } catch (error) {
       console.error('Error with streaming message:', error);
     } finally {
-      // Keep the streaming response visible and mark processing as complete
-      setIsProcessing(false);
+      // Keep streaming visible for a moment so user can read it
+      // Even if we refresh data, we'll show this message until then
       
-      // Wait a bit before refreshing the data to ensure the message is saved
+      // Only after delay, mark as not processing
       setTimeout(() => {
-        queryClient.invalidateQueries({ queryKey: ['/api/conversations', currentConversationId] });
-      }, 1000);
+        setIsProcessing(false);
+        
+        // If final message was saved properly, refresh conversation data
+        if (finalMessageSaved) {
+          queryClient.invalidateQueries({ queryKey: ['/api/conversations', currentConversationId] });
+        }
+      }, 500);
     }
   }, [currentConversationId, queryClient]);
 
@@ -208,7 +215,7 @@ export const ConversationProvider = ({ children }: { children: ReactNode }) => {
   };
 
   // Send a message (using streaming by default)
-  const sendMessage = async (content: string) => {
+  const sendMessage = async (content: string): Promise<void> => {
     if (!currentConversationId) {
       console.error('No active conversation');
       throw new Error('No active conversation');
@@ -217,7 +224,6 @@ export const ConversationProvider = ({ children }: { children: ReactNode }) => {
     try {
       // Use streaming response
       await sendStreamingMessage(currentConversationId, content);
-      return true;
     } catch (error) {
       console.error("Error in sendMessage:", error);
       throw error;
