@@ -39,20 +39,33 @@ export function ChatInterface() {
     setShowSidebar(!isMobile);
   }, [isMobile]);
   
-  // Auto-initiate conversation on component mount
+  // Auto-initiate conversation on component mount - using a ref to prevent multiple executions
+  const hasInitiatedRef = useRef(false);
+  
   useEffect(() => {
     const initiateConversation = async () => {
       try {
-        // If no conversation exists or no current conversation is selected, create one
-        if (conversations.length === 0 || !currentConversation) {
-          // Create a new conversation with default title
-          const newConversation = await createConversation('New chat');
+        // Only run once and only if we need to create a conversation
+        if (!hasInitiatedRef.current && !isLoadingConversations) {
+          hasInitiatedRef.current = true;
           
-          // Send an initial welcome message
-          if (newConversation && newConversation.id) {
-            setTimeout(() => {
-              sendMessage("Hello! I'm Claude, your professional branding assistant. How can I help you today?");
-            }, 1000);
+          // If conversations exist but none is selected, select the first one
+          if (conversations.length > 0 && !currentConversation) {
+            setCurrentConversation(conversations[0].id);
+            return;
+          }
+          
+          // If no conversations exist at all, create a new one
+          if (conversations.length === 0) {
+            console.log("Creating new initial conversation");
+            const newConversation = await createConversation('New chat');
+            
+            // Send an initial welcome message
+            if (newConversation && newConversation.id) {
+              setTimeout(() => {
+                sendMessage("Hello! I'm Claude, your professional branding assistant. How can I help you today?");
+              }, 1000);
+            }
           }
         }
       } catch (error) {
@@ -60,11 +73,11 @@ export function ChatInterface() {
       }
     };
 
-    // Only run if we have conversations data and we're not already loading
-    if (!isLoadingConversations) {
+    // Only run if all data is loaded and we haven't initiated yet
+    if (!isLoadingConversations && !hasInitiatedRef.current) {
       initiateConversation();
     }
-  }, [isLoadingConversations, conversations, currentConversation, createConversation, sendMessage]);
+  }, [isLoadingConversations, conversations, currentConversation, createConversation, sendMessage, setCurrentConversation]);
 
   const handleCreateConversation = async () => {
     if (newChatTitle.trim()) {
@@ -75,17 +88,32 @@ export function ChatInterface() {
   };
 
   const handleSendMessage = async (content: string) => {
-    if (!currentConversation) {
-      // If no conversation exists, create one first
-      setNewChatTitle('New chat');
-      setShowNewChatDialog(true);
-      return;
-    }
-    
     try {
-      await sendMessage(content);
+      // Make sure we have a current conversation before sending
+      if (!currentConversation || !currentConversation.conversation) {
+        // If we have conversations but none selected, select the first one
+        if (conversations.length > 0) {
+          setCurrentConversation(conversations[0].id);
+          // We need to wait for the conversation to be selected
+          // Let the user try again - the UI should update
+          return;
+        } else {
+          // If no conversation exists at all, create one first
+          console.log("Creating a new conversation for message");
+          const newConv = await createConversation('New chat');
+          
+          // Now we can send the message using the new conversation
+          if (newConv) {
+            return sendMessage(content);
+          }
+        }
+      } else {
+        // Normal case - we have a conversation, just send the message
+        await sendMessage(content);
+      }
     } catch (error) {
       console.error('Error sending message:', error);
+      // Display error to the user (could add toast notification here)
     }
   };
 

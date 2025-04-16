@@ -210,11 +210,18 @@ export const ConversationProvider = ({ children }: { children: ReactNode }) => {
   // Send a message (using streaming by default)
   const sendMessage = async (content: string) => {
     if (!currentConversationId) {
+      console.error('No active conversation');
       throw new Error('No active conversation');
     }
     
-    // Use streaming response
-    await sendStreamingMessage(currentConversationId, content);
+    try {
+      // Use streaming response
+      await sendStreamingMessage(currentConversationId, content);
+      return true;
+    } catch (error) {
+      console.error("Error in sendMessage:", error);
+      throw error;
+    }
   };
 
   return (
