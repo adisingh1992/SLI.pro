@@ -26,6 +26,22 @@ function ChatPageContent() {
     const handleBeforeUnload = (e: BeforeUnloadEvent) => {
       // Check if we have an active conversation or processing
       if (isProcessing || (currentConversation && currentConversation.messages.length > 0)) {
+        // Try to generate a summary
+        if (currentConversation && currentConversation.messages.length >= 4) {
+          // Use a synchronous fetch for beforeunload
+          // This is a best-effort attempt, as the page is about to unload
+          // We're using the sync version which is deprecated but works for this use case
+          try {
+            const xhr = new XMLHttpRequest();
+            xhr.open('POST', `/api/conversations/${currentConversation.conversation.id}/summary`, false);
+            xhr.setRequestHeader('Content-Type', 'application/json');
+            xhr.send();
+            console.log("Summary generation triggered on page unload");
+          } catch (error) {
+            console.error("Error generating summary on unload:", error);
+          }
+        }
+        
         // Standard approach to show browser's built-in confirmation dialog
         e.preventDefault();
         
@@ -91,8 +107,37 @@ function ChatPageContent() {
     };
   }, [currentConversation, isProcessing, navigate]);
 
+  // Generate a summary when the conversation is complete
+  const generateSummary = useCallback(async () => {
+    if (!currentConversation || currentConversation.messages.length < 4) {
+      // Don't generate summaries for very short conversations
+      console.log("Conversation too short for summary generation");
+      return;
+    }
+    
+    try {
+      console.log("Generating summary for conversation", currentConversation.conversation.id);
+      // Call the API to generate a summary
+      await fetch(`/api/conversations/${currentConversation.conversation.id}/summary`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include'
+      });
+      console.log("Summary generation request sent");
+    } catch (error) {
+      console.error("Error generating conversation summary:", error);
+    }
+  }, [currentConversation]);
+
   // Handle confirmation dialog responses
-  const handleConfirm = () => {
+  const handleConfirm = async () => {
+    if (currentConversation && currentConversation.messages.length > 0) {
+      // Generate a summary before navigating away
+      await generateSummary();
+    }
+    
     if (pendingPath) {
       // If we have a stored path, navigate to it
       navigate(pendingPath);
