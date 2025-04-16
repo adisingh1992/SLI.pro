@@ -38,6 +38,33 @@ export function ChatInterface() {
   useEffect(() => {
     setShowSidebar(!isMobile);
   }, [isMobile]);
+  
+  // Auto-initiate conversation on component mount
+  useEffect(() => {
+    const initiateConversation = async () => {
+      try {
+        // If no conversation exists or no current conversation is selected, create one
+        if (conversations.length === 0 || !currentConversation) {
+          // Create a new conversation with default title
+          const newConversation = await createConversation('New chat');
+          
+          // Send an initial welcome message
+          if (newConversation && newConversation.id) {
+            setTimeout(() => {
+              sendMessage("Hello! I'm Claude, your professional branding assistant. How can I help you today?");
+            }, 1000);
+          }
+        }
+      } catch (error) {
+        console.error("Failed to auto-initiate conversation:", error);
+      }
+    };
+
+    // Only run if we have conversations data and we're not already loading
+    if (!isLoadingConversations) {
+      initiateConversation();
+    }
+  }, [isLoadingConversations, conversations, currentConversation, createConversation, sendMessage]);
 
   const handleCreateConversation = async () => {
     if (newChatTitle.trim()) {

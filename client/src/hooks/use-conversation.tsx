@@ -155,8 +155,9 @@ export const ConversationProvider = ({ children }: { children: ReactNode }) => {
               if (eventData.type === 'chunk') {
                 setStreamingResponse(prev => prev + eventData.content);
               } else if (eventData.type === 'completed') {
-                // Event stream is complete, invalidate queries to refresh the UI
-                queryClient.invalidateQueries({ queryKey: ['/api/conversations', currentConversationId] });
+                // Event stream is complete, we'll invalidate queries after a delay
+                // to ensure messages stay visible and the backend has saved the response
+                console.log('Stream completed, will refresh data shortly');
               } else if (eventData.type === 'error') {
                 console.error('Error from server:', eventData.message);
               }
@@ -172,9 +173,13 @@ export const ConversationProvider = ({ children }: { children: ReactNode }) => {
     } catch (error) {
       console.error('Error with streaming message:', error);
     } finally {
+      // Keep the streaming response visible and mark processing as complete
       setIsProcessing(false);
-      // Refresh the conversation data once streaming is complete
-      queryClient.invalidateQueries({ queryKey: ['/api/conversations', currentConversationId] });
+      
+      // Wait a bit before refreshing the data to ensure the message is saved
+      setTimeout(() => {
+        queryClient.invalidateQueries({ queryKey: ['/api/conversations', currentConversationId] });
+      }, 1000);
     }
   }, [currentConversationId, queryClient]);
 
