@@ -12,7 +12,7 @@ import {
   insertQuestionnaireSchema,
   insertDocumentSchema,
 } from "@shared/schema";
-import { Anthropic } from "@anthropic-ai/sdk";
+
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Set up authentication routes
