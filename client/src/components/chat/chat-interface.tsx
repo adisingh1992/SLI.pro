@@ -47,6 +47,9 @@ export function ChatInterface() {
   
   // Keep track of conversation completion status
   const [hasGeneratedSummary, setHasGeneratedSummary] = useState(false);
+  
+  // State to control the display of calendly link
+  const [showCalendlyLink, setShowCalendlyLink] = useState(false);
 
   // Keep track of the last seen conversation ID to prevent data loss
   const lastConversationIdRef = useRef<number | null>(null);
@@ -66,6 +69,9 @@ export function ChatInterface() {
       
       // Reset summary generation status for the new conversation
       setHasGeneratedSummary(false);
+      
+      // Reset Calendly link visibility for the new conversation
+      setShowCalendlyLink(false);
 
       // If we're not actively streaming, replace all messages
       if (!isProcessing) {
@@ -128,6 +134,8 @@ export function ChatInterface() {
     if (lastAssistantMessage && 
         (lastAssistantMessage.content.includes("Phase 9: Summary") || 
          lastAssistantMessage.content.includes("Thank you for your time today") ||
+         lastAssistantMessage.content.includes("As we wrap up") ||
+         lastAssistantMessage.content.includes("Wishing you all the best") ||
          lastAssistantMessage.content.includes("This completes our assessment"))) {
       
       console.log("Conversation appears to be complete, generating summary");
@@ -135,6 +143,9 @@ export function ChatInterface() {
       try {
         // Mark as generated so we don't try again
         setHasGeneratedSummary(true);
+        
+        // Show the Calendly link
+        setShowCalendlyLink(true);
         
         // Call the API to generate a summary
         const response = await fetch(`/api/conversations/${currentConversation.conversation.id}/summary`, {
@@ -370,6 +381,22 @@ export function ChatInterface() {
                 </div>
               )}
 
+              {/* Calendly link for scheduling coaching sessions */}
+              {showCalendlyLink && (
+                <div className="my-8 p-6 border rounded-lg bg-blue-50 text-center">
+                  <h3 className="text-xl font-semibold mb-2">Schedule a Coaching Session</h3>
+                  <p className="mb-4">Thank you for completing your assessment. To take the next step in your professional branding journey, schedule a coaching session with our experts.</p>
+                  <a 
+                    href="https://calendly.com/dcara-sli/haas" 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="inline-block px-6 py-3 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-colors"
+                  >
+                    Schedule Now
+                  </a>
+                </div>
+              )}
+              
               <div ref={messagesEndRef} />
             </div>
           )}
