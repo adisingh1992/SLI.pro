@@ -57,12 +57,12 @@ function ChatPageContent() {
       window.removeEventListener('beforeunload', handleBeforeUnload);
       document.removeEventListener('click', handleLinkClick, true);
     };
-  }, [currentConversation, isProcessing]);
+  }, [currentConversation, isProcessing, navigate]);
 
   // Handle confirmation dialog responses
   const handleConfirm = () => {
     if (pendingPath) {
-      originalNavigateRef.current(pendingPath);
+      navigate(pendingPath);
     }
     setShowExitDialog(false);
     setPendingPath(null);

@@ -11,10 +11,20 @@ import {
 import { LogOut, User, ChevronDown, MessageSquare, FileText } from "lucide-react";
 import UserAvatar from "@/components/user-avatar";
 import sliProLogo from "@/assets/sliPro-logos_aqua.png";
+// This is a custom navigation function that will let the chat page's exit confirmation handle navigation
+function useSafeNavigation() {
+  const [, setLocation] = useLocation();
+  
+  // Just use the normal navigation - the chat page will intercept any navigation events
+  return (path: string) => {
+    setLocation(path);
+  };
+}
 
 export default function NavBar() {
   const { user, logoutMutation } = useAuth();
-  const [location, navigate] = useLocation();
+  const [location] = useLocation();
+  const navigate = useSafeNavigation();
 
   const handleLogout = () => {
     logoutMutation.mutate();
