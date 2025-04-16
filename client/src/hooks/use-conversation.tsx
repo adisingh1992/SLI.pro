@@ -99,10 +99,16 @@ export const ConversationProvider = ({ children }: { children: ReactNode }) => {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({ content }),
+        credentials: 'same-origin'
       });
       
       if (!response.body) {
         throw new Error('ReadableStream not supported');
+      }
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Stream request failed: ${response.status} ${errorText}`);
       }
       
       const reader = response.body.getReader();
@@ -159,7 +165,29 @@ export const ConversationProvider = ({ children }: { children: ReactNode }) => {
 
   // Create a new conversation
   const createConversation = async (title: string) => {
-    return createConversationMutation.mutateAsync(title);
+    try {
+      const response = await fetch('/api/conversations', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ title }),
+        credentials: 'same-origin'
+      });
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Failed to create conversation: ${response.status} ${errorText}`);
+      }
+      
+      const data = await response.json();
+      queryClient.invalidateQueries({ queryKey: ['/api/conversations'] });
+      setCurrentConversationId(data.id);
+      return data as Conversation;
+    } catch (error) {
+      console.error('Error creating conversation:', error);
+      throw error;
+    }
   };
 
   // Set the current conversation by ID
