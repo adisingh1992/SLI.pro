@@ -56,6 +56,19 @@ export const ConversationProvider = ({ children }: { children: ReactNode }) => {
     queryKey: ['/api/conversations', currentConversationId],
     // Using the default queryFn which will hit `/api/conversations/${currentConversationId}`
     enabled: !!currentConversationId,
+    select: (data: any) => {
+      // Make sure we have a consistent data structure
+      if (!data) return null;
+      
+      // Structure can come in different formats, normalize it
+      const conversation = data.conversation || data;
+      const messages = data.messages || [];
+      
+      return {
+        conversation,
+        messages: Array.isArray(messages) ? messages : []
+      } as ConversationWithMessages;
+    }
   });
 
   // Create a new conversation
@@ -203,7 +216,7 @@ export const ConversationProvider = ({ children }: { children: ReactNode }) => {
     <ConversationContext.Provider
       value={{
         conversations: Array.isArray(conversations) ? conversations : [],
-        currentConversation: currentConversation as ConversationWithMessages || null,
+        currentConversation: currentConversation || null,
         isLoadingConversations,
         isLoadingMessages,
         error: conversationsError || messagesError || null,

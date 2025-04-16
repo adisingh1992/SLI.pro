@@ -110,13 +110,19 @@ export function ChatInterface() {
             </div>
           ) : (
             <div className="space-y-4">
-              {currentConversation.messages.map((message) => (
-                <ChatMessage
-                  key={message.id}
-                  content={message.content}
-                  role={message.role}
-                />
-              ))}
+              {currentConversation?.messages?.length > 0 ? (
+                currentConversation.messages.map((message) => (
+                  <ChatMessage
+                    key={message.id}
+                    content={message.content}
+                    role={message.role}
+                  />
+                ))
+              ) : (
+                <div className="text-center text-muted-foreground py-8">
+                  <p>This conversation is empty. Start by sending a message.</p>
+                </div>
+              )}
               
               {/* Streaming message if active */}
               {isProcessing && streamingResponse && (
