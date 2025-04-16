@@ -6,11 +6,9 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Separator } from "@/components/ui/separator";
 import { ChatMessage } from "./chat-message";
 import { ChatInput } from "./chat-input";
 import { ConversationList } from "./conversation-list";
@@ -137,8 +135,6 @@ export function ChatInterface() {
       try {
         // Mark as generated so we don't try again
         setHasGeneratedSummary(true);
-        
-
         
         // Call the API to generate a summary
         const response = await fetch(`/api/conversations/${currentConversation.conversation.id}/summary`, {
