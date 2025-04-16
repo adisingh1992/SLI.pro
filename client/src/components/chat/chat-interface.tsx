@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef, useState, useCallback } from "react";
 import { useConversation } from "@/hooks/use-conversation";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
@@ -44,6 +44,9 @@ export function ChatInterface() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const isMobile = useIsMobile();
   const [showSidebar, setShowSidebar] = useState(!isMobile);
+  
+  // Keep track of conversation completion status
+  const [hasGeneratedSummary, setHasGeneratedSummary] = useState(false);
 
   // Keep track of the last seen conversation ID to prevent data loss
   const lastConversationIdRef = useRef<number | null>(null);
@@ -60,6 +63,9 @@ export function ChatInterface() {
 
       // Different conversation was loaded, update ref
       lastConversationIdRef.current = conversationId;
+      
+      // Reset summary generation status for the new conversation
+      setHasGeneratedSummary(false);
 
       // If we're not actively streaming, replace all messages
       if (!isProcessing) {
@@ -102,6 +108,60 @@ export function ChatInterface() {
       }
     }
   }, [streamingResponse, isProcessing, allMessages]);
+  
+  // Check for conversation completion and generate summary if needed
+  const checkForConversationCompletion = useCallback(async () => {
+    // Only run if we have a conversation, it has sufficient messages, and we haven't generated a summary yet
+    if (!currentConversation || 
+        !currentConversation.conversation ||
+        currentConversation.messages.length < 4 ||
+        hasGeneratedSummary) {
+      return;
+    }
+    
+    // Check if the conversation has progressed through all phases (9 phases in total)
+    // Look for phase completion markers in the assistant's messages
+    const assistantMessages = currentConversation.messages.filter(m => m.role === 'assistant');
+    const lastAssistantMessage = assistantMessages[assistantMessages.length - 1];
+    
+    // Look for markers indicating completion of Phase 9 (final phase)
+    if (lastAssistantMessage && 
+        (lastAssistantMessage.content.includes("Phase 9: Summary") || 
+         lastAssistantMessage.content.includes("Thank you for your time today") ||
+         lastAssistantMessage.content.includes("This completes our assessment"))) {
+      
+      console.log("Conversation appears to be complete, generating summary");
+      
+      try {
+        // Mark as generated so we don't try again
+        setHasGeneratedSummary(true);
+        
+        // Call the API to generate a summary
+        const response = await fetch(`/api/conversations/${currentConversation.conversation.id}/summary`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          credentials: 'include'
+        });
+        
+        if (response.ok) {
+          console.log("Successfully generated summary for completed conversation");
+        } else {
+          console.error("Failed to generate summary:", await response.text());
+        }
+      } catch (error) {
+        console.error("Error generating conversation summary:", error);
+      }
+    }
+  }, [currentConversation, hasGeneratedSummary]);
+  
+  // Run the completion check whenever messages change
+  useEffect(() => {
+    if (!isProcessing && currentConversation) {
+      checkForConversationCompletion();
+    }
+  }, [isProcessing, currentConversation, checkForConversationCompletion]);
 
   // Scroll to bottom when messages change
   useEffect(() => {
