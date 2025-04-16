@@ -24,7 +24,7 @@ export function ChatMessage({ content, role, isStreaming = false }: ChatMessageP
             </Avatar>
           )}
         </div>
-        <Card className={`p-3 ${role === 'user' ? 'bg-primary text-white' : 'bg-muted'} ${isStreaming ? 'animate-pulse' : ''}`}>
+        <Card className={`p-3 ${role === 'user' ? 'bg-primary text-white' : 'bg-muted'} ${isStreaming ? 'border-secondary' : ''}`}>
           <div className="prose dark:prose-invert prose-sm max-w-none">
             <ReactMarkdown>
               {content}
