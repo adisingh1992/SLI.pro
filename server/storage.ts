@@ -8,6 +8,8 @@ import {
   questionnaires, type Questionnaire, type InsertQuestionnaire,
   documents, type Document, type InsertDocument,
   passwordResets, type PasswordReset, type InsertPasswordReset,
+  conversations, type Conversation, type InsertConversation,
+  messages, type Message, type InsertMessage,
   type UpdateUser, type UpdateProfile, type UserProfile
 } from "@shared/schema";
 import session from "express-session";

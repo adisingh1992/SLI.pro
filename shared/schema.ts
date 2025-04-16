@@ -179,6 +179,39 @@ export type Document = typeof documents.$inferSelect;
 
 
 
+// Chat and conversation schemas
+export const conversations = pgTable("conversations", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().references(() => users.id),
+  title: text("title").notNull().default("New Conversation"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const messages = pgTable("messages", {
+  id: serial("id").primaryKey(),
+  conversationId: integer("conversation_id").notNull().references(() => conversations.id),
+  role: text("role").notNull(), // "user" or "assistant"
+  content: text("content").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const insertConversationSchema = createInsertSchema(conversations).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertMessageSchema = createInsertSchema(messages).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type InsertConversation = z.infer<typeof insertConversationSchema>;
+export type InsertMessage = z.infer<typeof insertMessageSchema>;
+export type Conversation = typeof conversations.$inferSelect;
+export type Message = typeof messages.$inferSelect;
+
 export type UserProfile = User & {
   experiences?: Experience[];
   education?: Education[];
@@ -187,4 +220,5 @@ export type UserProfile = User & {
   profile?: Profile;
   questionnaire?: Questionnaire;
   documents?: Document[];
+  conversations?: Conversation[];
 };
