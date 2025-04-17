@@ -26,7 +26,19 @@ export function ChatMessage({ content, role, isStreaming = false }: ChatMessageP
         </div>
         <Card className={`p-3 ${role === 'user' ? 'bg-primary text-white' : 'bg-muted'} ${isStreaming ? 'border-secondary' : ''}`}>
           <div className="prose dark:prose-invert prose-sm max-w-none">
-            <ReactMarkdown>
+            <ReactMarkdown
+              components={{
+                a: ({ node, ...props }) => (
+                  <a
+                    {...props}
+                    href={props.href || ''}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className={`underline ${role === 'user' ? 'text-white hover:text-blue-100' : 'text-blue-600 hover:text-blue-800'}`}
+                  />
+                ),
+              }}
+            >
               {content}
             </ReactMarkdown>
           </div>
