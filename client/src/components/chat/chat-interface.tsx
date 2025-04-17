@@ -125,17 +125,16 @@ export function ChatInterface() {
       return;
     }
     
-    // Get all assistant messages in the conversation
+    // Check if the conversation has progressed through all phases (9 phases in total)
+    // Look for phase completion markers in the assistant's messages
     const assistantMessages = currentConversation.messages.filter(m => m.role === 'assistant');
     const lastAssistantMessage = assistantMessages[assistantMessages.length - 1];
     
-    // Generate a summary if:
-    // 1. The conversation has at least 6 messages total (3 back-and-forth exchanges)
-    // 2. OR the last message contains "calendly" (existing condition)
-    if ((currentConversation.messages.length >= 6) || 
-        (lastAssistantMessage && lastAssistantMessage.content.includes("calendly"))) {
+    // Look for markers indicating completion of Phase 9 (final phase)
+    if (lastAssistantMessage && 
+        (lastAssistantMessage.content.includes("calendly"))) {
       
-      console.log("Conversation has sufficient content, generating summary");
+      console.log("Conversation appears to be complete, generating summary");
       
       try {
         // Mark as generated so we don't try again
@@ -151,7 +150,7 @@ export function ChatInterface() {
         });
         
         if (response.ok) {
-          console.log("Successfully generated summary for conversation");
+          console.log("Successfully generated summary for completed conversation");
         } else {
           console.error("Failed to generate summary:", await response.text());
         }
@@ -340,36 +339,6 @@ export function ChatInterface() {
             <h2 className="text-xl font-semibold">
               {currentConversation?.conversation?.title || "SLI.pro"}
             </h2>
-          </div>
-          
-          <div className="flex gap-2">
-            {currentConversation?.conversation?.id && (
-              <Button 
-                variant="outline"
-                size="sm"
-                onClick={async () => {
-                  try {
-                    const response = await fetch(`/api/conversations/${currentConversation.conversation.id}/summary`, {
-                      method: 'POST',
-                      headers: { 'Content-Type': 'application/json' },
-                      credentials: 'include'
-                    });
-                    
-                    if (response.ok) {
-                      console.log("Successfully generated summary for conversation");
-                      setHasGeneratedSummary(true);
-                      // Show a success notification or feedback here
-                    } else {
-                      console.error("Failed to generate summary:", await response.text());
-                    }
-                  } catch (error) {
-                    console.error("Error generating summary:", error);
-                  }
-                }}
-              >
-                Generate Summary
-              </Button>
-            )}
           </div>
         </div>
 
