@@ -256,9 +256,7 @@ export function ChatInterface() {
           // Small delay to ensure UI is ready
           setTimeout(async () => {
             try {
-              await sendMessage(
-                "Hello! I'm Claude, your professional branding assistant. How can I help you today?",
-              );
+              await sendMessage("Hello");
             } catch (err) {
               console.error("Error sending welcome message:", err);
             }
