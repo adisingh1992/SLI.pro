@@ -132,20 +132,13 @@ export function ChatInterface() {
     
     // Look for markers indicating completion of Phase 9 (final phase)
     if (lastAssistantMessage && 
-        (lastAssistantMessage.content.includes("Phase 9: Summary") || 
-         lastAssistantMessage.content.includes("Thank you for your time today") ||
-         lastAssistantMessage.content.includes("As we wrap up") ||
-         lastAssistantMessage.content.includes("Wishing you all the best") ||
-         lastAssistantMessage.content.includes("This completes our assessment"))) {
+        (lastAssistantMessage.content.includes("calendly"))) {
       
       console.log("Conversation appears to be complete, generating summary");
       
       try {
         // Mark as generated so we don't try again
         setHasGeneratedSummary(true);
-        
-        // Show the Calendly link
-        setShowCalendlyLink(true);
         
         // Call the API to generate a summary
         const response = await fetch(`/api/conversations/${currentConversation.conversation.id}/summary`, {
