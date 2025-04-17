@@ -60,9 +60,14 @@ export const ConversationProvider = ({ children }: { children: ReactNode }) => {
       // Make sure we have a consistent data structure
       if (!data) return null;
       
+      console.log('Raw conversation data from API:', data);
+      
       // Structure can come in different formats, normalize it
       const conversation = data.conversation || data;
       const messages = data.messages || [];
+      
+      console.log('Processed conversation:', conversation);
+      console.log('Processed messages:', messages);
       
       return {
         conversation,

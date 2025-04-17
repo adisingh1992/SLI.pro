@@ -44,10 +44,10 @@ export function ChatInterface() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const isMobile = useIsMobile();
   const [showSidebar, setShowSidebar] = useState(!isMobile);
-  
+
   // Keep track of conversation completion status
   const [hasGeneratedSummary, setHasGeneratedSummary] = useState(false);
-  
+
   // State to control the display of calendly link
   const [showCalendlyLink, setShowCalendlyLink] = useState(false);
 
@@ -66,10 +66,10 @@ export function ChatInterface() {
 
       // Different conversation was loaded, update ref
       lastConversationIdRef.current = conversationId;
-      
+
       // Reset summary generation status for the new conversation
       setHasGeneratedSummary(false);
-      
+
       // Reset Calendly link visibility for the new conversation
       setShowCalendlyLink(false);
 
@@ -114,43 +114,56 @@ export function ChatInterface() {
       }
     }
   }, [streamingResponse, isProcessing, allMessages]);
-  
+
   // Check for conversation completion and generate summary if needed
   const checkForConversationCompletion = useCallback(async () => {
     // Only run if we have a conversation, it has sufficient messages, and we haven't generated a summary yet
-    if (!currentConversation || 
-        !currentConversation.conversation ||
-        currentConversation.messages.length < 4 ||
-        hasGeneratedSummary) {
+    if (
+      !currentConversation ||
+      !currentConversation.conversation ||
+      currentConversation.messages.length < 1 ||
+      hasGeneratedSummary
+    ) {
       return;
     }
-    
+
     // Check if the conversation has progressed through all phases (9 phases in total)
     // Look for phase completion markers in the assistant's messages
-    const assistantMessages = currentConversation.messages.filter(m => m.role === 'assistant');
-    const lastAssistantMessage = assistantMessages[assistantMessages.length - 1];
-    
+    const assistantMessages = currentConversation.messages.filter(
+      (m) => m.role === "assistant",
+    );
+    const lastAssistantMessage =
+      assistantMessages[assistantMessages.length - 1];
+
     // Look for markers indicating completion of Phase 9 (final phase)
-    if (lastAssistantMessage && 
-        (lastAssistantMessage.content.includes("calendly"))) {
-      
+    if (
+      lastAssistantMessage &&
+      lastAssistantMessage.content.includes(
+        "https://calendly.com/dcara-sli/haas",
+      )
+    ) {
       console.log("Conversation appears to be complete, generating summary");
-      
+
       try {
         // Mark as generated so we don't try again
         setHasGeneratedSummary(true);
-        
+
         // Call the API to generate a summary
-        const response = await fetch(`/api/conversations/${currentConversation.conversation.id}/summary`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
+        const response = await fetch(
+          `/api/conversations/${currentConversation.conversation.id}/summary`,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            credentials: "include",
           },
-          credentials: 'include'
-        });
-        
+        );
+
         if (response.ok) {
-          console.log("Successfully generated summary for completed conversation");
+          console.log(
+            "Successfully generated summary for completed conversation",
+          );
         } else {
           console.error("Failed to generate summary:", await response.text());
         }
@@ -159,7 +172,7 @@ export function ChatInterface() {
       }
     }
   }, [currentConversation, hasGeneratedSummary]);
-  
+
   // Run the completion check whenever messages change
   useEffect(() => {
     if (!isProcessing && currentConversation) {
@@ -377,11 +390,17 @@ export function ChatInterface() {
               {/* Calendly link for scheduling coaching sessions */}
               {showCalendlyLink && (
                 <div className="my-8 p-6 border rounded-lg bg-blue-50 text-center">
-                  <h3 className="text-xl font-semibold mb-2">Schedule a Coaching Session</h3>
-                  <p className="mb-4">Thank you for completing your assessment. To take the next step in your professional branding journey, schedule a coaching session with our experts.</p>
-                  <a 
-                    href="https://calendly.com/dcara-sli/haas" 
-                    target="_blank" 
+                  <h3 className="text-xl font-semibold mb-2">
+                    Schedule a Coaching Session
+                  </h3>
+                  <p className="mb-4">
+                    Thank you for completing your assessment. To take the next
+                    step in your professional branding journey, schedule a
+                    coaching session with our experts.
+                  </p>
+                  <a
+                    href="https://calendly.com/dcara-sli/haas"
+                    target="_blank"
                     rel="noopener noreferrer"
                     className="inline-block px-6 py-3 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-colors"
                   >
@@ -389,7 +408,7 @@ export function ChatInterface() {
                   </a>
                 </div>
               )}
-              
+
               <div ref={messagesEndRef} />
             </div>
           )}
