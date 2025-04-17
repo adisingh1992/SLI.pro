@@ -2,6 +2,7 @@ import React from 'react';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Card } from '@/components/ui/card';
 import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 
 interface ChatMessageProps {
   content: string;
@@ -27,6 +28,7 @@ export function ChatMessage({ content, role, isStreaming = false }: ChatMessageP
         <Card className={`p-3 ${role === 'user' ? 'bg-primary text-white' : 'bg-muted'} ${isStreaming ? 'border-secondary' : ''}`}>
           <div className="prose dark:prose-invert prose-sm max-w-none">
             <ReactMarkdown
+              remarkPlugins={[remarkGfm]}
               components={{
                 a: ({ node, ...props }) => (
                   <a
