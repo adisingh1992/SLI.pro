@@ -72,10 +72,6 @@ export default function NavBar() {
                     <User className="mr-2 h-4 w-4" />
                     <span>View Profile</span>
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => navigate("/chat")} className="cursor-pointer">
-                    <MessageSquare className="mr-2 h-4 w-4" />
-                    <span>AI Assistant</span>
-                  </DropdownMenuItem>
                   <DropdownMenuItem onClick={() => navigate("/summaries")} className="cursor-pointer">
                     <FileText className="mr-2 h-4 w-4" />
                     <span>Conversation Summaries</span>

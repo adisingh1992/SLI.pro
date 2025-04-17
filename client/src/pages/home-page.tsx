@@ -200,35 +200,7 @@ export default function HomePage() {
             </div>
           )}
           
-          {/* Document Success Section - Visible when all required documents are uploaded */}
-          {userProfile?.questionnaire && userProfile.questionnaire.isDraft !== true && hasRequiredDocuments && (
-            <div className="mt-6 bg-[#f0fff7] border border-green-200 rounded-lg p-6">
-              <div className="flex items-start">
-                <div className="p-3 rounded-full bg-green-100 text-green-600 mr-4">
-                  <CheckCircle className="h-6 w-6" />
-                </div>
-                <div className="flex-1">
-                  <h2 className="text-lg font-medium text-[#333333] mb-2">
-                    Documents Successfully Uploaded
-                  </h2>
-                  <p className="text-gray-600 mb-4">
-                    Thank you for uploading your resume and LinkedIn profile. Your professional documents have been received and are ready for review.
-                  </p>
-                  <Button
-                    variant="outline"
-                    className="flex items-center border-green-300 text-green-700 hover:bg-green-50"
-                    onClick={() => {
-                      scrollToTop();
-                      navigate("/profile?tab=documents");
-                    }}
-                  >
-                    View Your Documents
-                    <FileText className="ml-2 h-4 w-4" />
-                  </Button>
-                </div>
-              </div>
-            </div>
-          )}
+          {/* Document Success Section removed as requested */}
           
           {/* Profile View Section - Only visible when questionnaire is present (completed or draft) */}
           {userProfile?.questionnaire && (
@@ -277,32 +249,7 @@ export default function HomePage() {
             </div>
           )}
 
-          {/* AI Assistant Section */}
-          <div className="mt-6 bg-[#f3f0ff] border border-purple-200 rounded-lg p-6">
-            <div className="flex items-start">
-              <div className="p-3 rounded-full bg-purple-100 text-purple-600 mr-4">
-                <MessageSquare className="h-6 w-6" />
-              </div>
-              <div className="flex-1">
-                <h2 className="text-lg font-medium text-[#333333] mb-2">
-                  AI Assistant
-                </h2>
-                <p className="text-gray-600 mb-4">
-                  Chat with your personal AI assistant, powered by Claude AI, to get personalized branding advice and answers to your professional development questions based on your profile information.
-                </p>
-                <Button
-                  className="flex items-center bg-purple-600 hover:bg-purple-700"
-                  onClick={() => {
-                    scrollToTop();
-                    navigate("/chat");
-                  }}
-                >
-                  Start Conversation
-                  <ArrowRight className="ml-2 h-4 w-4" />
-                </Button>
-              </div>
-            </div>
-          </div>
+          {/* AI Assistant Section removed as requested */}
 
           {/* Coaching Session Section */}
           <div className="mt-6 bg-[#f0fff7] border border-green-200 rounded-lg p-6">
@@ -326,10 +273,8 @@ export default function HomePage() {
                 <Button
                   className="flex items-center bg-green-600 hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
                   onClick={() => {
-                    toast({
-                      title: "Coming Soon",
-                      description: "The coaching session scheduling feature is currently under development.",
-                    });
+                    scrollToTop();
+                    navigate("/chat");
                   }}
                   disabled={!userProfile?.questionnaire || (userProfile?.questionnaire?.isDraft === true) || !hasRequiredDocuments}
                 >
