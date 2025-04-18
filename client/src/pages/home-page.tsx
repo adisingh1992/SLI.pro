@@ -13,6 +13,7 @@ import {
   FileText,
   MessageSquare,
 } from "lucide-react";
+import MonthlyCheckInWidget from "@/components/monthly-check-in-widget";
 import { Button } from "@/components/ui/button";
 import { useEffect } from "react";
 import NavBar from "@/components/nav-bar";
@@ -250,6 +251,11 @@ export default function HomePage() {
           )}
 
           {/* AI Assistant Section removed as requested */}
+
+          {/* Monthly Check-in Section - Only visible when questionnaire is completed */}
+          {userProfile?.questionnaire && userProfile.questionnaire.isDraft !== true && (
+            <MonthlyCheckInWidget userId={user?.id || 0} />
+          )}
 
           {/* Coaching Session Section */}
           <div className="mt-6 bg-[#f0fff7] border border-green-200 rounded-lg p-6">
