@@ -1,6 +1,6 @@
 import { useAuth } from "@/hooks/use-auth";
 import { useQuery } from "@tanstack/react-query";
-import { UserProfile } from "@shared/schema";
+import { FreshnessReport, UserProfile } from "@shared/schema";
 import { useToast } from "@/hooks/use-toast";
 import { useLocation } from "wouter";
 import {
@@ -14,6 +14,7 @@ import {
   MessageSquare,
 } from "lucide-react";
 import MonthlyCheckInWidget from "@/components/monthly-check-in-widget";
+import { FreshnessReportWidget } from "@/components/freshness-report-widget";
 import { Button } from "@/components/ui/button";
 import { useEffect } from "react";
 import NavBar from "@/components/nav-bar";

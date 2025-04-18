@@ -1,5 +1,5 @@
 import React from "react";
-import { useNavigate } from "wouter";
+import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Sparkles } from "lucide-react";
@@ -16,7 +16,7 @@ export const FreshnessReportWidget: React.FC<FreshnessReportWidgetProps> = ({
   userHasRequiredDocuments,
   latestReportDate
 }) => {
-  const navigate = useNavigate();
+  const [, navigate] = useLocation();
   const { toast } = useToast();
 
   const handleGenerateReport = () => {
