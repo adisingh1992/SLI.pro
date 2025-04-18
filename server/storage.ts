@@ -11,6 +11,7 @@ import {
   conversations, type Conversation, type InsertConversation,
   messages, type Message, type InsertMessage,
   conversationSummaries, type ConversationSummary, type InsertConversationSummary,
+  monthlyCheckIns, type MonthlyCheckIn, type InsertMonthlyCheckIn,
   type UpdateUser, type UpdateProfile, type UserProfile
 } from "@shared/schema";
 import session from "express-session";
@@ -93,6 +94,14 @@ export interface IStorage {
   getConversationSummaries(userId: number): Promise<ConversationSummary[]>;
   createConversationSummary(summary: InsertConversationSummary): Promise<ConversationSummary>;
 
+  // Monthly Check-in operations
+  getMonthlyCheckIns(userId: number): Promise<MonthlyCheckIn[]>;
+  getMonthlyCheckIn(id: number): Promise<MonthlyCheckIn | undefined>;
+  getMonthlyCheckInByMonth(userId: number, month: string): Promise<MonthlyCheckIn | undefined>;
+  createMonthlyCheckIn(checkIn: InsertMonthlyCheckIn): Promise<MonthlyCheckIn>;
+  updateMonthlyCheckIn(id: number, checkIn: Partial<InsertMonthlyCheckIn>): Promise<MonthlyCheckIn | undefined>;
+  deleteMonthlyCheckIn(id: number): Promise<void>;
+
   // Session store
   sessionStore: session.Store;
 }
@@ -110,6 +119,7 @@ export class MemStorage implements IStorage {
   private conversations: Map<number, Conversation>;
   private messages: Map<number, Message>;
   private conversationSummaries: Map<number, ConversationSummary>;
+  private monthlyCheckIns: Map<number, MonthlyCheckIn>;
   
   private userId: number;
   private experienceId: number;
@@ -123,6 +133,7 @@ export class MemStorage implements IStorage {
   private conversationId: number;
   private messageId: number;
   private conversationSummaryId: number;
+  private monthlyCheckInId: number;
   
   sessionStore: session.Store;
 
@@ -139,6 +150,7 @@ export class MemStorage implements IStorage {
     this.conversations = new Map();
     this.messages = new Map();
     this.conversationSummaries = new Map();
+    this.monthlyCheckIns = new Map();
     
     this.userId = 1;
     this.experienceId = 1;
@@ -152,6 +164,7 @@ export class MemStorage implements IStorage {
     this.conversationId = 1;
     this.messageId = 1;
     this.conversationSummaryId = 1;
+    this.monthlyCheckInId = 1;
     
     this.sessionStore = new MemoryStore({
       checkPeriod: 86400000,

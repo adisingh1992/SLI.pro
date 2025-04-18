@@ -278,6 +278,33 @@ export const insertConversationSummarySchema = createInsertSchema(conversationSu
 export type InsertConversationSummary = z.infer<typeof insertConversationSummarySchema>;
 export type ConversationSummary = typeof conversationSummaries.$inferSelect;
 
+// Monthly check-in form
+export const monthlyCheckIns = pgTable("monthly_check_ins", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().references(() => users.id),
+  month: text("month").notNull(), // Format: YYYY-MM
+  contentPosts: integer("content_posts").notNull(), // Number of posts published
+  contentLinks: jsonb("content_links").$type<string[]>().default([]),
+  contentScreenshots: jsonb("content_screenshots").$type<{name: string, data: string}[]>().default([]),
+  engagementFrequency: text("engagement_frequency").notNull(), // "daily", "3-5/week", "1-2/week", "less-than-1/week", "none"
+  engagementScreenshot: text("engagement_screenshot"), // Base64 encoded image
+  updatedProfileVisuals: boolean("updated_profile_visuals").default(false),
+  profileScreenshot: text("profile_screenshot"), // Base64 encoded image
+  newConnections: integer("new_connections").notNull(),
+  targetConnectionPercentage: text("target_connection_percentage").notNull(), // "0-25%", "26-50%", "51-75%", "76-100%"
+  recommendationImplementation: text("recommendation_implementation").notNull(), // "fully", "mostly", "partially", "minimally", "not-yet"
+  implementationChallenges: text("implementation_challenges"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const insertMonthlyCheckInSchema = createInsertSchema(monthlyCheckIns).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type InsertMonthlyCheckIn = z.infer<typeof insertMonthlyCheckInSchema>;
+export type MonthlyCheckIn = typeof monthlyCheckIns.$inferSelect;
+
 export type UserProfile = User & {
   experiences?: Experience[];
   education?: Education[];
@@ -288,4 +315,5 @@ export type UserProfile = User & {
   documents?: Document[];
   conversations?: Conversation[];
   conversationSummaries?: ConversationSummary[];
+  monthlyCheckIns?: MonthlyCheckIn[];
 };
