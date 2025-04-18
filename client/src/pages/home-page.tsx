@@ -36,6 +36,13 @@ export default function HomePage() {
     enabled: !!user,
   });
   
+  // Fetch the latest freshness report
+  const { data: latestFreshnessReport } = useQuery<FreshnessReport>({
+    queryKey: ["/api/freshness-reports/latest"],
+    enabled: !!user,
+    retry: false,
+  });
+  
   // Check if user has uploaded the required documents (resume and linkedin profile)
   const hasRequiredDocuments = userProfile?.documents?.some(doc => doc.type === 'resume') &&
                                userProfile?.documents?.some(doc => doc.type === 'linkedin');
@@ -252,6 +259,17 @@ export default function HomePage() {
           )}
 
           {/* AI Assistant Section removed as requested */}
+
+          {/* Freshness Report Widget - Only visible when questionnaire is completed and documents are uploaded */}
+          {userProfile?.questionnaire && userProfile.questionnaire.isDraft !== true && hasRequiredDocuments && (
+            <div className="mt-6">
+              <FreshnessReportWidget 
+                userHasQuestionnaire={!!userProfile?.questionnaire && userProfile.questionnaire.isDraft !== true}
+                userHasRequiredDocuments={hasRequiredDocuments}
+                latestReportDate={latestFreshnessReport?.createdAt ? new Date(latestFreshnessReport.createdAt) : undefined}
+              />
+            </div>
+          )}
 
           {/* Monthly Check-in Section - Only visible when questionnaire is completed */}
           {userProfile?.questionnaire && userProfile.questionnaire.isDraft !== true && (
