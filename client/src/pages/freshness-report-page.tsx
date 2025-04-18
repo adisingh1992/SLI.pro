@@ -42,7 +42,7 @@ const FreshnessReportPage = () => {
   const generateReportMutation = useMutation({
     mutationFn: async () => {
       setIsGenerating(true);
-      const response = await apiRequest("/api/freshness-reports", "POST");
+      const response = await apiRequest("POST", "/api/freshness-reports");
       return response;
     },
     onSuccess: (data) => {
@@ -135,7 +135,7 @@ const FreshnessReportPage = () => {
             {(error as any).message || "Failed to load report data"}
           </AlertDescription>
         </Alert>
-        <Button onClick={() => handleGenerateReport()} disabled={isGenerating}>
+        <Button onClick={handleGenerateReport} disabled={isGenerating}>
           {isGenerating ? "Generating Report..." : "Generate New Report"}
         </Button>
       </div>
