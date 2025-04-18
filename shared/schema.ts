@@ -305,6 +305,26 @@ export const insertMonthlyCheckInSchema = createInsertSchema(monthlyCheckIns).om
 export type InsertMonthlyCheckIn = z.infer<typeof insertMonthlyCheckInSchema>;
 export type MonthlyCheckIn = typeof monthlyCheckIns.$inferSelect;
 
+// Freshness Report
+export const freshnessReports = pgTable("freshness_reports", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().references(() => users.id),
+  questionnaireAnalysis: jsonb("questionnaire_analysis").$type<Record<string, any>>(),
+  resumeAnalysis: jsonb("resume_analysis").$type<Record<string, any>>(),
+  linkedinAnalysis: jsonb("linkedin_analysis").$type<Record<string, any>>(),
+  additionalDocumentsAnalysis: jsonb("additional_documents_analysis").$type<Record<string, any>[]>().default([]),
+  finalSynthesis: jsonb("final_synthesis").$type<Record<string, any>>(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const insertFreshnessReportSchema = createInsertSchema(freshnessReports).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type InsertFreshnessReport = z.infer<typeof insertFreshnessReportSchema>;
+export type FreshnessReport = typeof freshnessReports.$inferSelect;
+
 export type UserProfile = User & {
   experiences?: Experience[];
   education?: Education[];
@@ -316,4 +336,5 @@ export type UserProfile = User & {
   conversations?: Conversation[];
   conversationSummaries?: ConversationSummary[];
   monthlyCheckIns?: MonthlyCheckIn[];
+  freshnessReports?: FreshnessReport[];
 };

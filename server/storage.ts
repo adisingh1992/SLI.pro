@@ -101,6 +101,14 @@ export interface IStorage {
   createMonthlyCheckIn(checkIn: InsertMonthlyCheckIn): Promise<MonthlyCheckIn>;
   updateMonthlyCheckIn(id: number, checkIn: Partial<InsertMonthlyCheckIn>): Promise<MonthlyCheckIn | undefined>;
   deleteMonthlyCheckIn(id: number): Promise<void>;
+  
+  // Freshness Report operations
+  getFreshnessReports(userId: number): Promise<FreshnessReport[]>;
+  getFreshnessReport(id: number): Promise<FreshnessReport | undefined>;
+  getLatestFreshnessReport(userId: number): Promise<FreshnessReport | undefined>;
+  createFreshnessReport(report: InsertFreshnessReport): Promise<FreshnessReport>;
+  updateFreshnessReport(id: number, report: Partial<InsertFreshnessReport>): Promise<FreshnessReport | undefined>;
+  deleteFreshnessReport(id: number): Promise<void>;
 
   // Session store
   sessionStore: session.Store;
@@ -120,6 +128,7 @@ export class MemStorage implements IStorage {
   private messages: Map<number, Message>;
   private conversationSummaries: Map<number, ConversationSummary>;
   private monthlyCheckIns: Map<number, MonthlyCheckIn>;
+  private freshnessReports: Map<number, FreshnessReport>;
   
   private userId: number;
   private experienceId: number;
@@ -134,6 +143,7 @@ export class MemStorage implements IStorage {
   private messageId: number;
   private conversationSummaryId: number;
   private monthlyCheckInId: number;
+  private freshnessReportId: number;
   
   sessionStore: session.Store;
 
@@ -151,6 +161,7 @@ export class MemStorage implements IStorage {
     this.messages = new Map();
     this.conversationSummaries = new Map();
     this.monthlyCheckIns = new Map();
+    this.freshnessReports = new Map();
     
     this.userId = 1;
     this.experienceId = 1;
@@ -165,6 +176,7 @@ export class MemStorage implements IStorage {
     this.messageId = 1;
     this.conversationSummaryId = 1;
     this.monthlyCheckInId = 1;
+    this.freshnessReportId = 1;
     
     this.sessionStore = new MemoryStore({
       checkPeriod: 86400000,
@@ -398,6 +410,7 @@ export class MemStorage implements IStorage {
     const questionnaire = await this.getQuestionnaire(userId);
     const documents = await this.getDocuments(userId);
     const conversations = await this.getConversations(userId);
+    const freshnessReports = await this.getFreshnessReports(userId);
     
     return {
       ...user,
@@ -408,7 +421,8 @@ export class MemStorage implements IStorage {
       profile,
       questionnaire,
       documents,
-      conversations
+      conversations,
+      freshnessReports
     };
   }
   
@@ -588,6 +602,46 @@ export class MemStorage implements IStorage {
   
   async deleteMonthlyCheckIn(id: number): Promise<void> {
     this.monthlyCheckIns.delete(id);
+  }
+
+  // Freshness Report methods
+  async getFreshnessReports(userId: number): Promise<FreshnessReport[]> {
+    return Array.from(this.freshnessReports.values())
+      .filter(report => report.userId === userId)
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  }
+  
+  async getFreshnessReport(id: number): Promise<FreshnessReport | undefined> {
+    return this.freshnessReports.get(id);
+  }
+  
+  async getLatestFreshnessReport(userId: number): Promise<FreshnessReport | undefined> {
+    const reports = await this.getFreshnessReports(userId);
+    return reports.length > 0 ? reports[0] : undefined;
+  }
+  
+  async createFreshnessReport(report: InsertFreshnessReport): Promise<FreshnessReport> {
+    const id = this.freshnessReportId++;
+    const newReport: FreshnessReport = {
+      ...report,
+      id,
+      createdAt: new Date()
+    };
+    this.freshnessReports.set(id, newReport);
+    return newReport;
+  }
+  
+  async updateFreshnessReport(id: number, reportData: Partial<InsertFreshnessReport>): Promise<FreshnessReport | undefined> {
+    const report = await this.getFreshnessReport(id);
+    if (!report) return undefined;
+    
+    const updatedReport = { ...report, ...reportData };
+    this.freshnessReports.set(id, updatedReport);
+    return updatedReport;
+  }
+  
+  async deleteFreshnessReport(id: number): Promise<void> {
+    this.freshnessReports.delete(id);
   }
 }
 
