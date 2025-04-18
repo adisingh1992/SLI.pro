@@ -25,6 +25,23 @@ export function registerFreshnessRoutes(app: Express) {
     }
   });
 
+  // Get the latest freshness report for a user
+  app.get("/api/freshness-reports/latest", isAuthenticated, async (req, res) => {
+    try {
+      const userId = req.user!.id;
+      const latestReport = await storage.getLatestFreshnessReport(userId);
+      
+      if (!latestReport) {
+        return res.status(404).json({ error: "No freshness reports found" });
+      }
+      
+      res.json(latestReport);
+    } catch (error) {
+      console.error("Error fetching latest freshness report:", error);
+      res.status(500).json({ error: "Failed to fetch latest freshness report" });
+    }
+  });
+
   // Get a specific freshness report by ID
   app.get("/api/freshness-reports/:id", isAuthenticated, async (req, res) => {
     try {
@@ -44,23 +61,6 @@ export function registerFreshnessRoutes(app: Express) {
     } catch (error) {
       console.error("Error fetching freshness report:", error);
       res.status(500).json({ error: "Failed to fetch freshness report" });
-    }
-  });
-
-  // Get the latest freshness report for a user
-  app.get("/api/freshness-reports/latest", isAuthenticated, async (req, res) => {
-    try {
-      const userId = req.user!.id;
-      const latestReport = await storage.getLatestFreshnessReport(userId);
-      
-      if (!latestReport) {
-        return res.status(404).json({ error: "No freshness reports found" });
-      }
-      
-      res.json(latestReport);
-    } catch (error) {
-      console.error("Error fetching latest freshness report:", error);
-      res.status(500).json({ error: "Failed to fetch latest freshness report" });
     }
   });
 

@@ -22,7 +22,7 @@ interface FreshnessReportData {
   createdAt: string;
 }
 
-const FreshnessReportPage: React.FC = () => {
+const FreshnessReportPage = () => {
   const { user } = useAuth();
   const isAuthenticated = !!user;
   const { toast } = useToast();
@@ -634,4 +634,5 @@ const FreshnessReportPage: React.FC = () => {
   );
 };
 
-export default FreshnessReportPage;
+// Export without default to fix the routing issue
+export { FreshnessReportPage as default };
