@@ -10,58 +10,94 @@ const anthropic = new Anthropic({
 // The newest Anthropic model is "claude-3-7-sonnet-20250219" which was released February 24, 2025
 const CLAUDE_MODEL = "claude-3-7-sonnet-20250219";
 
-// Helper function to make Claude API calls
-async function callClaude(systemPrompt: string, userPrompt: string) {
-  try {
-    log(`Sending request to Claude for freshness report analysis`, "claude");
+// Helper function to make Claude API calls with retry logic for rate limits
+async function callClaude(systemPrompt: string, userPrompt: string, maxRetries = 3, initialBackoff = 10000) {
+  const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+  
+  // Helper function to truncate long user prompts to reduce token count
+  const truncateIfNeeded = (text: string, maxLength = 4000) => {
+    if (text.length > maxLength) {
+      log(`Truncating long user prompt from ${text.length} to ${maxLength} characters`, "claude");
+      return text.substring(0, maxLength) + "... [content truncated due to length]";
+    }
+    return text;
+  };
+  
+  // Use shorter user prompts to save on tokens
+  const truncatedUserPrompt = truncateIfNeeded(userPrompt);
+  
+  for (let attempt = 0; attempt < maxRetries; attempt++) {
+    try {
+      // Add retry information to logs
+      log(`Sending request to Claude for freshness report analysis (Attempt ${attempt + 1}/${maxRetries})`, "claude");
 
-    const response = await anthropic.messages.create({
-      model: CLAUDE_MODEL,
-      system: systemPrompt,
-      messages: [{ role: "user", content: userPrompt }],
-      max_tokens: 4096,
-      temperature: 0.5,
-    });
+      const response = await anthropic.messages.create({
+        model: CLAUDE_MODEL,
+        system: systemPrompt,
+        messages: [{ role: "user", content: truncatedUserPrompt }],
+        max_tokens: 4096,
+        temperature: 0.5,
+      });
 
-    // Return the text content from the response
-    if (response.content && response.content.length > 0) {
-      const textContent = response.content.filter(
-        (item) => item.type === "text",
-      );
-      
-      if (textContent.length > 0 && "text" in textContent[0]) {
-        const rawText = textContent[0].text;
+      // Return the text content from the response
+      if (response.content && response.content.length > 0) {
+        const textContent = response.content.filter(
+          (item) => item.type === "text",
+        );
         
-        // Extract JSON from the response, handling potential markdown code blocks
-        let jsonText = rawText;
-        
-        // If response is wrapped in markdown code blocks, extract the JSON content
-        if (rawText.includes("```json")) {
-          const jsonMatch = rawText.match(/```json\s*([\s\S]*?)\s*```/);
-          if (jsonMatch && jsonMatch[1]) {
-            jsonText = jsonMatch[1].trim();
+        if (textContent.length > 0 && "text" in textContent[0]) {
+          const rawText = textContent[0].text;
+          
+          // Extract JSON from the response, handling potential markdown code blocks
+          let jsonText = rawText;
+          
+          // If response is wrapped in markdown code blocks, extract the JSON content
+          if (rawText.includes("```json")) {
+            const jsonMatch = rawText.match(/```json\s*([\s\S]*?)\s*```/);
+            if (jsonMatch && jsonMatch[1]) {
+              jsonText = jsonMatch[1].trim();
+            }
+          } else if (rawText.includes("```")) {
+            const jsonMatch = rawText.match(/```\s*([\s\S]*?)\s*```/);
+            if (jsonMatch && jsonMatch[1]) {
+              jsonText = jsonMatch[1].trim();
+            }
           }
-        } else if (rawText.includes("```")) {
-          const jsonMatch = rawText.match(/```\s*([\s\S]*?)\s*```/);
-          if (jsonMatch && jsonMatch[1]) {
-            jsonText = jsonMatch[1].trim();
+          
+          try {
+            return JSON.parse(jsonText);
+          } catch (jsonError) {
+            log(`Error parsing JSON: ${jsonError}. Raw response: ${rawText}`, "claude");
+            throw new Error(`Failed to parse Claude's response as JSON: ${jsonError}`);
           }
-        }
-        
-        try {
-          return JSON.parse(jsonText);
-        } catch (jsonError) {
-          log(`Error parsing JSON: ${jsonError}. Raw response: ${rawText}`, "claude");
-          throw new Error(`Failed to parse Claude's response as JSON: ${jsonError}`);
         }
       }
-    }
 
-    throw new Error("No valid response content received from Claude");
-  } catch (error) {
-    log(`Error calling Claude API: ${error}`, "claude");
-    throw new Error(`Failed to analyze content: ${error}`);
+      throw new Error("No valid response content received from Claude");
+    } catch (error: any) {
+      // Check if this is a rate limit error
+      const errorString = String(error);
+      const isRateLimit = errorString.includes("rate_limit_error") || errorString.includes("429");
+      
+      // Log the specific error
+      log(`Error calling Claude API (Attempt ${attempt + 1}/${maxRetries}): ${error}`, "claude");
+      
+      // If we've used all our retries or it's not a rate limit error, give up
+      if (attempt === maxRetries - 1 || !isRateLimit) {
+        throw new Error(`Failed to analyze content: ${error}`);
+      }
+      
+      // Calculate backoff time with exponential increase
+      const backoffTime = initialBackoff * Math.pow(2, attempt);
+      log(`Rate limit exceeded. Retrying in ${backoffTime/1000} seconds...`, "claude");
+      
+      // Wait before trying again
+      await sleep(backoffTime);
+    }
   }
+  
+  // This should never be reached due to the throw in the loop, but TypeScript wants a return
+  throw new Error("Failed to complete Claude API call after retries");
 }
 
 // 1. Analyze questionnaire data

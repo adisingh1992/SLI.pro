@@ -93,15 +93,9 @@ export function registerFreshnessRoutes(app: Express) {
         });
       }
       
-      // Helper function to add delay between API calls
-      const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
-
-      // Process each part sequentially with delays to respect rate limits:
+      // Process each part sequentially:
       // 1. Analyze questionnaire data
       const questionnaireAnalysis = await generateQuestionnaireSummary(userProfile);
-      
-      // Add 5-second delay before next API call to respect rate limits
-      await sleep(5000);
       
       // 2. Analyze resume data
       const resumeDocument = userProfile.documents?.find(doc => doc.type === 'resume');
@@ -109,17 +103,11 @@ export function registerFreshnessRoutes(app: Express) {
         await generateResumeSummary(resumeDocument.fileData, questionnaireAnalysis) : 
         null;
       
-      // Add 5-second delay before next API call to respect rate limits
-      await sleep(5000);
-      
       // 3. Analyze LinkedIn profile
       const linkedinDocument = userProfile.documents?.find(doc => doc.type === 'linkedin');
       const linkedinAnalysis = linkedinDocument ? 
         await generateLinkedInSummary(linkedinDocument.fileData, questionnaireAnalysis, resumeAnalysis) : 
         null;
-      
-      // Add 5-second delay before next API call to respect rate limits
-      await sleep(5000);
       
       // 4. Analyze any additional documents
       const additionalDocuments = userProfile.documents?.filter(doc => 
@@ -129,9 +117,6 @@ export function registerFreshnessRoutes(app: Express) {
       const additionalDocumentsAnalysis = additionalDocuments && additionalDocuments.length > 0 ?
         await generateAdditionalDocsSummary(additionalDocuments, questionnaireAnalysis, resumeAnalysis, linkedinAnalysis) :
         [];
-        
-      // Add 5-second delay before final API call to respect rate limits
-      await sleep(5000);
     
       // 5. Generate final synthesis
       const finalSynthesis = await generateFinalSynthesis(
