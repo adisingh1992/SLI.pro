@@ -548,6 +548,47 @@ export class MemStorage implements IStorage {
     this.conversationSummaries.set(id, newSummary);
     return newSummary;
   }
+
+  // Monthly Check-in methods
+  async getMonthlyCheckIns(userId: number): Promise<MonthlyCheckIn[]> {
+    return Array.from(this.monthlyCheckIns.values())
+      .filter(checkIn => checkIn.userId === userId)
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  }
+  
+  async getMonthlyCheckIn(id: number): Promise<MonthlyCheckIn | undefined> {
+    return this.monthlyCheckIns.get(id);
+  }
+  
+  async getMonthlyCheckInByMonth(userId: number, month: string): Promise<MonthlyCheckIn | undefined> {
+    return Array.from(this.monthlyCheckIns.values()).find(
+      checkIn => checkIn.userId === userId && checkIn.month === month
+    );
+  }
+  
+  async createMonthlyCheckIn(checkIn: InsertMonthlyCheckIn): Promise<MonthlyCheckIn> {
+    const id = this.monthlyCheckInId++;
+    const newCheckIn: MonthlyCheckIn = {
+      ...checkIn,
+      id,
+      createdAt: new Date()
+    };
+    this.monthlyCheckIns.set(id, newCheckIn);
+    return newCheckIn;
+  }
+  
+  async updateMonthlyCheckIn(id: number, checkIn: Partial<InsertMonthlyCheckIn>): Promise<MonthlyCheckIn | undefined> {
+    const existingCheckIn = await this.getMonthlyCheckIn(id);
+    if (!existingCheckIn) return undefined;
+    
+    const updatedCheckIn = { ...existingCheckIn, ...checkIn };
+    this.monthlyCheckIns.set(id, updatedCheckIn);
+    return updatedCheckIn;
+  }
+  
+  async deleteMonthlyCheckIn(id: number): Promise<void> {
+    this.monthlyCheckIns.delete(id);
+  }
 }
 
 export const storage = new MemStorage();

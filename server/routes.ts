@@ -11,6 +11,7 @@ import {
   updateProfileSchema,
   insertQuestionnaireSchema,
   insertDocumentSchema,
+  insertMonthlyCheckInSchema,
 } from "@shared/schema";
 import { registerConversationRoutes } from "./conversation-routes";
 
@@ -549,6 +550,138 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       await storage.deleteDocument(documentId);
+      res.sendStatus(204);
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  // Monthly Check-in Routes
+  app.get("/api/monthly-check-ins", isAuthenticated, async (req, res, next) => {
+    try {
+      const checkIns = await storage.getMonthlyCheckIns(req.user.id);
+      res.json(checkIns);
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  app.get("/api/monthly-check-ins/:id", isAuthenticated, async (req, res, next) => {
+    try {
+      const checkInId = parseInt(req.params.id);
+      const checkIn = await storage.getMonthlyCheckIn(checkInId);
+
+      if (!checkIn) {
+        return res.status(404).json({ message: "Monthly check-in not found" });
+      }
+
+      if (checkIn.userId !== req.user.id) {
+        return res.status(403).json({ message: "Unauthorized" });
+      }
+
+      res.json(checkIn);
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  app.get("/api/monthly-check-ins/month/:month", isAuthenticated, async (req, res, next) => {
+    try {
+      const month = req.params.month;
+      const checkIn = await storage.getMonthlyCheckInByMonth(req.user.id, month);
+
+      if (!checkIn) {
+        return res.status(404).json({ message: "Monthly check-in not found" });
+      }
+
+      res.json(checkIn);
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  app.post("/api/monthly-check-ins", isAuthenticated, async (req, res, next) => {
+    try {
+      const validationResult = insertMonthlyCheckInSchema.safeParse({
+        ...req.body,
+        userId: req.user.id,
+      });
+
+      if (!validationResult.success) {
+        return res.status(400).json({
+          message: "Validation error",
+          errors: validationResult.error.errors,
+        });
+      }
+
+      // Check if a check-in already exists for this month
+      const existingCheckIn = await storage.getMonthlyCheckInByMonth(
+        req.user.id,
+        validationResult.data.month
+      );
+
+      if (existingCheckIn) {
+        return res.status(409).json({
+          message: "A check-in for this month already exists",
+          checkIn: existingCheckIn,
+        });
+      }
+
+      const checkIn = await storage.createMonthlyCheckIn(validationResult.data);
+      res.status(201).json(checkIn);
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  app.put("/api/monthly-check-ins/:id", isAuthenticated, async (req, res, next) => {
+    try {
+      const checkInId = parseInt(req.params.id);
+      const checkIn = await storage.getMonthlyCheckIn(checkInId);
+
+      if (!checkIn) {
+        return res.status(404).json({ message: "Monthly check-in not found" });
+      }
+
+      if (checkIn.userId !== req.user.id) {
+        return res.status(403).json({ message: "Unauthorized" });
+      }
+
+      const validationResult = insertMonthlyCheckInSchema
+        .partial()
+        .safeParse(req.body);
+        
+      if (!validationResult.success) {
+        return res.status(400).json({
+          message: "Validation error",
+          errors: validationResult.error.errors,
+        });
+      }
+
+      const updatedCheckIn = await storage.updateMonthlyCheckIn(
+        checkInId,
+        validationResult.data
+      );
+      res.json(updatedCheckIn);
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  app.delete("/api/monthly-check-ins/:id", isAuthenticated, async (req, res, next) => {
+    try {
+      const checkInId = parseInt(req.params.id);
+      const checkIn = await storage.getMonthlyCheckIn(checkInId);
+
+      if (!checkIn) {
+        return res.status(404).json({ message: "Monthly check-in not found" });
+      }
+
+      if (checkIn.userId !== req.user.id) {
+        return res.status(403).json({ message: "Unauthorized" });
+      }
+
+      await storage.deleteMonthlyCheckIn(checkInId);
       res.sendStatus(204);
     } catch (error) {
       next(error);
