@@ -616,7 +616,7 @@ export default function MonthlyCheckInPage() {
               <FormField
                 control={form.control}
                 name="implementationChallenges"
-                render={({ field }) => (
+                render={({ field: implementationField }) => (
                   <FormItem className="mb-4">
                     <FormLabel>
                       If not fully implemented, what prevented you from doing so?
@@ -625,7 +625,11 @@ export default function MonthlyCheckInPage() {
                       <Textarea 
                         placeholder="Please describe any challenges you faced..."
                         className="resize-none" 
-                        {...field} 
+                        value={implementationField.value || ''}
+                        onChange={(e) => implementationField.onChange(e.target.value)}
+                        onBlur={implementationField.onBlur}
+                        name={implementationField.name}
+                        ref={implementationField.ref}
                       />
                     </FormControl>
                     <FormMessage />
