@@ -77,7 +77,11 @@ export default function MonthlyCheckInWidget({ userId }: MonthlyCheckInWidgetPro
             className="flex items-center bg-blue-600 hover:bg-blue-700"
             onClick={() => {
               scrollToTop();
-              navigate("/monthly-check-in");
+              // Direct to appropriate tab based on whether user has completed current month
+              const url = hasCurrentMonthCheckIn ? 
+                "/monthly-check-in?tab=history" : 
+                "/monthly-check-in";
+              navigate(url);
             }}
           >
             {hasCurrentMonthCheckIn ? "View Check-in History" : "Start Monthly Check-in"}

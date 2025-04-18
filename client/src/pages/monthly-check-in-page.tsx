@@ -42,8 +42,9 @@ import {
 import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Loader2, ArrowLeft, Upload, X, Plus, Image, ArrowRight, CheckCircle } from "lucide-react";
+import { Loader2, ArrowLeft, Upload, X, Plus, Image, ArrowRight, CheckCircle, Calendar } from "lucide-react";
 import { scrollToTop } from "@/lib/utils";
+import { MonthlyCheckIn } from "@shared/schema";
 
 // Form schema for monthly check-in
 const checkInSchema = z.object({
@@ -83,6 +84,14 @@ export default function MonthlyCheckInPage() {
   const [currentStep, setCurrentStep] = useState(1);
   const totalSteps = 5;
   const [fileInputKey, setFileInputKey] = useState(0); // For resetting file inputs
+  const [activeTab, setActiveTab] = useState<"new" | "history">("new");
+  const [selectedCheckIn, setSelectedCheckIn] = useState<MonthlyCheckIn | null>(null);
+
+  // Fetch user's monthly check-ins
+  const { data: checkIns, isLoading: isLoadingCheckIns } = useQuery<MonthlyCheckIn[]>({
+    queryKey: ["/api/monthly-check-ins"],
+    enabled: !!user,
+  });
 
   // Current month in YYYY-MM format
   const getCurrentMonth = () => {
@@ -91,6 +100,12 @@ export default function MonthlyCheckInPage() {
     const month = String(now.getMonth() + 1).padStart(2, '0');
     return `${year}-${month}`;
   };
+
+  // Check if a check-in exists for the current month
+  const currentMonth = getCurrentMonth();
+  const hasCurrentMonthCheckIn = checkIns?.some(
+    checkIn => checkIn.month === currentMonth
+  );
 
   // Create the form
   const form = useForm<CheckInFormValues>({
@@ -107,6 +122,20 @@ export default function MonthlyCheckInPage() {
       recommendationImplementation: "not-yet",
     }
   });
+  
+  // Check URL parameters and load check-in details
+  useEffect(() => {
+    // Check for tab parameter in URL
+    const urlParams = new URLSearchParams(window.location.search);
+    const tabParam = urlParams.get('tab');
+    
+    if (tabParam === 'history') {
+      setActiveTab("history");
+    } else if (hasCurrentMonthCheckIn && checkIns) {
+      // Auto-switch to history tab if current month check-in exists
+      setActiveTab("history");
+    }
+  }, [hasCurrentMonthCheckIn, checkIns]);
 
   // Format month for display
   const formatMonth = (monthStr: string) => {
@@ -679,6 +708,102 @@ export default function MonthlyCheckInPage() {
     );
   };
 
+  // Render history view component
+  const renderHistory = () => {
+    if (isLoadingCheckIns) {
+      return (
+        <div className="flex items-center justify-center py-12">
+          <Loader2 className="h-8 w-8 animate-spin text-blue-500" />
+          <span className="ml-2 text-gray-600">Loading check-in history...</span>
+        </div>
+      );
+    }
+
+    if (!checkIns || checkIns.length === 0) {
+      return (
+        <div className="text-center py-12">
+          <div className="bg-blue-50 rounded-full h-16 w-16 flex items-center justify-center mx-auto mb-4">
+            <Calendar className="h-8 w-8 text-blue-500" />
+          </div>
+          <h3 className="text-lg font-medium text-gray-900 mb-1">No Check-ins Found</h3>
+          <p className="text-gray-600">You haven't completed any monthly check-ins yet.</p>
+          <Button 
+            className="mt-6 bg-blue-600 hover:bg-blue-700"
+            onClick={() => setActiveTab("new")}
+          >
+            Create Your First Check-in
+          </Button>
+        </div>
+      );
+    }
+
+    return (
+      <div className="space-y-6">
+        <div className="mb-4">
+          <h2 className="text-xl font-semibold mb-2">Your Check-in History</h2>
+          <p className="text-gray-600">
+            View your past professional brand check-ins and track your progress over time.
+          </p>
+        </div>
+
+        <div className="grid gap-4 md:grid-cols-2">
+          {checkIns.map((checkIn) => (
+            <Card key={checkIn.id} className="overflow-hidden">
+              <CardHeader className="bg-blue-50 py-4">
+                <CardTitle className="text-lg font-medium flex items-center">
+                  <Calendar className="h-5 w-5 mr-2 text-blue-600" />
+                  {formatMonth(checkIn.month)}
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="pt-4">
+                <dl className="space-y-2 text-sm">
+                  <div className="flex justify-between">
+                    <dt className="font-medium text-gray-500">Content Posts:</dt>
+                    <dd>{checkIn.contentPosts}</dd>
+                  </div>
+                  <div className="flex justify-between">
+                    <dt className="font-medium text-gray-500">Engagement Frequency:</dt>
+                    <dd className="capitalize">{checkIn.engagementFrequency.replace(/-/g, ' ')}</dd>
+                  </div>
+                  <div className="flex justify-between">
+                    <dt className="font-medium text-gray-500">New Connections:</dt>
+                    <dd>{checkIn.newConnections}</dd>
+                  </div>
+                  <div className="flex justify-between">
+                    <dt className="font-medium text-gray-500">Target Connections:</dt>
+                    <dd>{checkIn.targetConnectionPercentage}</dd>
+                  </div>
+                  <div className="flex justify-between">
+                    <dt className="font-medium text-gray-500">Implementation:</dt>
+                    <dd className="capitalize">{checkIn.recommendationImplementation.replace(/-/g, ' ')}</dd>
+                  </div>
+                </dl>
+                {checkIn.implementationChallenges && (
+                  <div className="mt-4 pt-4 border-t border-gray-100">
+                    <h4 className="font-medium text-gray-500 text-sm mb-1">Implementation Challenges:</h4>
+                    <p className="text-sm text-gray-700">{checkIn.implementationChallenges}</p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+        
+        {!hasCurrentMonthCheckIn && (
+          <div className="flex justify-center mt-8">
+            <Button 
+              className="bg-blue-600 hover:bg-blue-700"
+              onClick={() => setActiveTab("new")}
+            >
+              Create New Check-in
+            </Button>
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  // Main rendering
   return (
     <div className="min-h-screen bg-[#F5F5F5] flex flex-col">
       <NavBar />
@@ -697,53 +822,66 @@ export default function MonthlyCheckInPage() {
             Monthly Professional Brand Check-In
           </h1>
           <p className="text-gray-600 mt-1">
-            Track your professional branding activities for {formatMonth(form.getValues().month)}
+            {activeTab === "new" 
+              ? `Track your professional branding activities for ${formatMonth(form.getValues().month)}`
+              : "View your professional brand check-in history"}
           </p>
         </div>
 
         <Card>
           <CardContent className="pt-6">
-            <Progress />
-            
-            <Form {...form}>
-              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-                {renderStepContent()}
+            <Tabs defaultValue={activeTab} value={activeTab} onValueChange={(value) => setActiveTab(value as "new" | "history")} className="mb-6">
+              <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger value="new" disabled={hasCurrentMonthCheckIn}>New Check-in</TabsTrigger>
+                <TabsTrigger value="history">History</TabsTrigger>
+              </TabsList>
+              <TabsContent value="new">
+                <Progress />
                 
-                <div className="flex justify-between mt-8">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={prevStep}
-                    disabled={isFirstStep}
-                    className="w-[120px]"
-                  >
-                    Previous
-                  </Button>
-                  
-                  {isLastStep ? (
-                    <Button 
-                      type="button"
-                      onClick={form.handleSubmit(onSubmit)}
-                      className="w-[120px] bg-[#bed6d1] hover:bg-[#6c8083]"
-                      disabled={checkInMutation.isPending}
-                    >
-                      {checkInMutation.isPending ? (
-                        <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                      ) : null}
-                      Submit
-                    </Button>
-                  ) : (
-                    <Button 
-                      type="button" 
-                      onClick={nextStep} 
-                      className="w-[120px] bg-[#bed6d1] hover:bg-[#6c8083]"
-                    >
-                      Next
-                    </Button>
-                  )}
-                </div>
-              </form>
-            </Form>
+                <Form {...form}>
+                  <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+                    {renderStepContent()}
+                    
+                    <div className="flex justify-between mt-8">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={prevStep}
+                        disabled={isFirstStep}
+                        className="w-[120px]"
+                      >
+                        Previous
+                      </Button>
+                      
+                      {isLastStep ? (
+                        <Button 
+                          type="button"
+                          onClick={form.handleSubmit(onSubmit)}
+                          className="w-[120px] bg-[#bed6d1] hover:bg-[#6c8083]"
+                          disabled={checkInMutation.isPending}
+                        >
+                          {checkInMutation.isPending ? (
+                            <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                          ) : null}
+                          Submit
+                        </Button>
+                      ) : (
+                        <Button 
+                          type="button" 
+                          onClick={nextStep} 
+                          className="w-[120px] bg-[#bed6d1] hover:bg-[#6c8083]"
+                        >
+                          Next
+                        </Button>
+                      )}
+                    </div>
+                  </form>
+                </Form>
+              </TabsContent>
+              <TabsContent value="history">
+                {renderHistory()}
+              </TabsContent>
+            </Tabs>
           </CardContent>
         </Card>
       </div>
