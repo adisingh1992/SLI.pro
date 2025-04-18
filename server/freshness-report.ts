@@ -247,7 +247,7 @@ Please provide your analysis in valid JSON format without comments or explanatio
 
     const userPrompt = `Here is the client's additional document (${document.type}) content:
 
-${document.content}
+${document.fileData}
 
 Here is the analysis of their questionnaire responses:
 ${JSON.stringify(questionnaireAnalysis, null, 2)}

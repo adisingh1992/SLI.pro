@@ -14,6 +14,7 @@ import {
   insertMonthlyCheckInSchema,
 } from "@shared/schema";
 import { registerConversationRoutes } from "./conversation-routes";
+import { registerFreshnessRoutes } from "./freshness-routes";
 
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -690,6 +691,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Register conversation routes (Claude chat interface)
   registerConversationRoutes(app);
+  registerFreshnessRoutes(app);
 
   const httpServer = createServer(app);
   return httpServer;

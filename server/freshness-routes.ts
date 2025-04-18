@@ -100,13 +100,13 @@ export function registerFreshnessRoutes(app: Express) {
       // 2. Analyze resume data
       const resumeDocument = userProfile.documents?.find(doc => doc.type === 'resume');
       const resumeAnalysis = resumeDocument ? 
-        await generateResumeSummary(resumeDocument.content, questionnaireAnalysis) : 
+        await generateResumeSummary(resumeDocument.fileData, questionnaireAnalysis) : 
         null;
       
       // 3. Analyze LinkedIn profile
       const linkedinDocument = userProfile.documents?.find(doc => doc.type === 'linkedin');
       const linkedinAnalysis = linkedinDocument ? 
-        await generateLinkedInSummary(linkedinDocument.content, questionnaireAnalysis, resumeAnalysis) : 
+        await generateLinkedInSummary(linkedinDocument.fileData, questionnaireAnalysis, resumeAnalysis) : 
         null;
       
       // 4. Analyze any additional documents
