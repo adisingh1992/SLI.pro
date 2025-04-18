@@ -28,8 +28,32 @@ async function callClaude(systemPrompt: string, userPrompt: string) {
       const textContent = response.content.filter(
         (item) => item.type === "text",
       );
+      
       if (textContent.length > 0 && "text" in textContent[0]) {
-        return JSON.parse(textContent[0].text);
+        const rawText = textContent[0].text;
+        
+        // Extract JSON from the response, handling potential markdown code blocks
+        let jsonText = rawText;
+        
+        // If response is wrapped in markdown code blocks, extract the JSON content
+        if (rawText.includes("```json")) {
+          const jsonMatch = rawText.match(/```json\s*([\s\S]*?)\s*```/);
+          if (jsonMatch && jsonMatch[1]) {
+            jsonText = jsonMatch[1].trim();
+          }
+        } else if (rawText.includes("```")) {
+          const jsonMatch = rawText.match(/```\s*([\s\S]*?)\s*```/);
+          if (jsonMatch && jsonMatch[1]) {
+            jsonText = jsonMatch[1].trim();
+          }
+        }
+        
+        try {
+          return JSON.parse(jsonText);
+        } catch (jsonError) {
+          log(`Error parsing JSON: ${jsonError}. Raw response: ${rawText}`, "claude");
+          throw new Error(`Failed to parse Claude's response as JSON: ${jsonError}`);
+        }
       }
     }
 
@@ -44,7 +68,7 @@ async function callClaude(systemPrompt: string, userPrompt: string) {
 export async function generateQuestionnaireSummary(userProfile: any) {
   const systemPrompt = `You are an expert professional branding analyst at SLI.pro. Your task is to analyze a client's questionnaire responses and produce a structured summary of their professional brand positioning.
 
-Please provide your analysis in valid JSON format without comments or explanations. Ensure the output strictly follows this structure:
+Please provide your analysis in valid JSON format only, without markdown formatting, comments, explanations, or code blocks. Do not wrap your response in \`\`\`json or any other formatting. The response should be purely JSON that can be directly parsed. Ensure the output strictly follows this structure:
 
 {
   "professionalIdentity": {
@@ -103,7 +127,7 @@ Please analyze this information and create a structured summary of their profess
 export async function generateResumeSummary(resumeContent: string, questionnaireAnalysis: any) {
   const systemPrompt = `You are an expert resume analyst for SLI.pro, a professional branding service. Your task is to extract key career insights from a client's resume and compare them against their stated career goals and aspirations.
 
-Please provide your analysis in valid JSON format without comments or explanations. Ensure the output strictly follows this structure:
+Please provide your analysis in valid JSON format only, without markdown formatting, comments, explanations, or code blocks. Do not wrap your response in \`\`\`json or any other formatting. The response should be purely JSON that can be directly parsed. Ensure the output strictly follows this structure:
 
 {
   "careerTrajectory": {
@@ -158,7 +182,7 @@ Please analyze the resume content in relation to their questionnaire responses a
 export async function generateLinkedInSummary(linkedinContent: string, questionnaireAnalysis: any, resumeAnalysis: any) {
   const systemPrompt = `You are an expert LinkedIn profile analyst for SLI.pro, a professional branding service. Your task is to analyze a client's LinkedIn profile content and evaluate its effectiveness in supporting their professional brand.
 
-Please provide your analysis in valid JSON format without comments or explanations. Ensure the output strictly follows this structure:
+Please provide your analysis in valid JSON format only, without markdown formatting, comments, explanations, or code blocks. Do not wrap your response in \`\`\`json or any other formatting. The response should be purely JSON that can be directly parsed. Ensure the output strictly follows this structure:
 
 {
   "profileCompleteness": {
@@ -222,7 +246,7 @@ export async function generateAdditionalDocsSummary(
   for (const document of documents) {
     const systemPrompt = `You are an expert document analyst for SLI.pro, a professional branding service. Your task is to analyze an additional document submitted by a client and evaluate how it contributes to their professional brand narrative.
 
-Please provide your analysis in valid JSON format without comments or explanations. Ensure the output strictly follows this structure:
+Please provide your analysis in valid JSON format only, without markdown formatting, comments, explanations, or code blocks. Do not wrap your response in \`\`\`json or any other formatting. The response should be purely JSON that can be directly parsed. Ensure the output strictly follows this structure:
 
 {
   "documentType": string,
