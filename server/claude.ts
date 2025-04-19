@@ -2,12 +2,8 @@ import Anthropic from "@anthropic-ai/sdk";
 import { log } from "./vite";
 import { storage } from "./storage";
 import { InsertConversationSummary } from "@shared/schema";
-import type {
-  ContentBlockDelta,
-  ContentBlockStartEvent,
-  ContentBlock,
-  Message,
-} from "@anthropic-ai/sdk";
+// Update imports to use namespace import syntax for compatibility
+import type * as AnthropicTypes from "@anthropic-ai/sdk";
 
 // Check if API key is available
 if (!process.env.ANTHROPIC_API_KEY) {
@@ -395,7 +391,7 @@ export async function generateStreamingClaudeResponse(
     log(`Sending streaming request to Claude for user ${userId}`, "claude");
 
     const stream = await anthropic.messages.create({
-      model: "claude-3-opus-20240229",
+      model: CLAUDE_MODEL,
       system: systemPrompt,
       messages: messages,
       max_tokens: 4096,

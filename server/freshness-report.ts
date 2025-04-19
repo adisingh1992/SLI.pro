@@ -90,11 +90,33 @@ async function callClaude(systemPrompt: string, userPrompt: string, maxRetries =
             
             // Check if rawText contains any JSON object by extracting anything between braces
             try {
-              const allMatches = [...rawText.matchAll(/\{(?:[^{}]|(?:\{[^{}]*\}))*\}/g)];
-              if (allMatches.length > 0) {
-                // Find the largest possible JSON object (assume it's the most complete one)
-                const largestMatch = allMatches.reduce((largest, current) => 
-                  (current[0].length > largest.length) ? current[0] : largest
+              // Find potential JSON objects using a simpler approach 
+              // to avoid TypeScript downlevelIteration issues
+              let bracketCount = 0;
+              let startIndex = -1;
+              let potentialMatches = [];
+              
+              // Scan through the string character by character
+              for (let i = 0; i < rawText.length; i++) {
+                if (rawText[i] === '{') {
+                  if (bracketCount === 0) {
+                    startIndex = i; // Mark the start of a potential JSON object
+                  }
+                  bracketCount++;
+                } else if (rawText[i] === '}') {
+                  bracketCount--;
+                  // When brackets balance out, we've found a complete object
+                  if (bracketCount === 0 && startIndex !== -1) {
+                    potentialMatches.push(rawText.substring(startIndex, i + 1));
+                    startIndex = -1;
+                  }
+                }
+              }
+              
+              if (potentialMatches.length > 0) {
+                // Find the largest potential JSON object
+                const largestMatch = potentialMatches.reduce((largest, current) => 
+                  (current.length > largest.length) ? current : largest
                 , "");
                 
                 if (largestMatch.length > 0) {
@@ -107,7 +129,7 @@ async function callClaude(systemPrompt: string, userPrompt: string, maxRetries =
                 }
               }
             } catch (regexError) {
-              log(`Error using regex to find JSON: ${regexError}`, "claude");
+              log(`Error finding JSON objects: ${regexError}`, "claude");
             }
             
             // If all attempts failed, provide a generic fallback
