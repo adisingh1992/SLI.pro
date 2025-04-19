@@ -392,7 +392,7 @@ const ReportDisplay: React.FC<FreshnessReportProps> = ({ report, userName }) => 
             <div className="space-y-3">
               <h4 className="text-sm font-semibold">Recommended Improvements</h4>
               <ul className="space-y-2">
-                {contentRecommendations.linkedInEnhancements.slice(0, 3).map((improvement, index) => (
+                {contentRecommendations.linkedInEnhancements.slice(0, 3).map((improvement: string, index: number) => (
                   <li key={index} className="flex items-start gap-2">
                     <ChevronRight className="h-4 w-4 text-primary shrink-0 mt-0.5" />
                     <span className="text-sm">{improvement}</span>
