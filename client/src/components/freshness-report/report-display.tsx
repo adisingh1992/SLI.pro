@@ -5,16 +5,60 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { 
   GraduationCap, BookOpen, Briefcase, Calendar, CheckCircle, 
-  ChevronRight, ClipboardCheck, Dice, FileText, Globe, 
+  ChevronRight, ClipboardCheck, Dice5, FileText, Globe, 
   Lightbulb, ListChecks, Target, TrendingUp, UserCircle 
 } from 'lucide-react';
 
 interface FreshnessReportProps {
-  report: any;
+  report: {
+    id: number;
+    userId: number;
+    questionnaireAnalysis: any;
+    resumeAnalysis: any;
+    linkedinAnalysis: any;
+    additionalDocumentsAnalysis: any[];
+    finalSynthesis: {
+      brandAudit: {
+        currentBrandStrength: string;
+        coreStrengths: string[];
+        criticalGaps: string[];
+        brandConsistency: string;
+      };
+      personalBrandStrategy: {
+        uniqueValueProposition: string;
+        coreNarrative: string;
+        recommendedPositioning: string;
+        targetAudience: string[];
+        keyDifferentiators: string[];
+      };
+      contentRecommendations: {
+        resumeImprovements: string[];
+        linkedInEnhancements: string[];
+        thoughtLeadershipTopics: string[];
+      };
+      digitalPresenceStrategy: {
+        platformPriorities: string[];
+        engagementTactics: string[];
+        networkingApproach: string;
+        contentCalendarFramework: string;
+      };
+      implementationRoadmap: {
+        immediateNextSteps: string[];
+        thirtyDayMilestones: string[];
+        ninetyDayGoals: string[];
+      };
+      competitiveAnalysis: {
+        marketPositioning: string;
+        industryTrendAlignment: string;
+        distinctionOpportunities: string;
+      };
+    };
+    createdAt: string;
+  };
   userName?: string;
 }
 
-const calculateFreshnessGrade = (report: any): string => {
+const calculateFreshnessGrade = (report: FreshnessReportProps['report']): string => {
   // In a full implementation, we would calculate this based on various factors
   // For now, we'll extract it from the final synthesis if available
   try {
@@ -144,7 +188,7 @@ const ReportDisplay: React.FC<FreshnessReportProps> = ({ report, userName }) => 
             <div className="mb-3">
               <h4 className="text-sm font-semibold mb-2">Key Challenges</h4>
               <ul className="space-y-2">
-                {brandAudit.criticalGaps.slice(0, 2).map((gap, index) => (
+                {brandAudit.criticalGaps.slice(0, 2).map((gap: string, index: number) => (
                   <li key={index} className="flex items-start gap-2">
                     <ChevronRight className="h-4 w-4 text-primary shrink-0 mt-0.5" />
                     <span className="text-sm">{gap}</span>
@@ -177,7 +221,7 @@ const ReportDisplay: React.FC<FreshnessReportProps> = ({ report, userName }) => 
             </div>
             
             <div className="space-y-4">
-              {implementationRoadmap.immediateNextSteps.slice(0, 3).map((step, index) => (
+              {implementationRoadmap.immediateNextSteps.slice(0, 3).map((step: string, index: number) => (
                 <div key={index} className="flex items-start gap-3 p-3 bg-muted/50 rounded-md border">
                   <div className="bg-primary text-primary-foreground rounded-full w-6 h-6 flex items-center justify-center shrink-0 mt-0.5">
                     {index + 1}
@@ -195,12 +239,12 @@ const ReportDisplay: React.FC<FreshnessReportProps> = ({ report, userName }) => 
           {/* 5. Key Themes & Insights */}
           <div className="mb-8">
             <div className="flex items-center gap-2 mb-4">
-              <LightBulb className="h-5 w-5 text-primary" />
+              <Lightbulb className="h-5 w-5 text-primary" />
               <h3 className="text-lg font-semibold">Key Themes & Insights</h3>
             </div>
             
             <div className="flex flex-wrap gap-2 mb-4">
-              {personalBrandStrategy.keyDifferentiators.slice(0, 5).map((theme, index) => (
+              {personalBrandStrategy.keyDifferentiators.slice(0, 5).map((theme: string, index: number) => (
                 <Badge key={index} variant="outline" className="px-3 py-1">
                   {theme}
                 </Badge>
@@ -271,7 +315,7 @@ const ReportDisplay: React.FC<FreshnessReportProps> = ({ report, userName }) => 
                 </div>
               </li>
               <li className="flex items-start gap-2">
-                <Dice className="h-4 w-4 text-primary shrink-0 mt-0.5" />
+                <Dice5 className="h-4 w-4 text-primary shrink-0 mt-0.5" />
                 <div>
                   <span className="text-xs text-muted-foreground">Brand Consistency</span>
                   <p className="text-sm">{brandAudit.brandConsistency}</p>
@@ -318,7 +362,7 @@ const ReportDisplay: React.FC<FreshnessReportProps> = ({ report, userName }) => 
         <Card>
           <CardHeader>
             <div className="flex items-center gap-2">
-              <AcademicCap className="h-5 w-5 text-primary" />
+              <GraduationCap className="h-5 w-5 text-primary" />
               <CardTitle className="text-lg">Resume Insights</CardTitle>
             </div>
           </CardHeader>
@@ -326,7 +370,7 @@ const ReportDisplay: React.FC<FreshnessReportProps> = ({ report, userName }) => 
             <div className="space-y-3">
               <h4 className="text-sm font-semibold">Recommended Improvements</h4>
               <ul className="space-y-2">
-                {contentRecommendations.resumeImprovements.slice(0, 3).map((improvement, index) => (
+                {contentRecommendations.resumeImprovements.slice(0, 3).map((improvement: string, index: number) => (
                   <li key={index} className="flex items-start gap-2">
                     <ChevronRight className="h-4 w-4 text-primary shrink-0 mt-0.5" />
                     <span className="text-sm">{improvement}</span>
