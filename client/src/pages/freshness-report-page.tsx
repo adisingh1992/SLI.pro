@@ -10,6 +10,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { AlertCircle, BookOpen, CheckCircle2, Download, FileText, Lightbulb, Sparkles } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
+import ReportDisplay from "@/components/freshness-report/report-display";
 
 interface FreshnessReportData {
   id: number;

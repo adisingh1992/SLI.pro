@@ -8,7 +8,7 @@ const anthropic = new Anthropic({
 });
 
 // The newest Anthropic model is "claude-3-7-sonnet-20250219" which was released February 24, 2025
-const CLAUDE_MODEL = "claude-3-7-sonnet-20250219";
+const CLAUDE_MODEL = "claude-3-opus-20240229";
 
 // Helper function to make Claude API calls with retry logic for rate limits
 async function callClaude(systemPrompt: string, userPrompt: string, maxRetries = 3, initialBackoff = 10000) {
