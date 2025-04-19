@@ -3,12 +3,10 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Separator } from "@/components/ui/separator";
+import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { AlertCircle, BookOpen, CheckCircle2, Download, FileText, Lightbulb, Sparkles } from "lucide-react";
+import { AlertCircle, FileText, Sparkles } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import ReportDisplay from "@/components/freshness-report/report-display";
 
@@ -28,7 +26,6 @@ const FreshnessReportPage = () => {
   const isAuthenticated = !!user;
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const [activeTab, setActiveTab] = useState("overview");
   const [isGenerating, setIsGenerating] = useState(false);
 
   // Fetch the latest report
@@ -162,7 +159,6 @@ const FreshnessReportPage = () => {
 
   // Main content with report data
   const report = reportData as FreshnessReportData;
-  const { finalSynthesis } = report;
 
   return (
     <div className="container px-4 py-8">
@@ -182,283 +178,11 @@ const FreshnessReportPage = () => {
           {isGenerating ? "Generating..." : "Generate New Report"}
         </Button>
       </div>
-
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-3 md:grid-cols-5 mb-6">
-          <TabsTrigger value="overview">Overview</TabsTrigger>
-          <TabsTrigger value="strategy">Strategy</TabsTrigger>
-          <TabsTrigger value="content">Content</TabsTrigger>
-          <TabsTrigger value="implementation">Implementation</TabsTrigger>
-          <TabsTrigger value="full-report">Full Report</TabsTrigger>
-        </TabsList>
-
-        {/* Overview Tab */}
-        <TabsContent value="overview" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center">
-                <Sparkles className="h-5 w-5 mr-2 text-blue-500" />
-                Brand Audit
-              </CardTitle>
-              <CardDescription>
-                Current state of your professional brand
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div>
-                <h4 className="font-medium mb-2">Brand Strength</h4>
-                <p>{finalSynthesis?.brandAudit?.currentBrandStrength || "No data available"}</p>
-              </div>
-              <Separator />
-              <div>
-                <h4 className="font-medium mb-2">Core Strengths</h4>
-                <ul className="list-disc pl-5 space-y-1">
-                  {finalSynthesis?.brandAudit?.coreStrengths?.map((strength: string, i: number) => (
-                    <li key={i}>{strength}</li>
-                  )) || "No data available"}
-                </ul>
-              </div>
-              <Separator />
-              <div>
-                <h4 className="font-medium mb-2">Critical Gaps</h4>
-                <ul className="list-disc pl-5 space-y-1">
-                  {finalSynthesis?.brandAudit?.criticalGaps?.map((gap: string, i: number) => (
-                    <li key={i}>{gap}</li>
-                  )) || "No data available"}
-                </ul>
-              </div>
-            </CardContent>
-          </Card>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-lg flex items-center">
-                  <CheckCircle2 className="h-5 w-5 mr-2 text-green-500" />
-                  Unique Value Proposition
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p>{finalSynthesis?.personalBrandStrategy?.uniqueValueProposition || "No data available"}</p>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-lg flex items-center">
-                  <Lightbulb className="h-5 w-5 mr-2 text-amber-500" />
-                  Next Steps
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <ul className="list-disc pl-5 space-y-1">
-                  {finalSynthesis?.implementationRoadmap?.immediateNextSteps?.map((step: string, i: number) => (
-                    <li key={i}>{step}</li>
-                  )) || "No data available"}
-                </ul>
-              </CardContent>
-            </Card>
-          </div>
-        </TabsContent>
-
-        {/* Strategy Tab */}
-        <TabsContent value="strategy" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Personal Brand Strategy</CardTitle>
-              <CardDescription>
-                Strategic recommendations for your professional brand
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div>
-                <h4 className="font-medium mb-2">Recommended Positioning</h4>
-                <p>{finalSynthesis?.personalBrandStrategy?.recommendedPositioning || "No data available"}</p>
-              </div>
-              <Separator />
-              <div>
-                <h4 className="font-medium mb-2">Target Audience</h4>
-                <ul className="list-disc pl-5 space-y-1">
-                  {finalSynthesis?.personalBrandStrategy?.targetAudience?.map((audience: string, i: number) => (
-                    <li key={i}>{audience}</li>
-                  )) || "No data available"}
-                </ul>
-              </div>
-              <Separator />
-              <div>
-                <h4 className="font-medium mb-2">Core Narrative</h4>
-                <p>{finalSynthesis?.personalBrandStrategy?.coreNarrative || "No data available"}</p>
-              </div>
-              <Separator />
-              <div>
-                <h4 className="font-medium mb-2">Key Differentiators</h4>
-                <ul className="list-disc pl-5 space-y-1">
-                  {finalSynthesis?.personalBrandStrategy?.keyDifferentiators?.map((diff: string, i: number) => (
-                    <li key={i}>{diff}</li>
-                  )) || "No data available"}
-                </ul>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>Competitive Analysis</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div>
-                <h4 className="font-medium mb-2">Market Positioning</h4>
-                <p>{finalSynthesis?.competitiveAnalysis?.marketPositioning || "No data available"}</p>
-              </div>
-              <Separator />
-              <div>
-                <h4 className="font-medium mb-2">Industry Trend Alignment</h4>
-                <p>{finalSynthesis?.competitiveAnalysis?.industryTrendAlignment || "No data available"}</p>
-              </div>
-              <Separator />
-              <div>
-                <h4 className="font-medium mb-2">Distinction Opportunities</h4>
-                <p>{finalSynthesis?.competitiveAnalysis?.distinctionOpportunities || "No data available"}</p>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        {/* Content Tab */}
-        <TabsContent value="content" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Content Recommendations</CardTitle>
-              <CardDescription>
-                Improve your professional content and digital presence
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div>
-                <h4 className="font-medium mb-2">Resume Improvements</h4>
-                <ul className="list-disc pl-5 space-y-1">
-                  {finalSynthesis?.contentRecommendations?.resumeImprovements?.map((imp: string, i: number) => (
-                    <li key={i}>{imp}</li>
-                  )) || "No data available"}
-                </ul>
-              </div>
-              <Separator />
-              <div>
-                <h4 className="font-medium mb-2">LinkedIn Enhancements</h4>
-                <ul className="list-disc pl-5 space-y-1">
-                  {finalSynthesis?.contentRecommendations?.linkedInEnhancements?.map((enh: string, i: number) => (
-                    <li key={i}>{enh}</li>
-                  )) || "No data available"}
-                </ul>
-              </div>
-              <Separator />
-              <div>
-                <h4 className="font-medium mb-2">Thought Leadership Topics</h4>
-                <ul className="list-disc pl-5 space-y-1">
-                  {finalSynthesis?.contentRecommendations?.thoughtLeadershipTopics?.map((topic: string, i: number) => (
-                    <li key={i}>{topic}</li>
-                  )) || "No data available"}
-                </ul>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>Digital Presence Strategy</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div>
-                <h4 className="font-medium mb-2">Platform Priorities</h4>
-                <ul className="list-disc pl-5 space-y-1">
-                  {finalSynthesis?.digitalPresenceStrategy?.platformPriorities?.map((platform: string, i: number) => (
-                    <li key={i}>{platform}</li>
-                  )) || "No data available"}
-                </ul>
-              </div>
-              <Separator />
-              <div>
-                <h4 className="font-medium mb-2">Engagement Tactics</h4>
-                <ul className="list-disc pl-5 space-y-1">
-                  {finalSynthesis?.digitalPresenceStrategy?.engagementTactics?.map((tactic: string, i: number) => (
-                    <li key={i}>{tactic}</li>
-                  )) || "No data available"}
-                </ul>
-              </div>
-              <Separator />
-              <div>
-                <h4 className="font-medium mb-2">Networking Approach</h4>
-                <p>{finalSynthesis?.digitalPresenceStrategy?.networkingApproach || "No data available"}</p>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        {/* Implementation Tab */}
-        <TabsContent value="implementation" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Implementation Roadmap</CardTitle>
-              <CardDescription>
-                Actionable steps to enhance your professional brand
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div>
-                <h4 className="font-medium mb-3">Immediate Next Steps</h4>
-                <ul className="list-disc pl-5 space-y-2">
-                  {finalSynthesis?.implementationRoadmap?.immediateNextSteps?.map((step: string, i: number) => (
-                    <li key={i}>{step}</li>
-                  )) || "No data available"}
-                </ul>
-              </div>
-              <Separator />
-              <div>
-                <h4 className="font-medium mb-3">30-Day Milestones</h4>
-                <ul className="list-disc pl-5 space-y-2">
-                  {finalSynthesis?.implementationRoadmap?.["30DayMilestones"]?.map((milestone: string, i: number) => (
-                    <li key={i}>{milestone}</li>
-                  )) || "No data available"}
-                </ul>
-              </div>
-              <Separator />
-              <div>
-                <h4 className="font-medium mb-3">90-Day Milestones</h4>
-                <ul className="list-disc pl-5 space-y-2">
-                  {finalSynthesis?.implementationRoadmap?.["90DayMilestones"]?.map((milestone: string, i: number) => (
-                    <li key={i}>{milestone}</li>
-                  )) || "No data available"}
-                </ul>
-              </div>
-              <Separator />
-              <div>
-                <h4 className="font-medium mb-3">Success Metrics</h4>
-                <ul className="list-disc pl-5 space-y-2">
-                  {finalSynthesis?.implementationRoadmap?.successMetrics?.map((metric: string, i: number) => (
-                    <li key={i}>{metric}</li>
-                  )) || "No data available"}
-                </ul>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        {/* Full Report Tab */}
-        <TabsContent value="full-report">
-          <div className="mb-4 flex items-center justify-end">
-            <Button variant="outline" size="sm">
-              <Download className="h-4 w-4 mr-2" />
-              Export Report
-            </Button>
-          </div>
-          
-          {/* Use our new ReportDisplay component here */}
-          <ReportDisplay report={report} userName={user?.username} />
-        </TabsContent>
-      </Tabs>
+      
+      {/* Full Report Content */}
+      <ReportDisplay report={report} userName={user?.username} />
     </div>
   );
 };
 
-// Export without default to fix the routing issue
-export { FreshnessReportPage as default };
+export default FreshnessReportPage;
