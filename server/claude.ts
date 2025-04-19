@@ -9,6 +9,17 @@ import type {
   Message,
 } from "@anthropic-ai/sdk";
 
+// Check if API key is available
+if (!process.env.ANTHROPIC_API_KEY) {
+  log("WARNING: ANTHROPIC_API_KEY environment variable is not set", "claude");
+} else {
+  log("ANTHROPIC_API_KEY is available", "claude");
+}
+
+// the newest Anthropic model is "claude-3-7-sonnet-20250219" which was released February 24, 2025
+const CLAUDE_MODEL = 'claude-3-7-sonnet-20250219';
+log(`Using Claude model: ${CLAUDE_MODEL}`, "claude");
+
 // Initialize Anthropic client
 const anthropic = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY,
@@ -170,7 +181,7 @@ export async function generateClaudeResponse(
     log(`Sending request to Claude for user ${userId}`, "claude");
 
     const response = await anthropic.messages.create({
-      model: "claude-3-opus-20240229",
+      model: CLAUDE_MODEL,
       system: systemPrompt,
       messages: messages,
       max_tokens: 4096,
@@ -318,7 +329,7 @@ Timeframe: ${q.timeframe || "Not specified"}
 
     // Call Claude with the request
     const response = await anthropic.messages.create({
-      model: "claude-3-opus-20240229",
+      model: CLAUDE_MODEL,
       system: systemPrompt,
       max_tokens: 4096,
       temperature: 0.2,

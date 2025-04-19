@@ -86,14 +86,41 @@ async function callClaude(systemPrompt: string, userPrompt: string, maxRetries =
           } catch (jsonError) {
             log(`Error parsing JSON: ${jsonError}. Raw response: ${rawText}`, "claude");
             
-            // Fallback to a default structure if we can't parse the JSON
-            // This is better than failing the entire report generation
+            log(`Will attempt to parse partial content to salvage response`, "claude");
+            
+            // Check if rawText contains any JSON object by extracting anything between braces
+            try {
+              const allMatches = [...rawText.matchAll(/\{(?:[^{}]|(?:\{[^{}]*\}))*\}/g)];
+              if (allMatches.length > 0) {
+                // Find the largest possible JSON object (assume it's the most complete one)
+                const largestMatch = allMatches.reduce((largest, current) => 
+                  (current[0].length > largest.length) ? current[0] : largest
+                , "");
+                
+                if (largestMatch.length > 0) {
+                  log(`Found potential JSON object in response. Attempting to parse it.`, "claude");
+                  try {
+                    return JSON.parse(largestMatch);
+                  } catch (parseErr) {
+                    log(`Failed to parse largest match: ${parseErr}`, "claude");
+                  }
+                }
+              }
+            } catch (regexError) {
+              log(`Error using regex to find JSON: ${regexError}`, "claude");
+            }
+            
+            // If all attempts failed, provide a generic fallback
+            log(`Using fallback default response structure`, "claude");
+            
+            // Create a generic response that matches the expected schema
             return {
               brandAudit: {
                 currentBrandStrength: "Moderate - Based on your profile data",
                 coreStrengths: ["Technical expertise", "Problem-solving abilities"],
                 criticalGaps: ["Need for more consistent online presence", "Clearer professional narrative"],
-                brandConsistency: "Requires improvement across platforms"
+                brandConsistency: "Requires improvement across platforms",
+                marketRelevance: "Moderate - Some alignment with industry trends"
               },
               personalBrandStrategy: {
                 uniqueValueProposition: "A skilled professional with expertise in your field",

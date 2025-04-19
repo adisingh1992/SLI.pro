@@ -93,41 +93,84 @@ export function registerFreshnessRoutes(app: Express) {
         });
       }
       
-      // Process each part sequentially:
+      // Process each part sequentially with detailed logging:
       try {
+        console.log('Starting freshness report generation process...');
+        
         // 1. Analyze questionnaire data
-        const questionnaireAnalysis = await generateQuestionnaireSummary(userProfile);
+        console.log('Step 1: Starting questionnaire analysis...');
+        let questionnaireAnalysis;
+        try {
+          questionnaireAnalysis = await generateQuestionnaireSummary(userProfile);
+          console.log('Step 1: Questionnaire analysis completed successfully');
+        } catch (error) {
+          console.error('Step 1: Error during questionnaire analysis:', error);
+          throw new Error(`Questionnaire analysis failed: ${error instanceof Error ? error.message : String(error)}`);
+        }
         
         // 2. Analyze resume data
+        console.log('Step 2: Starting resume analysis...');
         const resumeDocument = userProfile.documents?.find(doc => doc.type === 'resume');
-        const resumeAnalysis = resumeDocument ? 
-          await generateResumeSummary(resumeDocument.fileData, questionnaireAnalysis) : 
-          null;
+        let resumeAnalysis = null;
+        try {
+          resumeAnalysis = resumeDocument ? 
+            await generateResumeSummary(resumeDocument.fileData, questionnaireAnalysis) : 
+            null;
+          console.log('Step 2: Resume analysis completed successfully');
+        } catch (error) {
+          console.error('Step 2: Error during resume analysis:', error);
+          throw new Error(`Resume analysis failed: ${error instanceof Error ? error.message : String(error)}`);
+        }
         
         // 3. Analyze LinkedIn profile
+        console.log('Step 3: Starting LinkedIn profile analysis...');
         const linkedinDocument = userProfile.documents?.find(doc => doc.type === 'linkedin');
-        const linkedinAnalysis = linkedinDocument ? 
-          await generateLinkedInSummary(linkedinDocument.fileData, questionnaireAnalysis, resumeAnalysis) : 
-          null;
+        let linkedinAnalysis = null;
+        try {
+          linkedinAnalysis = linkedinDocument ? 
+            await generateLinkedInSummary(linkedinDocument.fileData, questionnaireAnalysis, resumeAnalysis) : 
+            null;
+          console.log('Step 3: LinkedIn analysis completed successfully');
+        } catch (error) {
+          console.error('Step 3: Error during LinkedIn analysis:', error);
+          throw new Error(`LinkedIn analysis failed: ${error instanceof Error ? error.message : String(error)}`);
+        }
         
         // 4. Analyze any additional documents
+        console.log('Step 4: Starting additional documents analysis...');
         const additionalDocuments = userProfile.documents?.filter(doc => 
           doc.type !== 'resume' && doc.type !== 'linkedin'
         );
         
-        const additionalDocumentsAnalysis = additionalDocuments && additionalDocuments.length > 0 ?
-          await generateAdditionalDocsSummary(additionalDocuments, questionnaireAnalysis, resumeAnalysis, linkedinAnalysis) :
-          [];
+        let additionalDocumentsAnalysis = [];
+        try {
+          additionalDocumentsAnalysis = additionalDocuments && additionalDocuments.length > 0 ?
+            await generateAdditionalDocsSummary(additionalDocuments, questionnaireAnalysis, resumeAnalysis, linkedinAnalysis) :
+            [];
+          console.log('Step 4: Additional documents analysis completed successfully');
+        } catch (error) {
+          console.error('Step 4: Error during additional documents analysis:', error);
+          throw new Error(`Additional documents analysis failed: ${error instanceof Error ? error.message : String(error)}`);
+        }
       
         // 5. Generate final synthesis
-        const finalSynthesis = await generateFinalSynthesis(
-          questionnaireAnalysis,
-          resumeAnalysis,
-          linkedinAnalysis,
-          additionalDocumentsAnalysis
-        );
+        console.log('Step 5: Starting final synthesis...');
+        let finalSynthesis;
+        try {
+          finalSynthesis = await generateFinalSynthesis(
+            questionnaireAnalysis,
+            resumeAnalysis,
+            linkedinAnalysis,
+            additionalDocumentsAnalysis
+          );
+          console.log('Step 5: Final synthesis completed successfully');
+        } catch (error) {
+          console.error('Step 5: Error during final synthesis:', error);
+          throw new Error(`Final synthesis failed: ${error instanceof Error ? error.message : String(error)}`);
+        }
       
         // Create the freshness report object
+        console.log('Step 6: Creating freshness report object...');
         const freshReport = {
           userId,
           questionnaireAnalysis: questionnaireAnalysis || {},
@@ -138,10 +181,26 @@ export function registerFreshnessRoutes(app: Express) {
         };
         
         // Validate the report data
-        const validatedReport = insertFreshnessReportSchema.parse(freshReport);
+        console.log('Step 7: Validating report data...');
+        let validatedReport;
+        try {
+          validatedReport = insertFreshnessReportSchema.parse(freshReport);
+          console.log('Step 7: Report data validation successful');
+        } catch (validationError) {
+          console.error('Step 7: Error during report validation:', validationError);
+          throw validationError; // Let the outer try/catch handle this
+        }
         
         // Store the report
-        const createdReport = await storage.createFreshnessReport(validatedReport);
+        console.log('Step 8: Storing report in database...');
+        let createdReport;
+        try {
+          createdReport = await storage.createFreshnessReport(validatedReport);
+          console.log('Step 8: Report stored successfully with ID:', createdReport.id);
+        } catch (storageError) {
+          console.error('Step 8: Error storing report:', storageError);
+          throw new Error(`Failed to store report: ${storageError instanceof Error ? storageError.message : String(storageError)}`);
+        }
         res.status(201).json(createdReport);
       } catch (analysisError) {
         console.error("Error during analysis phase:", analysisError);
