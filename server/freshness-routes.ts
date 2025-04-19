@@ -94,54 +94,62 @@ export function registerFreshnessRoutes(app: Express) {
       }
       
       // Process each part sequentially:
-      // 1. Analyze questionnaire data
-      const questionnaireAnalysis = await generateQuestionnaireSummary(userProfile);
+      try {
+        // 1. Analyze questionnaire data
+        const questionnaireAnalysis = await generateQuestionnaireSummary(userProfile);
+        
+        // 2. Analyze resume data
+        const resumeDocument = userProfile.documents?.find(doc => doc.type === 'resume');
+        const resumeAnalysis = resumeDocument ? 
+          await generateResumeSummary(resumeDocument.fileData, questionnaireAnalysis) : 
+          null;
+        
+        // 3. Analyze LinkedIn profile
+        const linkedinDocument = userProfile.documents?.find(doc => doc.type === 'linkedin');
+        const linkedinAnalysis = linkedinDocument ? 
+          await generateLinkedInSummary(linkedinDocument.fileData, questionnaireAnalysis, resumeAnalysis) : 
+          null;
+        
+        // 4. Analyze any additional documents
+        const additionalDocuments = userProfile.documents?.filter(doc => 
+          doc.type !== 'resume' && doc.type !== 'linkedin'
+        );
+        
+        const additionalDocumentsAnalysis = additionalDocuments && additionalDocuments.length > 0 ?
+          await generateAdditionalDocsSummary(additionalDocuments, questionnaireAnalysis, resumeAnalysis, linkedinAnalysis) :
+          [];
       
-      // 2. Analyze resume data
-      const resumeDocument = userProfile.documents?.find(doc => doc.type === 'resume');
-      const resumeAnalysis = resumeDocument ? 
-        await generateResumeSummary(resumeDocument.fileData, questionnaireAnalysis) : 
-        null;
+        // 5. Generate final synthesis
+        const finalSynthesis = await generateFinalSynthesis(
+          questionnaireAnalysis,
+          resumeAnalysis,
+          linkedinAnalysis,
+          additionalDocumentsAnalysis
+        );
       
-      // 3. Analyze LinkedIn profile
-      const linkedinDocument = userProfile.documents?.find(doc => doc.type === 'linkedin');
-      const linkedinAnalysis = linkedinDocument ? 
-        await generateLinkedInSummary(linkedinDocument.fileData, questionnaireAnalysis, resumeAnalysis) : 
-        null;
-      
-      // 4. Analyze any additional documents
-      const additionalDocuments = userProfile.documents?.filter(doc => 
-        doc.type !== 'resume' && doc.type !== 'linkedin'
-      );
-      
-      const additionalDocumentsAnalysis = additionalDocuments && additionalDocuments.length > 0 ?
-        await generateAdditionalDocsSummary(additionalDocuments, questionnaireAnalysis, resumeAnalysis, linkedinAnalysis) :
-        [];
-    
-      // 5. Generate final synthesis
-      const finalSynthesis = await generateFinalSynthesis(
-        questionnaireAnalysis,
-        resumeAnalysis,
-        linkedinAnalysis,
-        additionalDocumentsAnalysis
-      );
-    
-      // Create the freshness report object
-      const freshReport = {
-        userId,
-        questionnaireAnalysis,
-        resumeAnalysis,
-        linkedinAnalysis,
-        additionalDocumentsAnalysis,
-        finalSynthesis
-      };
-      
-      // Validate the report data
-      const validatedReport = insertFreshnessReportSchema.parse(freshReport);
-      
-      // Store the report
-      const createdReport = await storage.createFreshnessReport(validatedReport);
-      res.status(201).json(createdReport);
+        // Create the freshness report object
+        const freshReport = {
+          userId,
+          questionnaireAnalysis: questionnaireAnalysis || {},
+          resumeAnalysis: resumeAnalysis || {},
+          linkedinAnalysis: linkedinAnalysis || {},
+          additionalDocumentsAnalysis: additionalDocumentsAnalysis || [],
+          finalSynthesis: finalSynthesis || {}
+        };
+        
+        // Validate the report data
+        const validatedReport = insertFreshnessReportSchema.parse(freshReport);
+        
+        // Store the report
+        const createdReport = await storage.createFreshnessReport(validatedReport);
+        res.status(201).json(createdReport);
+      } catch (analysisError) {
+        console.error("Error during analysis phase:", analysisError);
+        return res.status(500).json({ 
+          error: "Failed during content analysis", 
+          details: analysisError instanceof Error ? analysisError.message : String(analysisError)
+        });
+      }
       
     } catch (error) {
       console.error("Error creating freshness report:", error);
@@ -153,7 +161,10 @@ export function registerFreshnessRoutes(app: Express) {
         });
       }
       
-      res.status(500).json({ error: "Failed to create freshness report" });
+      res.status(500).json({ 
+        error: "Failed to create freshness report",
+        details: error instanceof Error ? error.message : String(error)
+      });
     }
   });
 
