@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
@@ -6,8 +6,9 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { AlertCircle, FileText, Sparkles } from "lucide-react";
+import { AlertCircle, FileText, Sparkles, CheckCircle2 } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
+import { Progress } from "@/components/ui/progress";
 import ReportDisplay from "@/components/freshness-report/report-display";
 
 interface FreshnessReportData {
@@ -27,9 +28,41 @@ const FreshnessReportPage = () => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [isGenerating, setIsGenerating] = useState(false);
+  const [progress, setProgress] = useState(0);
+
+  // Progress bar animation when generating report
+  useEffect(() => {
+    let interval: NodeJS.Timeout;
+    
+    if (isGenerating) {
+      setProgress(0);
+      
+      interval = setInterval(() => {
+        setProgress((prevProgress) => {
+          // Slowly increase to 90%, then wait for actual completion
+          if (prevProgress >= 90) {
+            clearInterval(interval);
+            return 90;
+          }
+          return prevProgress + (Math.random() * 3);
+        });
+      }, 800);
+    } else {
+      setProgress(100);
+    }
+    
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [isGenerating]);
 
   // Fetch the latest report
-  const { data: reportData, isLoading, isError, error } = useQuery({
+  const {
+    data: reportData,
+    isLoading,
+    isError,
+    error,
+  } = useQuery({
     queryKey: ["/api/freshness-reports/latest"],
     enabled: isAuthenticated,
     retry: false,
@@ -44,7 +77,9 @@ const FreshnessReportPage = () => {
       return response;
     },
     onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ["/api/freshness-reports/latest"] });
+      queryClient.invalidateQueries({
+        queryKey: ["/api/freshness-reports/latest"],
+      });
       toast({
         title: "Success!",
         description: "Your professional brand assessment has been generated.",
@@ -53,12 +88,11 @@ const FreshnessReportPage = () => {
     },
     onError: (err: any) => {
       setIsGenerating(false);
-      const errorMessage = err.response?.data?.error || 
-        err.message || 
-        "Failed to generate report";
-      
+      const errorMessage =
+        err.response?.data?.error || err.message || "Failed to generate report";
+
       const missingDocs = err.response?.data?.missingDocuments;
-      
+
       toast({
         title: "Error generating report",
         description: errorMessage,
@@ -74,35 +108,71 @@ const FreshnessReportPage = () => {
   // Format the date
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric'
+    return date.toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "long",
+      day: "numeric",
     });
   };
 
   // Content for when no report exists
   const NoReportContent = () => (
     <div className="flex flex-col items-center justify-center py-12 text-center">
-      <FileText className="h-16 w-16 text-muted-foreground mb-4" />
-      <h3 className="text-xl font-medium mb-2">No Brand Assessment Yet</h3>
-      <p className="text-muted-foreground max-w-md mb-6">
-        Generate your first professional brand assessment to get comprehensive insights into your brand positioning.
-      </p>
-      <Button
-        onClick={handleGenerateReport}
-        disabled={isGenerating}
-        className="flex items-center"
-      >
-        {isGenerating ? (
-          <>Generating Report...</>
-        ) : (
-          <>
+      {isGenerating ? (
+        <div className="w-full max-w-md">
+          <div className="flex items-center justify-center mb-4">
+            <div className="relative flex items-center justify-center w-16 h-16 rounded-full bg-primary/10">
+              <Sparkles className="h-8 w-8 text-primary animate-pulse" />
+            </div>
+          </div>
+          <h3 className="text-xl font-medium mb-2">Generating Your Report</h3>
+          <p className="text-muted-foreground mb-6">
+            Please wait while our AI analyzes your professional profile. This may take a minute or two.
+          </p>
+          <div className="space-y-2 w-full">
+            <div className="flex justify-between text-sm text-muted-foreground">
+              <span>Progress</span>
+              <span>{Math.round(progress)}%</span>
+            </div>
+            <Progress value={progress} className="h-2 w-full" />
+          </div>
+          <div className="mt-6 space-y-3">
+            <div className="flex items-start gap-2 text-sm text-muted-foreground text-left">
+              <CheckCircle2 className={`h-4 w-4 mt-0.5 ${progress > 25 ? "text-green-500" : "text-muted"}`} />
+              <span>Analyzing your questionnaire data...</span>
+            </div>
+            <div className="flex items-start gap-2 text-sm text-muted-foreground text-left">
+              <CheckCircle2 className={`h-4 w-4 mt-0.5 ${progress > 45 ? "text-green-500" : "text-muted"}`} />
+              <span>Processing resume information...</span>
+            </div>
+            <div className="flex items-start gap-2 text-sm text-muted-foreground text-left">
+              <CheckCircle2 className={`h-4 w-4 mt-0.5 ${progress > 65 ? "text-green-500" : "text-muted"}`} />
+              <span>Reviewing LinkedIn profile...</span>
+            </div>
+            <div className="flex items-start gap-2 text-sm text-muted-foreground text-left">
+              <CheckCircle2 className={`h-4 w-4 mt-0.5 ${progress > 85 ? "text-green-500" : "text-muted"}`} />
+              <span>Generating brand recommendations...</span>
+            </div>
+          </div>
+        </div>
+      ) : (
+        <>
+          <FileText className="h-16 w-16 text-muted-foreground mb-4" />
+          <h3 className="text-xl font-medium mb-2">No Brand Assessment Yet</h3>
+          <p className="text-muted-foreground max-w-md mb-6">
+            Generate your first professional brand assessment to get comprehensive
+            insights into your brand positioning.
+          </p>
+          <Button
+            onClick={handleGenerateReport}
+            disabled={isGenerating}
+            className="flex items-center"
+          >
             <Sparkles className="mr-2 h-4 w-4" />
             Generate Assessment
-          </>
-        )}
-      </Button>
+          </Button>
+        </>
+      )}
     </div>
   );
 
@@ -144,9 +214,10 @@ const FreshnessReportPage = () => {
   if (!reportData) {
     return (
       <div className="container px-4 py-8">
-        <h1 className="text-2xl font-bold mb-4">Professional Brand Assessment</h1>
+        <h1 className="text-2xl font-bold mb-4">Freshness Report</h1>
         <p className="text-muted-foreground mb-8">
-          Get a comprehensive analysis of your professional brand presence and positioning
+          Get a comprehensive analysis of your professional brand presence and
+          positioning
         </p>
         <Card>
           <CardContent className="pt-6">
@@ -164,23 +235,69 @@ const FreshnessReportPage = () => {
     <div className="container px-4 py-8">
       <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-bold">Professional Brand Assessment</h1>
+          <h1 className="text-2xl font-bold">Freshness Report</h1>
           <p className="text-muted-foreground">
             Generated on {formatDate(report.createdAt)}
           </p>
         </div>
-        <Button
-          onClick={handleGenerateReport}
-          disabled={isGenerating}
-          variant="outline"
-          className="mt-4 md:mt-0"
-        >
-          {isGenerating ? "Generating..." : "Generate New Report"}
-        </Button>
+        {isGenerating ? (
+          <div className="mt-4 md:mt-0 space-y-2 min-w-[250px]">
+            <div className="flex justify-between text-sm">
+              <span className="text-muted-foreground">Generating new report...</span>
+              <span className="text-muted-foreground">{Math.round(progress)}%</span>
+            </div>
+            <Progress value={progress} className="h-2" />
+          </div>
+        ) : (
+          <Button
+            onClick={handleGenerateReport}
+            disabled={isGenerating}
+            variant="outline"
+            className="mt-4 md:mt-0"
+          >
+            Generate New Report
+          </Button>
+        )}
       </div>
-      
-      {/* Full Report Content */}
-      <ReportDisplay report={report} userName={user?.username} />
+
+      {isGenerating ? (
+        <Card className="mb-8 p-8">
+          <div className="flex flex-col items-center justify-center py-8 text-center">
+            <div className="w-full max-w-md">
+              <div className="flex items-center justify-center mb-4">
+                <div className="relative flex items-center justify-center w-16 h-16 rounded-full bg-primary/10">
+                  <Sparkles className="h-8 w-8 text-primary animate-pulse" />
+                </div>
+              </div>
+              <h3 className="text-xl font-medium mb-2">Generating Your Report</h3>
+              <p className="text-muted-foreground mb-6">
+                Please wait while our AI analyzes your professional profile. This may take a minute or two.
+              </p>
+              <div className="mt-6 space-y-3">
+                <div className="flex items-start gap-2 text-sm text-muted-foreground text-left">
+                  <CheckCircle2 className={`h-4 w-4 mt-0.5 ${progress > 25 ? "text-green-500" : "text-muted"}`} />
+                  <span>Analyzing your questionnaire data...</span>
+                </div>
+                <div className="flex items-start gap-2 text-sm text-muted-foreground text-left">
+                  <CheckCircle2 className={`h-4 w-4 mt-0.5 ${progress > 45 ? "text-green-500" : "text-muted"}`} />
+                  <span>Processing resume information...</span>
+                </div>
+                <div className="flex items-start gap-2 text-sm text-muted-foreground text-left">
+                  <CheckCircle2 className={`h-4 w-4 mt-0.5 ${progress > 65 ? "text-green-500" : "text-muted"}`} />
+                  <span>Reviewing LinkedIn profile...</span>
+                </div>
+                <div className="flex items-start gap-2 text-sm text-muted-foreground text-left">
+                  <CheckCircle2 className={`h-4 w-4 mt-0.5 ${progress > 85 ? "text-green-500" : "text-muted"}`} />
+                  <span>Generating brand recommendations...</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </Card>
+      ) : (
+        /* Full Report Content */
+        <ReportDisplay report={report} userName={user?.firstName} />
+      )}
     </div>
   );
 };

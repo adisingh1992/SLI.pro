@@ -50,7 +50,7 @@ export const FreshnessReportWidget: React.FC<FreshnessReportWidgetProps> = ({
       <CardHeader className="pb-2">
         <CardTitle className="text-lg flex items-center">
           <Sparkles className="h-5 w-5 mr-2 text-blue-500" />
-          Professional Brand Assessment
+          Freshness Report
         </CardTitle>
         <CardDescription>
           Get a comprehensive analysis of your professional brand presence
@@ -83,7 +83,7 @@ export const FreshnessReportWidget: React.FC<FreshnessReportWidgetProps> = ({
           className="w-full"
           variant={latestReportDate ? "outline" : "default"}
         >
-          {latestReportDate ? "Generate New Report" : "Generate Report"}
+          {latestReportDate ? "View Report" : "View Report"}
         </Button>
       </CardFooter>
     </Card>
