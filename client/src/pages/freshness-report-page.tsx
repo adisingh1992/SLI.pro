@@ -34,27 +34,34 @@ const FreshnessReportPage = () => {
   useEffect(() => {
     let interval: NodeJS.Timeout;
     
+    // Reset progress immediately when starting generation
     if (isGenerating) {
+      // Ensure progress starts from 0
       setProgress(0);
       
-      interval = setInterval(() => {
-        setProgress((prevProgress) => {
-          // Slowly increase to 90%, then wait for actual completion
-          if (prevProgress >= 90) {
-            clearInterval(interval);
-            return 90;
-          }
-          return prevProgress + (Math.random() * 3);
-        });
-      }, 800);
-    } else {
+      // Small delay to ensure UI has updated before starting animation
+      setTimeout(() => {
+        interval = setInterval(() => {
+          setProgress((prevProgress) => {
+            // Slowly increase to 90%, then wait for actual completion
+            if (prevProgress >= 90) {
+              clearInterval(interval);
+              return 90;
+            }
+            return prevProgress + (Math.random() * 3);
+          });
+        }, 800);
+      }, 50);
+    } else if (progress > 0 && progress < 100) {
+      // Only set to 100% if we were in the middle of progress
       setProgress(100);
     }
     
+    // Clean up interval on unmount or when isGenerating changes
     return () => {
       if (interval) clearInterval(interval);
     };
-  }, [isGenerating]);
+  }, [isGenerating, progress]);
 
   // Fetch the latest report
   const {
@@ -72,7 +79,7 @@ const FreshnessReportPage = () => {
   // Mutation for generating a new report
   const generateReportMutation = useMutation({
     mutationFn: async () => {
-      setIsGenerating(true);
+      // setIsGenerating(true) is now called in handleGenerateReport
       const response = await apiRequest("POST", "/api/freshness-reports");
       return response;
     },
@@ -102,6 +109,8 @@ const FreshnessReportPage = () => {
   });
 
   const handleGenerateReport = () => {
+    // Set isGenerating to true immediately before making the API call
+    setIsGenerating(true);
     generateReportMutation.mutate();
   };
 
