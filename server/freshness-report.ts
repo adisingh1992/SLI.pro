@@ -64,12 +64,22 @@ async function callClaude(systemPrompt: string, userPrompt: string, maxRetries =
             }
           }
           
-          // Sometimes Claude responds with text before the JSON. Try to find JSON within the response.
-          if (jsonText.indexOf('{') >= 0 && jsonText.lastIndexOf('}') > 0) {
+          // Sometimes Claude responds with text before, after, or between the JSON.
+          // First try to extract JSON with precise regex patterns for JSON objects
+          const jsonRegex = /\{(?:[^{}]|(?:\{(?:[^{}]|(?:\{(?:[^{}]|(?:\{(?:[^{}])*\}))*\}))*\}))*\}/;
+          const match = jsonText.match(jsonRegex);
+          if (match && match[0]) {
+            jsonText = match[0];
+          } 
+          // Fallback to simpler approach if the regex doesn't match
+          else if (jsonText.indexOf('{') >= 0 && jsonText.lastIndexOf('}') > 0) {
             const jsonStart = jsonText.indexOf('{');
             const jsonEnd = jsonText.lastIndexOf('}') + 1;
             jsonText = jsonText.substring(jsonStart, jsonEnd);
           }
+          
+          // Clean up potential issues with line breaks and special characters
+          jsonText = jsonText.replace(/[\r\n]+/g, ' ').trim();
           
           try {
             return JSON.parse(jsonText);
@@ -152,7 +162,9 @@ async function callClaude(systemPrompt: string, userPrompt: string, maxRetries =
 export async function generateQuestionnaireSummary(userProfile: any) {
   const systemPrompt = `You are an expert professional branding analyst at SLI.pro. Your task is to analyze a client's questionnaire responses and produce a structured summary of their professional brand positioning.
 
-Please provide your analysis in valid JSON format only, without markdown formatting, comments, explanations, or code blocks. Do not wrap your response in \`\`\`json or any other formatting. The response should be purely JSON that can be directly parsed. Ensure the output strictly follows this structure:
+EXTREMELY IMPORTANT: You MUST respond with VALID JSON ONLY. Your entire response must be parseable by JSON.parse(). DO NOT include any explanatory text, comments, markdown formatting, or code blocks. Your response should start with '{' and end with '}' without any other characters.
+
+The JSON output must strictly follow this structure:
 
 {
   "professionalIdentity": {
@@ -211,7 +223,9 @@ Please analyze this information and create a structured summary of their profess
 export async function generateResumeSummary(resumeContent: string, questionnaireAnalysis: any) {
   const systemPrompt = `You are an expert resume analyst for SLI.pro, a professional branding service. Your task is to extract key career insights from a client's resume and compare them against their stated career goals and aspirations.
 
-Please provide your analysis in valid JSON format only, without markdown formatting, comments, explanations, or code blocks. Do not wrap your response in \`\`\`json or any other formatting. The response should be purely JSON that can be directly parsed. Ensure the output strictly follows this structure:
+EXTREMELY IMPORTANT: You MUST respond with VALID JSON ONLY. Your entire response must be parseable by JSON.parse(). DO NOT include any explanatory text, comments, markdown formatting, or code blocks. Your response should start with '{' and end with '}' without any other characters.
+
+The JSON output must strictly follow this structure:
 
 {
   "careerTrajectory": {
@@ -266,7 +280,9 @@ Please analyze the resume content in relation to their questionnaire responses a
 export async function generateLinkedInSummary(linkedinContent: string, questionnaireAnalysis: any, resumeAnalysis: any) {
   const systemPrompt = `You are an expert LinkedIn profile analyst for SLI.pro, a professional branding service. Your task is to analyze a client's LinkedIn profile content and evaluate its effectiveness in supporting their professional brand.
 
-Please provide your analysis in valid JSON format only, without markdown formatting, comments, explanations, or code blocks. Do not wrap your response in \`\`\`json or any other formatting. The response should be purely JSON that can be directly parsed. Ensure the output strictly follows this structure:
+EXTREMELY IMPORTANT: You MUST respond with VALID JSON ONLY. Your entire response must be parseable by JSON.parse(). DO NOT include any explanatory text, comments, markdown formatting, or code blocks. Your response should start with '{' and end with '}' without any other characters.
+
+The JSON output must strictly follow this structure:
 
 {
   "profileCompleteness": {
@@ -330,7 +346,9 @@ export async function generateAdditionalDocsSummary(
   for (const document of documents) {
     const systemPrompt = `You are an expert document analyst for SLI.pro, a professional branding service. Your task is to analyze an additional document submitted by a client and evaluate how it contributes to their professional brand narrative.
 
-Please provide your analysis in valid JSON format only, without markdown formatting, comments, explanations, or code blocks. Do not wrap your response in \`\`\`json or any other formatting. The response should be purely JSON that can be directly parsed. Ensure the output strictly follows this structure:
+EXTREMELY IMPORTANT: You MUST respond with VALID JSON ONLY. Your entire response must be parseable by JSON.parse(). DO NOT include any explanatory text, comments, markdown formatting, or code blocks. Your response should start with '{' and end with '}' without any other characters.
+
+The JSON output must strictly follow this structure:
 
 {
   "documentType": string,
@@ -384,7 +402,9 @@ export async function generateFinalSynthesis(
 ) {
   const systemPrompt = `You are an expert professional branding strategist at SLI.pro. Your task is to synthesize all the analyses of a client's materials into a comprehensive professional branding assessment and strategy recommendation.
 
-Please provide your synthesis in valid JSON format without comments or explanations. Ensure the output strictly follows this structure:
+EXTREMELY IMPORTANT: You MUST respond with VALID JSON ONLY. Your entire response must be parseable by JSON.parse(). DO NOT include any explanatory text, comments, markdown formatting, or code blocks. Your response should start with '{' and end with '}' without any other characters.
+
+The JSON output must strictly follow this structure:
 
 {
   "brandAudit": {
@@ -441,7 +461,7 @@ ${JSON.stringify(linkedinAnalysis, null, 2)}
 ${additionalDocumentsAnalysis.length > 0 ? `Additional Documents Analysis:
 ${JSON.stringify(additionalDocumentsAnalysis, null, 2)}` : "No additional documents were provided."}
 
-Please synthesize all these analyses into a comprehensive professional branding assessment and strategy recommendation according to the structure in your instructions. Focus on providing actionable insights and a clear roadmap for the client to enhance their professional brand.`;
+Your task is to synthesize these analyses into a JSON object exactly matching the structure I specified. Remember, your response must be ONLY valid JSON with no explanatory text, markdown, or other non-JSON content. Start with '{' and end with '}' with no other characters.`;
 
   return await callClaude(systemPrompt, userPrompt);
 }
