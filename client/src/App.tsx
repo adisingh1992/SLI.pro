@@ -11,7 +11,7 @@ import QuestionnairePage from "@/pages/questionnaire-simple";
 import ChatPage from "@/pages/chat-page";
 import SummaryPage from "@/pages/summary-page";
 import MonthlyCheckInPage from "@/pages/monthly-check-in-page";
-import FreshnessReportPage from "@/pages/freshness-report-page";
+import FreshnessReportPage from "@/pages/freshness-report-page-new";
 import { AuthProvider } from "@/hooks/use-auth";
 import { ProtectedRoute } from "@/lib/protected-route";
 
@@ -24,9 +24,15 @@ function Router() {
       <ProtectedRoute path="/questionnaire" component={QuestionnairePage} />
       <ProtectedRoute path="/chat" component={ChatPage} />
       <ProtectedRoute path="/summaries" component={SummaryPage} />
-      <ProtectedRoute path="/conversations/:id/summary" component={SummaryPage} />
+      <ProtectedRoute
+        path="/conversations/:id/summary"
+        component={SummaryPage}
+      />
       <ProtectedRoute path="/monthly-check-in" component={MonthlyCheckInPage} />
-      <ProtectedRoute path="/freshness-report" component={FreshnessReportPage} />
+      <ProtectedRoute
+        path="/freshness-report"
+        component={FreshnessReportPage}
+      />
       <Route path="/auth" component={AuthPage} />
       <Route component={NotFound} />
     </Switch>

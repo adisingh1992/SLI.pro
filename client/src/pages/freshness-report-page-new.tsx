@@ -5,8 +5,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { AlertCircle, FileText, Sparkles, CheckCircle2 } from "lucide-react";
+import { FileText, Sparkles, CheckCircle2 } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { Progress } from "@/components/ui/progress";
 import ReportDisplay from "@/components/freshness-report/report-display";
@@ -18,52 +17,7 @@ interface FreshnessReportData {
   resumeAnalysis: any;
   linkedinAnalysis: any;
   additionalDocumentsAnalysis: any[];
-  finalSynthesis: {
-    brandAudit: {
-      currentBrandStrength: string;
-      coreStrengths: string[];
-      criticalGaps: string[];
-      brandConsistency: string;
-      marketRelevance: string;
-    };
-    personalBrandStrategy: {
-      uniqueValueProposition: string;
-      coreNarrative: string;
-      recommendedPositioning: string;
-      targetAudience: string[];
-      keyDifferentiators: string[];
-    };
-    contentRecommendations: {
-      resumeImprovements: string[];
-      linkedInEnhancements: string[];
-      thoughtLeadershipTopics: string[];
-      contentFormatPreferences: string[];
-    };
-    digitalPresenceStrategy: {
-      platformPriorities: string[];
-      engagementTactics: string[];
-      networkingApproach: string;
-      contentCalendarFramework: string;
-    };
-    implementationRoadmap: {
-      immediateNextSteps: string[];
-      "30DayMilestones": string[];
-      "90DayMilestones": string[];
-      successMetrics: string[];
-    };
-    competitiveAnalysis: {
-      marketPositioning: string;
-      industryTrendAlignment: string;
-      distinctionOpportunities: string;
-      threatAssessment: string;
-    };
-    detailedMetrics?: {
-      profileContentQuality: {
-        grade: string;
-        explanation: string;
-      };
-    };
-  };
+  finalSynthesis: any;
   createdAt: string;
 }
 
@@ -288,24 +242,6 @@ const FreshnessReportPage = () => {
       </div>
     );
   }
-
-  // Error state
-  // if (isError && error) {
-  //   return (
-  //     <div className="container px-4 py-8">
-  //       <Alert variant="destructive" className="mb-6">
-  //         <AlertCircle className="h-4 w-4" />
-  //         <AlertTitle>Error</AlertTitle>
-  //         <AlertDescription>
-  //           {(error as any).message || "Failed to load report data"}
-  //         </AlertDescription>
-  //       </Alert>
-  //       <Button onClick={handleGenerateReport} disabled={isGenerating}>
-  //         {isGenerating ? "Generating Report..." : "Generate New Report"}
-  //       </Button>
-  //     </div>
-  //   );
-  // }
 
   // If report doesn't exist yet
   if (!reportData) {

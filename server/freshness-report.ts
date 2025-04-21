@@ -559,6 +559,218 @@ function calculateProfileContentQuality(resumeAnalysis: any, linkedinAnalysis: a
   }
 }
 
+// Helper function to calculate narrative consistency grade
+function calculateNarrativeConsistency(
+  questionnaireAnalysis: any, 
+  resumeAnalysis: any, 
+  linkedinAnalysis: any
+): { grade: string, explanation: string } {
+  try {
+    log(`Calculating narrative consistency across user materials`, "freshness");
+    
+    // Extract key data points for comparison
+    const questionnaireProfession = questionnaireAnalysis?.professionalIdentity?.currentRole || '';
+    const questionnaireIndustry = questionnaireAnalysis?.professionalIdentity?.industry || '';
+    const questionnaireSkills = questionnaireAnalysis?.professionalIdentity?.standoutSkills || [];
+    const questionnaireAspirations = questionnaireAnalysis?.careerAspirations?.shortTermGoals || '';
+    
+    const resumeProfession = resumeAnalysis?.careerTrajectory?.mostRecentRole?.title || '';
+    const resumeIndustry = resumeAnalysis?.careerTrajectory?.industryFocus || [];
+    const resumeSkills = resumeAnalysis?.skillsAssessment?.technicalSkills || [];
+    const resumeDiscrepancies = resumeAnalysis?.alignmentWithQuestionnaireResponses?.discrepancies || [];
+    const resumeConsistencies = resumeAnalysis?.alignmentWithQuestionnaireResponses?.consistencies || [];
+    
+    const linkedinProfession = linkedinAnalysis?.personalBrandProjection?.industryPositioning || '';
+    const linkedinSkills = linkedinAnalysis?.profileCompleteness?.skillsRelevance || '';
+    const linkedinValueProp = linkedinAnalysis?.personalBrandProjection?.uniqueValueProposition || '';
+    const linkedinDiscrepancies = linkedinAnalysis?.comparisonToResume?.inconsistencies || [];
+    const linkedinConsistencies = linkedinAnalysis?.comparisonToResume?.consistencies || [];
+    
+    // Calculate individual consistency scores
+    
+    // 1. Role/profession consistency across platforms
+    let roleConsistencyScore = 0;
+    if (
+      (questionnaireProfession && resumeProfession && questionnaireProfession.toLowerCase().includes(resumeProfession.toLowerCase())) ||
+      (resumeProfession && linkedinProfession && resumeProfession.toLowerCase().includes(linkedinProfession.toLowerCase())) ||
+      (questionnaireProfession && linkedinProfession && questionnaireProfession.toLowerCase().includes(linkedinProfession.toLowerCase()))
+    ) {
+      roleConsistencyScore = 4; // Strong role consistency
+    } else if (
+      resumeConsistencies.some((item: string) => item.toLowerCase().includes('role') || item.toLowerCase().includes('position')) ||
+      linkedinConsistencies.some((item: string) => item.toLowerCase().includes('role') || item.toLowerCase().includes('position'))
+    ) {
+      roleConsistencyScore = 3; // Good role consistency
+    } else if (
+      questionnaireProfession && resumeProfession && linkedinProfession
+    ) {
+      roleConsistencyScore = 2; // Basic role consistency (all present but different)
+    } else if (
+      (questionnaireProfession && resumeProfession) ||
+      (questionnaireProfession && linkedinProfession) ||
+      (resumeProfession && linkedinProfession)
+    ) {
+      roleConsistencyScore = 1; // Poor role consistency (some missing)
+    } else {
+      roleConsistencyScore = 0; // No consistency (most missing)
+    }
+    
+    // 2. Skills consistency across platforms
+    let skillsConsistencyScore = 0;
+    const hasQuestionnaireSkills = questionnaireSkills && questionnaireSkills.length > 0;
+    const hasResumeSkills = resumeSkills && resumeSkills.length > 0;
+    const hasLinkedinSkills = linkedinSkills && linkedinSkills.toLowerCase().includes('relevant');
+    
+    if (
+      hasQuestionnaireSkills && hasResumeSkills && hasLinkedinSkills &&
+      !resumeDiscrepancies.some((item: string) => item.toLowerCase().includes('skill')) &&
+      !linkedinDiscrepancies.some((item: string) => item.toLowerCase().includes('skill'))
+    ) {
+      skillsConsistencyScore = 4; // Strong skills consistency
+    } else if (
+      hasQuestionnaireSkills && hasResumeSkills && hasLinkedinSkills &&
+      (resumeConsistencies.some((item: string) => item.toLowerCase().includes('skill')) ||
+       linkedinConsistencies.some((item: string) => item.toLowerCase().includes('skill')))
+    ) {
+      skillsConsistencyScore = 3; // Good skills consistency
+    } else if (
+      (hasQuestionnaireSkills && hasResumeSkills) ||
+      (hasQuestionnaireSkills && hasLinkedinSkills) ||
+      (hasResumeSkills && hasLinkedinSkills)
+    ) {
+      skillsConsistencyScore = 2; // Basic skills consistency
+    } else if (
+      hasQuestionnaireSkills || hasResumeSkills || hasLinkedinSkills
+    ) {
+      skillsConsistencyScore = 1; // Poor skills consistency
+    } else {
+      skillsConsistencyScore = 0; // No skills consistency
+    }
+    
+    // 3. Narrative consistency (career goals, aspirations, story)
+    let narrativeConsistencyScore = 0;
+    
+    if (
+      resumeConsistencies.length > 3 && 
+      linkedinConsistencies.length > 3 &&
+      resumeDiscrepancies.length <= 1 &&
+      linkedinDiscrepancies.length <= 1
+    ) {
+      narrativeConsistencyScore = 4; // Strong narrative consistency
+    } else if (
+      resumeConsistencies.length > 2 && 
+      linkedinConsistencies.length > 2 &&
+      resumeDiscrepancies.length <= 2 &&
+      linkedinDiscrepancies.length <= 2
+    ) {
+      narrativeConsistencyScore = 3; // Good narrative consistency
+    } else if (
+      resumeConsistencies.length > 1 && 
+      linkedinConsistencies.length > 1 &&
+      resumeDiscrepancies.length <= 3 &&
+      linkedinDiscrepancies.length <= 3
+    ) {
+      narrativeConsistencyScore = 2; // Basic narrative consistency
+    } else if (
+      resumeConsistencies.length >= 1 && 
+      linkedinConsistencies.length >= 1
+    ) {
+      narrativeConsistencyScore = 1; // Poor narrative consistency
+    } else {
+      narrativeConsistencyScore = 0; // No narrative consistency
+    }
+    
+    // 4. Industry/domain consistency
+    let industryConsistencyScore = 0;
+    const questionnaireIndustryLower = questionnaireIndustry.toLowerCase();
+    const hasResumeIndustryMatch = Array.isArray(resumeIndustry) && 
+      resumeIndustry.some((industry: string) => 
+        questionnaireIndustryLower.includes(industry.toLowerCase()) || 
+        industry.toLowerCase().includes(questionnaireIndustryLower)
+      );
+    const hasLinkedinIndustryMatch = linkedinProfession.toLowerCase().includes(questionnaireIndustryLower) || 
+                                questionnaireIndustryLower.includes(linkedinProfession.toLowerCase());
+    
+    if (hasResumeIndustryMatch && hasLinkedinIndustryMatch) {
+      industryConsistencyScore = 4; // Strong industry consistency
+    } else if (hasResumeIndustryMatch || hasLinkedinIndustryMatch) {
+      industryConsistencyScore = 3; // Good industry consistency
+    } else if (resumeIndustry.length > 0 && linkedinProfession) {
+      industryConsistencyScore = 2; // Basic industry consistency
+    } else if (resumeIndustry.length > 0 || linkedinProfession) {
+      industryConsistencyScore = 1; // Poor industry consistency
+    } else {
+      industryConsistencyScore = 0; // No industry consistency
+    }
+    
+    // 5. Value proposition consistency
+    let valueConsistencyScore = 0;
+    const questionnaireValue = questionnaireAnalysis?.recommendedPositioning?.valueProposition || '';
+    const resumeValue = resumeAnalysis?.accomplishments?.keyAchievements?.join(' ') || '';
+    
+    if (
+      questionnaireValue && linkedinValueProp && resumeValue &&
+      !resumeDiscrepancies.some((item: string) => item.toLowerCase().includes('value') || item.toLowerCase().includes('achievement')) &&
+      !linkedinDiscrepancies.some((item: string) => item.toLowerCase().includes('value') || item.toLowerCase().includes('proposition'))
+    ) {
+      valueConsistencyScore = 4; // Strong value consistency
+    } else if (
+      questionnaireValue && linkedinValueProp && resumeValue &&
+      (resumeConsistencies.some((item: string) => item.toLowerCase().includes('value') || item.toLowerCase().includes('achievement')) ||
+       linkedinConsistencies.some((item: string) => item.toLowerCase().includes('value') || item.toLowerCase().includes('proposition')))
+    ) {
+      valueConsistencyScore = 3; // Good value consistency
+    } else if (
+      (questionnaireValue && linkedinValueProp) ||
+      (questionnaireValue && resumeValue) ||
+      (linkedinValueProp && resumeValue)
+    ) {
+      valueConsistencyScore = 2; // Basic value consistency
+    } else if (
+      questionnaireValue || linkedinValueProp || resumeValue
+    ) {
+      valueConsistencyScore = 1; // Poor value consistency
+    } else {
+      valueConsistencyScore = 0; // No value consistency
+    }
+    
+    // Calculate overall score (out of 20 possible points)
+    const totalScore = roleConsistencyScore + skillsConsistencyScore + narrativeConsistencyScore + 
+                      industryConsistencyScore + valueConsistencyScore;
+    
+    log(`Narrative consistency calculation - Total score: ${totalScore}`, "freshness");
+    
+    // Determine grade based on score
+    let grade: string;
+    let explanation: string;
+    
+    if (totalScore >= 18) {
+      grade = 'A';
+      explanation = 'Excellent consistency across all materials with a clear, unified professional narrative. Role, skills, experience, and value proposition align perfectly across resume, LinkedIn, and questionnaire.';
+    } else if (totalScore >= 14) {
+      grade = 'B';
+      explanation = 'Good narrative consistency with minor variations. Professional identity, skills, and career goals are mostly aligned across platforms with a few small discrepancies.';
+    } else if (totalScore >= 10) {
+      grade = 'C';
+      explanation = 'Average consistency with some noticeable differences across materials. Core elements appear in all platforms but with varying emphasis and some contradictions.';
+    } else if (totalScore >= 6) {
+      grade = 'D';
+      explanation = 'Below average consistency with significant differences between resume, LinkedIn profile, and stated goals. Professional narrative is fragmented across platforms.';
+    } else {
+      grade = 'F';
+      explanation = 'Poor consistency with major contradictions between materials. No clear unified professional story emerges when comparing resume, LinkedIn profile, and questionnaire responses.';
+    }
+    
+    return { grade, explanation };
+  } catch (error) {
+    log(`Error calculating narrative consistency grade: ${error}`, "freshness");
+    return {
+      grade: 'C',
+      explanation: 'Could not fully assess narrative consistency due to insufficient or incomparable data across your professional materials. This is a baseline grade.'
+    };
+  }
+}
+
 export async function generateFinalSynthesis(
   questionnaireAnalysis: any,
   resumeAnalysis: any,
@@ -568,8 +780,11 @@ export async function generateFinalSynthesis(
   try {
     // Calculate profile content quality
     const profileContentQuality = calculateProfileContentQuality(resumeAnalysis, linkedinAnalysis);
-    
     log(`Calculated profile content quality grade: ${profileContentQuality.grade}`, "freshness");
+    
+    // Calculate narrative consistency
+    const narrativeConsistency = calculateNarrativeConsistency(questionnaireAnalysis, resumeAnalysis, linkedinAnalysis);
+    log(`Calculated narrative consistency grade: ${narrativeConsistency.grade}`, "freshness");
     
     const systemPrompt = `You are an expert professional branding strategist at SLI.pro. Your task is to synthesize all the analyses of a client's materials into a comprehensive professional branding assessment and strategy recommendation.
 
@@ -620,6 +835,10 @@ The JSON output must strictly follow this structure:
     "profileContentQuality": {
       "grade": "${profileContentQuality.grade}",
       "explanation": "${profileContentQuality.explanation}"
+    },
+    "narrativeConsistency": {
+      "grade": "${narrativeConsistency.grade}",
+      "explanation": "${narrativeConsistency.explanation}"
     }
   }
 }`;
@@ -638,10 +857,16 @@ ${JSON.stringify(linkedinAnalysis, null, 2)}
 ${additionalDocumentsAnalysis.length > 0 ? `Additional Documents Analysis:
 ${JSON.stringify(additionalDocumentsAnalysis, null, 2)}` : "No additional documents were provided."}
 
-Profile Content Quality Assessment:
+Detailed Metric Assessments:
+1. Profile Content Quality Assessment:
 ${JSON.stringify(profileContentQuality, null, 2)}
 
-Your task is to synthesize these analyses into a JSON object exactly matching the structure I specified. Remember, your response must be ONLY valid JSON with no explanatory text, markdown, or other non-JSON content. Start with '{' and end with '}' with no other characters.`;
+2. Narrative Consistency Assessment:
+${JSON.stringify(narrativeConsistency, null, 2)}
+
+Your task is to synthesize these analyses into a JSON object exactly matching the structure I specified. Remember, your response must be ONLY valid JSON with no explanatory text, markdown, or other non-JSON content. Start with '{' and end with '}' with no other characters.
+
+Be sure to consider the Narrative Consistency assessment in your recommendations, particularly in identifying critical gaps and suggesting improvements for better alignment across the client's professional materials.`;
 
     return await callClaude(systemPrompt, userPrompt);
   } catch (error) {

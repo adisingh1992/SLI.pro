@@ -57,6 +57,10 @@ interface FreshnessReportProps {
           grade: string;
           explanation: string;
         };
+        narrativeConsistency?: {
+          grade: string;
+          explanation: string;
+        };
       };
     };
     createdAt: string;
@@ -256,19 +260,42 @@ const ReportDisplay: React.FC<FreshnessReportProps> = ({ report, userName }) => 
               </p>
             </div>
             
-            {/* Narrative Consistency - Placeholder */}
-            <div className="mb-4 p-3 bg-muted/30 rounded-md border border-dashed">
-              <div className="flex items-center justify-between mb-1 opacity-60">
-                <h4 className="text-sm font-semibold">Narrative Consistency</h4>
-                <div className="flex items-center gap-1">
-                  <span className="text-xs text-muted-foreground">Grade:</span>
-                  <span className="text-sm font-bold px-2 py-0.5 rounded bg-gray-100 text-gray-500">-</span>
+            {/* Narrative Consistency */}
+            {detailedMetrics?.narrativeConsistency ? (
+              <div className="mb-4 p-4 bg-muted/50 rounded-md border">
+                <div className="flex items-center justify-between mb-2">
+                  <h4 className="text-sm font-semibold">Narrative Consistency</h4>
+                  <div className="flex items-center gap-1">
+                    <span className="text-xs text-muted-foreground">Grade:</span>
+                    <span className={`text-sm font-bold px-2 py-0.5 rounded ${
+                      detailedMetrics.narrativeConsistency.grade === 'A' ? 'bg-green-100 text-green-700' :
+                      detailedMetrics.narrativeConsistency.grade === 'B' ? 'bg-blue-100 text-blue-700' :
+                      detailedMetrics.narrativeConsistency.grade === 'C' ? 'bg-yellow-100 text-yellow-700' :
+                      detailedMetrics.narrativeConsistency.grade === 'D' ? 'bg-orange-100 text-orange-700' :
+                      'bg-red-100 text-red-700'
+                    }`}>
+                      {detailedMetrics.narrativeConsistency.grade}
+                    </span>
+                  </div>
                 </div>
+                <p className="text-sm text-muted-foreground">
+                  {detailedMetrics.narrativeConsistency.explanation}
+                </p>
               </div>
-              <p className="text-xs text-muted-foreground opacity-60 italic">
-                Coming soon: Evaluates how consistently your professional story appears across all platforms.
-              </p>
-            </div>
+            ) : (
+              <div className="mb-4 p-3 bg-muted/30 rounded-md border border-dashed">
+                <div className="flex items-center justify-between mb-1 opacity-60">
+                  <h4 className="text-sm font-semibold">Narrative Consistency</h4>
+                  <div className="flex items-center gap-1">
+                    <span className="text-xs text-muted-foreground">Grade:</span>
+                    <span className="text-sm font-bold px-2 py-0.5 rounded bg-gray-100 text-gray-500">-</span>
+                  </div>
+                </div>
+                <p className="text-xs text-muted-foreground opacity-60 italic">
+                  Coming soon: Evaluates how consistently your professional story appears across all platforms.
+                </p>
+              </div>
+            )}
             
             {/* Content Creation Activity - Placeholder */}
             <div className="mb-4 p-3 bg-muted/30 rounded-md border border-dashed">
