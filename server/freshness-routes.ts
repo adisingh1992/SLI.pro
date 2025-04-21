@@ -1,7 +1,7 @@
 import { Express, Request, Response, NextFunction } from "express";
 import { storage } from "./storage";
 import { z } from "zod";
-import { insertFreshnessReportSchema } from "@shared/schema";
+import { insertFreshnessReportSchema, MonthlyCheckIn } from "@shared/schema";
 import { generateQuestionnaireSummary, generateResumeSummary, generateLinkedInSummary, generateAdditionalDocsSummary, generateFinalSynthesis } from "./freshness-report";
 
 // Middleware to check if user is authenticated
@@ -153,6 +153,18 @@ export function registerFreshnessRoutes(app: Express) {
           throw new Error(`Additional documents analysis failed: ${error instanceof Error ? error.message : String(error)}`);
         }
       
+        // 4.5 Get monthly check-in data
+        console.log('Step 4.5: Fetching monthly check-in data...');
+        let monthlyCheckIns: MonthlyCheckIn[] = [];
+        try {
+          monthlyCheckIns = await storage.getMonthlyCheckIns(userId);
+          console.log(`Step 4.5: Successfully fetched ${monthlyCheckIns.length} monthly check-ins`);
+        } catch (error) {
+          console.error('Step 4.5: Error fetching monthly check-ins:', error);
+          // Continue without monthly check-in data rather than failing the entire report
+          console.log('Step 4.5: Continuing without monthly check-in data');
+        }
+        
         // 5. Generate final synthesis
         console.log('Step 5: Starting final synthesis...');
         let finalSynthesis;
@@ -161,7 +173,8 @@ export function registerFreshnessRoutes(app: Express) {
             questionnaireAnalysis,
             resumeAnalysis,
             linkedinAnalysis,
-            additionalDocumentsAnalysis
+            additionalDocumentsAnalysis,
+            monthlyCheckIns
           );
           console.log('Step 5: Final synthesis completed successfully');
         } catch (error) {

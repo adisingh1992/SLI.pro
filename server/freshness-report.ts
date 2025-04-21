@@ -771,11 +771,101 @@ function calculateNarrativeConsistency(
   }
 }
 
+// Helper function to calculate content creation activity grade
+function calculateContentCreationActivity(monthlyCheckIns: any[]): { grade: string, explanation: string } {
+  try {
+    log(`Calculating content creation activity grade`, "freshness");
+    
+    if (!monthlyCheckIns || monthlyCheckIns.length === 0) {
+      return {
+        grade: 'F',
+        explanation: 'No monthly check-in data available. We recommend completing at least one monthly check-in to track your content creation activity.'
+      };
+    }
+    
+    // Sort check-ins by month to get them in chronological order
+    const sortedCheckIns = [...monthlyCheckIns].sort((a, b) => {
+      return a.month.localeCompare(b.month); // Format is YYYY-MM so this works for sorting
+    });
+    
+    // Calculate average posts per month
+    const totalPosts = sortedCheckIns.reduce((sum, checkIn) => sum + (checkIn.contentPosts || 0), 0);
+    const averagePostsPerMonth = totalPosts / sortedCheckIns.length;
+    
+    log(`Content creation calculation - Average posts per month: ${averagePostsPerMonth}`, "freshness");
+    
+    // Get the trend by comparing the most recent month to the previous months
+    let trend = '';
+    if (sortedCheckIns.length > 1) {
+      const mostRecentMonth = sortedCheckIns[sortedCheckIns.length - 1];
+      const previousMonthsAverage = sortedCheckIns.slice(0, -1).reduce((sum, checkIn) => sum + (checkIn.contentPosts || 0), 0) / (sortedCheckIns.length - 1);
+      
+      if (mostRecentMonth.contentPosts > previousMonthsAverage * 1.25) {
+        trend = 'increasing';
+      } else if (mostRecentMonth.contentPosts < previousMonthsAverage * 0.75) {
+        trend = 'decreasing';
+      } else {
+        trend = 'stable';
+      }
+    }
+    
+    // Determine grade based on average posts per month
+    let grade: string;
+    let explanation: string;
+    
+    if (averagePostsPerMonth >= 8) {
+      grade = 'A';
+      explanation = `Excellent content creation activity with an average of ${averagePostsPerMonth.toFixed(1)} posts per month. ${
+        trend === 'increasing' ? 'Your activity is trending upward, which is excellent!' :
+        trend === 'decreasing' ? 'Your recent activity has decreased slightly. Consider maintaining this high level consistently.' :
+        trend === 'stable' ? 'You maintain a consistent high level of content creation.' : ''
+      }`;
+    } else if (averagePostsPerMonth >= 4) {
+      grade = 'B';
+      explanation = `Good content creation activity with an average of ${averagePostsPerMonth.toFixed(1)} posts per month. ${
+        trend === 'increasing' ? 'Your activity is trending upward, which is great progress!' :
+        trend === 'decreasing' ? 'Your recent activity has decreased slightly. Try to maintain consistency.' :
+        trend === 'stable' ? 'You maintain a consistent good level of content creation.' : ''
+      }`;
+    } else if (averagePostsPerMonth >= 2) {
+      grade = 'C';
+      explanation = `Average content creation activity with ${averagePostsPerMonth.toFixed(1)} posts per month. ${
+        trend === 'increasing' ? 'Your activity is trending upward, which shows good improvement!' :
+        trend === 'decreasing' ? 'Your recent activity has decreased. Consider setting a content creation schedule.' :
+        trend === 'stable' ? 'You maintain a moderate level of content creation.' : ''
+      } Consider increasing frequency to strengthen your professional brand.`;
+    } else if (averagePostsPerMonth >= 1) {
+      grade = 'D';
+      explanation = `Below average content creation activity with ${averagePostsPerMonth.toFixed(1)} posts per month. ${
+        trend === 'increasing' ? 'Your activity is trending upward, which is a positive sign!' :
+        trend === 'decreasing' ? 'Your recent activity has decreased. We recommend establishing a content strategy.' :
+        trend === 'stable' ? 'You maintain a minimal level of content creation.' : ''
+      } Increasing your posting frequency would significantly boost your professional visibility.`;
+    } else {
+      grade = 'F';
+      explanation = `Minimal to no content creation activity with ${averagePostsPerMonth.toFixed(1)} posts per month. ${
+        trend === 'increasing' ? 'There are signs of improvement in your recent activity.' :
+        trend === 'decreasing' ? 'Your already limited activity has decreased further.' :
+        trend === 'stable' ? 'You consistently show minimal content creation.' : ''
+      } We strongly recommend implementing a content strategy to enhance your professional brand presence.`;
+    }
+    
+    return { grade, explanation };
+  } catch (error) {
+    log(`Error calculating content creation activity grade: ${error}`, "freshness");
+    return {
+      grade: 'C',
+      explanation: 'Could not fully assess content creation activity due to insufficient data. This is a baseline grade.'
+    };
+  }
+}
+
 export async function generateFinalSynthesis(
   questionnaireAnalysis: any,
   resumeAnalysis: any,
   linkedinAnalysis: any,
-  additionalDocumentsAnalysis: any[]
+  additionalDocumentsAnalysis: any[],
+  monthlyCheckIns: any[] = []
 ) {
   try {
     // Calculate profile content quality
@@ -785,6 +875,10 @@ export async function generateFinalSynthesis(
     // Calculate narrative consistency
     const narrativeConsistency = calculateNarrativeConsistency(questionnaireAnalysis, resumeAnalysis, linkedinAnalysis);
     log(`Calculated narrative consistency grade: ${narrativeConsistency.grade}`, "freshness");
+    
+    // Calculate content creation activity
+    const contentCreationActivity = calculateContentCreationActivity(monthlyCheckIns);
+    log(`Calculated content creation activity grade: ${contentCreationActivity.grade}`, "freshness");
     
     const systemPrompt = `You are an expert professional branding strategist at SLI.pro. Your task is to synthesize all the analyses of a client's materials into a comprehensive professional branding assessment and strategy recommendation.
 
@@ -839,6 +933,10 @@ The JSON output must strictly follow this structure:
     "narrativeConsistency": {
       "grade": "${narrativeConsistency.grade}",
       "explanation": "${narrativeConsistency.explanation}"
+    },
+    "contentCreationActivity": {
+      "grade": "${contentCreationActivity.grade}",
+      "explanation": "${contentCreationActivity.explanation}"
     }
   }
 }`;
@@ -857,6 +955,9 @@ ${JSON.stringify(linkedinAnalysis, null, 2)}
 ${additionalDocumentsAnalysis.length > 0 ? `Additional Documents Analysis:
 ${JSON.stringify(additionalDocumentsAnalysis, null, 2)}` : "No additional documents were provided."}
 
+Monthly Check-In Data:
+${monthlyCheckIns.length > 0 ? JSON.stringify(monthlyCheckIns, null, 2) : "No monthly check-in data available."}
+
 Detailed Metric Assessments:
 1. Profile Content Quality Assessment:
 ${JSON.stringify(profileContentQuality, null, 2)}
@@ -864,9 +965,14 @@ ${JSON.stringify(profileContentQuality, null, 2)}
 2. Narrative Consistency Assessment:
 ${JSON.stringify(narrativeConsistency, null, 2)}
 
+3. Content Creation Activity Assessment:
+${JSON.stringify(contentCreationActivity, null, 2)}
+
 Your task is to synthesize these analyses into a JSON object exactly matching the structure I specified. Remember, your response must be ONLY valid JSON with no explanatory text, markdown, or other non-JSON content. Start with '{' and end with '}' with no other characters.
 
-Be sure to consider the Narrative Consistency assessment in your recommendations, particularly in identifying critical gaps and suggesting improvements for better alignment across the client's professional materials.`;
+Be sure to consider all detailed metrics in your recommendations, particularly:
+- The Narrative Consistency assessment when identifying critical gaps and suggesting improvements for better alignment across materials
+- The Content Creation Activity assessment when recommending content strategies and engagement tactics`;
 
     return await callClaude(systemPrompt, userPrompt);
   } catch (error) {
