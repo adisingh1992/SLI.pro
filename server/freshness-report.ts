@@ -443,13 +443,135 @@ Please analyze this additional document in relation to their other materials and
 }
 
 // 5. Generate final synthesis
+// Helper function to calculate profile content quality grade
+function calculateProfileContentQuality(resumeAnalysis: any, linkedinAnalysis: any): { grade: string, explanation: string } {
+  try {
+    // Extract relevant information from analyses
+    const resumeExperience = resumeAnalysis?.presentationStyle?.clarity || '';
+    const linkedinHeadline = linkedinAnalysis?.profileCompleteness?.headlineEffectiveness || '';
+    const linkedinAbout = linkedinAnalysis?.profileCompleteness?.aboutSectionQuality || '';
+    const linkedinExperience = linkedinAnalysis?.profileCompleteness?.experienceDetailLevel || '';
+    const skillsSection = linkedinAnalysis?.profileCompleteness?.skillsRelevance || '';
+    const education = linkedinAnalysis?.profileCompleteness?.educationPresentation || '';
+    
+    // Assess headline quality
+    let headlineScore = 0;
+    if (linkedinHeadline.toLowerCase().includes('strong') || linkedinHeadline.toLowerCase().includes('compelling')) {
+      headlineScore = 4;
+    } else if (linkedinHeadline.toLowerCase().includes('good')) {
+      headlineScore = 3;
+    } else if (linkedinHeadline.toLowerCase().includes('basic')) {
+      headlineScore = 2;
+    } else if (linkedinHeadline.toLowerCase().includes('weak')) {
+      headlineScore = 1;
+    } else {
+      headlineScore = 0;
+    }
+    
+    // Assess About section quality
+    let aboutScore = 0;
+    if (linkedinAbout.toLowerCase().includes('compelling')) {
+      aboutScore = 4;
+    } else if (linkedinAbout.toLowerCase().includes('solid')) {
+      aboutScore = 3;
+    } else if (linkedinAbout.toLowerCase().includes('standard')) {
+      aboutScore = 2;
+    } else if (linkedinAbout.toLowerCase().includes('minimal')) {
+      aboutScore = 1;
+    } else {
+      aboutScore = 0;
+    }
+    
+    // Assess Experience section quality
+    let experienceScore = 0;
+    if ((resumeExperience.toLowerCase().includes('clear') && resumeExperience.toLowerCase().includes('detailed')) || 
+        (linkedinExperience.toLowerCase().includes('detailed') && linkedinExperience.toLowerCase().includes('achievement'))) {
+      experienceScore = 4;
+    } else if (linkedinExperience.toLowerCase().includes('detailed') || resumeExperience.toLowerCase().includes('good')) {
+      experienceScore = 3;
+    } else if (linkedinExperience.toLowerCase().includes('basic')) {
+      experienceScore = 2;
+    } else if (linkedinExperience.toLowerCase().includes('sparse')) {
+      experienceScore = 1;
+    } else {
+      experienceScore = 0;
+    }
+    
+    // Assess Skills section quality
+    let skillsScore = 0;
+    if (skillsSection.toLowerCase().includes('comprehensive') || skillsSection.toLowerCase().includes('highly relevant')) {
+      skillsScore = 4;
+    } else if (skillsSection.toLowerCase().includes('good') || skillsSection.toLowerCase().includes('mostly')) {
+      skillsScore = 3;
+    } else if (skillsSection.toLowerCase().includes('partial')) {
+      skillsScore = 2;
+    } else if (skillsSection.toLowerCase().includes('few') || skillsSection.toLowerCase().includes('limited')) {
+      skillsScore = 1;
+    } else {
+      skillsScore = 0;
+    }
+    
+    // Assess Education section quality
+    let educationScore = 0;
+    if (education.toLowerCase().includes('complete') || education.toLowerCase().includes('detailed')) {
+      educationScore = 4;
+    } else if (education.toLowerCase().includes('good')) {
+      educationScore = 3;
+    } else if (education.toLowerCase().includes('basic')) {
+      educationScore = 2;
+    } else if (education.toLowerCase().includes('incomplete')) {
+      educationScore = 1;
+    } else {
+      educationScore = 0;
+    }
+    
+    // Calculate overall score (out of 20 possible points)
+    const totalScore = headlineScore + aboutScore + experienceScore + skillsScore + educationScore;
+    
+    // Determine grade based on score
+    let grade: string;
+    let explanation: string;
+    
+    if (totalScore >= 18) {
+      grade = 'A';
+      explanation = 'Strong headline; compelling About section; detailed experience with quantified achievements; fully populated Skills section; complete Education section.';
+    } else if (totalScore >= 14) {
+      grade = 'B';
+      explanation = 'Good headline; solid About section; detailed experience with some achievements; mostly populated Skills section; complete Education section.';
+    } else if (totalScore >= 10) {
+      grade = 'C';
+      explanation = 'Basic headline; standard About section; experience listed but few details; partially populated Skills section; basic Education information.';
+    } else if (totalScore >= 6) {
+      grade = 'D';
+      explanation = 'Weak headline; minimal About section; sparse experience details; few listed Skills; incomplete Education section.';
+    } else {
+      grade = 'F';
+      explanation = 'Missing/inappropriate headline; no About section; minimal experience details; empty or irrelevant Skills section; missing Education information.';
+    }
+    
+    return { grade, explanation };
+  } catch (error) {
+    log(`Error calculating profile content quality grade: ${error}`, "freshness");
+    return {
+      grade: 'C',
+      explanation: 'Could not fully assess profile content quality due to insufficient data. This is a baseline grade.'
+    };
+  }
+}
+
 export async function generateFinalSynthesis(
   questionnaireAnalysis: any,
   resumeAnalysis: any,
   linkedinAnalysis: any,
   additionalDocumentsAnalysis: any[]
 ) {
-  const systemPrompt = `You are an expert professional branding strategist at SLI.pro. Your task is to synthesize all the analyses of a client's materials into a comprehensive professional branding assessment and strategy recommendation.
+  try {
+    // Calculate profile content quality
+    const profileContentQuality = calculateProfileContentQuality(resumeAnalysis, linkedinAnalysis);
+    
+    log(`Calculated profile content quality grade: ${profileContentQuality.grade}`, "freshness");
+    
+    const systemPrompt = `You are an expert professional branding strategist at SLI.pro. Your task is to synthesize all the analyses of a client's materials into a comprehensive professional branding assessment and strategy recommendation.
 
 EXTREMELY IMPORTANT: You MUST respond with VALID JSON ONLY. Your entire response must be parseable by JSON.parse(). DO NOT include any explanatory text, comments, markdown formatting, or code blocks. Your response should start with '{' and end with '}' without any other characters.
 
@@ -493,10 +615,16 @@ The JSON output must strictly follow this structure:
     "industryTrendAlignment": string,
     "distinctionOpportunities": string,
     "threatAssessment": string
+  },
+  "detailedMetrics": {
+    "profileContentQuality": {
+      "grade": "${profileContentQuality.grade}",
+      "explanation": "${profileContentQuality.explanation}"
+    }
   }
 }`;
 
-  const userPrompt = `Here are all the analyses of the client's materials:
+    const userPrompt = `Here are all the analyses of the client's materials:
 
 Questionnaire Analysis:
 ${JSON.stringify(questionnaireAnalysis, null, 2)}
@@ -510,7 +638,14 @@ ${JSON.stringify(linkedinAnalysis, null, 2)}
 ${additionalDocumentsAnalysis.length > 0 ? `Additional Documents Analysis:
 ${JSON.stringify(additionalDocumentsAnalysis, null, 2)}` : "No additional documents were provided."}
 
+Profile Content Quality Assessment:
+${JSON.stringify(profileContentQuality, null, 2)}
+
 Your task is to synthesize these analyses into a JSON object exactly matching the structure I specified. Remember, your response must be ONLY valid JSON with no explanatory text, markdown, or other non-JSON content. Start with '{' and end with '}' with no other characters.`;
 
-  return await callClaude(systemPrompt, userPrompt);
+    return await callClaude(systemPrompt, userPrompt);
+  } catch (error) {
+    log(`Error generating final synthesis: ${error}`, "freshness");
+    throw new Error(`Failed to generate final synthesis: ${error}`);
+  }
 }

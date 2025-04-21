@@ -52,6 +52,12 @@ interface FreshnessReportProps {
         industryTrendAlignment: string;
         distinctionOpportunities: string;
       };
+      detailedMetrics?: {
+        profileContentQuality: {
+          grade: string;
+          explanation: string;
+        };
+      };
     };
     createdAt: string;
   };
@@ -59,9 +65,13 @@ interface FreshnessReportProps {
 }
 
 const calculateFreshnessGrade = (report: FreshnessReportProps['report']): string => {
-  // In a full implementation, we would calculate this based on various factors
-  // For now, we'll extract it from the final synthesis if available
+  // First check if we have a detailed metrics profile content quality grade
   try {
+    if (report.finalSynthesis.detailedMetrics?.profileContentQuality?.grade) {
+      return report.finalSynthesis.detailedMetrics.profileContentQuality.grade;
+    }
+    
+    // Fall back to extracting from brand strength if detailed metrics aren't available
     const brandStrength = report.finalSynthesis.brandAudit.currentBrandStrength || '';
     
     if (brandStrength.toLowerCase().includes('strong')) return 'A';
@@ -112,7 +122,8 @@ const ReportDisplay: React.FC<FreshnessReportProps> = ({ report, userName }) => 
     contentRecommendations,
     digitalPresenceStrategy,
     implementationRoadmap,
-    competitiveAnalysis
+    competitiveAnalysis,
+    detailedMetrics
   } = report.finalSynthesis;
 
   return (
@@ -200,15 +211,106 @@ const ReportDisplay: React.FC<FreshnessReportProps> = ({ report, userName }) => 
           
           <Separator className="my-6" />
 
-          {/* 3. Detailed Metrics Assessment (placeholder) */}
-          <div className="mb-8 opacity-70">
-            <div className="flex items-center gap-2 mb-2">
+          {/* 3. Detailed Metrics Assessment */}
+          <div className="mb-8">
+            <div className="flex items-center gap-2 mb-4">
               <TrendingUp className="h-5 w-5 text-primary" />
               <h3 className="text-lg font-semibold">Detailed Metrics Assessment</h3>
             </div>
-            <p className="text-sm text-muted-foreground italic">
-              Coming soon in a future update. This section will provide detailed scoring across multiple brand dimensions.
-            </p>
+            
+            {/* Profile Content Quality - Active Metric */}
+            {detailedMetrics?.profileContentQuality && (
+              <div className="mb-5 p-4 bg-muted/50 rounded-md border">
+                <div className="flex items-center justify-between mb-2">
+                  <h4 className="text-sm font-semibold">Profile Content Quality</h4>
+                  <div className="flex items-center gap-1">
+                    <span className="text-xs text-muted-foreground">Grade:</span>
+                    <span className={`text-sm font-bold px-2 py-0.5 rounded ${
+                      detailedMetrics.profileContentQuality.grade === 'A' ? 'bg-green-100 text-green-700' :
+                      detailedMetrics.profileContentQuality.grade === 'B' ? 'bg-blue-100 text-blue-700' :
+                      detailedMetrics.profileContentQuality.grade === 'C' ? 'bg-yellow-100 text-yellow-700' :
+                      detailedMetrics.profileContentQuality.grade === 'D' ? 'bg-orange-100 text-orange-700' :
+                      'bg-red-100 text-red-700'
+                    }`}>
+                      {detailedMetrics.profileContentQuality.grade}
+                    </span>
+                  </div>
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  {detailedMetrics.profileContentQuality.explanation}
+                </p>
+              </div>
+            )}
+            
+            {/* SLI Clarity - Placeholder */}
+            <div className="mb-4 p-3 bg-muted/30 rounded-md border border-dashed">
+              <div className="flex items-center justify-between mb-1 opacity-60">
+                <h4 className="text-sm font-semibold">SLI Clarity</h4>
+                <div className="flex items-center gap-1">
+                  <span className="text-xs text-muted-foreground">Grade:</span>
+                  <span className="text-sm font-bold px-2 py-0.5 rounded bg-gray-100 text-gray-500">-</span>
+                </div>
+              </div>
+              <p className="text-xs text-muted-foreground opacity-60 italic">
+                Coming soon: Measures how clearly your Single Lasting Impression is defined across your materials.
+              </p>
+            </div>
+            
+            {/* Narrative Consistency - Placeholder */}
+            <div className="mb-4 p-3 bg-muted/30 rounded-md border border-dashed">
+              <div className="flex items-center justify-between mb-1 opacity-60">
+                <h4 className="text-sm font-semibold">Narrative Consistency</h4>
+                <div className="flex items-center gap-1">
+                  <span className="text-xs text-muted-foreground">Grade:</span>
+                  <span className="text-sm font-bold px-2 py-0.5 rounded bg-gray-100 text-gray-500">-</span>
+                </div>
+              </div>
+              <p className="text-xs text-muted-foreground opacity-60 italic">
+                Coming soon: Evaluates how consistently your professional story appears across all platforms.
+              </p>
+            </div>
+            
+            {/* Content Creation Activity - Placeholder */}
+            <div className="mb-4 p-3 bg-muted/30 rounded-md border border-dashed">
+              <div className="flex items-center justify-between mb-1 opacity-60">
+                <h4 className="text-sm font-semibold">Content Creation Activity</h4>
+                <div className="flex items-center gap-1">
+                  <span className="text-xs text-muted-foreground">Grade:</span>
+                  <span className="text-sm font-bold px-2 py-0.5 rounded bg-gray-100 text-gray-500">-</span>
+                </div>
+              </div>
+              <p className="text-xs text-muted-foreground opacity-60 italic">
+                Coming soon: Measures your activity level in creating professional content and thought leadership.
+              </p>
+            </div>
+            
+            {/* Engagement Activity - Placeholder */}
+            <div className="mb-4 p-3 bg-muted/30 rounded-md border border-dashed">
+              <div className="flex items-center justify-between mb-1 opacity-60">
+                <h4 className="text-sm font-semibold">Engagement Activity</h4>
+                <div className="flex items-center gap-1">
+                  <span className="text-xs text-muted-foreground">Grade:</span>
+                  <span className="text-sm font-bold px-2 py-0.5 rounded bg-gray-100 text-gray-500">-</span>
+                </div>
+              </div>
+              <p className="text-xs text-muted-foreground opacity-60 italic">
+                Coming soon: Tracks how actively you engage with industry content and thought leaders.
+              </p>
+            </div>
+            
+            {/* Implementation of Recommendations - Placeholder */}
+            <div className="p-3 bg-muted/30 rounded-md border border-dashed">
+              <div className="flex items-center justify-between mb-1 opacity-60">
+                <h4 className="text-sm font-semibold">Implementation of Recommendations</h4>
+                <div className="flex items-center gap-1">
+                  <span className="text-xs text-muted-foreground">Grade:</span>
+                  <span className="text-sm font-bold px-2 py-0.5 rounded bg-gray-100 text-gray-500">-</span>
+                </div>
+              </div>
+              <p className="text-xs text-muted-foreground opacity-60 italic">
+                Coming soon: Measures how effectively you've implemented previous SLI.pro recommendations.
+              </p>
+            </div>
           </div>
           
           <Separator className="my-6" />
