@@ -37,10 +37,10 @@ const FreshnessReportPage = () => {
     if (progressInterval.current) {
       clearInterval(progressInterval.current);
     }
-    
+
     // Reset progress to 0
     setProgress(0);
-    
+
     // Create new interval for progress animation
     progressInterval.current = setInterval(() => {
       setProgress((prevProgress) => {
@@ -50,7 +50,7 @@ const FreshnessReportPage = () => {
           }
           return 90;
         }
-        return prevProgress + (Math.random() * 3);
+        return prevProgress + Math.random() * 3;
       });
     }, 800);
   };
@@ -136,7 +136,7 @@ const FreshnessReportPage = () => {
     console.log("Generate Report button clicked");
     // Set generating state first to trigger UI update
     setIsGenerating(true);
-    
+
     // Short timeout to ensure state has propagated to UI
     setTimeout(() => {
       console.log("Initiating API call after timeout");
@@ -241,22 +241,22 @@ const FreshnessReportPage = () => {
   }
 
   // Error state
-  if (isError && error) {
-    return (
-      <div className="container px-4 py-8">
-        <Alert variant="destructive" className="mb-6">
-          <AlertCircle className="h-4 w-4" />
-          <AlertTitle>Error</AlertTitle>
-          <AlertDescription>
-            {(error as any).message || "Failed to load report data"}
-          </AlertDescription>
-        </Alert>
-        <Button onClick={handleGenerateReport} disabled={isGenerating}>
-          {isGenerating ? "Generating Report..." : "Generate New Report"}
-        </Button>
-      </div>
-    );
-  }
+  // if (isError && error) {
+  //   return (
+  //     <div className="container px-4 py-8">
+  //       <Alert variant="destructive" className="mb-6">
+  //         <AlertCircle className="h-4 w-4" />
+  //         <AlertTitle>Error</AlertTitle>
+  //         <AlertDescription>
+  //           {(error as any).message || "Failed to load report data"}
+  //         </AlertDescription>
+  //       </Alert>
+  //       <Button onClick={handleGenerateReport} disabled={isGenerating}>
+  //         {isGenerating ? "Generating Report..." : "Generate New Report"}
+  //       </Button>
+  //     </div>
+  //   );
+  // }
 
   // If report doesn't exist yet
   if (!reportData) {

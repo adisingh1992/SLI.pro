@@ -18,7 +18,52 @@ interface FreshnessReportData {
   resumeAnalysis: any;
   linkedinAnalysis: any;
   additionalDocumentsAnalysis: any[];
-  finalSynthesis: any;
+  finalSynthesis: {
+    brandAudit: {
+      currentBrandStrength: string;
+      coreStrengths: string[];
+      criticalGaps: string[];
+      brandConsistency: string;
+      marketRelevance: string;
+    };
+    personalBrandStrategy: {
+      uniqueValueProposition: string;
+      coreNarrative: string;
+      recommendedPositioning: string;
+      targetAudience: string[];
+      keyDifferentiators: string[];
+    };
+    contentRecommendations: {
+      resumeImprovements: string[];
+      linkedInEnhancements: string[];
+      thoughtLeadershipTopics: string[];
+      contentFormatPreferences: string[];
+    };
+    digitalPresenceStrategy: {
+      platformPriorities: string[];
+      engagementTactics: string[];
+      networkingApproach: string;
+      contentCalendarFramework: string;
+    };
+    implementationRoadmap: {
+      immediateNextSteps: string[];
+      "30DayMilestones": string[];
+      "90DayMilestones": string[];
+      successMetrics: string[];
+    };
+    competitiveAnalysis: {
+      marketPositioning: string;
+      industryTrendAlignment: string;
+      distinctionOpportunities: string;
+      threatAssessment: string;
+    };
+    detailedMetrics?: {
+      profileContentQuality: {
+        grade: string;
+        explanation: string;
+      };
+    };
+  };
   createdAt: string;
 }
 
@@ -30,20 +75,20 @@ const FreshnessReportPage = () => {
   const [isGenerating, setIsGenerating] = useState(false);
   const [progress, setProgress] = useState(0);
   const progressIntervalRef = useRef<NodeJS.Timeout | null>(null);
-  
+
   // Function to start progress animation
   const startProgressAnimation = () => {
     console.log("Starting progress animation");
-    
+
     // Reset progress to 0
     setProgress(0);
-    
+
     // Clear any existing interval first to avoid multiple animations
     if (progressIntervalRef.current) {
       clearInterval(progressIntervalRef.current);
       progressIntervalRef.current = null;
     }
-    
+
     // Start a new progress animation
     progressIntervalRef.current = setInterval(() => {
       setProgress((prevProgress) => {
@@ -59,21 +104,21 @@ const FreshnessReportPage = () => {
       });
     }, 800);
   };
-  
+
   // Function to complete progress animation
   const completeProgressAnimation = () => {
     console.log("Completing progress animation");
-    
+
     // Clear the interval
     if (progressIntervalRef.current) {
       clearInterval(progressIntervalRef.current);
       progressIntervalRef.current = null;
     }
-    
+
     // Set progress to 100%
     setProgress(100);
   };
-  
+
   // Clean up on component unmount
   useEffect(() => {
     return () => {
@@ -82,11 +127,11 @@ const FreshnessReportPage = () => {
       }
     };
   }, []);
-  
+
   // Watch for changes to isGenerating state
   useEffect(() => {
     console.log("isGenerating changed:", isGenerating);
-    
+
     if (isGenerating) {
       startProgressAnimation();
     } else if (progress > 0) {
@@ -141,7 +186,7 @@ const FreshnessReportPage = () => {
   const handleGenerateReport = () => {
     // Set generating state first to trigger UI update
     setIsGenerating(true);
-    
+
     // Short timeout to ensure state has propagated to UI
     setTimeout(() => {
       generateReportMutation.mutate();
@@ -245,22 +290,22 @@ const FreshnessReportPage = () => {
   }
 
   // Error state
-  if (isError && error) {
-    return (
-      <div className="container px-4 py-8">
-        <Alert variant="destructive" className="mb-6">
-          <AlertCircle className="h-4 w-4" />
-          <AlertTitle>Error</AlertTitle>
-          <AlertDescription>
-            {(error as any).message || "Failed to load report data"}
-          </AlertDescription>
-        </Alert>
-        <Button onClick={handleGenerateReport} disabled={isGenerating}>
-          {isGenerating ? "Generating Report..." : "Generate New Report"}
-        </Button>
-      </div>
-    );
-  }
+  // if (isError && error) {
+  //   return (
+  //     <div className="container px-4 py-8">
+  //       <Alert variant="destructive" className="mb-6">
+  //         <AlertCircle className="h-4 w-4" />
+  //         <AlertTitle>Error</AlertTitle>
+  //         <AlertDescription>
+  //           {(error as any).message || "Failed to load report data"}
+  //         </AlertDescription>
+  //       </Alert>
+  //       <Button onClick={handleGenerateReport} disabled={isGenerating}>
+  //         {isGenerating ? "Generating Report..." : "Generate New Report"}
+  //       </Button>
+  //     </div>
+  //   );
+  // }
 
   // If report doesn't exist yet
   if (!reportData) {
