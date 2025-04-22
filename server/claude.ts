@@ -12,8 +12,9 @@ if (!process.env.ANTHROPIC_API_KEY) {
   log("ANTHROPIC_API_KEY is available", "claude");
 }
 
-// Using Claude 3 Opus model for optimal performance as requested
-const CLAUDE_MODEL = 'claude-3-opus-20240229';
+// Using the newest Anthropic model which was released February 24, 2025
+// the newest Anthropic model is "claude-3-7-sonnet-20250219" which was released February 24, 2025
+const CLAUDE_MODEL = 'claude-3-7-sonnet-20250219';
 log(`Using Claude model: ${CLAUDE_MODEL}`, "claude");
 
 // Initialize Anthropic client
