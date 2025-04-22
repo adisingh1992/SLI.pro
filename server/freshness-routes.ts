@@ -41,6 +41,31 @@ export function registerFreshnessRoutes(app: Express) {
       res.status(500).json({ error: "Failed to fetch latest freshness report" });
     }
   });
+  
+  // Get the previous freshness report for a user (before the latest)
+  app.get("/api/freshness-reports/previous", isAuthenticated, async (req, res) => {
+    try {
+      const userId = req.user!.id;
+      // Get all reports for the user
+      const reports = await storage.getFreshnessReports(userId);
+      
+      // Sort reports by creation date (newest first)
+      const sortedReports = reports.sort((a, b) => 
+        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+      );
+      
+      // If we have at least 2 reports, return the second one (previous)
+      if (sortedReports.length >= 2) {
+        return res.json(sortedReports[1]);
+      }
+      
+      // Otherwise, no previous report exists
+      return res.status(404).json({ error: "No previous freshness report found" });
+    } catch (error) {
+      console.error("Error fetching previous freshness report:", error);
+      res.status(500).json({ error: "Failed to fetch previous freshness report" });
+    }
+  });
 
   // Get a specific freshness report by ID
   app.get("/api/freshness-reports/:id", isAuthenticated, async (req, res) => {
@@ -165,6 +190,31 @@ export function registerFreshnessRoutes(app: Express) {
           console.log('Step 4.5: Continuing without monthly check-in data');
         }
         
+        // 4.6 Get previous freshness report for recommendation implementation assessment
+        console.log('Step 4.6: Fetching previous freshness report...');
+        let previousReport = null;
+        try {
+          // Get all reports for the user
+          const reports = await storage.getFreshnessReports(userId);
+          
+          // Sort reports by creation date (newest first)
+          const sortedReports = reports.sort((a, b) => 
+            new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+          );
+          
+          // If there's at least one previous report, use it
+          if (sortedReports.length > 0) {
+            previousReport = sortedReports[0];
+            console.log(`Step 4.6: Successfully fetched previous report from ${new Date(previousReport.createdAt).toISOString()}`);
+          } else {
+            console.log('Step 4.6: No previous freshness report found');
+          }
+        } catch (error) {
+          console.error('Step 4.6: Error fetching previous report:', error);
+          // Continue without previous report data rather than failing the entire report
+          console.log('Step 4.6: Continuing without previous report data');
+        }
+        
         // 5. Generate final synthesis
         console.log('Step 5: Starting final synthesis...');
         let finalSynthesis;
@@ -174,7 +224,9 @@ export function registerFreshnessRoutes(app: Express) {
             resumeAnalysis,
             linkedinAnalysis,
             additionalDocumentsAnalysis,
-            monthlyCheckIns
+            monthlyCheckIns,
+            userId,
+            previousReport
           );
           console.log('Step 5: Final synthesis completed successfully');
         } catch (error) {

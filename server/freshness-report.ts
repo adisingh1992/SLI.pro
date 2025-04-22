@@ -986,12 +986,198 @@ function calculateEngagementActivity(monthlyCheckIns: any[]): { grade: string, e
   }
 }
 
+// Helper function to calculate recommendation implementation grade
+async function calculateRecommendationImplementation(
+  userId: number,
+  previousReport: any,
+  resumeData: string,
+  linkedinData: string,
+  monthlyCheckIns: any[]
+): Promise<{ grade: string, explanation: string }> {
+  try {
+    log(`Calculating recommendation implementation grade`, "freshness");
+    
+    // Check if we have a previous report to analyze
+    if (!previousReport || !previousReport.finalSynthesis) {
+      return {
+        grade: 'N/A',
+        explanation: 'No previous freshness report available to assess implementation progress. Once you have a previous report, we will track how well you have implemented the recommendations.'
+      };
+    }
+    
+    // Check if we have at least one monthly check-in with recommendation implementation data
+    const latestCheckIn = monthlyCheckIns.length > 0 ? 
+      [...monthlyCheckIns].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())[0] : 
+      null;
+    
+    // Extract recommendations from previous report
+    const previousRecommendations = {
+      resumeImprovements: previousReport.finalSynthesis.contentRecommendations?.resumeImprovements || [],
+      linkedInEnhancements: previousReport.finalSynthesis.contentRecommendations?.linkedInEnhancements || [],
+      immediateNextSteps: previousReport.finalSynthesis.implementationRoadmap?.immediateNextSteps || []
+    };
+    
+    const allRecommendations = [
+      ...previousRecommendations.resumeImprovements,
+      ...previousRecommendations.linkedInEnhancements, 
+      ...previousRecommendations.immediateNextSteps
+    ];
+    
+    // If no recommendations were found in the previous report
+    if (allRecommendations.length === 0) {
+      return {
+        grade: 'N/A',
+        explanation: 'No specific recommendations were found in your previous freshness report.'
+      };
+    }
+    
+    // If we have a monthly check-in with recommendation implementation data
+    if (latestCheckIn && latestCheckIn.recommendationImplementation) {
+      // Use monthly check-in data to calculate implementation grade
+      let implementationPercentage = 0;
+      
+      switch (latestCheckIn.recommendationImplementation) {
+        case 'fully':
+          implementationPercentage = 95; // 90-100%
+          break;
+        case 'mostly':
+          implementationPercentage = 80; // 75-89%
+          break;
+        case 'partially':
+          implementationPercentage = 60; // 50-74%
+          break;
+        case 'minimally':
+          implementationPercentage = 35; // 25-49%
+          break;
+        case 'not-yet':
+          implementationPercentage = 10; // Less than 25%
+          break;
+        default:
+          implementationPercentage = 0;
+      }
+      
+      log(`Implementation percentage from check-in data: ${implementationPercentage}%`, "freshness");
+      
+      // Determine challenge note if available
+      const challenges = latestCheckIn.implementationChallenges ? 
+        `You noted challenges: "${latestCheckIn.implementationChallenges}"` : '';
+      
+      // Determine grade based on implementation percentage
+      let grade: string;
+      let explanation: string;
+      
+      if (implementationPercentage >= 90) {
+        grade = 'A';
+        explanation = `Excellent implementation of previous recommendations (${implementationPercentage}%). ${challenges} You have successfully applied almost all the suggestions from your previous report, which significantly strengthens your professional brand.`;
+      } else if (implementationPercentage >= 75) {
+        grade = 'B';
+        explanation = `Good implementation of previous recommendations (${implementationPercentage}%). ${challenges} You have applied most of the key suggestions from your previous report, creating positive momentum for your brand.`;
+      } else if (implementationPercentage >= 50) {
+        grade = 'C';
+        explanation = `Average implementation of previous recommendations (${implementationPercentage}%). ${challenges} You have made progress on implementing some suggestions, but there are still several areas where applying the recommendations would strengthen your brand.`;
+      } else if (implementationPercentage >= 25) {
+        grade = 'D';
+        explanation = `Below average implementation of previous recommendations (${implementationPercentage}%). ${challenges} You have taken some initial steps, but most of the valuable suggestions remain unimplemented. Focusing on these recommendations would significantly improve your professional brand.`;
+      } else {
+        grade = 'F';
+        explanation = `Minimal implementation of previous recommendations (${implementationPercentage}%). ${challenges} Very few of the suggested improvements have been applied. We recommend prioritizing these recommendations to strengthen your professional brand presence.`;
+      }
+      
+      return { grade, explanation };
+    } else {
+      // If no monthly check-in data is available, use Claude to analyze
+      log(`No monthly check-in data available for recommendation implementation, using Claude for analysis`, "freshness");
+      
+      // Prepare system prompt for Claude analysis
+      const systemPrompt = `You are an expert professional branding strategist at SLI.pro. Your task is to assess how well a client has implemented previous recommendations for improving their professional brand. You will analyze their current resume and LinkedIn profile against specific recommendations from a previous assessment.
+
+EXTREMELY IMPORTANT: You MUST respond with VALID JSON ONLY. Your entire response must be parseable by JSON.parse(). DO NOT include any explanatory text, comments, markdown formatting, or code blocks. Your response should start with '{' and end with '}' without any other characters.
+
+The JSON output must strictly follow this structure:
+
+{
+  "implementedRecommendations": number,
+  "totalRecommendations": number,
+  "implementationPercentage": number,
+  "grade": string,
+  "explanation": string,
+  "implementationDetails": [
+    {
+      "recommendation": string,
+      "implemented": boolean,
+      "evidence": string
+    }
+  ]
+}`;
+
+      const userPrompt = `Here are the recommendations from the client's previous freshness report that they should have implemented:
+
+Resume Improvements:
+${JSON.stringify(previousRecommendations.resumeImprovements, null, 2)}
+
+LinkedIn Enhancements:
+${JSON.stringify(previousRecommendations.linkedInEnhancements, null, 2)}
+
+Immediate Next Steps:
+${JSON.stringify(previousRecommendations.immediateNextSteps, null, 2)}
+
+Here is the client's current resume:
+${resumeData}
+
+Here is the client's current LinkedIn profile:
+${linkedinData}
+
+Your task is to:
+1. Carefully analyze each recommendation and determine if it has been implemented based on the current resume and LinkedIn profile
+2. Calculate what percentage of total recommendations have been implemented
+3. Assign a grade based on the following rubric:
+   - Grade A: 90-100% implemented
+   - Grade B: 75-89% implemented
+   - Grade C: 50-74% implemented
+   - Grade D: 25-49% implemented
+   - Grade F: Less than 25% implemented
+4. Provide a brief explanation of your assessment and key areas for improvement
+
+Remember, respond with ONLY valid JSON with no explanatory text or comments outside the JSON structure.`;
+
+      try {
+        const claudeResponse = await callClaude(systemPrompt, userPrompt);
+        const analysisResult = JSON.parse(claudeResponse);
+        
+        log(`Claude analysis of recommendation implementation: ${analysisResult.implementationPercentage}%`, "freshness");
+        log(`Implementation grade: ${analysisResult.grade}`, "freshness");
+        
+        return {
+          grade: analysisResult.grade,
+          explanation: analysisResult.explanation
+        };
+      } catch (error) {
+        log(`Error analyzing recommendation implementation with Claude: ${error}`, "freshness");
+        
+        // Fallback if Claude analysis fails
+        return {
+          grade: 'C',
+          explanation: 'We were unable to automatically assess your implementation of previous recommendations. This baseline grade will be updated when you complete a monthly check-in with implementation details.'
+        };
+      }
+    }
+  } catch (error) {
+    log(`Error calculating recommendation implementation grade: ${error}`, "freshness");
+    return {
+      grade: 'N/A',
+      explanation: 'Could not assess recommendation implementation due to insufficient data.'
+    };
+  }
+}
+
 export async function generateFinalSynthesis(
   questionnaireAnalysis: any,
   resumeAnalysis: any,
   linkedinAnalysis: any,
   additionalDocumentsAnalysis: any[],
-  monthlyCheckIns: any[] = []
+  monthlyCheckIns: any[] = [],
+  userId?: number,
+  previousReport?: any
 ) {
   try {
     // Calculate profile content quality
@@ -1009,6 +1195,38 @@ export async function generateFinalSynthesis(
     // Calculate engagement activity
     const engagementActivity = calculateEngagementActivity(monthlyCheckIns);
     log(`Calculated engagement activity grade: ${engagementActivity.grade}`, "freshness");
+    
+    // Calculate recommendation implementation if we have a previous report and userId
+    let recommendationImplementation = { grade: 'N/A', explanation: 'Recommendation implementation assessment requires a previous freshness report. This metric will be available after you generate your second report.' };
+    
+    if (userId && previousReport) {
+      try {
+        // Extract resume and LinkedIn data for assessment
+        let resumeData = '';
+        let linkedinData = '';
+        
+        if (resumeAnalysis && resumeAnalysis.rawText) {
+          resumeData = resumeAnalysis.rawText;
+        }
+        
+        if (linkedinAnalysis && linkedinAnalysis.rawText) {
+          linkedinData = linkedinAnalysis.rawText;
+        }
+        
+        recommendationImplementation = await calculateRecommendationImplementation(
+          userId,
+          previousReport,
+          resumeData,
+          linkedinData,
+          monthlyCheckIns
+        );
+        
+        log(`Calculated recommendation implementation grade: ${recommendationImplementation.grade}`, "freshness");
+      } catch (error) {
+        log(`Error calculating recommendation implementation: ${error}`, "freshness");
+        // Keep default values if calculation fails
+      }
+    }
     
     const systemPrompt = `You are an expert professional branding strategist at SLI.pro. Your task is to synthesize all the analyses of a client's materials into a comprehensive professional branding assessment and strategy recommendation.
 
@@ -1071,6 +1289,10 @@ The JSON output must strictly follow this structure:
     "engagementActivity": {
       "grade": "${engagementActivity.grade}",
       "explanation": "${engagementActivity.explanation}"
+    },
+    "recommendationImplementation": {
+      "grade": "${recommendationImplementation.grade}",
+      "explanation": "${recommendationImplementation.explanation}"
     }
   }
 }`;
@@ -1105,12 +1327,16 @@ ${JSON.stringify(contentCreationActivity, null, 2)}
 4. Engagement Activity Assessment:
 ${JSON.stringify(engagementActivity, null, 2)}
 
+5. Recommendation Implementation Assessment:
+${JSON.stringify(recommendationImplementation, null, 2)}
+
 Your task is to synthesize these analyses into a JSON object exactly matching the structure I specified. Remember, your response must be ONLY valid JSON with no explanatory text, markdown, or other non-JSON content. Start with '{' and end with '}' with no other characters.
 
 Be sure to consider all detailed metrics in your recommendations, particularly:
 - The Narrative Consistency assessment when identifying critical gaps and suggesting improvements for better alignment across materials
 - The Content Creation Activity assessment when recommending content strategies
-- The Engagement Activity assessment when recommending networking approaches and engagement tactics`;
+- The Engagement Activity assessment when recommending networking approaches and engagement tactics
+- The Recommendation Implementation assessment when determining the effectiveness of previous recommendations`;
 
     return await callClaude(systemPrompt, userPrompt);
   } catch (error) {

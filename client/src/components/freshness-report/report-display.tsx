@@ -69,6 +69,10 @@ interface FreshnessReportProps {
           grade: string;
           explanation: string;
         };
+        recommendationImplementation?: {
+          grade: string;
+          explanation: string;
+        };
       };
     };
     createdAt: string;
@@ -379,19 +383,44 @@ const ReportDisplay: React.FC<FreshnessReportProps> = ({ report, userName }) => 
               </div>
             )}
             
-            {/* Implementation of Recommendations - Placeholder */}
-            <div className="p-3 bg-muted/30 rounded-md border border-dashed">
-              <div className="flex items-center justify-between mb-1 opacity-60">
-                <h4 className="text-sm font-semibold">Implementation of Recommendations</h4>
-                <div className="flex items-center gap-1">
-                  <span className="text-xs text-muted-foreground">Grade:</span>
-                  <span className="text-sm font-bold px-2 py-0.5 rounded bg-gray-100 text-gray-500">-</span>
+            {/* Implementation of Recommendations */}
+            {detailedMetrics?.recommendationImplementation && detailedMetrics.recommendationImplementation.grade !== 'N/A' ? (
+              <div className="p-4 bg-muted/50 rounded-md border">
+                <div className="flex items-center justify-between mb-2">
+                  <h4 className="text-sm font-semibold">Implementation of Recommendations</h4>
+                  <div className="flex items-center gap-1">
+                    <span className="text-xs text-muted-foreground">Grade:</span>
+                    <span className={`text-sm font-bold px-2 py-0.5 rounded ${
+                      detailedMetrics.recommendationImplementation.grade === 'A' ? 'bg-green-100 text-green-700' :
+                      detailedMetrics.recommendationImplementation.grade === 'B' ? 'bg-blue-100 text-blue-700' :
+                      detailedMetrics.recommendationImplementation.grade === 'C' ? 'bg-yellow-100 text-yellow-700' :
+                      detailedMetrics.recommendationImplementation.grade === 'D' ? 'bg-orange-100 text-orange-700' :
+                      detailedMetrics.recommendationImplementation.grade === 'F' ? 'bg-red-100 text-red-700' :
+                      'bg-gray-100 text-gray-700'
+                    }`}>
+                      {detailedMetrics.recommendationImplementation.grade}
+                    </span>
+                  </div>
                 </div>
+                <p className="text-sm text-muted-foreground">
+                  {detailedMetrics.recommendationImplementation.explanation}
+                </p>
               </div>
-              <p className="text-xs text-muted-foreground opacity-60 italic">
-                Coming soon: Measures how effectively you've implemented previous SLI.pro recommendations.
-              </p>
-            </div>
+            ) : (
+              <div className="p-3 bg-muted/30 rounded-md border border-dashed">
+                <div className="flex items-center justify-between mb-1 opacity-60">
+                  <h4 className="text-sm font-semibold">Implementation of Recommendations</h4>
+                  <div className="flex items-center gap-1">
+                    <span className="text-xs text-muted-foreground">Grade:</span>
+                    <span className="text-sm font-bold px-2 py-0.5 rounded bg-gray-100 text-gray-500">-</span>
+                  </div>
+                </div>
+                <p className="text-xs text-muted-foreground opacity-60 italic">
+                  {detailedMetrics?.recommendationImplementation?.explanation || 
+                  "This metric requires a previous freshness report. It will be available once you've generated multiple reports."}
+                </p>
+              </div>
+            )}
           </div>
           
           <Separator className="my-6" />
