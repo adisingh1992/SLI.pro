@@ -11,11 +11,11 @@ const anthropic = new Anthropic({
 const CLAUDE_MODEL = "claude-3-opus-20240229";
 
 // Helper function to make Claude API calls with retry logic for rate limits
-async function callClaude(systemPrompt: string, userPrompt: string, maxRetries = 3, initialBackoff = 10000) {
+async function callClaude(systemPrompt: string, userPrompt: string, maxRetries = 3, initialBackoff = 60000) {
   const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
   
   // Helper function to truncate long user prompts to reduce token count
-  const truncateIfNeeded = (text: string, maxLength = 4000) => {
+  const truncateIfNeeded = (text: string, maxLength = 150000) => {
     if (text.length > maxLength) {
       log(`Truncating long user prompt from ${text.length} to ${maxLength} characters`, "claude");
       return text.substring(0, maxLength) + "... [content truncated due to length]";
@@ -36,7 +36,7 @@ async function callClaude(systemPrompt: string, userPrompt: string, maxRetries =
         system: systemPrompt,
         messages: [{ role: "user", content: truncatedUserPrompt }],
         max_tokens: 4096,
-        temperature: 0.5,
+        temperature: 0.5
       });
 
       // Return the text content from the response
@@ -860,6 +860,132 @@ function calculateContentCreationActivity(monthlyCheckIns: any[]): { grade: stri
   }
 }
 
+// Helper function to calculate engagement activity grade
+function calculateEngagementActivity(monthlyCheckIns: any[]): { grade: string, explanation: string } {
+  try {
+    log(`Calculating engagement activity grade`, "freshness");
+    
+    if (!monthlyCheckIns || monthlyCheckIns.length === 0) {
+      return {
+        grade: 'F',
+        explanation: 'No monthly check-in data available. We recommend completing at least one monthly check-in to track your engagement activity.'
+      };
+    }
+    
+    // Sort check-ins by month to get them in chronological order
+    const sortedCheckIns = [...monthlyCheckIns].sort((a, b) => {
+      return a.month.localeCompare(b.month); // Format is YYYY-MM so this works for sorting
+    });
+    
+    // Get the most recent check-in for engagement frequency analysis
+    const latestCheckIn = sortedCheckIns[sortedCheckIns.length - 1];
+    
+    // Convert engagement frequency to numerical value (engagements per week)
+    let engagementsPerWeek = 0;
+    
+    switch (latestCheckIn.engagementFrequency) {
+      case 'daily':
+        engagementsPerWeek = 7; // daily = 7 days per week
+        break;
+      case '3-5/week':
+        engagementsPerWeek = 4; // average of 3-5 is 4
+        break;
+      case '1-2/week':
+        engagementsPerWeek = 1.5; // average of 1-2 is 1.5
+        break;
+      case 'less-than-1/week':
+        engagementsPerWeek = 0.5; // less than once per week
+        break;
+      case 'none':
+        engagementsPerWeek = 0; // no engagement
+        break;
+      default:
+        engagementsPerWeek = 0;
+    }
+    
+    log(`Engagement activity calculation - Engagements per week: ${engagementsPerWeek}`, "freshness");
+    
+    // Calculate engagement trend if multiple check-ins are available
+    let trend = '';
+    const engagementFrequencyValues: { [key: string]: number } = {
+      'daily': 7,
+      '3-5/week': 4,
+      '1-2/week': 1.5,
+      'less-than-1/week': 0.5,
+      'none': 0
+    };
+    
+    if (sortedCheckIns.length > 1) {
+      const previousCheckIn = sortedCheckIns[sortedCheckIns.length - 2];
+      const previousEngagementValue = engagementFrequencyValues[previousCheckIn.engagementFrequency] || 0;
+      const currentEngagementValue = engagementFrequencyValues[latestCheckIn.engagementFrequency] || 0;
+      
+      if (currentEngagementValue > previousEngagementValue * 1.25) {
+        trend = 'increasing';
+      } else if (currentEngagementValue < previousEngagementValue * 0.75) {
+        trend = 'decreasing';
+      } else {
+        trend = 'stable';
+      }
+    }
+    
+    // Determine grade based on engagements per week (following the rubric)
+    let grade: string;
+    let explanation: string;
+    
+    // Grade A – 7 or more engagements per week (daily)
+    // Grade B – 4 to 6 engagements per week (3-5/week)
+    // Grade C – 2 to 3 engagements per week (close to "1-2/week" but higher)
+    // Grade D – 1 engagement per week (falls in "1-2/week" range)
+    // Grade F – 0 engagements per week or no available data (less-than-1/week or none)
+    
+    if (engagementsPerWeek >= 7) {
+      grade = 'A';
+      explanation = `Excellent engagement activity with daily interaction in your professional network. ${
+        trend === 'increasing' ? 'Your engagement is showing strong improvement!' :
+        trend === 'decreasing' ? 'Your engagement has decreased slightly. Maintain your current frequency for optimal results.' :
+        trend === 'stable' ? 'You consistently maintain an excellent level of engagement.' : ''
+      }`;
+    } else if (engagementsPerWeek >= 4) {
+      grade = 'B';
+      explanation = `Good engagement activity with regular interaction (3-5 times per week) in your professional network. ${
+        trend === 'increasing' ? 'Your engagement is showing positive improvement!' :
+        trend === 'decreasing' ? 'Your engagement has decreased slightly. Try to maintain consistency.' :
+        trend === 'stable' ? 'You maintain a consistent good level of engagement.' : ''
+      }`;
+    } else if (engagementsPerWeek >= 2) {
+      grade = 'C';
+      explanation = `Average engagement activity with moderate interaction (2-3 times per week) in your professional network. ${
+        trend === 'increasing' ? 'Your engagement is improving, which is a positive sign!' :
+        trend === 'decreasing' ? 'Your engagement has decreased. Consider setting a regular engagement schedule.' :
+        trend === 'stable' ? 'You maintain a moderate level of engagement.' : ''
+      } Consider increasing your engagement frequency to strengthen your professional network.`;
+    } else if (engagementsPerWeek >= 1) {
+      grade = 'D';
+      explanation = `Below average engagement activity with minimal interaction (about once per week) in your professional network. ${
+        trend === 'increasing' ? 'Your engagement is showing some improvement, which is a step in the right direction!' :
+        trend === 'decreasing' ? 'Your already limited engagement has decreased further. We recommend establishing a regular engagement routine.' :
+        trend === 'stable' ? 'You maintain a minimal level of engagement.' : ''
+      } Increasing your engagement frequency would significantly boost your professional visibility and networking effectiveness.`;
+    } else {
+      grade = 'F';
+      explanation = `Minimal to no engagement activity in your professional network. ${
+        trend === 'increasing' ? 'There are signs of improvement in your recent activity.' :
+        trend === 'decreasing' ? 'Your already limited engagement has decreased further.' :
+        trend === 'stable' ? 'You consistently show minimal engagement.' : ''
+      } We strongly recommend implementing a regular engagement strategy to enhance your professional brand presence and network.`;
+    }
+    
+    return { grade, explanation };
+  } catch (error) {
+    log(`Error calculating engagement activity grade: ${error}`, "freshness");
+    return {
+      grade: 'C',
+      explanation: 'Could not fully assess engagement activity due to insufficient data. This is a baseline grade.'
+    };
+  }
+}
+
 export async function generateFinalSynthesis(
   questionnaireAnalysis: any,
   resumeAnalysis: any,
@@ -879,6 +1005,10 @@ export async function generateFinalSynthesis(
     // Calculate content creation activity
     const contentCreationActivity = calculateContentCreationActivity(monthlyCheckIns);
     log(`Calculated content creation activity grade: ${contentCreationActivity.grade}`, "freshness");
+    
+    // Calculate engagement activity
+    const engagementActivity = calculateEngagementActivity(monthlyCheckIns);
+    log(`Calculated engagement activity grade: ${engagementActivity.grade}`, "freshness");
     
     const systemPrompt = `You are an expert professional branding strategist at SLI.pro. Your task is to synthesize all the analyses of a client's materials into a comprehensive professional branding assessment and strategy recommendation.
 
@@ -937,6 +1067,10 @@ The JSON output must strictly follow this structure:
     "contentCreationActivity": {
       "grade": "${contentCreationActivity.grade}",
       "explanation": "${contentCreationActivity.explanation}"
+    },
+    "engagementActivity": {
+      "grade": "${engagementActivity.grade}",
+      "explanation": "${engagementActivity.explanation}"
     }
   }
 }`;
@@ -968,11 +1102,15 @@ ${JSON.stringify(narrativeConsistency, null, 2)}
 3. Content Creation Activity Assessment:
 ${JSON.stringify(contentCreationActivity, null, 2)}
 
+4. Engagement Activity Assessment:
+${JSON.stringify(engagementActivity, null, 2)}
+
 Your task is to synthesize these analyses into a JSON object exactly matching the structure I specified. Remember, your response must be ONLY valid JSON with no explanatory text, markdown, or other non-JSON content. Start with '{' and end with '}' with no other characters.
 
 Be sure to consider all detailed metrics in your recommendations, particularly:
 - The Narrative Consistency assessment when identifying critical gaps and suggesting improvements for better alignment across materials
-- The Content Creation Activity assessment when recommending content strategies and engagement tactics`;
+- The Content Creation Activity assessment when recommending content strategies
+- The Engagement Activity assessment when recommending networking approaches and engagement tactics`;
 
     return await callClaude(systemPrompt, userPrompt);
   } catch (error) {

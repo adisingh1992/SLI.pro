@@ -65,6 +65,10 @@ interface FreshnessReportProps {
           grade: string;
           explanation: string;
         };
+        engagementActivity?: {
+          grade: string;
+          explanation: string;
+        };
       };
     };
     createdAt: string;
@@ -338,19 +342,42 @@ const ReportDisplay: React.FC<FreshnessReportProps> = ({ report, userName }) => 
               </div>
             )}
             
-            {/* Engagement Activity - Placeholder */}
-            <div className="mb-4 p-3 bg-muted/30 rounded-md border border-dashed">
-              <div className="flex items-center justify-between mb-1 opacity-60">
-                <h4 className="text-sm font-semibold">Engagement Activity</h4>
-                <div className="flex items-center gap-1">
-                  <span className="text-xs text-muted-foreground">Grade:</span>
-                  <span className="text-sm font-bold px-2 py-0.5 rounded bg-gray-100 text-gray-500">-</span>
+            {/* Engagement Activity */}
+            {detailedMetrics?.engagementActivity ? (
+              <div className="mb-4 p-4 bg-muted/50 rounded-md border">
+                <div className="flex items-center justify-between mb-2">
+                  <h4 className="text-sm font-semibold">Engagement Activity</h4>
+                  <div className="flex items-center gap-1">
+                    <span className="text-xs text-muted-foreground">Grade:</span>
+                    <span className={`text-sm font-bold px-2 py-0.5 rounded ${
+                      detailedMetrics.engagementActivity.grade === 'A' ? 'bg-green-100 text-green-700' :
+                      detailedMetrics.engagementActivity.grade === 'B' ? 'bg-blue-100 text-blue-700' :
+                      detailedMetrics.engagementActivity.grade === 'C' ? 'bg-yellow-100 text-yellow-700' :
+                      detailedMetrics.engagementActivity.grade === 'D' ? 'bg-orange-100 text-orange-700' :
+                      'bg-red-100 text-red-700'
+                    }`}>
+                      {detailedMetrics.engagementActivity.grade}
+                    </span>
+                  </div>
                 </div>
+                <p className="text-sm text-muted-foreground">
+                  {detailedMetrics.engagementActivity.explanation}
+                </p>
               </div>
-              <p className="text-xs text-muted-foreground opacity-60 italic">
-                Coming soon: Tracks how actively you engage with industry content and thought leaders.
-              </p>
-            </div>
+            ) : (
+              <div className="mb-4 p-3 bg-muted/30 rounded-md border border-dashed">
+                <div className="flex items-center justify-between mb-1 opacity-60">
+                  <h4 className="text-sm font-semibold">Engagement Activity</h4>
+                  <div className="flex items-center gap-1">
+                    <span className="text-xs text-muted-foreground">Grade:</span>
+                    <span className="text-sm font-bold px-2 py-0.5 rounded bg-gray-100 text-gray-500">-</span>
+                  </div>
+                </div>
+                <p className="text-xs text-muted-foreground opacity-60 italic">
+                  No engagement activity data available. Complete monthly check-ins to track your engagement with industry content and thought leaders.
+                </p>
+              </div>
+            )}
             
             {/* Implementation of Recommendations - Placeholder */}
             <div className="p-3 bg-muted/30 rounded-md border border-dashed">
