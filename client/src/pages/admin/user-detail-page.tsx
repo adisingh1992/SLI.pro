@@ -45,7 +45,7 @@ export default function UserDetailPage() {
     error: userError,
   } = useQuery<UserProfileWithoutPassword>({
     queryKey: [`/api/admin/users/${userId}`],
-    queryFn: getQueryFn(),
+    queryFn: getQueryFn({ on401: "throw" }),
     enabled: !!userId && !!user?.isAdmin,
   });
 

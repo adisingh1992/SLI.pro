@@ -15,9 +15,16 @@ import FreshnessReportPage from "@/pages/freshness-report-page-new";
 import { AuthProvider } from "@/hooks/use-auth";
 import { ProtectedRoute } from "@/lib/protected-route";
 
+// Admin pages
+import AdminLoginPage from "@/pages/admin/login-page";
+import AdminDashboardPage from "@/pages/admin/dashboard-page";
+import AdminUsersPage from "@/pages/admin/users-page";
+import AdminUserDetailPage from "@/pages/admin/user-detail-page";
+
 function Router() {
   return (
     <Switch>
+      {/* Main app routes */}
       <ProtectedRoute path="/" component={HomePage} />
       <ProtectedRoute path="/profile" component={ProfilePage} />
       <ProtectedRoute path="/profile/create" component={ProfileCreationPage} />
@@ -33,6 +40,14 @@ function Router() {
         path="/freshness-report"
         component={FreshnessReportPage}
       />
+      
+      {/* Admin routes */}
+      <Route path="/admin/login" component={AdminLoginPage} />
+      <Route path="/admin/dashboard" component={AdminDashboardPage} />
+      <Route path="/admin/users" component={AdminUsersPage} />
+      <Route path="/admin/users/:id" component={AdminUserDetailPage} />
+      
+      {/* Auth and fallback routes */}
       <Route path="/auth" component={AuthPage} />
       <Route component={NotFound} />
     </Switch>

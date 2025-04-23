@@ -26,7 +26,7 @@ export default function AdminDashboardPage() {
     error: countError,
   } = useQuery({
     queryKey: ["/api/admin/users/count"],
-    queryFn: getQueryFn(),
+    queryFn: getQueryFn({ on401: "throw" }),
     enabled: !!user?.isAdmin,
   });
 

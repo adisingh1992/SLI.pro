@@ -779,6 +779,47 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   }
 
+  // Admin API routes
+  app.get("/api/admin/users", isAdmin, async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const users = await getAllUsers();
+      // Remove passwords from the response
+      const usersWithoutPasswords = users.map(user => {
+        const { password, ...userWithoutPassword } = user;
+        return userWithoutPassword;
+      });
+      res.json(usersWithoutPasswords);
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  app.get("/api/admin/users/count", isAdmin, async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const users = await getAllUsers();
+      res.json({ count: users.length });
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  app.get("/api/admin/users/:id", isAdmin, async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const userId = parseInt(req.params.id);
+      const userProfile = await storage.getUserProfile(userId);
+      
+      if (!userProfile) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      
+      // Remove password from the response
+      const { password, ...userWithoutPassword } = userProfile;
+      res.json(userWithoutPassword);
+    } catch (error) {
+      next(error);
+    }
+  });
+
   // Create admin user if it doesn't exist
   (async () => {
     try {
