@@ -411,7 +411,10 @@ export class MemStorage implements IStorage {
     const questionnaire = await this.getQuestionnaire(userId);
     const documents = await this.getDocuments(userId);
     const conversations = await this.getConversations(userId);
+    const monthlyCheckIns = await this.getMonthlyCheckIns(userId);
     const freshnessReports = await this.getFreshnessReports(userId);
+    
+    console.log(`Fetched ${monthlyCheckIns.length} monthly check-ins for user ${userId}`);
     
     return {
       ...user,
@@ -423,6 +426,7 @@ export class MemStorage implements IStorage {
       questionnaire,
       documents,
       conversations,
+      monthlyCheckIns,
       freshnessReports
     };
   }

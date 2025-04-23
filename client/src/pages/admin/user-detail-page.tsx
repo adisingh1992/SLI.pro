@@ -126,7 +126,7 @@ export default function UserDetailPage() {
   };
 
   // Find the most recent monthly check-in
-  const mostRecentCheckIn = userData.monthlyCheckIns?.length > 0 
+  const mostRecentCheckIn = userData.monthlyCheckIns && userData.monthlyCheckIns.length > 0 
     ? userData.monthlyCheckIns.reduce((latest, current) => {
         return new Date(latest.createdAt) > new Date(current.createdAt) ? latest : current;
       })
@@ -213,7 +213,8 @@ export default function UserDetailPage() {
                     Registration Date
                   </div>
                   <p className="text-sm font-medium">
-                    {userData.profile?.createdAt ? formatDate(userData.profile.createdAt.toString()) : 'N/A'}
+                    {/* Using a placeholder since profile doesn't have createdAt field */}
+                    {'N/A'}
                   </p>
                 </div>
               </div>
@@ -410,7 +411,7 @@ export default function UserDetailPage() {
               </ScrollArea>
             )}
           </CardContent>
-          {userData.monthlyCheckIns?.length > 0 && (
+          {userData.monthlyCheckIns && (userData.monthlyCheckIns.length > 0) && (
             <CardFooter className="flex justify-end border-t bg-muted/10 py-3">
               <Button variant="outline" size="sm">
                 Export Check-In Data
