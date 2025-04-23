@@ -14,6 +14,7 @@ import {
   insertQuestionnaireSchema,
   insertDocumentSchema,
   insertMonthlyCheckInSchema,
+  insertCoachingNoteSchema,
   User
 } from "@shared/schema";
 
@@ -826,6 +827,87 @@ export async function registerRoutes(app: Express): Promise<Server> {
     };
     
     res.json(debugInfo);
+  });
+
+  // Coaching Notes routes - ADMIN only
+  app.get("/api/admin/users/:userId/coaching-notes", isAdmin, async (req, res, next) => {
+    try {
+      const userId = parseInt(req.params.userId);
+      const notes = await storage.getCoachingNotes(userId);
+      res.json(notes);
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  app.get("/api/admin/coaching-notes/:id", isAdmin, async (req, res, next) => {
+    try {
+      const noteId = parseInt(req.params.id);
+      const note = await storage.getCoachingNote(noteId);
+      
+      if (!note) {
+        return res.status(404).json({ message: "Coaching note not found" });
+      }
+      
+      res.json(note);
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  app.post("/api/admin/coaching-notes", isAdmin, async (req, res, next) => {
+    try {
+      const validationResult = insertCoachingNoteSchema.safeParse({
+        ...req.body,
+      });
+
+      if (!validationResult.success) {
+        return res.status(400).json({
+          message: "Validation error",
+          errors: validationResult.error.errors,
+        });
+      }
+
+      const note = await storage.createCoachingNote(validationResult.data);
+      res.status(201).json(note);
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  app.put("/api/admin/coaching-notes/:id", isAdmin, async (req, res, next) => {
+    try {
+      const noteId = parseInt(req.params.id);
+      const note = await storage.getCoachingNote(noteId);
+
+      if (!note) {
+        return res.status(404).json({ message: "Coaching note not found" });
+      }
+
+      const updatedNote = await storage.updateCoachingNote(
+        noteId,
+        req.body.content,
+      );
+      res.json(updatedNote);
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  app.delete("/api/admin/coaching-notes/:id", isAdmin, async (req, res, next) => {
+    try {
+      const noteId = parseInt(req.params.id);
+      const note = await storage.getCoachingNote(noteId);
+
+      if (!note) {
+        return res.status(404).json({ message: "Coaching note not found" });
+      }
+
+      await storage.deleteCoachingNote(noteId);
+      res.sendStatus(204);
+    } catch (error) {
+      next(error);
+    }
   });
 
   // Force update the admin user on server start for debugging
