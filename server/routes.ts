@@ -14,6 +14,7 @@ import {
   insertQuestionnaireSchema,
   insertDocumentSchema,
   insertMonthlyCheckInSchema,
+  User
 } from "@shared/schema";
 
 const scryptAsync = promisify(scrypt);
@@ -777,6 +778,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Error fetching all users:", error);
       return [];
     }
+  }
+
+  // Helper function to get all users
+  async function getAllUsers(): Promise<User[]> {
+    // Get all users from storage
+    const users: User[] = [];
+    let id = 1;
+    let user = await storage.getUser(id);
+    
+    while (user) {
+      users.push(user);
+      id++;
+      user = await storage.getUser(id);
+    }
+    
+    return users;
   }
 
   // Admin API routes
