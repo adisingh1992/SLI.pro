@@ -2,7 +2,21 @@ import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/use-auth";
 import { Link, useLocation, useParams } from "wouter";
-import { ArrowLeft, Loader2, UserCircle } from "lucide-react";
+import { 
+  ArrowLeft, 
+  Calendar, 
+  Download, 
+  Eye, 
+  File, 
+  FileText, 
+  Loader2, 
+  MailIcon, 
+  MapPin, 
+  Phone, 
+  User,
+  UserCircle, 
+  FileIcon
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -10,6 +24,7 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
+  CardFooter,
 } from "@/components/ui/card";
 import {
   Tabs,
@@ -26,6 +41,8 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { getQueryFn } from "@/lib/queryClient";
 import AdminLayout from "./layout";
 import { UserProfile } from "@shared/schema";
@@ -97,263 +114,309 @@ export default function UserDetailPage() {
     );
   }
 
+  // Format a date string in a readable format (assuming ISO format)
+  const formatDate = (dateString: string) => {
+    if (!dateString) return 'N/A';
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', { 
+      year: 'numeric', 
+      month: 'long', 
+      day: 'numeric' 
+    });
+  };
+
+  // Find the most recent monthly check-in
+  const mostRecentCheckIn = userData.monthlyCheckIns?.length > 0 
+    ? userData.monthlyCheckIns.reduce((latest, current) => {
+        return new Date(latest.createdAt) > new Date(current.createdAt) ? latest : current;
+      })
+    : null;
+
   return (
     <AdminLayout>
       <div className="p-6 space-y-6">
-        <div className="mb-6">
+        <div className="mb-4">
           <Link href="/admin/users">
-            <Button variant="ghost" size="sm" className="mb-4">
+            <Button variant="ghost" size="sm" className="mb-2">
               <ArrowLeft className="h-4 w-4 mr-2" />
               Back to Users
             </Button>
           </Link>
           <div className="flex items-center justify-between">
-            <h1 className="text-3xl font-bold">User Details</h1>
-            <Badge variant={userData.isAdmin ? "default" : "outline"}>
+            <h1 className="text-3xl font-bold">User Profile</h1>
+            <Badge variant={userData.isAdmin ? "default" : "outline"} className="text-sm">
               {userData.isAdmin ? "Admin" : "User"}
             </Badge>
           </div>
+          <p className="text-muted-foreground mt-1">
+            Viewing complete profile information for {userData.firstName} {userData.lastName}
+          </p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <Card className="md:col-span-1">
-            <CardHeader>
-              <CardTitle>Profile Information</CardTitle>
-              <CardDescription>Basic user information</CardDescription>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Section 1: Basic Profile Information */}
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="flex items-center text-xl">
+                <User className="mr-2 h-5 w-5" />
+                Basic Profile Information
+              </CardTitle>
+              <CardDescription>
+                Essential user information and registration data
+              </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex justify-center">
-                <div className="h-24 w-24 rounded-full bg-gray-100 flex items-center justify-center text-gray-500">
-                  <UserCircle className="h-16 w-16" />
+            <CardContent className="space-y-6">
+              <div className="flex items-center gap-4">
+                <div className="h-20 w-20 rounded-full bg-primary/10 flex items-center justify-center text-primary">
+                  <UserCircle className="h-12 w-12" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold">
+                    {userData.firstName} {userData.lastName}
+                  </h3>
+                  {userData.headline && (
+                    <p className="text-muted-foreground">{userData.headline}</p>
+                  )}
                 </div>
               </div>
-              <div className="space-y-2">
-                <div>
-                  <h3 className="text-sm font-medium text-gray-500">Name</h3>
-                  <p>
-                    {userData.firstName} {userData.lastName}
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <div className="flex items-center text-sm font-medium text-muted-foreground">
+                    <MailIcon className="mr-2 h-4 w-4" />
+                    Email Address
+                  </div>
+                  <p className="text-sm font-medium">{userData.username}</p>
+                </div>
+                
+                <div className="space-y-1">
+                  <div className="flex items-center text-sm font-medium text-muted-foreground">
+                    <Phone className="mr-2 h-4 w-4" />
+                    Phone Number
+                  </div>
+                  <p className="text-sm font-medium">{userData.phoneNumber}</p>
+                </div>
+                
+                {userData.location && (
+                  <div className="space-y-1">
+                    <div className="flex items-center text-sm font-medium text-muted-foreground">
+                      <MapPin className="mr-2 h-4 w-4" />
+                      Location
+                    </div>
+                    <p className="text-sm font-medium">{userData.location}</p>
+                  </div>
+                )}
+                
+                <div className="space-y-1">
+                  <div className="flex items-center text-sm font-medium text-muted-foreground">
+                    <Calendar className="mr-2 h-4 w-4" />
+                    Registration Date
+                  </div>
+                  <p className="text-sm font-medium">
+                    {userData.profile?.createdAt ? formatDate(userData.profile.createdAt.toString()) : 'N/A'}
                   </p>
                 </div>
-                <div>
-                  <h3 className="text-sm font-medium text-gray-500">Email</h3>
-                  <p>{userData.username}</p>
-                </div>
-                <div>
-                  <h3 className="text-sm font-medium text-gray-500">Phone</h3>
-                  <p>{userData.phoneNumber}</p>
-                </div>
-                {userData.headline && (
-                  <div>
-                    <h3 className="text-sm font-medium text-gray-500">
-                      Headline
-                    </h3>
-                    <p>{userData.headline}</p>
-                  </div>
-                )}
-                {userData.location && (
-                  <div>
-                    <h3 className="text-sm font-medium text-gray-500">
-                      Location
-                    </h3>
-                    <p>{userData.location}</p>
-                  </div>
-                )}
-                {userData.bio && (
-                  <div>
-                    <h3 className="text-sm font-medium text-gray-500">Bio</h3>
-                    <p className="text-sm">{userData.bio}</p>
-                  </div>
-                )}
               </div>
+              
+              {userData.bio && (
+                <div className="space-y-1 pt-2">
+                  <h3 className="text-sm font-medium text-muted-foreground">Bio</h3>
+                  <p className="text-sm">{userData.bio}</p>
+                </div>
+              )}
             </CardContent>
           </Card>
 
-          <Card className="md:col-span-2">
-            <Tabs defaultValue="experiences">
-              <CardHeader className="pb-0">
-                <div className="flex items-center justify-between">
-                  <CardTitle>Profile Details</CardTitle>
-                  <TabsList>
-                    <TabsTrigger value="experiences">Experiences</TabsTrigger>
-                    <TabsTrigger value="education">Education</TabsTrigger>
-                    <TabsTrigger value="skills">Skills & Languages</TabsTrigger>
-                  </TabsList>
+          {/* Section 2: Uploaded Documents */}
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="flex items-center text-xl">
+                <FileText className="mr-2 h-5 w-5" />
+                Uploaded Documents
+              </CardTitle>
+              <CardDescription>
+                Documents uploaded by the user including resume and LinkedIn profile
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {!userData.documents?.length ? (
+                <div className="flex flex-col items-center justify-center border border-dashed rounded-lg p-8 text-center text-muted-foreground">
+                  <FileIcon className="h-10 w-10 text-muted-foreground mb-2" />
+                  <p>No documents have been uploaded yet</p>
+                  <p className="text-sm mt-1">When the user uploads documents, they will appear here</p>
                 </div>
-              </CardHeader>
-              <CardContent className="pt-4">
-                <TabsContent value="experiences">
-                  {!userData.experiences?.length ? (
-                    <div className="text-center p-6 text-gray-500">
-                      No experience information available.
-                    </div>
-                  ) : (
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>Title</TableHead>
-                          <TableHead>Company</TableHead>
-                          <TableHead>Period</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {userData.experiences.map((exp) => (
-                          <TableRow key={exp.id}>
-                            <TableCell className="font-medium">
-                              {exp.title}
-                            </TableCell>
-                            <TableCell>{exp.company}</TableCell>
-                            <TableCell>
-                              {exp.startDate} - {exp.current ? "Present" : exp.endDate}
-                            </TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  )}
-                </TabsContent>
-                <TabsContent value="education">
-                  {!userData.education?.length ? (
-                    <div className="text-center p-6 text-gray-500">
-                      No education information available.
-                    </div>
-                  ) : (
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>Degree</TableHead>
-                          <TableHead>Institution</TableHead>
-                          <TableHead>Period</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {userData.education.map((edu) => (
-                          <TableRow key={edu.id}>
-                            <TableCell className="font-medium">
-                              {edu.degree}
-                            </TableCell>
-                            <TableCell>{edu.institution}</TableCell>
-                            <TableCell>
-                              {edu.startYear} - {edu.endYear || "Present"}
-                            </TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  )}
-                </TabsContent>
-                <TabsContent value="skills">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div>
-                      <h3 className="text-sm font-medium text-gray-500 mb-2">
-                        Skills
-                      </h3>
-                      {!userData.skills?.length ? (
-                        <p className="text-gray-500 text-sm">
-                          No skills added yet.
-                        </p>
-                      ) : (
-                        <div className="flex flex-wrap gap-2">
-                          {userData.skills.map((skill) => (
-                            <Badge key={skill.id} variant="outline">
-                              {skill.name}
-                            </Badge>
-                          ))}
+              ) : (
+                <div className="grid gap-3">
+                  {userData.documents.map((doc) => (
+                    <div key={doc.id} className="flex items-center justify-between bg-secondary/30 rounded-md p-3">
+                      <div className="flex items-center">
+                        <div className="h-10 w-10 bg-secondary/50 rounded flex items-center justify-center mr-3">
+                          <File className="h-5 w-5 text-secondary-foreground" />
                         </div>
-                      )}
-                    </div>
-                    <div>
-                      <h3 className="text-sm font-medium text-gray-500 mb-2">
-                        Languages
-                      </h3>
-                      {!userData.languages?.length ? (
-                        <p className="text-gray-500 text-sm">
-                          No languages added yet.
-                        </p>
-                      ) : (
-                        <div className="space-y-2">
-                          {userData.languages.map((language) => (
-                            <div
-                              key={language.id}
-                              className="flex justify-between"
-                            >
-                              <span>{language.name}</span>
-                              <span className="text-sm text-gray-500">
-                                {language.proficiency}
-                              </span>
-                            </div>
-                          ))}
+                        <div>
+                          <p className="font-medium text-sm">{doc.name}</p>
+                          <p className="text-xs text-muted-foreground">
+                            Uploaded on {formatDate(doc.uploadedAt.toString())}
+                          </p>
                         </div>
-                      )}
+                      </div>
+                      <div className="flex gap-2">
+                        <Button size="sm" variant="ghost">
+                          <Eye className="h-4 w-4 mr-1" />
+                          Preview
+                        </Button>
+                        <Button size="sm" variant="outline">
+                          <Download className="h-4 w-4 mr-1" />
+                          Download
+                        </Button>
+                      </div>
                     </div>
-                  </div>
-                </TabsContent>
-              </CardContent>
-            </Tabs>
+                  ))}
+                </div>
+              )}
+            </CardContent>
           </Card>
         </div>
 
-        {/* Questionnaire Section */}
+        {/* Section 3: Questionnaire Data */}
         <Card>
-          <CardHeader>
-            <CardTitle>Questionnaire</CardTitle>
+          <CardHeader className="pb-3">
+            <CardTitle className="flex items-center text-xl">
+              <FileText className="mr-2 h-5 w-5" />
+              Questionnaire Data
+            </CardTitle>
             <CardDescription>
-              User's questionnaire responses
+              User's responses to the career profile questionnaire
             </CardDescription>
           </CardHeader>
           <CardContent>
             {!userData.questionnaire ? (
-              <div className="text-center p-6 text-gray-500">
-                User has not completed the questionnaire.
+              <div className="flex flex-col items-center justify-center border border-dashed rounded-lg p-8 text-center text-muted-foreground">
+                <FileText className="h-10 w-10 text-muted-foreground mb-2" />
+                <p>No questionnaire data available</p>
+                <p className="text-sm mt-1">User has not completed the questionnaire yet</p>
               </div>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                  <h3 className="text-sm font-medium text-gray-500 mb-2">
-                    Industry
-                  </h3>
-                  <p className="mb-4">
-                    {userData.questionnaire.industry || "Not specified"}
-                  </p>
-
-                  <h3 className="text-sm font-medium text-gray-500 mb-2">
-                    Background
-                  </h3>
-                  <p className="mb-4">
-                    {userData.questionnaire.background || "Not specified"}
-                  </p>
-
-                  <h3 className="text-sm font-medium text-gray-500 mb-2">
-                    Goals
-                  </h3>
-                  <p className="mb-4">
-                    {userData.questionnaire.goals || "Not specified"}
-                  </p>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-6">
+                <div className="rounded-lg bg-secondary/20 p-4">
+                  <h3 className="text-base font-medium mb-2 text-primary">Industry</h3>
+                  <p className="text-sm">{userData.questionnaire.industry || "Not specified"}</p>
                 </div>
-                <div>
-                  <h3 className="text-sm font-medium text-gray-500 mb-2">
-                    Aspirations
-                  </h3>
-                  <p className="mb-4">
-                    {userData.questionnaire.aspirations || "Not specified"}
-                  </p>
-
-                  <h3 className="text-sm font-medium text-gray-500 mb-2">
-                    Challenges
-                  </h3>
-                  <p className="mb-4">
-                    {userData.questionnaire.challenges || "Not specified"}
-                  </p>
-
-                  <h3 className="text-sm font-medium text-gray-500 mb-2">
-                    Interests
-                  </h3>
-                  <p className="mb-4">
-                    {userData.questionnaire.interests || "Not specified"}
-                  </p>
+                
+                <div className="rounded-lg bg-secondary/20 p-4">
+                  <h3 className="text-base font-medium mb-2 text-primary">Background</h3>
+                  <p className="text-sm">{userData.questionnaire.background || "Not specified"}</p>
                 </div>
+                
+                <div className="rounded-lg bg-secondary/20 p-4">
+                  <h3 className="text-base font-medium mb-2 text-primary">Goals</h3>
+                  <p className="text-sm">{userData.questionnaire.goals || "Not specified"}</p>
+                </div>
+                
+                <div className="rounded-lg bg-secondary/20 p-4">
+                  <h3 className="text-base font-medium mb-2 text-primary">Aspirations</h3>
+                  <p className="text-sm">{userData.questionnaire.aspirations || "Not specified"}</p>
+                </div>
+                
+                <div className="rounded-lg bg-secondary/20 p-4">
+                  <h3 className="text-base font-medium mb-2 text-primary">Challenges</h3>
+                  <p className="text-sm">{userData.questionnaire.challenges || "Not specified"}</p>
+                </div>
+                
+                <div className="rounded-lg bg-secondary/20 p-4">
+                  <h3 className="text-base font-medium mb-2 text-primary">Interests</h3>
+                  <p className="text-sm">{userData.questionnaire.interests || "Not specified"}</p>
+                </div>
+                
+                {userData.questionnaire.timeframe && (
+                  <div className="rounded-lg bg-secondary/20 p-4 md:col-span-2">
+                    <h3 className="text-base font-medium mb-2 text-primary">Timeframe</h3>
+                    <p className="text-sm">{userData.questionnaire.timeframe}</p>
+                  </div>
+                )}
               </div>
             )}
           </CardContent>
+        </Card>
+
+        {/* Section 4: Monthly Check-In Data */}
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="flex items-center text-xl">
+              <Calendar className="mr-2 h-5 w-5" />
+              Monthly Check-In Data
+            </CardTitle>
+            <CardDescription>
+              User's monthly progress check-ins and engagement tracking
+            </CardDescription>
+            {mostRecentCheckIn && (
+              <Badge variant="outline" className="mt-2 inline-flex w-auto">
+                Most recent: {formatDate(mostRecentCheckIn.createdAt.toString())}
+              </Badge>
+            )}
+          </CardHeader>
+          <CardContent>
+            {!userData.monthlyCheckIns?.length ? (
+              <div className="flex flex-col items-center justify-center border border-dashed rounded-lg p-8 text-center text-muted-foreground">
+                <Calendar className="h-10 w-10 text-muted-foreground mb-2" />
+                <p>No monthly check-in data available</p>
+                <p className="text-sm mt-1">User has not submitted any monthly check-ins yet</p>
+              </div>
+            ) : (
+              <ScrollArea className="h-[400px] rounded-md border">
+                <Table className="min-w-[700px]">
+                  <TableHeader className="bg-muted/50 sticky top-0">
+                    <TableRow>
+                      <TableHead>Month</TableHead>
+                      <TableHead>Content Posts</TableHead>
+                      <TableHead>Engagement</TableHead>
+                      <TableHead>New Connections</TableHead>
+                      <TableHead>Recommendations</TableHead>
+                      <TableHead>Submission Date</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {userData.monthlyCheckIns
+                      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+                      .map((checkIn) => (
+                        <TableRow key={checkIn.id} className={mostRecentCheckIn?.id === checkIn.id ? "bg-primary/5" : ""}>
+                          <TableCell className="font-medium">{checkIn.month}</TableCell>
+                          <TableCell>{checkIn.contentPosts}</TableCell>
+                          <TableCell>
+                            <Badge variant="outline" className="font-normal">
+                              {checkIn.engagementFrequency}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>{checkIn.newConnections}</TableCell>
+                          <TableCell>
+                            <Badge 
+                              variant={
+                                checkIn.recommendationImplementation === 'fully' ? 'default' :
+                                checkIn.recommendationImplementation === 'mostly' ? 'secondary' :
+                                checkIn.recommendationImplementation === 'partially' ? 'outline' :
+                                'destructive'
+                              }
+                              className="font-normal capitalize">
+                              {checkIn.recommendationImplementation}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-muted-foreground text-sm">
+                            {formatDate(checkIn.createdAt.toString())}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                  </TableBody>
+                </Table>
+              </ScrollArea>
+            )}
+          </CardContent>
+          {userData.monthlyCheckIns?.length > 0 && (
+            <CardFooter className="flex justify-end border-t bg-muted/10 py-3">
+              <Button variant="outline" size="sm">
+                Export Check-In Data
+              </Button>
+            </CardFooter>
+          )}
         </Card>
       </div>
     </AdminLayout>

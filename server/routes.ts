@@ -713,32 +713,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
   registerConversationRoutes(app);
   registerFreshnessRoutes(app);
 
-  // Get user details (for admin)
-  app.get("/api/admin/users/:id", isAdmin, async (req, res, next) => {
-    try {
-      const userId = parseInt(req.params.id);
-      const user = await storage.getUser(userId);
-      
-      if (!user) {
-        return res.status(404).json({ message: "User not found" });
-      }
-      
-      // Get full user profile
-      const userProfile = await storage.getUserProfile(userId);
-      if (!userProfile) {
-        // If profile doesn't exist, just return the user
-        const { password, ...userWithoutPassword } = user;
-        return res.json(userWithoutPassword);
-      }
-      
-      // Remove password before sending
-      const { password, ...profileWithoutPassword } = userProfile;
-      res.json(profileWithoutPassword);
-    } catch (error) {
-      next(error);
-    }
-  });
-
   // Helper function to get all users for admin routes
   async function getAllUsers(excludeAdmins: boolean = false): Promise<User[]> {
     // If we need to exclude admins, use the storage method directly
@@ -771,45 +745,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     return users;
   }
 
-  // Admin API routes - ORDER MATTERS! More specific routes must come first
-  
-  // Route for getting count of non-admin users
-  app.get("/api/admin/users/count", isAdmin, async (req: Request, res: Response, next: NextFunction) => {
-    try {
-      // Get all users from storage, then manually filter
-      const allUsers = await getAllUsers(false);
-      
-      // FORCE filter admin users out - manual approach to bypass any caching issues
-      const nonAdminUsers = allUsers.filter(user => user.isAdmin !== true);
-      
-      console.log('FORCED FILTERING - Admin users excluded from count:', nonAdminUsers.length, 'non-admin users found');
-      console.log('FORCED FILTERING - Admin users excluded from count - users:', nonAdminUsers.map(u => ({ id: u.id, username: u.username, isAdmin: u.isAdmin })));
-      
-      res.json({ count: nonAdminUsers.length });
-    } catch (error) {
-      next(error);
-    }
-  });
-  
-  // Route for getting a specific user
-  app.get("/api/admin/users/:id([0-9]+)", isAdmin, async (req: Request, res: Response, next: NextFunction) => {
-    try {
-      const userId = parseInt(req.params.id);
-      const userProfile = await storage.getUserProfile(userId);
-      
-      if (!userProfile) {
-        return res.status(404).json({ message: "User not found" });
-      }
-      
-      // Remove password from the response
-      const { password, ...userWithoutPassword } = userProfile;
-      res.json(userWithoutPassword);
-    } catch (error) {
-      next(error);
-    }
-  });
-  
-  // Route for getting all non-admin users (must come AFTER more specific routes)
+  // Admin API routes
   app.get("/api/admin/users", isAdmin, async (req: Request, res: Response, next: NextFunction) => {
     try {
       // Get all users from storage, then manually filter
@@ -827,6 +763,49 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
       
       res.json(usersWithoutPasswords);
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  app.get("/api/admin/users/count", isAdmin, async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      // Get all users from storage, then manually filter
+      const allUsers = await getAllUsers(false);
+      
+      // FORCE filter admin users out - manual approach to bypass any caching issues
+      const nonAdminUsers = allUsers.filter(user => user.isAdmin !== true);
+      
+      console.log('FORCED FILTERING - Admin users excluded from count:', nonAdminUsers.length, 'non-admin users found');
+      console.log('FORCED FILTERING - Admin users excluded from count - users:', nonAdminUsers.map(u => ({ id: u.id, username: u.username, isAdmin: u.isAdmin })));
+      
+      res.json({ count: nonAdminUsers.length });
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  // Get user details (for admin)
+  app.get("/api/admin/users/:id", isAdmin, async (req, res, next) => {
+    try {
+      const userId = parseInt(req.params.id);
+      const user = await storage.getUser(userId);
+
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      // Get full user profile
+      const userProfile = await storage.getUserProfile(userId);
+      if (!userProfile) {
+        // If profile doesn't exist, just return the user
+        const { password, ...userWithoutPassword } = user;
+        return res.json(userWithoutPassword);
+      }
+
+      // Remove password before sending
+      const { password, ...profileWithoutPassword } = userProfile;
+      res.json(profileWithoutPassword);
     } catch (error) {
       next(error);
     }
@@ -879,30 +858,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Always force update the isAdmin flag for this user to ensure it's set properly
       const updatedUser = await storage.updateUser(adminUser.id, { isAdmin: true });
       console.log("Admin user updated:", updatedUser?.username, "isAdmin:", updatedUser?.isAdmin, "type:", typeof updatedUser?.isAdmin);
-      
-      // Create a test user if needed for testing
-      const testUserEmail = "test@example.com";
-      const testUser = await storage.getUserByUsername(testUserEmail);
-      
-      if (!testUser) {
-        const newTestUser = await storage.createUser({
-          username: testUserEmail,
-          password: await hashPassword("password123"),
-          firstName: "Test",
-          lastName: "User",
-          phoneNumber: "555-555-5555",
-          isAdmin: false
-        });
-        
-        console.log("Test user created:", newTestUser.username);
-        
-        // Create an empty profile for test user
-        await storage.createProfile({
-          userId: newTestUser.id,
-          completionStep: 0,
-          isComplete: false
-        });
-      }
       
       // Print all users for debugging
       const allUsers = await getAllUsers(false);
