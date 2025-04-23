@@ -12,6 +12,7 @@ export const users = pgTable("users", {
   headline: text("headline"),
   bio: text("bio"),
   location: text("location"),
+  isAdmin: boolean("is_admin").default(false).notNull(),
 });
 
 export const experiences = pgTable("experiences", {
