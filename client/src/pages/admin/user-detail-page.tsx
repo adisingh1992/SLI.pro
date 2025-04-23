@@ -144,9 +144,20 @@ export default function UserDetailPage() {
           </Link>
           <div className="flex items-center justify-between">
             <h1 className="text-3xl font-bold">User Profile</h1>
-            <Badge variant={userData.isAdmin ? "default" : "outline"} className="text-sm">
-              {userData.isAdmin ? "Admin" : "User"}
-            </Badge>
+            <div className="flex items-center gap-3">
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={() => navigate(`/admin/users/${userId}/coaching-notes`)}
+                className="flex items-center gap-2"
+              >
+                <FileText className="h-4 w-4" />
+                Coaching Notes
+              </Button>
+              <Badge variant={userData.isAdmin ? "default" : "outline"} className="text-sm">
+                {userData.isAdmin ? "Admin" : "User"}
+              </Badge>
+            </div>
           </div>
           <p className="text-muted-foreground mt-1">
             Viewing complete profile information for {userData.firstName} {userData.lastName}

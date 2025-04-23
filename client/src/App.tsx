@@ -20,6 +20,7 @@ import AdminLoginPage from "@/pages/admin/login-page";
 import AdminDashboardPage from "@/pages/admin/dashboard-page";
 import AdminUsersPage from "@/pages/admin/users-page";
 import AdminUserDetailPage from "@/pages/admin/user-detail-page";
+import AdminCoachingNotesPage from "@/pages/admin/coaching-notes-page";
 
 function Router() {
   return (
@@ -46,6 +47,7 @@ function Router() {
       <Route path="/admin/dashboard" component={AdminDashboardPage} />
       <Route path="/admin/users" component={AdminUsersPage} />
       <Route path="/admin/users/:id" component={AdminUserDetailPage} />
+      <Route path="/admin/users/:userId/coaching-notes" component={AdminCoachingNotesPage} />
       
       {/* Auth and fallback routes */}
       <Route path="/auth" component={AuthPage} />
