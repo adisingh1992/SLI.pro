@@ -327,6 +327,25 @@ export const insertFreshnessReportSchema = createInsertSchema(freshnessReports).
 export type InsertFreshnessReport = z.infer<typeof insertFreshnessReportSchema>;
 export type FreshnessReport = typeof freshnessReports.$inferSelect;
 
+// Coaching Notes schema
+export const coachingNotes = pgTable("coaching_notes", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().references(() => users.id),
+  adminId: integer("admin_id").notNull().references(() => users.id), // The admin who wrote the note
+  content: text("content").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const insertCoachingNoteSchema = createInsertSchema(coachingNotes).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertCoachingNote = z.infer<typeof insertCoachingNoteSchema>;
+export type CoachingNote = typeof coachingNotes.$inferSelect;
+
 export type UserProfile = User & {
   experiences?: Experience[];
   education?: Education[];
@@ -339,4 +358,5 @@ export type UserProfile = User & {
   conversationSummaries?: ConversationSummary[];
   monthlyCheckIns?: MonthlyCheckIn[];
   freshnessReports?: FreshnessReport[];
+  coachingNotes?: CoachingNote[];
 };

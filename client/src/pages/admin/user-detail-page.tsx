@@ -209,13 +209,7 @@ export default function UserDetailPage() {
                 
                 <div className="space-y-1">
                   <div className="flex items-center text-sm font-medium text-muted-foreground">
-                    <Calendar className="mr-2 h-4 w-4" />
-                    Registration Date
                   </div>
-                  <p className="text-sm font-medium">
-                    {/* Using a placeholder since profile doesn't have createdAt field */}
-                    {'N/A'}
-                  </p>
                 </div>
               </div>
               
@@ -262,24 +256,6 @@ export default function UserDetailPage() {
                         </div>
                       </div>
                       <div className="flex gap-2">
-                        <Button 
-                          size="sm" 
-                          variant="ghost"
-                          onClick={() => {
-                            // Open the document in a new tab for preview
-                            try {
-                              // Create a data URL directly from the base64 data
-                              const dataUrl = `data:application/pdf;base64,${doc.fileData}`;
-                              window.open(dataUrl, '_blank');
-                            } catch (error) {
-                              console.error("Error opening document:", error);
-                              alert("Unable to preview document. Please try downloading instead.");
-                            }
-                          }}
-                        >
-                          <Eye className="h-4 w-4 mr-1" />
-                          Preview
-                        </Button>
                         <Button 
                           size="sm" 
                           variant="outline"

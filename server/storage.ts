@@ -111,6 +111,13 @@ export interface IStorage {
   updateFreshnessReport(id: number, report: Partial<InsertFreshnessReport>): Promise<FreshnessReport | undefined>;
   deleteFreshnessReport(id: number): Promise<void>;
 
+  // Coaching Notes operations
+  getCoachingNotes(userId: number): Promise<CoachingNote[]>;
+  getCoachingNote(id: number): Promise<CoachingNote | undefined>;
+  createCoachingNote(note: InsertCoachingNote): Promise<CoachingNote>;
+  updateCoachingNote(id: number, content: string): Promise<CoachingNote | undefined>;
+  deleteCoachingNote(id: number): Promise<void>;
+
   // Session store
   sessionStore: session.Store;
 }
@@ -130,6 +137,7 @@ export class MemStorage implements IStorage {
   private conversationSummaries: Map<number, ConversationSummary>;
   private monthlyCheckIns: Map<number, MonthlyCheckIn>;
   private freshnessReports: Map<number, FreshnessReport>;
+  private coachingNotes: Map<number, CoachingNote>;
   
   private userId: number;
   private experienceId: number;
@@ -145,6 +153,7 @@ export class MemStorage implements IStorage {
   private conversationSummaryId: number;
   private monthlyCheckInId: number;
   private freshnessReportId: number;
+  private coachingNoteId: number;
   
   sessionStore: session.Store;
 
@@ -163,6 +172,7 @@ export class MemStorage implements IStorage {
     this.conversationSummaries = new Map();
     this.monthlyCheckIns = new Map();
     this.freshnessReports = new Map();
+    this.coachingNotes = new Map();
     
     this.userId = 1;
     this.experienceId = 1;
@@ -178,6 +188,7 @@ export class MemStorage implements IStorage {
     this.conversationSummaryId = 1;
     this.monthlyCheckInId = 1;
     this.freshnessReportId = 1;
+    this.coachingNoteId = 1;
     
     this.sessionStore = new MemoryStore({
       checkPeriod: 86400000,
@@ -413,6 +424,7 @@ export class MemStorage implements IStorage {
     const conversations = await this.getConversations(userId);
     const monthlyCheckIns = await this.getMonthlyCheckIns(userId);
     const freshnessReports = await this.getFreshnessReports(userId);
+    const coachingNotes = await this.getCoachingNotes(userId);
     
     console.log(`Fetched ${monthlyCheckIns.length} monthly check-ins for user ${userId}`);
     
@@ -427,7 +439,8 @@ export class MemStorage implements IStorage {
       documents,
       conversations,
       monthlyCheckIns,
-      freshnessReports
+      freshnessReports,
+      coachingNotes
     };
   }
   
@@ -652,6 +665,46 @@ export class MemStorage implements IStorage {
   
   async deleteFreshnessReport(id: number): Promise<void> {
     this.freshnessReports.delete(id);
+  }
+
+  // Coaching Notes methods
+  async getCoachingNotes(userId: number): Promise<CoachingNote[]> {
+    return Array.from(this.coachingNotes.values())
+      .filter(note => note.userId === userId)
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  }
+  
+  async getCoachingNote(id: number): Promise<CoachingNote | undefined> {
+    return this.coachingNotes.get(id);
+  }
+  
+  async createCoachingNote(note: InsertCoachingNote): Promise<CoachingNote> {
+    const id = this.coachingNoteId++;
+    const newNote: CoachingNote = {
+      ...note,
+      id,
+      createdAt: new Date(),
+      updatedAt: new Date()
+    };
+    this.coachingNotes.set(id, newNote);
+    return newNote;
+  }
+  
+  async updateCoachingNote(id: number, content: string): Promise<CoachingNote | undefined> {
+    const note = await this.getCoachingNote(id);
+    if (!note) return undefined;
+    
+    const updatedNote = {
+      ...note,
+      content,
+      updatedAt: new Date()
+    };
+    this.coachingNotes.set(id, updatedNote);
+    return updatedNote;
+  }
+  
+  async deleteCoachingNote(id: number): Promise<void> {
+    this.coachingNotes.delete(id);
   }
 }
 
