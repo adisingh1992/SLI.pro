@@ -713,33 +713,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
   registerConversationRoutes(app);
   registerFreshnessRoutes(app);
 
-  // Admin API routes
-  // Get all users (for admin)
-  app.get("/api/admin/users", isAdmin, async (req, res, next) => {
-    try {
-      // Get all users from storage
-      const users = await getAllUsers();
-      // Remove passwords before sending to client
-      const usersWithoutPasswords = users.map(user => {
-        const { password, ...userWithoutPassword } = user;
-        return userWithoutPassword;
-      });
-      res.json(usersWithoutPasswords);
-    } catch (error) {
-      next(error);
-    }
-  });
-
-  // Get user count (for admin dashboard)
-  app.get("/api/admin/users/count", isAdmin, async (req, res, next) => {
-    try {
-      const users = await getAllUsers();
-      res.json({ count: users.length });
-    } catch (error) {
-      next(error);
-    }
-  });
-
   // Get user details (for admin)
   app.get("/api/admin/users/:id", isAdmin, async (req, res, next) => {
     try {
@@ -798,7 +771,45 @@ export async function registerRoutes(app: Express): Promise<Server> {
     return users;
   }
 
-  // Admin API routes
+  // Admin API routes - ORDER MATTERS! More specific routes must come first
+  
+  // Route for getting count of non-admin users
+  app.get("/api/admin/users/count", isAdmin, async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      // Get all users from storage, then manually filter
+      const allUsers = await getAllUsers(false);
+      
+      // FORCE filter admin users out - manual approach to bypass any caching issues
+      const nonAdminUsers = allUsers.filter(user => user.isAdmin !== true);
+      
+      console.log('FORCED FILTERING - Admin users excluded from count:', nonAdminUsers.length, 'non-admin users found');
+      console.log('FORCED FILTERING - Admin users excluded from count - users:', nonAdminUsers.map(u => ({ id: u.id, username: u.username, isAdmin: u.isAdmin })));
+      
+      res.json({ count: nonAdminUsers.length });
+    } catch (error) {
+      next(error);
+    }
+  });
+  
+  // Route for getting a specific user
+  app.get("/api/admin/users/:id([0-9]+)", isAdmin, async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const userId = parseInt(req.params.id);
+      const userProfile = await storage.getUserProfile(userId);
+      
+      if (!userProfile) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      
+      // Remove password from the response
+      const { password, ...userWithoutPassword } = userProfile;
+      res.json(userWithoutPassword);
+    } catch (error) {
+      next(error);
+    }
+  });
+  
+  // Route for getting all non-admin users (must come AFTER more specific routes)
   app.get("/api/admin/users", isAdmin, async (req: Request, res: Response, next: NextFunction) => {
     try {
       // Get all users from storage, then manually filter
@@ -816,40 +827,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
       
       res.json(usersWithoutPasswords);
-    } catch (error) {
-      next(error);
-    }
-  });
-
-  app.get("/api/admin/users/count", isAdmin, async (req: Request, res: Response, next: NextFunction) => {
-    try {
-      // Get all users from storage, then manually filter
-      const allUsers = await getAllUsers(false);
-      
-      // FORCE filter admin users out - manual approach to bypass any caching issues
-      const nonAdminUsers = allUsers.filter(user => user.isAdmin !== true);
-      
-      console.log('FORCED FILTERING - Admin users excluded from count:', nonAdminUsers.length, 'non-admin users found');
-      console.log('FORCED FILTERING - Admin users excluded from count - users:', nonAdminUsers.map(u => ({ id: u.id, username: u.username, isAdmin: u.isAdmin })));
-      
-      res.json({ count: nonAdminUsers.length });
-    } catch (error) {
-      next(error);
-    }
-  });
-
-  app.get("/api/admin/users/:id", isAdmin, async (req: Request, res: Response, next: NextFunction) => {
-    try {
-      const userId = parseInt(req.params.id);
-      const userProfile = await storage.getUserProfile(userId);
-      
-      if (!userProfile) {
-        return res.status(404).json({ message: "User not found" });
-      }
-      
-      // Remove password from the response
-      const { password, ...userWithoutPassword } = userProfile;
-      res.json(userWithoutPassword);
     } catch (error) {
       next(error);
     }
