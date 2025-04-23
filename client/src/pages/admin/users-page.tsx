@@ -94,7 +94,10 @@ export default function UsersPage() {
     <AdminLayout>
       <div className="p-6 space-y-6">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
-          <h1 className="text-3xl font-bold">Users</h1>
+          <div>
+            <h1 className="text-3xl font-bold">Users</h1>
+            <p className="text-sm text-gray-500 mt-1">Showing all non-admin users</p>
+          </div>
           <div className="w-full sm:w-auto flex items-center gap-2 sm:min-w-[300px]">
             <Search className="h-4 w-4 text-gray-500" />
             <Input

@@ -79,7 +79,10 @@ export default function AdminDashboardPage() {
               ) : countError ? (
                 <p className="text-red-500 text-sm">Error loading user count</p>
               ) : (
-                <p className="text-3xl font-bold">{userCountData?.count || 0}</p>
+                <div>
+                  <p className="text-3xl font-bold">{userCountData?.count || 0}</p>
+                  <p className="text-xs text-gray-500 mt-1">* Admin users are excluded from this count</p>
+                </div>
               )}
             </CardContent>
           </Card>

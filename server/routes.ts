@@ -767,14 +767,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Helper function to get all users for admin routes
-  async function getAllUsers(): Promise<User[]> {
+  async function getAllUsers(excludeAdmins: boolean = false): Promise<User[]> {
     // Get all users from storage using a sequential ID approach
     const users: User[] = [];
     let id = 1;
     let user = await storage.getUser(id);
     
     while (user) {
-      users.push(user);
+      // Only add the user if we're not excluding admins or the user is not an admin
+      if (!excludeAdmins || !user.isAdmin) {
+        users.push(user);
+      }
       id++;
       user = await storage.getUser(id);
     }
@@ -785,7 +788,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Admin API routes
   app.get("/api/admin/users", isAdmin, async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const users = await getAllUsers();
+      // Get all non-admin users
+      const users = await getAllUsers(true); // true = exclude admins
       // Remove passwords from the response
       const usersWithoutPasswords = users.map(user => {
         const { password, ...userWithoutPassword } = user;
@@ -799,7 +803,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/admin/users/count", isAdmin, async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const users = await getAllUsers();
+      // Get count of non-admin users
+      const users = await getAllUsers(true); // true = exclude admins
       res.json({ count: users.length });
     } catch (error) {
       next(error);
