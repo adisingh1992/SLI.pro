@@ -773,15 +773,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
     let id = 1;
     let user = await storage.getUser(id);
     
+    console.log("Debug - getAllUsers with excludeAdmins:", excludeAdmins);
+    
     while (user) {
+      console.log(`Debug - User ${user.id}:`, {
+        username: user.username, 
+        isAdmin: user.isAdmin, 
+        excluded: excludeAdmins && user.isAdmin === true
+      });
+      
       // Only add the user if we're not excluding admins or the user is not an admin
-      if (!excludeAdmins || !user.isAdmin) {
+      // Make strict comparison to ensure boolean values are properly checked
+      if (!excludeAdmins || user.isAdmin !== true) {
         users.push(user);
       }
       id++;
       user = await storage.getUser(id);
     }
     
+    console.log("Debug - Final users list:", users.map(u => ({ id: u.id, username: u.username, isAdmin: u.isAdmin })));
     return users;
   }
 
@@ -790,6 +800,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       // Get all non-admin users
       const users = await getAllUsers(true); // true = exclude admins
+      console.log('Admin users excluded from list:', users.map(u => ({ id: u.id, username: u.username, isAdmin: u.isAdmin })));
+      
       // Remove passwords from the response
       const usersWithoutPasswords = users.map(user => {
         const { password, ...userWithoutPassword } = user;
@@ -805,6 +817,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       // Get count of non-admin users
       const users = await getAllUsers(true); // true = exclude admins
+      console.log('Admin users excluded from count:', users.length, 'non-admin users found');
       res.json({ count: users.length });
     } catch (error) {
       next(error);
@@ -828,21 +841,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Create admin user if it doesn't exist
+  // Temporary debug route to check user state
+  app.get("/api/debug/users", isAdmin, async (req: Request, res: Response) => {
+    // Get all users from the database
+    const allUsers = await getAllUsers(false);
+    
+    const debugInfo = {
+      allUsers: allUsers.map(u => ({
+        id: u.id,
+        username: u.username,
+        isAdmin: u.isAdmin,
+        typeofIsAdmin: typeof u.isAdmin
+      }))
+    };
+    
+    res.json(debugInfo);
+  });
+
+  // Force update the admin user on server start for debugging
   (async () => {
     try {
       const adminEmail = "dcara@sli.pro";
-      const adminUser = await storage.getUserByUsername(adminEmail);
+      let adminUser = await storage.getUserByUsername(adminEmail);
       
       if (!adminUser) {
         // Create admin user with default credentials
-        const adminUser = await storage.createUser({
+        adminUser = await storage.createUser({
           username: adminEmail,
           password: await hashPassword(adminEmail), // Using email as password as specified
           firstName: "Admin",
           lastName: "User",
           phoneNumber: "123-456-7890",
-          isAdmin: true
+          isAdmin: true // Make sure this is a boolean true, not a string
         });
 
         console.log("Admin user created:", adminUser.username);
@@ -853,13 +883,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
           completionStep: 0,
           isComplete: false
         });
-      } else if (!adminUser.isAdmin) {
-        // Update the user to be an admin if they exist but aren't an admin
-        await storage.updateUser(adminUser.id, { isAdmin: true });
-        console.log("User updated to admin:", adminUser.username);
       }
+      
+      // Always force update the isAdmin flag for this user to ensure it's set properly
+      const updatedUser = await storage.updateUser(adminUser.id, { isAdmin: true });
+      console.log("Admin user updated:", updatedUser?.username, "isAdmin:", updatedUser?.isAdmin, "type:", typeof updatedUser?.isAdmin);
+      
+      // Create a test user if needed for testing
+      const testUserEmail = "test@example.com";
+      const testUser = await storage.getUserByUsername(testUserEmail);
+      
+      if (!testUser) {
+        const newTestUser = await storage.createUser({
+          username: testUserEmail,
+          password: await hashPassword("password123"),
+          firstName: "Test",
+          lastName: "User",
+          phoneNumber: "555-555-5555",
+          isAdmin: false
+        });
+        
+        console.log("Test user created:", newTestUser.username);
+        
+        // Create an empty profile for test user
+        await storage.createProfile({
+          userId: newTestUser.id,
+          completionStep: 0,
+          isComplete: false
+        });
+      }
+      
+      // Print all users for debugging
+      const allUsers = await getAllUsers(false);
+      console.log("All users:", allUsers.map(u => ({ id: u.id, username: u.username, isAdmin: u.isAdmin })));
+      
     } catch (error) {
-      console.error("Error setting up admin user:", error);
+      console.error("Error setting up users:", error);
     }
   })();
 
