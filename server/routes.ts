@@ -801,10 +801,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Admin API routes
   app.get("/api/admin/users", isAdmin, async (req: Request, res: Response, next: NextFunction) => {
     try {
-      // Get only non-admin users directly from storage
-      const nonAdminUsers = await storage.getNonAdminUsers();
+      // Get all users from storage, then manually filter
+      const allUsers = await getAllUsers(false);
       
-      console.log('Non-admin users to display:', nonAdminUsers.map(u => ({ id: u.id, username: u.username, isAdmin: u.isAdmin })));
+      // FORCE filter admin users out - manual approach to bypass any caching issues
+      const nonAdminUsers = allUsers.filter(user => user.isAdmin !== true);
+      
+      console.log('FORCED FILTERING - Non-admin users to display:', nonAdminUsers.map(u => ({ id: u.id, username: u.username, isAdmin: u.isAdmin })));
       
       // Remove passwords from the response
       const usersWithoutPasswords = nonAdminUsers.map(user => {
@@ -820,11 +823,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/admin/users/count", isAdmin, async (req: Request, res: Response, next: NextFunction) => {
     try {
-      // Get only non-admin users directly from storage
-      const nonAdminUsers = await storage.getNonAdminUsers();
+      // Get all users from storage, then manually filter
+      const allUsers = await getAllUsers(false);
       
-      console.log('Admin users excluded from count:', nonAdminUsers.length, 'non-admin users found');
-      console.log('Admin users excluded from count - users:', nonAdminUsers.map(u => ({ id: u.id, username: u.username, isAdmin: u.isAdmin })));
+      // FORCE filter admin users out - manual approach to bypass any caching issues
+      const nonAdminUsers = allUsers.filter(user => user.isAdmin !== true);
+      
+      console.log('FORCED FILTERING - Admin users excluded from count:', nonAdminUsers.length, 'non-admin users found');
+      console.log('FORCED FILTERING - Admin users excluded from count - users:', nonAdminUsers.map(u => ({ id: u.id, username: u.username, isAdmin: u.isAdmin })));
       
       res.json({ count: nonAdminUsers.length });
     } catch (error) {
