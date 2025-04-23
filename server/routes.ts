@@ -766,23 +766,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Function to get all users for admin routes
-  async function getAllUsers() {
-    // Get all users - implementation-specific for in-memory storage
-    // This function is only used internally by admin routes
-    try {
-      // Access the users map directly from the storage object
-      // @ts-ignore - access private property for admin functionality
-      return Array.from(storage["users"].values());
-    } catch (error) {
-      console.error("Error fetching all users:", error);
-      return [];
-    }
-  }
-
-  // Helper function to get all users
+  // Helper function to get all users for admin routes
   async function getAllUsers(): Promise<User[]> {
-    // Get all users from storage
+    // Get all users from storage using a sequential ID approach
     const users: User[] = [];
     let id = 1;
     let user = await storage.getUser(id);
