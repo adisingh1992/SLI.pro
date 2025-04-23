@@ -63,6 +63,7 @@ export const insertUserSchema = createInsertSchema(users).pick({
   firstName: true,
   lastName: true,
   phoneNumber: true,
+  isAdmin: true,
 });
 
 export const insertExperienceSchema = createInsertSchema(experiences).omit({

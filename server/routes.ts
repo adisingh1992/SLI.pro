@@ -3,6 +3,8 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { setupAuth } from "./auth";
 import { z } from "zod";
+import { scrypt, randomBytes } from "crypto";
+import { promisify } from "util";
 import {
   insertExperienceSchema,
   insertEducationSchema,
@@ -13,6 +15,15 @@ import {
   insertDocumentSchema,
   insertMonthlyCheckInSchema,
 } from "@shared/schema";
+
+const scryptAsync = promisify(scrypt);
+
+// Helper function for password hashing - needed for creating admin user
+async function hashPassword(password: string) {
+  const salt = randomBytes(16).toString("hex");
+  const buf = (await scryptAsync(password, salt, 64)) as Buffer;
+  return `${buf.toString("hex")}.${salt}`;
+}
 import { registerConversationRoutes } from "./conversation-routes";
 import { registerFreshnessRoutes } from "./freshness-routes";
 
@@ -22,9 +33,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
   setupAuth(app);
 
   // Middleware to check if user is authenticated
-  const isAuthenticated = (req, res, next) => {
+  const isAuthenticated = (req: Request, res: Response, next: NextFunction) => {
     if (!req.isAuthenticated()) {
       return res.status(401).json({ message: "Unauthorized" });
+    }
+    next();
+  };
+  
+  // Middleware to check if user is an admin
+  const isAdmin = (req: Request, res: Response, next: NextFunction) => {
+    if (!req.isAuthenticated() || !req.user?.isAdmin) {
+      return res.status(403).json({ message: "Forbidden: Admin access required" });
     }
     next();
   };
@@ -692,6 +711,108 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Register conversation routes (Claude chat interface)
   registerConversationRoutes(app);
   registerFreshnessRoutes(app);
+
+  // Admin API routes
+  // Get all users (for admin)
+  app.get("/api/admin/users", isAdmin, async (req, res, next) => {
+    try {
+      // Get all users from storage
+      const users = await getAllUsers();
+      // Remove passwords before sending to client
+      const usersWithoutPasswords = users.map(user => {
+        const { password, ...userWithoutPassword } = user;
+        return userWithoutPassword;
+      });
+      res.json(usersWithoutPasswords);
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  // Get user count (for admin dashboard)
+  app.get("/api/admin/users/count", isAdmin, async (req, res, next) => {
+    try {
+      const users = await getAllUsers();
+      res.json({ count: users.length });
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  // Get user details (for admin)
+  app.get("/api/admin/users/:id", isAdmin, async (req, res, next) => {
+    try {
+      const userId = parseInt(req.params.id);
+      const user = await storage.getUser(userId);
+      
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      
+      // Get full user profile
+      const userProfile = await storage.getUserProfile(userId);
+      if (!userProfile) {
+        // If profile doesn't exist, just return the user
+        const { password, ...userWithoutPassword } = user;
+        return res.json(userWithoutPassword);
+      }
+      
+      // Remove password before sending
+      const { password, ...profileWithoutPassword } = userProfile;
+      res.json(profileWithoutPassword);
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  // Function to get all users for admin routes
+  async function getAllUsers() {
+    // Get all users - implementation-specific for in-memory storage
+    // This function is only used internally by admin routes
+    try {
+      // Access the users map directly from the storage object
+      // @ts-ignore - access private property for admin functionality
+      return Array.from(storage["users"].values());
+    } catch (error) {
+      console.error("Error fetching all users:", error);
+      return [];
+    }
+  }
+
+  // Create admin user if it doesn't exist
+  (async () => {
+    try {
+      const adminEmail = "dcara@sli.pro";
+      const adminUser = await storage.getUserByUsername(adminEmail);
+      
+      if (!adminUser) {
+        // Create admin user with default credentials
+        const adminUser = await storage.createUser({
+          username: adminEmail,
+          password: await hashPassword(adminEmail), // Using email as password as specified
+          firstName: "Admin",
+          lastName: "User",
+          phoneNumber: "123-456-7890",
+          isAdmin: true
+        });
+
+        console.log("Admin user created:", adminUser.username);
+
+        // Create an empty profile for admin
+        await storage.createProfile({
+          userId: adminUser.id,
+          completionStep: 0,
+          isComplete: false
+        });
+      } else if (!adminUser.isAdmin) {
+        // Update the user to be an admin if they exist but aren't an admin
+        await storage.updateUser(adminUser.id, { isAdmin: true });
+        console.log("User updated to admin:", adminUser.username);
+      }
+    } catch (error) {
+      console.error("Error setting up admin user:", error);
+    }
+  })();
 
   const httpServer = createServer(app);
   return httpServer;
