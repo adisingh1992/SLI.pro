@@ -798,15 +798,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Admin API routes
   app.get("/api/admin/users", isAdmin, async (req: Request, res: Response, next: NextFunction) => {
     try {
-      // Get all non-admin users
-      const users = await getAllUsers(true); // true = exclude admins
-      console.log('Admin users excluded from list:', users.map(u => ({ id: u.id, username: u.username, isAdmin: u.isAdmin })));
+      // Get all non-admin users using a direct method to ensure we exclude admins
+      const allUsers = await getAllUsers(false); // Get all users
+      
+      // Manually filter out admin users
+      const nonAdminUsers = allUsers.filter(user => user.isAdmin !== true);
+      
+      console.log('Non-admin users to display:', nonAdminUsers.map(u => ({ id: u.id, username: u.username, isAdmin: u.isAdmin })));
       
       // Remove passwords from the response
-      const usersWithoutPasswords = users.map(user => {
+      const usersWithoutPasswords = nonAdminUsers.map(user => {
         const { password, ...userWithoutPassword } = user;
         return userWithoutPassword;
       });
+      
       res.json(usersWithoutPasswords);
     } catch (error) {
       next(error);
@@ -815,10 +820,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/admin/users/count", isAdmin, async (req: Request, res: Response, next: NextFunction) => {
     try {
-      // Get count of non-admin users
-      const users = await getAllUsers(true); // true = exclude admins
-      console.log('Admin users excluded from count:', users.length, 'non-admin users found');
-      res.json({ count: users.length });
+      // Get all users then filter to exclude admins
+      const allUsers = await getAllUsers(false);
+      
+      // Manually filter out the admin users
+      const nonAdminUsers = allUsers.filter(user => user.isAdmin !== true);
+      
+      console.log('Admin users excluded from count:', nonAdminUsers.length, 'non-admin users found');
+      console.log('Admin users excluded from count - users:', nonAdminUsers.map(u => ({ id: u.id, username: u.username, isAdmin: u.isAdmin })));
+      
+      res.json({ count: nonAdminUsers.length });
     } catch (error) {
       next(error);
     }
