@@ -768,25 +768,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Helper function to get all users for admin routes
   async function getAllUsers(excludeAdmins: boolean = false): Promise<User[]> {
-    // Get all users from storage using a sequential ID approach
+    // If we need to exclude admins, use the storage method directly
+    if (excludeAdmins) {
+      console.log("Debug - Using getNonAdminUsers() to get only non-admin users");
+      const nonAdminUsers = await storage.getNonAdminUsers();
+      console.log("Debug - Non-admin users:", nonAdminUsers.map(u => ({ id: u.id, username: u.username, isAdmin: u.isAdmin })));
+      return nonAdminUsers;
+    }
+    
+    // Otherwise get all users
+    console.log("Debug - Getting all users, including admins");
     const users: User[] = [];
     let id = 1;
     let user = await storage.getUser(id);
-    
-    console.log("Debug - getAllUsers with excludeAdmins:", excludeAdmins);
     
     while (user) {
       console.log(`Debug - User ${user.id}:`, {
         username: user.username, 
         isAdmin: user.isAdmin, 
-        excluded: excludeAdmins && user.isAdmin === true
+        excluded: false
       });
       
-      // Only add the user if we're not excluding admins or the user is not an admin
-      // Make strict comparison to ensure boolean values are properly checked
-      if (!excludeAdmins || user.isAdmin !== true) {
-        users.push(user);
-      }
+      users.push(user);
       id++;
       user = await storage.getUser(id);
     }
@@ -798,11 +801,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Admin API routes
   app.get("/api/admin/users", isAdmin, async (req: Request, res: Response, next: NextFunction) => {
     try {
-      // Get all non-admin users using a direct method to ensure we exclude admins
-      const allUsers = await getAllUsers(false); // Get all users
-      
-      // Manually filter out admin users
-      const nonAdminUsers = allUsers.filter(user => user.isAdmin !== true);
+      // Get only non-admin users directly from storage
+      const nonAdminUsers = await storage.getNonAdminUsers();
       
       console.log('Non-admin users to display:', nonAdminUsers.map(u => ({ id: u.id, username: u.username, isAdmin: u.isAdmin })));
       
@@ -820,11 +820,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/admin/users/count", isAdmin, async (req: Request, res: Response, next: NextFunction) => {
     try {
-      // Get all users then filter to exclude admins
-      const allUsers = await getAllUsers(false);
-      
-      // Manually filter out the admin users
-      const nonAdminUsers = allUsers.filter(user => user.isAdmin !== true);
+      // Get only non-admin users directly from storage
+      const nonAdminUsers = await storage.getNonAdminUsers();
       
       console.log('Admin users excluded from count:', nonAdminUsers.length, 'non-admin users found');
       console.log('Admin users excluded from count - users:', nonAdminUsers.map(u => ({ id: u.id, username: u.username, isAdmin: u.isAdmin })));

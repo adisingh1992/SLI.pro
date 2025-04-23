@@ -26,6 +26,7 @@ export interface IStorage {
   createUser(user: InsertUser): Promise<User>;
   updateUser(id: number, data: UpdateUser): Promise<User | undefined>;
   updateUserPassword(id: number, password: string): Promise<User | undefined>;
+  getNonAdminUsers(): Promise<User[]>; // New method to get only non-admin users
   
   // Experience operations
   getExperiences(userId: number): Promise<Experience[]>;
@@ -434,6 +435,11 @@ export class MemStorage implements IStorage {
     const updatedUser = { ...user, password };
     this.users.set(id, updatedUser);
     return updatedUser;
+  }
+  
+  async getNonAdminUsers(): Promise<User[]> {
+    // Return only users that are NOT marked as admin
+    return Array.from(this.users.values()).filter(user => user.isAdmin !== true);
   }
   
   async createPasswordReset(passwordReset: InsertPasswordReset): Promise<PasswordReset> {
