@@ -55,6 +55,7 @@ export default function CoachingNotesPage() {
         },
         body: JSON.stringify({
           userId: Number(userId),
+          adminId: user!.id, // Add the current admin's ID
           content,
         }),
       });
