@@ -262,11 +262,45 @@ export default function UserDetailPage() {
                         </div>
                       </div>
                       <div className="flex gap-2">
-                        <Button size="sm" variant="ghost">
+                        <Button 
+                          size="sm" 
+                          variant="ghost"
+                          onClick={() => {
+                            // Open the document in a new tab for preview
+                            try {
+                              // Create a data URL directly from the base64 data
+                              const dataUrl = `data:application/pdf;base64,${doc.fileData}`;
+                              window.open(dataUrl, '_blank');
+                            } catch (error) {
+                              console.error("Error opening document:", error);
+                              alert("Unable to preview document. Please try downloading instead.");
+                            }
+                          }}
+                        >
                           <Eye className="h-4 w-4 mr-1" />
                           Preview
                         </Button>
-                        <Button size="sm" variant="outline">
+                        <Button 
+                          size="sm" 
+                          variant="outline"
+                          onClick={() => {
+                            try {
+                              // Create a data URL directly from the base64 data
+                              const dataUrl = `data:application/pdf;base64,${doc.fileData}`;
+                              
+                              // Create a temporary link and trigger download
+                              const downloadLink = document.createElement('a');
+                              downloadLink.href = dataUrl;
+                              downloadLink.download = doc.fileName || `${doc.name}.pdf`;
+                              document.body.appendChild(downloadLink);
+                              downloadLink.click();
+                              document.body.removeChild(downloadLink);
+                            } catch (error) {
+                              console.error("Error downloading document:", error);
+                              alert("Unable to download document. Please try again later.");
+                            }
+                          }}
+                        >
                           <Download className="h-4 w-4 mr-1" />
                           Download
                         </Button>
@@ -411,13 +445,6 @@ export default function UserDetailPage() {
               </ScrollArea>
             )}
           </CardContent>
-          {userData.monthlyCheckIns && (userData.monthlyCheckIns.length > 0) && (
-            <CardFooter className="flex justify-end border-t bg-muted/10 py-3">
-              <Button variant="outline" size="sm">
-                Export Check-In Data
-              </Button>
-            </CardFooter>
-          )}
         </Card>
       </div>
     </AdminLayout>
