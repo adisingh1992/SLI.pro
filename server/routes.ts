@@ -584,6 +584,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.patch("/api/documents/:id/analysis", isAuthenticated, async (req, res, next) => {
+    try {
+      const documentId = parseInt(req.params.id);
+      const document = await storage.getDocument(documentId);
+
+      if (!document) {
+        return res.status(404).json({ message: "Document not found" });
+      }
+
+      // Only admins or document owners can update the analysis
+      if (document.userId !== req.user.id && !req.user.isAdmin) {
+        return res.status(403).json({ message: "Unauthorized" });
+      }
+
+      const { analysisContent } = req.body;
+      if (typeof analysisContent !== 'string') {
+        return res.status(400).json({ message: "Analysis content must be a string" });
+      }
+
+      const updatedDocument = await storage.updateDocument(documentId, { analysisContent });
+      res.json(updatedDocument);
+    } catch (error) {
+      next(error);
+    }
+  });
+
   // Monthly Check-in Routes
   app.get("/api/monthly-check-ins", isAuthenticated, async (req, res, next) => {
     try {
