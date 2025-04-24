@@ -12,6 +12,41 @@ const anthropic = new Anthropic({
   apiKey: ANTHROPIC_API_KEY!,
 });
 
+// Helper function for exponential backoff retries
+async function callWithRetry<T>(
+  apiCall: () => Promise<T>, 
+  maxRetries = 5, 
+  initialBackoff = 60000, // 60 seconds initial backoff
+  identifier = "API Call"
+): Promise<T> {
+  let retries = 0;
+  
+  while (true) {
+    try {
+      return await apiCall();
+    } catch (error: any) {
+      // Check if it's a rate limit error
+      const isRateLimit = error?.toString().includes('rate_limit_error');
+      
+      if (!isRateLimit || retries >= maxRetries) {
+        // If it's not a rate limit error or we've used all retries, rethrow
+        throw error;
+      }
+      
+      // Calculate exponential backoff time
+      const backoffTime = initialBackoff * Math.pow(2, retries);
+      retries++;
+      
+      log(`Rate limit exceeded for ${identifier}. Retrying in ${backoffTime/1000} seconds (retry ${retries}/${maxRetries})`, "claude");
+      
+      // Wait for the backoff period
+      await new Promise(resolve => setTimeout(resolve, backoffTime));
+      
+      log(`Resuming ${identifier} after backoff`, "claude");
+    }
+  }
+}
+
 /**
  * Extracts and summarizes user information from their questionnaire
  */
@@ -322,17 +357,22 @@ ${coachingNotesSummary}
 
 Please generate three distinct, compelling SLI options that this person can use in professional settings.`;
 
-    // Call Claude API
+    // Call Claude API with retry mechanism
     log(`Calling Claude API to generate SLIs`, "claude");
-    const response = await anthropic.messages.create({
-      model: CLAUDE_MODEL,
-      system: systemPrompt,
-      max_tokens: 4096,
-      temperature: 0.5,
-      messages: [
-        { role: "user", content: userMessage }
-      ]
-    });
+    const response = await callWithRetry(
+      () => anthropic.messages.create({
+        model: CLAUDE_MODEL,
+        system: systemPrompt,
+        max_tokens: 4096,
+        temperature: 0.5,
+        messages: [
+          { role: "user", content: userMessage }
+        ]
+      }),
+      5,  // max retries
+      60000,  // initial backoff of 60 seconds
+      "SLI generation"
+    );
 
     // Parse the response content to extract the JSON
     const responseContent = response.content.find(item => item.type === 'text')?.text || '';

@@ -202,6 +202,41 @@ export async function generateClaudeResponse(
 }
 
 // Function to analyze document content
+// Helper function for exponential backoff retries
+async function callWithRetry<T>(
+  apiCall: () => Promise<T>, 
+  maxRetries = 5, 
+  initialBackoff = 60000, // 60 seconds initial backoff as requested
+  identifier = "API Call"
+): Promise<T> {
+  let retries = 0;
+  
+  while (true) {
+    try {
+      return await apiCall();
+    } catch (error: any) {
+      // Check if it's a rate limit error
+      const isRateLimit = error?.toString().includes('rate_limit_error');
+      
+      if (!isRateLimit || retries >= maxRetries) {
+        // If it's not a rate limit error or we've used all retries, rethrow
+        throw error;
+      }
+      
+      // Calculate exponential backoff time
+      const backoffTime = initialBackoff * Math.pow(2, retries);
+      retries++;
+      
+      log(`Rate limit exceeded for ${identifier}. Retrying in ${backoffTime/1000} seconds (retry ${retries}/${maxRetries})`, "claude");
+      
+      // Wait for the backoff period
+      await new Promise(resolve => setTimeout(resolve, backoffTime));
+      
+      log(`Resuming ${identifier} after backoff`, "claude");
+    }
+  }
+}
+
 export async function analyzeDocument(document: Document): Promise<string | null> {
   try {
     // Skip analysis if no fileData is present
@@ -280,18 +315,23 @@ export async function analyzeDocument(document: Document): Promise<string | null
     // of the document directly in the prompt
     const fullPrompt = `${analysisPrompt}\n\nDocument content:\n${document.fileData}`;
 
-    // Send to Claude for analysis as text-only
-    const response = await anthropic.messages.create({
-      model: CLAUDE_MODEL,
-      messages: [
-        { 
-          role: "user", 
-          content: fullPrompt
-        }
-      ],
-      max_tokens: 4096,
-      temperature: 0.5,
-    });
+    // Use callWithRetry for API calls with exponential backoff
+    const response = await callWithRetry(
+      () => anthropic.messages.create({
+        model: CLAUDE_MODEL,
+        messages: [
+          { 
+            role: "user", 
+            content: fullPrompt
+          }
+        ],
+        max_tokens: 4096,
+        temperature: 0.5,
+      }),
+      5,  // max retries
+      60000,  // initial backoff of 60 seconds
+      `document analysis for ${document.name} (${document.id})`
+    );
 
     // Extract the analysis text from the response
     if (response.content && response.content.length > 0) {
@@ -438,14 +478,19 @@ Timeframe: ${q.timeframe || "Not specified"}
       },
     ];
 
-    // Call Claude with the request
-    const response = await anthropic.messages.create({
-      model: CLAUDE_MODEL,
-      system: systemPrompt,
-      max_tokens: 4096,
-      temperature: 0.5,
-      messages: summaryRequest,
-    });
+    // Call Claude with the request using retry mechanism
+    const response = await callWithRetry(
+      () => anthropic.messages.create({
+        model: CLAUDE_MODEL,
+        system: systemPrompt,
+        max_tokens: 4096,
+        temperature: 0.5,
+        messages: summaryRequest,
+      }),
+      5,  // max retries
+      60000,  // initial backoff of 60 seconds
+      `conversation summary for conversation ${conversationId}`
+    );
 
     // Parse the response to extract the JSON
     let summaryData: any;
@@ -505,14 +550,46 @@ export async function generateStreamingClaudeResponse(
 
     log(`Sending streaming request to Claude for user ${userId}`, "claude");
 
-    const stream = await anthropic.messages.create({
-      model: CLAUDE_MODEL,
-      system: systemPrompt,
-      messages: messages,
-      max_tokens: 4096,
-      temperature: 0.5,
-      stream: true,
-    });
+    // Note: We're not using callWithRetry here since streams work differently
+    // Instead implement a manual retry approach for streaming
+    let retries = 0;
+    const maxRetries = 5;
+    const initialBackoff = 60000; // 60 seconds
+
+    let stream;
+    
+    while (true) {
+      try {
+        stream = await anthropic.messages.create({
+          model: CLAUDE_MODEL,
+          system: systemPrompt,
+          messages: messages,
+          max_tokens: 4096,
+          temperature: 0.5,
+          stream: true,
+        });
+        break; // If successful, exit the loop
+      } catch (error: any) {
+        // Check if it's a rate limit error
+        const isRateLimit = error?.toString().includes('rate_limit_error');
+        
+        if (!isRateLimit || retries >= maxRetries) {
+          // If it's not a rate limit error or we've used all retries, rethrow
+          throw error;
+        }
+        
+        // Calculate exponential backoff time
+        const backoffTime = initialBackoff * Math.pow(2, retries);
+        retries++;
+        
+        log(`Rate limit exceeded for streaming request. Retrying in ${backoffTime/1000} seconds (retry ${retries}/${maxRetries})`, "claude");
+        
+        // Wait for the backoff period
+        await new Promise(resolve => setTimeout(resolve, backoffTime));
+        
+        log(`Resuming streaming request after backoff`, "claude");
+      }
+    }
 
     for await (const chunk of stream) {
       if (
