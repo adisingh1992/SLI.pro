@@ -1,7 +1,7 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { log } from "./vite";
 import { storage } from "./storage";
-import { InsertConversationSummary } from "@shared/schema";
+import { InsertConversationSummary, Document } from "@shared/schema";
 // Update imports to use namespace import syntax for compatibility
 
 // Check if API key is available
@@ -201,7 +201,122 @@ export async function generateClaudeResponse(
   }
 }
 
-// Function to generate a conversation summary
+// Function to analyze document content
+export async function analyzeDocument(document: Document): Promise<string | null> {
+  try {
+    // Skip analysis if no fileData is present
+    if (!document.fileData) {
+      log(`No file data available for document ${document.id}`, "claude");
+      return null;
+    }
+
+    // Get document type and check if we already have an analysis
+    const documentType = document.type.toLowerCase();
+    if (document.analysisContent) {
+      log(`Document ${document.id} already has analysis content`, "claude");
+      return document.analysisContent;
+    }
+
+    log(`Analyzing document ${document.id} of type ${documentType}`, "claude");
+
+    // Create prompt based on document type
+    let analysisPrompt = "";
+    switch (documentType) {
+      case "resume":
+        analysisPrompt = `Analyze this resume deeply and extract all relevant professional information. 
+        Include details about:
+        - Career trajectory and progression
+        - Key roles and responsibilities
+        - Technical and soft skills
+        - Educational background
+        - Notable achievements and results
+        - Industry specializations
+        - Leadership experience
+        - Project highlights
+        
+        Format your analysis as a detailed but concise summary that captures the essence of this person's professional profile.`;
+        break;
+      case "linkedin":
+        analysisPrompt = `Provide a thorough analysis of this LinkedIn profile PDF. 
+        Include details about:
+        - Professional summary and headline
+        - Career progression and roles
+        - Skills and endorsements
+        - Network size and relationships
+        - Content creation activity
+        - Engagement patterns and interests
+        - Educational background
+        - Certifications and credentials
+
+        Format your analysis as a comprehensive professional assessment that highlights key strengths, patterns, and opportunities from the profile.`;
+        break;
+      case "certificate":
+        analysisPrompt = `Analyze this certificate or credential document. 
+        Include details about:
+        - The type of certification and issuing organization
+        - Skills or knowledge validated
+        - Level of achievement or specialization
+        - Industry relevance and value
+        - Date issued and expiration (if applicable)
+        
+        Format your analysis as a concise summary that explains the significance of this credential to the person's professional profile.`;
+        break;
+      case "assessment":
+        analysisPrompt = `Analyze this assessment document thoroughly. 
+        Include details about:
+        - Type of assessment (personality, skills, strengths, etc.)
+        - Key findings and results
+        - Strengths and potential areas for development
+        - Career implications and applications
+        - Unique insights or patterns
+        
+        Format your analysis as a concise professional interpretation that highlights the most significant insights for career development.`;
+        break;
+      default:
+        analysisPrompt = `Analyze this document thoroughly. Extract the main points, key information, and any insights relevant to professional branding and career development. Format your analysis as a detailed but concise summary.`;
+    }
+
+    // Send to Claude for analysis
+    const response = await anthropic.messages.create({
+      model: CLAUDE_MODEL,
+      messages: [
+        { 
+          role: "user", 
+          content: [
+            {
+              type: "text", 
+              text: analysisPrompt
+            },
+            {
+              type: "image",
+              source: {
+                type: "base64",
+                media_type: "image/jpeg",  // Claude accepts PDF content as images
+                data: document.fileData
+              }
+            }
+          ]
+        }
+      ],
+      max_tokens: 4096,
+      temperature: 0.2,
+    });
+
+    // Extract the analysis text from the response
+    if (response.content && response.content.length > 0) {
+      const textContent = response.content.filter(item => item.type === "text");
+      if (textContent.length > 0 && "text" in textContent[0]) {
+        return textContent[0].text;
+      }
+    }
+
+    return null;
+  } catch (error) {
+    log(`Error analyzing document ${document.id}: ${error}`, "claude");
+    return null;
+  }
+}
+
 export async function generateConversationSummary(
   conversationId: number,
   userId: number,
