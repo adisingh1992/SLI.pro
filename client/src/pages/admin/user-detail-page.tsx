@@ -15,7 +15,8 @@ import {
   User,
   UserCircle, 
   FileIcon,
-  MessageSquare
+  MessageSquare,
+  Star
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -116,6 +117,14 @@ export default function UserDetailPage() {
                 <FileText className="h-4 w-4" />
                 Coaching Notes
               </Button>
+              <Button 
+                variant="outline"
+                onClick={() => navigate(`/admin/users/${userId}/sli`)}
+                className="flex items-center gap-2"
+              >
+                <Star className="h-4 w-4" />
+                Service Level Indicators
+              </Button>
             </div>
           </div>
         </div>
@@ -169,6 +178,14 @@ export default function UserDetailPage() {
               >
                 <FileText className="h-4 w-4" />
                 Coaching Notes
+              </Button>
+              <Button 
+                variant="outline"
+                className="flex items-center gap-2"
+                onClick={() => navigate(`/admin/users/${userId}/sli`)}
+              >
+                <Star className="h-4 w-4" />
+                Service Level Indicators
               </Button>
             </div>
           </div>
