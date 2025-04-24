@@ -2,21 +2,21 @@ import { useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/use-auth";
 import { Link, useLocation, useParams } from "wouter";
-import { 
-  ArrowLeft, 
-  Calendar, 
-  Download, 
-  File, 
-  FileText, 
-  Loader2, 
-  MailIcon, 
-  MapPin, 
-  Phone, 
+import {
+  ArrowLeft,
+  Calendar,
+  Download,
+  File,
+  FileText,
+  Loader2,
+  MailIcon,
+  MapPin,
+  Phone,
   User,
-  UserCircle, 
+  UserCircle,
   FileIcon,
   MessageSquare,
-  Star
+  Star,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -24,7 +24,7 @@ import {
   CardContent,
   CardDescription,
   CardHeader,
-  CardTitle
+  CardTitle,
 } from "@/components/ui/card";
 import {
   Table,
@@ -92,16 +92,17 @@ export default function UserDetailPage() {
           </div>
           <div className="bg-red-50 border border-red-200 p-6 rounded-md text-center">
             <p className="text-red-600">
-              Error loading user data. The user may not exist or there was a problem fetching the data.
+              Error loading user data. The user may not exist or there was a
+              problem fetching the data.
             </p>
             <div className="flex justify-center gap-3 mt-4">
-              <Button 
+              <Button
                 variant="outline"
                 onClick={() => navigate("/admin/users")}
               >
                 Return to Users List
               </Button>
-              <Button 
+              <Button
                 variant="outline"
                 onClick={() => navigate(`/admin/users/${userId}/summary`)}
                 className="flex items-center gap-2"
@@ -109,21 +110,23 @@ export default function UserDetailPage() {
                 <MessageSquare className="h-4 w-4" />
                 View Conversation Summary
               </Button>
-              <Button 
+              <Button
                 variant="outline"
-                onClick={() => navigate(`/admin/users/${userId}/coaching-notes`)}
+                onClick={() =>
+                  navigate(`/admin/users/${userId}/coaching-notes`)
+                }
                 className="flex items-center gap-2"
               >
                 <FileText className="h-4 w-4" />
                 Coaching Notes
               </Button>
-              <Button 
+              <Button
                 variant="outline"
                 onClick={() => navigate(`/admin/users/${userId}/sli`)}
                 className="flex items-center gap-2"
               >
                 <Star className="h-4 w-4" />
-                Service Level Indicators
+                Generate SLIs
               </Button>
             </div>
           </div>
@@ -134,21 +137,24 @@ export default function UserDetailPage() {
 
   // Format a date string in a readable format (assuming ISO format)
   const formatDate = (dateString: string) => {
-    if (!dateString) return 'N/A';
+    if (!dateString) return "N/A";
     const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', { 
-      year: 'numeric', 
-      month: 'long', 
-      day: 'numeric' 
+    return date.toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "long",
+      day: "numeric",
     });
   };
 
   // Find the most recent monthly check-in
-  const mostRecentCheckIn = userData.monthlyCheckIns && userData.monthlyCheckIns.length > 0 
-    ? userData.monthlyCheckIns.reduce((latest, current) => {
-        return new Date(latest.createdAt) > new Date(current.createdAt) ? latest : current;
-      })
-    : null;
+  const mostRecentCheckIn =
+    userData.monthlyCheckIns && userData.monthlyCheckIns.length > 0
+      ? userData.monthlyCheckIns.reduce((latest, current) => {
+          return new Date(latest.createdAt) > new Date(current.createdAt)
+            ? latest
+            : current;
+        })
+      : null;
 
   return (
     <AdminLayout>
@@ -163,7 +169,7 @@ export default function UserDetailPage() {
           <div className="flex items-center justify-between">
             <h1 className="text-3xl font-bold">User Profile</h1>
             <div className="flex space-x-2">
-              <Button 
+              <Button
                 variant="outline"
                 className="flex items-center gap-2"
                 onClick={() => navigate(`/admin/users/${userId}/summary`)}
@@ -171,26 +177,29 @@ export default function UserDetailPage() {
                 <MessageSquare className="h-4 w-4" />
                 View Conversation Summary
               </Button>
-              <Button 
+              <Button
                 variant="outline"
                 className="flex items-center gap-2"
-                onClick={() => navigate(`/admin/users/${userId}/coaching-notes`)}
+                onClick={() =>
+                  navigate(`/admin/users/${userId}/coaching-notes`)
+                }
               >
                 <FileText className="h-4 w-4" />
                 Coaching Notes
               </Button>
-              <Button 
+              <Button
                 variant="outline"
                 className="flex items-center gap-2"
                 onClick={() => navigate(`/admin/users/${userId}/sli`)}
               >
                 <Star className="h-4 w-4" />
-                Service Level Indicators
+                Generate SLIs
               </Button>
             </div>
           </div>
           <p className="text-muted-foreground mt-1">
-            Viewing complete profile information for {userData.firstName} {userData.lastName}
+            Viewing complete profile information for {userData.firstName}{" "}
+            {userData.lastName}
           </p>
         </div>
 
@@ -220,7 +229,7 @@ export default function UserDetailPage() {
                   )}
                 </div>
               </div>
-              
+
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-1">
                   <div className="flex items-center text-sm font-medium text-muted-foreground">
@@ -229,7 +238,7 @@ export default function UserDetailPage() {
                   </div>
                   <p className="text-sm font-medium">{userData.username}</p>
                 </div>
-                
+
                 <div className="space-y-1">
                   <div className="flex items-center text-sm font-medium text-muted-foreground">
                     <Phone className="mr-2 h-4 w-4" />
@@ -237,7 +246,7 @@ export default function UserDetailPage() {
                   </div>
                   <p className="text-sm font-medium">{userData.phoneNumber}</p>
                 </div>
-                
+
                 {userData.location && (
                   <div className="space-y-1">
                     <div className="flex items-center text-sm font-medium text-muted-foreground">
@@ -247,16 +256,17 @@ export default function UserDetailPage() {
                     <p className="text-sm font-medium">{userData.location}</p>
                   </div>
                 )}
-                
+
                 <div className="space-y-1">
-                  <div className="flex items-center text-sm font-medium text-muted-foreground">
-                  </div>
+                  <div className="flex items-center text-sm font-medium text-muted-foreground"></div>
                 </div>
               </div>
-              
+
               {userData.bio && (
                 <div className="space-y-1 pt-2">
-                  <h3 className="text-sm font-medium text-muted-foreground">Bio</h3>
+                  <h3 className="text-sm font-medium text-muted-foreground">
+                    Bio
+                  </h3>
                   <p className="text-sm">{userData.bio}</p>
                 </div>
               )}
@@ -271,7 +281,8 @@ export default function UserDetailPage() {
                 Uploaded Documents
               </CardTitle>
               <CardDescription>
-                Documents uploaded by the user including resume and LinkedIn profile
+                Documents uploaded by the user including resume and LinkedIn
+                profile
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -279,12 +290,17 @@ export default function UserDetailPage() {
                 <div className="flex flex-col items-center justify-center border border-dashed rounded-lg p-8 text-center text-muted-foreground">
                   <FileIcon className="h-10 w-10 text-muted-foreground mb-2" />
                   <p>No documents have been uploaded yet</p>
-                  <p className="text-sm mt-1">When the user uploads documents, they will appear here</p>
+                  <p className="text-sm mt-1">
+                    When the user uploads documents, they will appear here
+                  </p>
                 </div>
               ) : (
                 <div className="grid gap-3">
                   {userData.documents.map((doc) => (
-                    <div key={doc.id} className="flex items-center justify-between bg-secondary/30 rounded-md p-3">
+                    <div
+                      key={doc.id}
+                      className="flex items-center justify-between bg-secondary/30 rounded-md p-3"
+                    >
                       <div className="flex items-center">
                         <div className="h-10 w-10 bg-secondary/50 rounded flex items-center justify-center mr-3">
                           <File className="h-5 w-5 text-secondary-foreground" />
@@ -297,24 +313,30 @@ export default function UserDetailPage() {
                         </div>
                       </div>
                       <div className="flex gap-2">
-                        <Button 
-                          size="sm" 
+                        <Button
+                          size="sm"
                           variant="outline"
                           onClick={() => {
                             try {
                               // Create a data URL directly from the base64 data
                               const dataUrl = `data:application/pdf;base64,${doc.fileData}`;
-                              
+
                               // Create a temporary link and trigger download
-                              const downloadLink = document.createElement('a');
+                              const downloadLink = document.createElement("a");
                               downloadLink.href = dataUrl;
-                              downloadLink.download = doc.fileName || `${doc.name}.pdf`;
+                              downloadLink.download =
+                                doc.fileName || `${doc.name}.pdf`;
                               document.body.appendChild(downloadLink);
                               downloadLink.click();
                               document.body.removeChild(downloadLink);
                             } catch (error) {
-                              console.error("Error downloading document:", error);
-                              alert("Unable to download document. Please try again later.");
+                              console.error(
+                                "Error downloading document:",
+                                error,
+                              );
+                              alert(
+                                "Unable to download document. Please try again later.",
+                              );
                             }
                           }}
                         >
@@ -346,44 +368,74 @@ export default function UserDetailPage() {
               <div className="flex flex-col items-center justify-center border border-dashed rounded-lg p-8 text-center text-muted-foreground">
                 <FileText className="h-10 w-10 text-muted-foreground mb-2" />
                 <p>No questionnaire data available</p>
-                <p className="text-sm mt-1">User has not completed the questionnaire yet</p>
+                <p className="text-sm mt-1">
+                  User has not completed the questionnaire yet
+                </p>
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-6">
                 <div className="rounded-lg bg-secondary/20 p-4">
-                  <h3 className="text-base font-medium mb-2 text-primary">Industry</h3>
-                  <p className="text-sm">{userData.questionnaire.industry || "Not specified"}</p>
+                  <h3 className="text-base font-medium mb-2 text-primary">
+                    Industry
+                  </h3>
+                  <p className="text-sm">
+                    {userData.questionnaire.industry || "Not specified"}
+                  </p>
                 </div>
-                
+
                 <div className="rounded-lg bg-secondary/20 p-4">
-                  <h3 className="text-base font-medium mb-2 text-primary">Background</h3>
-                  <p className="text-sm">{userData.questionnaire.background || "Not specified"}</p>
+                  <h3 className="text-base font-medium mb-2 text-primary">
+                    Background
+                  </h3>
+                  <p className="text-sm">
+                    {userData.questionnaire.background || "Not specified"}
+                  </p>
                 </div>
-                
+
                 <div className="rounded-lg bg-secondary/20 p-4">
-                  <h3 className="text-base font-medium mb-2 text-primary">Goals</h3>
-                  <p className="text-sm">{userData.questionnaire.goals || "Not specified"}</p>
+                  <h3 className="text-base font-medium mb-2 text-primary">
+                    Goals
+                  </h3>
+                  <p className="text-sm">
+                    {userData.questionnaire.goals || "Not specified"}
+                  </p>
                 </div>
-                
+
                 <div className="rounded-lg bg-secondary/20 p-4">
-                  <h3 className="text-base font-medium mb-2 text-primary">Aspirations</h3>
-                  <p className="text-sm">{userData.questionnaire.aspirations || "Not specified"}</p>
+                  <h3 className="text-base font-medium mb-2 text-primary">
+                    Aspirations
+                  </h3>
+                  <p className="text-sm">
+                    {userData.questionnaire.aspirations || "Not specified"}
+                  </p>
                 </div>
-                
+
                 <div className="rounded-lg bg-secondary/20 p-4">
-                  <h3 className="text-base font-medium mb-2 text-primary">Challenges</h3>
-                  <p className="text-sm">{userData.questionnaire.challenges || "Not specified"}</p>
+                  <h3 className="text-base font-medium mb-2 text-primary">
+                    Challenges
+                  </h3>
+                  <p className="text-sm">
+                    {userData.questionnaire.challenges || "Not specified"}
+                  </p>
                 </div>
-                
+
                 <div className="rounded-lg bg-secondary/20 p-4">
-                  <h3 className="text-base font-medium mb-2 text-primary">Interests</h3>
-                  <p className="text-sm">{userData.questionnaire.interests || "Not specified"}</p>
+                  <h3 className="text-base font-medium mb-2 text-primary">
+                    Interests
+                  </h3>
+                  <p className="text-sm">
+                    {userData.questionnaire.interests || "Not specified"}
+                  </p>
                 </div>
-                
+
                 {userData.questionnaire.timeframe && (
                   <div className="rounded-lg bg-secondary/20 p-4 md:col-span-2">
-                    <h3 className="text-base font-medium mb-2 text-primary">Timeframe</h3>
-                    <p className="text-sm">{userData.questionnaire.timeframe}</p>
+                    <h3 className="text-base font-medium mb-2 text-primary">
+                      Timeframe
+                    </h3>
+                    <p className="text-sm">
+                      {userData.questionnaire.timeframe}
+                    </p>
                   </div>
                 )}
               </div>
@@ -403,7 +455,8 @@ export default function UserDetailPage() {
             </CardDescription>
             {mostRecentCheckIn && (
               <Badge variant="outline" className="mt-2 inline-flex w-auto">
-                Most recent: {formatDate(mostRecentCheckIn.createdAt.toString())}
+                Most recent:{" "}
+                {formatDate(mostRecentCheckIn.createdAt.toString())}
               </Badge>
             )}
           </CardHeader>
@@ -412,7 +465,9 @@ export default function UserDetailPage() {
               <div className="flex flex-col items-center justify-center border border-dashed rounded-lg p-8 text-center text-muted-foreground">
                 <Calendar className="h-10 w-10 text-muted-foreground mb-2" />
                 <p>No monthly check-in data available</p>
-                <p className="text-sm mt-1">User has not submitted any monthly check-ins yet</p>
+                <p className="text-sm mt-1">
+                  User has not submitted any monthly check-ins yet
+                </p>
               </div>
             ) : (
               <ScrollArea className="h-[400px] rounded-md border">
@@ -429,10 +484,23 @@ export default function UserDetailPage() {
                   </TableHeader>
                   <TableBody>
                     {userData.monthlyCheckIns
-                      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+                      .sort(
+                        (a, b) =>
+                          new Date(b.createdAt).getTime() -
+                          new Date(a.createdAt).getTime(),
+                      )
                       .map((checkIn) => (
-                        <TableRow key={checkIn.id} className={mostRecentCheckIn?.id === checkIn.id ? "bg-primary/5" : ""}>
-                          <TableCell className="font-medium">{checkIn.month}</TableCell>
+                        <TableRow
+                          key={checkIn.id}
+                          className={
+                            mostRecentCheckIn?.id === checkIn.id
+                              ? "bg-primary/5"
+                              : ""
+                          }
+                        >
+                          <TableCell className="font-medium">
+                            {checkIn.month}
+                          </TableCell>
                           <TableCell>{checkIn.contentPosts}</TableCell>
                           <TableCell>
                             <Badge variant="outline" className="font-normal">
@@ -441,14 +509,20 @@ export default function UserDetailPage() {
                           </TableCell>
                           <TableCell>{checkIn.newConnections}</TableCell>
                           <TableCell>
-                            <Badge 
+                            <Badge
                               variant={
-                                checkIn.recommendationImplementation === 'fully' ? 'default' :
-                                checkIn.recommendationImplementation === 'mostly' ? 'secondary' :
-                                checkIn.recommendationImplementation === 'partially' ? 'outline' :
-                                'destructive'
+                                checkIn.recommendationImplementation === "fully"
+                                  ? "default"
+                                  : checkIn.recommendationImplementation ===
+                                      "mostly"
+                                    ? "secondary"
+                                    : checkIn.recommendationImplementation ===
+                                        "partially"
+                                      ? "outline"
+                                      : "destructive"
                               }
-                              className="font-normal capitalize">
+                              className="font-normal capitalize"
+                            >
                               {checkIn.recommendationImplementation}
                             </Badge>
                           </TableCell>

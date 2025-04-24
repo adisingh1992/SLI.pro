@@ -28,33 +28,124 @@ Timeframe: ${questionnaire.timeframe || "Not specified"}
 }
 
 /**
- * Extracts and summarizes user information from their resume
+ * Analyzes and summarizes user information from their resume
  */
 async function summarizeResume(document: any): Promise<string> {
   if (!document) return "No resume available";
   
-  return `Resume filename: ${document.fileName}
-Note: The resume content has been uploaded as a PDF and is available for reference.`;
+  try {
+    // If the fileData is available, analyze it with Claude
+    if (document.fileData) {
+      log(`Analyzing resume content for document: ${document.name}`, "claude");
+      
+      const systemPrompt = `You are an expert resume analyst. Your task is to analyze a resume and extract the key information in a structured summary. 
+      Focus on work experience, skills, education, achievements, and any unique qualifications. 
+      Be concise but comprehensive, capturing the essence of the person's professional background.`;
+      
+      const userPrompt = `Please analyze this resume and provide a structured summary of the key information:
+
+${document.fileData}`;
+      
+      const response = await anthropic.messages.create({
+        model: CLAUDE_MODEL,
+        system: systemPrompt,
+        max_tokens: 1024,
+        temperature: 0.5,
+        messages: [{ role: "user", content: userPrompt }]
+      });
+      
+      const summary = response.content.find(item => item.type === 'text')?.text || '';
+      return `Resume Analysis (${document.fileName}):\n${summary}`;
+    } else {
+      return `Resume filename: ${document.fileName}\nNote: The resume content is not available for detailed analysis.`;
+    }
+  } catch (error) {
+    log(`Error analyzing resume: ${error}`, "claude");
+    return `Resume filename: ${document.fileName}\nNote: Could not analyze the resume content due to an error.`;
+  }
 }
 
 /**
- * Extracts and summarizes user information from their LinkedIn profile
+ * Analyzes and summarizes user information from their LinkedIn profile
  */
 async function summarizeLinkedIn(document: any): Promise<string> {
   if (!document) return "No LinkedIn profile available";
   
-  return `LinkedIn profile filename: ${document.fileName}
-Note: The LinkedIn profile has been uploaded as a PDF and is available for reference.`;
+  try {
+    // If the fileData is available, analyze it with Claude
+    if (document.fileData) {
+      log(`Analyzing LinkedIn profile content for document: ${document.name}`, "claude");
+      
+      const systemPrompt = `You are an expert LinkedIn profile analyst. Your task is to analyze a LinkedIn profile and extract the key information in a structured summary. 
+      Focus on work experience, skills, endorsements, recommendations, education, and any unique qualifications or networking patterns. 
+      Be concise but comprehensive, capturing the essence of the person's professional presence and personal brand.`;
+      
+      const userPrompt = `Please analyze this LinkedIn profile and provide a structured summary of the key information:
+
+${document.fileData}`;
+      
+      const response = await anthropic.messages.create({
+        model: CLAUDE_MODEL,
+        system: systemPrompt,
+        max_tokens: 1024,
+        temperature: 0.5,
+        messages: [{ role: "user", content: userPrompt }]
+      });
+      
+      const summary = response.content.find(item => item.type === 'text')?.text || '';
+      return `LinkedIn Profile Analysis (${document.fileName}):\n${summary}`;
+    } else {
+      return `LinkedIn profile filename: ${document.fileName}\nNote: The LinkedIn profile content is not available for detailed analysis.`;
+    }
+  } catch (error) {
+    log(`Error analyzing LinkedIn profile: ${error}`, "claude");
+    return `LinkedIn profile filename: ${document.fileName}\nNote: Could not analyze the LinkedIn profile content due to an error.`;
+  }
 }
 
 /**
- * Extracts and summarizes user information from additional documents
+ * Analyzes and summarizes user information from additional documents
  */
 async function summarizeAdditionalDocs(documents: any[]): Promise<string> {
   if (!documents || documents.length === 0) return "No additional documents available";
   
-  return `Additional documents available:
-${documents.map(doc => `- ${doc.name} (${doc.fileName})`).join('\n')}`;
+  const summaries = [];
+  
+  // Process each document
+  for (const doc of documents) {
+    try {
+      // If the fileData is available, analyze it with Claude
+      if (doc.fileData) {
+        log(`Analyzing additional document content for: ${doc.name}`, "claude");
+        
+        const systemPrompt = `You are an expert document analyst. Your task is to analyze a document and extract the key information in a short summary. 
+        Focus on the type of document, its main content, key points, and how it relates to the person's professional background or aspirations.
+        Be concise but informative, capturing the essence of the document in a few paragraphs.`;
+        
+        const userPrompt = `Please analyze this document (${doc.name}) and provide a concise summary of its content and relevance:
+
+${doc.fileData}`;
+        
+        const response = await anthropic.messages.create({
+          model: CLAUDE_MODEL,
+          system: systemPrompt,
+          max_tokens: 512,
+          temperature: 0.5,
+          messages: [{ role: "user", content: userPrompt }]
+        });
+        
+        const summary = response.content.find(item => item.type === 'text')?.text || '';
+        summaries.push(`Document: ${doc.name} (${doc.fileName})\nSummary: ${summary}`);
+      } else {
+        summaries.push(`Document: ${doc.name} (${doc.fileName})\nNote: Content not available for analysis.`);
+      }
+    } catch (error) {
+      log(`Error analyzing additional document ${doc.name}: ${error}`, "claude");
+      summaries.push(`Document: ${doc.name} (${doc.fileName})\nNote: Could not analyze the document content due to an error.`);
+    }
+  }
+  
+  return `Additional Documents Analysis:\n\n${summaries.join('\n\n')}`;
 }
 
 /**

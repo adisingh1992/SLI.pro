@@ -247,6 +247,7 @@ export default function SliPage() {
                       <TabsList className="mb-4">
                         <TabsTrigger value="statements">SLI Statements</TabsTrigger>
                         <TabsTrigger value="selection">Selection</TabsTrigger>
+                        <TabsTrigger value="sources">Document Analysis</TabsTrigger>
                       </TabsList>
                       <TabsContent value="statements" className="space-y-4">
                         <div className="grid grid-cols-1 gap-6">
@@ -318,6 +319,137 @@ export default function SliPage() {
                               </div>
                             </div>
                           </RadioGroup>
+                        </div>
+                      </TabsContent>
+                      
+                      <TabsContent value="sources">
+                        <div className="space-y-6">
+                          <p className="text-muted-foreground mb-6">
+                            The SLI generation process analyzed the following documents and user data to create personalized SLI options:
+                          </p>
+                          
+                          {/* Document Analysis Section */}
+                          <div className="space-y-6">
+                            {/* Resume Analysis */}
+                            {userData?.documents?.find(doc => doc.type === 'resume') ? (
+                              <div className="rounded-lg border overflow-hidden">
+                                <div className="bg-muted px-4 py-3">
+                                  <h3 className="font-semibold flex items-center gap-2">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-file-text"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/><line x1="16" x2="8" y1="13" y2="13"/><line x1="16" x2="8" y1="17" y2="17"/><line x1="10" x2="8" y1="9" y2="9"/></svg>
+                                    Resume Analysis
+                                  </h3>
+                                </div>
+                                <div className="p-4 max-h-64 overflow-y-auto bg-card">
+                                  <p className="whitespace-pre-wrap text-sm">
+                                    {userData?.documents.find(doc => doc.type === 'resume')?.analysisContent || 
+                                    "AI analyzed this resume to extract key professional information, including work experience, skills, education, and achievements. This information helped generate SLIs that reflect the user's professional background and qualifications."}
+                                  </p>
+                                </div>
+                              </div>
+                            ) : null}
+                            
+                            {/* LinkedIn Analysis */}
+                            {userData?.documents?.find(doc => doc.type === 'linkedin') ? (
+                              <div className="rounded-lg border overflow-hidden">
+                                <div className="bg-muted px-4 py-3">
+                                  <h3 className="font-semibold flex items-center gap-2">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-linkedin"><path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6z"/><rect width="4" height="12" x="2" y="9"/><circle cx="4" cy="4" r="2"/></svg>
+                                    LinkedIn Profile Analysis
+                                  </h3>
+                                </div>
+                                <div className="p-4 max-h-64 overflow-y-auto bg-card">
+                                  <p className="whitespace-pre-wrap text-sm">
+                                    {userData?.documents.find(doc => doc.type === 'linkedin')?.analysisContent || 
+                                    "AI analyzed this LinkedIn profile to understand the user's professional network, endorsements, recommendations, and public professional presence. This information contributed to creating SLIs that align with the user's professional brand."}
+                                  </p>
+                                </div>
+                              </div>
+                            ) : null}
+                            
+                            {/* Additional Documents Analysis */}
+                            {userData?.documents?.filter(doc => doc.type !== 'resume' && doc.type !== 'linkedin').length > 0 ? (
+                              <div className="rounded-lg border overflow-hidden">
+                                <div className="bg-muted px-4 py-3">
+                                  <h3 className="font-semibold flex items-center gap-2">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-files"><path d="M15.5 2H8.6c-.4 0-.8.2-1.1.5-.3.3-.5.7-.5 1.1v12.8c0 .4.2.8.5 1.1.3.3.7.5 1.1.5h9.8c.4 0 .8-.2 1.1-.5.3-.3.5-.7.5-1.1V6.5L15.5 2z"/><path d="M3 7.6v12.8c0 .4.2.8.5 1.1.3.3.7.5 1.1.5h9.8"/><path d="M15 2v5h5"/></svg>
+                                    Additional Documents Analysis
+                                  </h3>
+                                </div>
+                                <div className="p-4 max-h-64 overflow-y-auto bg-card">
+                                  {userData?.documents?.filter(doc => doc.type !== 'resume' && doc.type !== 'linkedin').map((doc, i) => (
+                                    <div key={i} className="mb-4 pb-4 border-b last:border-b-0 last:mb-0 last:pb-0">
+                                      <h4 className="font-medium mb-1">{doc.name}</h4>
+                                      <p className="whitespace-pre-wrap text-sm">
+                                        {doc.analysisContent || 
+                                        "AI analyzed this document to extract relevant information for SLI generation, complementing insights from the resume and LinkedIn profile."}
+                                      </p>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            ) : null}
+                            
+                            {/* Questionnaire Analysis */}
+                            {userData?.questionnaire ? (
+                              <div className="rounded-lg border overflow-hidden">
+                                <div className="bg-muted px-4 py-3">
+                                  <h3 className="font-semibold flex items-center gap-2">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-clipboard-list"><rect width="8" height="4" x="8" y="2" rx="1" ry="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="M12 11h4"/><path d="M12 16h4"/><path d="M8 11h.01"/><path d="M8 16h.01"/></svg>
+                                    Questionnaire Analysis
+                                  </h3>
+                                </div>
+                                <div className="p-4 max-h-64 overflow-y-auto bg-card">
+                                  <p className="whitespace-pre-wrap text-sm">
+                                    The AI analyzed the following questionnaire responses:
+                                  </p>
+                                  <div className="mt-2 space-y-2">
+                                    {userData.questionnaire.industry && (
+                                      <div className="bg-muted/40 p-2 rounded">
+                                        <span className="font-medium">Industry:</span> {userData.questionnaire.industry}
+                                      </div>
+                                    )}
+                                    {userData.questionnaire.background && (
+                                      <div className="bg-muted/40 p-2 rounded">
+                                        <span className="font-medium">Background:</span> {userData.questionnaire.background}
+                                      </div>
+                                    )}
+                                    {userData.questionnaire.goals && (
+                                      <div className="bg-muted/40 p-2 rounded">
+                                        <span className="font-medium">Goals:</span> {userData.questionnaire.goals}
+                                      </div>
+                                    )}
+                                    {userData.questionnaire.aspirations && (
+                                      <div className="bg-muted/40 p-2 rounded">
+                                        <span className="font-medium">Aspirations:</span> {userData.questionnaire.aspirations}
+                                      </div>
+                                    )}
+                                    {userData.questionnaire.challenges && (
+                                      <div className="bg-muted/40 p-2 rounded">
+                                        <span className="font-medium">Challenges:</span> {userData.questionnaire.challenges}
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
+                            ) : null}
+                            
+                            {/* Conversation Summary */}
+                            {userData?.conversationSummaries && userData.conversationSummaries.length > 0 ? (
+                              <div className="rounded-lg border overflow-hidden">
+                                <div className="bg-muted px-4 py-3">
+                                  <h3 className="font-semibold flex items-center gap-2">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-message-square"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                                    Conversation Insights
+                                  </h3>
+                                </div>
+                                <div className="p-4 max-h-64 overflow-y-auto bg-card">
+                                  <p className="whitespace-pre-wrap text-sm">
+                                    The AI incorporated insights from the user's conversations with the platform, including career aspirations, strengths, challenges, and specific goals discussed during those interactions.
+                                  </p>
+                                </div>
+                              </div>
+                            ) : null}
+                          </div>
                         </div>
                       </TabsContent>
                     </Tabs>
