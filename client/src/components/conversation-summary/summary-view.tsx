@@ -13,7 +13,7 @@ import { AlertCircle, RefreshCw } from 'lucide-react';
 import { apiRequest } from '@/lib/queryClient';
 
 interface ConversationSummaryViewProps {
-  id: number;
+  id: number | string;
   isAdmin?: boolean;
   userId?: number;
 }
