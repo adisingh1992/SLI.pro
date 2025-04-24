@@ -346,6 +346,43 @@ export const insertCoachingNoteSchema = createInsertSchema(coachingNotes).omit({
 export type InsertCoachingNote = z.infer<typeof insertCoachingNoteSchema>;
 export type CoachingNote = typeof coachingNotes.$inferSelect;
 
+// SLIs (Single Lasting Impressions) schema
+export const slis = pgTable("slis", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
+  adminId: integer("admin_id").notNull().references(() => users.id), // The admin who generated the SLIs
+  title1: text("title1").notNull(),
+  statement1: text("statement1").notNull(),
+  rationale1: text("rationale1").notNull(),
+  title2: text("title2").notNull(),
+  statement2: text("statement2").notNull(),
+  rationale2: text("rationale2").notNull(),
+  title3: text("title3").notNull(),
+  statement3: text("statement3").notNull(),
+  rationale3: text("rationale3").notNull(),
+  selectedSliIndex: integer("selected_sli_index"), // 1, 2, or 3, null if not selected yet
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const insertSliSchema = createInsertSchema(slis).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const updateSliSchema = createInsertSchema(slis).omit({
+  id: true,
+  userId: true,
+  adminId: true,
+  createdAt: true,
+  updatedAt: true,
+}).partial();
+
+export type InsertSli = z.infer<typeof insertSliSchema>;
+export type UpdateSli = z.infer<typeof updateSliSchema>;
+export type Sli = typeof slis.$inferSelect;
+
 export type UserProfile = User & {
   experiences?: Experience[];
   education?: Education[];
@@ -359,4 +396,5 @@ export type UserProfile = User & {
   monthlyCheckIns?: MonthlyCheckIn[];
   freshnessReports?: FreshnessReport[];
   coachingNotes?: CoachingNote[];
+  slis?: Sli[];
 };
