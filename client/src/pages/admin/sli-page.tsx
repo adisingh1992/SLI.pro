@@ -1,0 +1,333 @@
+import { useEffect, useState } from "react";
+import { useLocation, useParams } from "wouter";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { Sli } from "@shared/schema";
+import { queryClient } from "@/lib/queryClient";
+import { useAuth } from "@/hooks/use-auth";
+
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { useToast } from "@/hooks/use-toast";
+import Layout from "./layout";
+import { ArrowLeft, RefreshCw, CheckCircle2 } from "lucide-react";
+import { Separator } from "@/components/ui/separator";
+import { formatDistanceToNow } from "date-fns";
+import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Label } from "@/components/ui/label";
+
+export default function SliPage() {
+  const { user } = useAuth();
+  const { userId } = useParams();
+  const [_, navigate] = useLocation();
+  const { toast } = useToast();
+
+  // Fetch user data
+  const { data: userData } = useQuery({
+    queryKey: [`/api/admin/users/${userId}`],
+    queryFn: async () => {
+      const res = await fetch(`/api/admin/users/${userId}`);
+      if (!res.ok) throw new Error("Failed to fetch user");
+      return res.json();
+    },
+    enabled: !!userId && !!user?.isAdmin,
+  });
+
+  // Fetch SLIs
+  const { data: slis, isLoading: slisLoading, refetch: refetchSlis } = useQuery({
+    queryKey: [`/api/admin/users/${userId}/slis`],
+    queryFn: async () => {
+      const res = await fetch(`/api/admin/users/${userId}/slis`);
+      if (!res.ok) throw new Error("Failed to fetch SLIs");
+      return res.json();
+    },
+    enabled: !!userId && !!user?.isAdmin,
+  });
+
+  // Generate SLIs
+  const generateSliMutation = useMutation({
+    mutationFn: async () => {
+      const res = await fetch(`/api/admin/users/${userId}/slis/generate`, {
+        method: "POST",
+      });
+      
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.message || "Failed to generate SLIs");
+      }
+      
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [`/api/admin/users/${userId}/slis`] });
+      toast({
+        title: "Success",
+        description: "SLIs generated successfully",
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Update SLI
+  const updateSliMutation = useMutation({
+    mutationFn: async ({ id, selectedSliIndex }: { id: number; selectedSliIndex: number | null }) => {
+      const res = await fetch(`/api/admin/slis/${id}`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          selectedSliIndex,
+        }),
+      });
+      
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.message || "Failed to update SLI");
+      }
+      
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [`/api/admin/users/${userId}/slis`] });
+      toast({
+        title: "Success",
+        description: "SLI updated successfully",
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Delete SLI
+  const deleteSliMutation = useMutation({
+    mutationFn: async (id: number) => {
+      const res = await fetch(`/api/admin/slis/${id}`, {
+        method: "DELETE",
+      });
+      
+      if (!res.ok) {
+        throw new Error("Failed to delete SLI");
+      }
+      
+      return true;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [`/api/admin/users/${userId}/slis`] });
+      toast({
+        title: "Success",
+        description: "SLI deleted successfully",
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Format a date string
+  const formatDate = (dateString: string) => {
+    try {
+      return new Date(dateString).toLocaleDateString('en-US', { 
+        year: 'numeric', 
+        month: 'long', 
+        day: 'numeric' 
+      });
+    } catch (error) {
+      return 'Invalid date';
+    }
+  };
+
+  // Handle selecting an SLI
+  const handleSelectSli = (sli: Sli, index: number | null) => {
+    updateSliMutation.mutate({ id: sli.id, selectedSliIndex: index });
+  };
+
+  return (
+    <Layout>
+      <div className="space-y-6 p-6">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-2">
+            <Button 
+              variant="outline" 
+              size="icon" 
+              onClick={() => navigate(`/admin/users/${userId}`)}
+            >
+              <ArrowLeft className="h-4 w-4" />
+            </Button>
+            <h1 className="text-2xl font-bold">
+              SLIs for {userData?.firstName} {userData?.lastName}
+            </h1>
+          </div>
+          <Button 
+            variant="default" 
+            onClick={() => generateSliMutation.mutate()}
+            disabled={generateSliMutation.isPending}
+            className="flex items-center gap-2"
+          >
+            <RefreshCw className={`h-4 w-4 ${generateSliMutation.isPending ? 'animate-spin' : ''}`} />
+            {generateSliMutation.isPending ? 'Generating...' : 'Generate SLIs'}
+          </Button>
+        </div>
+
+        <div className="space-y-6">
+          {slisLoading ? (
+            <Card>
+              <CardContent className="pt-6 flex justify-center">
+                <p>Loading SLIs...</p>
+              </CardContent>
+            </Card>
+          ) : !slis || slis.length === 0 ? (
+            <Card>
+              <CardContent className="pt-6">
+                <div className="flex flex-col items-center justify-center text-center p-6">
+                  <div className="h-20 w-20 bg-muted rounded-full flex items-center justify-center mb-4">
+                    <RefreshCw className="h-10 w-10 text-muted-foreground" />
+                  </div>
+                  <h3 className="text-xl font-medium mb-2">No SLIs Generated Yet</h3>
+                  <p className="text-muted-foreground mb-4">
+                    Generate SLIs to provide single lasting impressions based on user data
+                  </p>
+                  <Button 
+                    onClick={() => generateSliMutation.mutate()}
+                    disabled={generateSliMutation.isPending}
+                  >
+                    {generateSliMutation.isPending ? 'Generating...' : 'Generate SLIs Now'}
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="space-y-8">
+              {slis.map((sli: Sli) => (
+                <Card key={sli.id} className="overflow-hidden">
+                  <CardHeader className="bg-muted/50">
+                    <div className="flex justify-between items-center">
+                      <div>
+                        <CardTitle className="text-xl">SLI Set</CardTitle>
+                        <CardDescription>
+                          Generated on {formatDate(sli.createdAt.toString())} ({formatDistanceToNow(new Date(sli.createdAt), { addSuffix: true })})
+                        </CardDescription>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {sli.selectedSliIndex !== null && (
+                          <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
+                            <CheckCircle2 className="h-3 w-3 mr-1" />
+                            Selected
+                          </Badge>
+                        )}
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          onClick={() => deleteSliMutation.mutate(sli.id)}
+                          className="text-destructive hover:text-destructive"
+                        >
+                          Delete
+                        </Button>
+                      </div>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="pt-6">
+                    <Tabs defaultValue="statements" className="w-full">
+                      <TabsList className="mb-4">
+                        <TabsTrigger value="statements">SLI Statements</TabsTrigger>
+                        <TabsTrigger value="selection">Selection</TabsTrigger>
+                      </TabsList>
+                      <TabsContent value="statements" className="space-y-4">
+                        <div className="grid grid-cols-1 gap-6">
+                          <div className="p-4 rounded-lg border bg-card">
+                            <h3 className="text-lg font-medium text-primary mb-2">{sli.title1}</h3>
+                            <p className="mb-4">{sli.statement1}</p>
+                            <div className="bg-muted/40 p-3 rounded-md">
+                              <h4 className="text-sm font-medium mb-1">Rationale:</h4>
+                              <p className="text-sm text-muted-foreground">{sli.rationale1}</p>
+                            </div>
+                          </div>
+                          
+                          <div className="p-4 rounded-lg border bg-card">
+                            <h3 className="text-lg font-medium text-primary mb-2">{sli.title2}</h3>
+                            <p className="mb-4">{sli.statement2}</p>
+                            <div className="bg-muted/40 p-3 rounded-md">
+                              <h4 className="text-sm font-medium mb-1">Rationale:</h4>
+                              <p className="text-sm text-muted-foreground">{sli.rationale2}</p>
+                            </div>
+                          </div>
+                          
+                          <div className="p-4 rounded-lg border bg-card">
+                            <h3 className="text-lg font-medium text-primary mb-2">{sli.title3}</h3>
+                            <p className="mb-4">{sli.statement3}</p>
+                            <div className="bg-muted/40 p-3 rounded-md">
+                              <h4 className="text-sm font-medium mb-1">Rationale:</h4>
+                              <p className="text-sm text-muted-foreground">{sli.rationale3}</p>
+                            </div>
+                          </div>
+                        </div>
+                      </TabsContent>
+                      <TabsContent value="selection">
+                        <div className="space-y-6">
+                          <p className="text-muted-foreground">
+                            Select the most impactful SLI statement to be used as the primary single lasting impression for this user:
+                          </p>
+                          <RadioGroup 
+                            value={sli.selectedSliIndex !== null ? sli.selectedSliIndex.toString() : undefined}
+                            onValueChange={(value) => handleSelectSli(sli, value ? parseInt(value) : null)}
+                            className="space-y-6"
+                          >
+                            <div className="flex items-start space-x-3 p-4 rounded-lg border">
+                              <RadioGroupItem value="0" id={`sli-${sli.id}-0`} className="mt-1" />
+                              <div className="grid gap-1.5">
+                                <Label htmlFor={`sli-${sli.id}-0`} className="font-medium text-primary">
+                                  {sli.title1}
+                                </Label>
+                                <p className="text-sm text-muted-foreground mb-1">{sli.statement1}</p>
+                              </div>
+                            </div>
+                            
+                            <div className="flex items-start space-x-3 p-4 rounded-lg border">
+                              <RadioGroupItem value="1" id={`sli-${sli.id}-1`} className="mt-1" />
+                              <div className="grid gap-1.5">
+                                <Label htmlFor={`sli-${sli.id}-1`} className="font-medium text-primary">
+                                  {sli.title2}
+                                </Label>
+                                <p className="text-sm text-muted-foreground mb-1">{sli.statement2}</p>
+                              </div>
+                            </div>
+                            
+                            <div className="flex items-start space-x-3 p-4 rounded-lg border">
+                              <RadioGroupItem value="2" id={`sli-${sli.id}-2`} className="mt-1" />
+                              <div className="grid gap-1.5">
+                                <Label htmlFor={`sli-${sli.id}-2`} className="font-medium text-primary">
+                                  {sli.title3}
+                                </Label>
+                                <p className="text-sm text-muted-foreground mb-1">{sli.statement3}</p>
+                              </div>
+                            </div>
+                          </RadioGroup>
+                        </div>
+                      </TabsContent>
+                    </Tabs>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    </Layout>
+  );
+}
