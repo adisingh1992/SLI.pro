@@ -237,7 +237,7 @@ export async function analyzeDocument(document: Document): Promise<string | null
         Format your analysis as a detailed but concise summary that captures the essence of this person's professional profile.`;
         break;
       case "linkedin":
-        analysisPrompt = `Provide a thorough analysis of this LinkedIn profile PDF. 
+        analysisPrompt = `Provide a thorough analysis of this LinkedIn profile. 
         Include details about:
         - Professional summary and headline
         - Career progression and roles
@@ -276,38 +276,38 @@ export async function analyzeDocument(document: Document): Promise<string | null
         analysisPrompt = `Analyze this document thoroughly. Extract the main points, key information, and any insights relevant to professional branding and career development. Format your analysis as a detailed but concise summary.`;
     }
 
-    // Send to Claude for analysis
+    // Since we're having issues with image processing, let's send just the text content
+    // of the document directly in the prompt
+    const fullPrompt = `${analysisPrompt}\n\nDocument content:\n${document.fileData}`;
+
+    // Send to Claude for analysis as text-only
     const response = await anthropic.messages.create({
       model: CLAUDE_MODEL,
       messages: [
         { 
           role: "user", 
-          content: [
-            {
-              type: "text", 
-              text: analysisPrompt
-            },
-            {
-              type: "image",
-              source: {
-                type: "base64",
-                media_type: "image/jpeg",  // Claude accepts PDF content as images
-                data: document.fileData
-              }
-            }
-          ]
+          content: fullPrompt
         }
       ],
       max_tokens: 4096,
-      temperature: 0.2,
+      temperature: 0.5,
     });
 
     // Extract the analysis text from the response
     if (response.content && response.content.length > 0) {
-      const textContent = response.content.filter(item => item.type === "text");
-      if (textContent.length > 0 && "text" in textContent[0]) {
-        return textContent[0].text;
+      const textContent = response.content[0].text;
+      
+      // Save the analysis to the database
+      if (textContent) {
+        try {
+          await storage.updateDocument(document.id, { analysisContent: textContent });
+          log(`Saved analysis for document: ${document.name}`, "claude");
+        } catch (saveError) {
+          log(`Error saving document analysis: ${saveError}`, "claude");
+        }
       }
+      
+      return textContent;
     }
 
     return null;
@@ -443,7 +443,7 @@ Timeframe: ${q.timeframe || "Not specified"}
       model: CLAUDE_MODEL,
       system: systemPrompt,
       max_tokens: 4096,
-      temperature: 0.2,
+      temperature: 0.5,
       messages: summaryRequest,
     });
 
