@@ -124,7 +124,8 @@ export const documents = pgTable("documents", {
   type: text("type").notNull(), // document type: "resume", "linkedin", "certificate", etc.
   fileName: text("file_name").notNull(),
   fileData: text("file_data").notNull(), // Base64 encoded PDF data
-  uploadedAt: timestamp("uploaded_at").defaultNow().notNull()
+  uploadedAt: timestamp("uploaded_at").defaultNow().notNull(),
+  analysisContent: text("analysis_content"), // AI-generated analysis of document content
 });
 
 export const insertDocumentSchema = createInsertSchema(documents).omit({

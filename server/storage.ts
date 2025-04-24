@@ -61,6 +61,7 @@ export interface IStorage {
   getDocuments(userId: number): Promise<Document[]>;
   getDocument(id: number): Promise<Document | undefined>;
   createDocument(document: InsertDocument): Promise<Document>;
+  updateDocument(id: number, data: Partial<Document>): Promise<Document | undefined>;
   deleteDocument(id: number): Promise<void>;
   
   // Profile operations
@@ -417,6 +418,15 @@ export class MemStorage implements IStorage {
     };
     this.documents.set(id, newDocument);
     return newDocument;
+  }
+  
+  async updateDocument(id: number, data: Partial<Document>): Promise<Document | undefined> {
+    const document = await this.getDocument(id);
+    if (!document) return undefined;
+    
+    const updatedDocument = { ...document, ...data };
+    this.documents.set(id, updatedDocument);
+    return updatedDocument;
   }
   
   async deleteDocument(id: number): Promise<void> {

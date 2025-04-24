@@ -1,6 +1,7 @@
 import { Anthropic } from '@anthropic-ai/sdk';
 import { InsertSli, Sli, UserProfile } from '@shared/schema';
 import { log } from './vite';
+import { storage } from './storage';
 
 const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY;
 const CLAUDE_MODEL = process.env.CLAUDE_MODEL || 'claude-3-7-sonnet-20250219';
@@ -34,6 +35,12 @@ async function summarizeResume(document: any): Promise<string> {
   if (!document) return "No resume available";
   
   try {
+    // Check if we already have an analysis saved
+    if (document.analysisContent) {
+      log(`Using existing resume analysis for document: ${document.name}`, "claude");
+      return `Resume Analysis (${document.fileName}):\n${document.analysisContent}`;
+    }
+    
     // If the fileData is available, analyze it with Claude
     if (document.fileData) {
       log(`Analyzing resume content for document: ${document.name}`, "claude");
@@ -55,6 +62,17 @@ ${document.fileData}`;
       });
       
       const summary = response.content.find(item => item.type === 'text')?.text || '';
+      
+      // Save the analysis to the database
+      if (summary) {
+        try {
+          await storage.updateDocument(document.id, { analysisContent: summary });
+          log(`Saved resume analysis for document: ${document.name}`, "claude");
+        } catch (saveError) {
+          log(`Error saving resume analysis: ${saveError}`, "claude");
+        }
+      }
+      
       return `Resume Analysis (${document.fileName}):\n${summary}`;
     } else {
       return `Resume filename: ${document.fileName}\nNote: The resume content is not available for detailed analysis.`;
@@ -72,6 +90,12 @@ async function summarizeLinkedIn(document: any): Promise<string> {
   if (!document) return "No LinkedIn profile available";
   
   try {
+    // Check if we already have an analysis saved
+    if (document.analysisContent) {
+      log(`Using existing LinkedIn analysis for document: ${document.name}`, "claude");
+      return `LinkedIn Profile Analysis (${document.fileName}):\n${document.analysisContent}`;
+    }
+    
     // If the fileData is available, analyze it with Claude
     if (document.fileData) {
       log(`Analyzing LinkedIn profile content for document: ${document.name}`, "claude");
@@ -93,6 +117,17 @@ ${document.fileData}`;
       });
       
       const summary = response.content.find(item => item.type === 'text')?.text || '';
+      
+      // Save the analysis to the database
+      if (summary) {
+        try {
+          await storage.updateDocument(document.id, { analysisContent: summary });
+          log(`Saved LinkedIn analysis for document: ${document.name}`, "claude");
+        } catch (saveError) {
+          log(`Error saving LinkedIn analysis: ${saveError}`, "claude");
+        }
+      }
+      
       return `LinkedIn Profile Analysis (${document.fileName}):\n${summary}`;
     } else {
       return `LinkedIn profile filename: ${document.fileName}\nNote: The LinkedIn profile content is not available for detailed analysis.`;
@@ -114,6 +149,13 @@ async function summarizeAdditionalDocs(documents: any[]): Promise<string> {
   // Process each document
   for (const doc of documents) {
     try {
+      // Check if we already have an analysis saved
+      if (doc.analysisContent) {
+        log(`Using existing analysis for document: ${doc.name}`, "claude");
+        summaries.push(`Document: ${doc.name} (${doc.fileName})\nSummary: ${doc.analysisContent}`);
+        continue;
+      }
+      
       // If the fileData is available, analyze it with Claude
       if (doc.fileData) {
         log(`Analyzing additional document content for: ${doc.name}`, "claude");
@@ -135,6 +177,17 @@ ${doc.fileData}`;
         });
         
         const summary = response.content.find(item => item.type === 'text')?.text || '';
+        
+        // Save the analysis to the database
+        if (summary) {
+          try {
+            await storage.updateDocument(doc.id, { analysisContent: summary });
+            log(`Saved analysis for document: ${doc.name}`, "claude");
+          } catch (saveError) {
+            log(`Error saving document analysis: ${saveError}`, "claude");
+          }
+        }
+        
         summaries.push(`Document: ${doc.name} (${doc.fileName})\nSummary: ${summary}`);
       } else {
         summaries.push(`Document: ${doc.name} (${doc.fileName})\nNote: Content not available for analysis.`);
