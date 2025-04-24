@@ -3,7 +3,6 @@ import { log } from "./vite";
 import { storage } from "./storage";
 import { InsertConversationSummary } from "@shared/schema";
 // Update imports to use namespace import syntax for compatibility
-import type * as AnthropicTypes from "@anthropic-ai/sdk";
 
 // Check if API key is available
 if (!process.env.ANTHROPIC_API_KEY) {
