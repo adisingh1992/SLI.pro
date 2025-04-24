@@ -1,0 +1,77 @@
+Feature Request: “SLIs” Module in Admin Section
+Purpose:
+Create a new feature within the Admin Section titled “SLIs” (Single Lasting Impressions). This feature will generate three distinct SLI options for each user by leveraging Claude as a branding expert.
+
+Claude’s Role: Branding Expert for SLI.pro
+Claude should be prompted to act as a professional branding strategist, crafting three powerful, distinct SLIs for a user based on submitted materials and coaching insights. Each SLI should balance authenticity and aspiration, serving as a conversationally shareable brand statement.
+
+Input Sources (Processed Sequentially due to API token limits):
+Process each of the following one at a time, summarizing the data before feeding it to Claude:
+
+Branding Questionnaire
+
+Summarize key answers to identify values, strengths, and goals.
+
+Resume (PDF)
+
+Extract and summarize notable achievements, experiences, and skills.
+
+LinkedIn Profile (PDF)
+
+Analyze tone, keywords, and professional positioning.
+
+Additional Documents
+
+Summarize relevant branding/digital presence content.
+
+Conversation Summary
+
+Pull the latest conversation summary from the conversation_summaries database table.
+
+Coaching Notes
+
+Summarize the latest admin-submitted coaching session notes.
+
+Output: Generated SLIs (Displayed on New Admin Page)
+For each user, generate three SLI options, formatted as follows:
+
+SLI Option [1-3]: [Descriptive Title]
+SLI Statement:
+A clear, conversational sentence that expresses the user's unique value proposition—ideal for networking and casual introductions.
+
+Rationale (3–4 paragraphs):
+
+How the SLI draws from the user’s unique strengths and experiences
+
+How it bridges past experience with future aspirations
+
+How it differentiates the user from peers
+
+How it aligns with insights from their personality assessments
+
+How it positions them for their desired role/industry
+
+SLI Quality Criteria:
+Each SLI should:
+
+Be conversationally shareable ("Starbucks line test").
+
+Connect the user’s authentic experience with their aspirational direction.
+
+Reflect their natural communication style.
+
+Act as a foundation for resume and LinkedIn positioning.
+
+Provide a thematic guide for content creation and personal branding.
+
+Ensure each SLI is meaningfully distinct, highlighting different aspects of the user’s:
+
+Background
+
+Personality
+
+Industry focus
+
+Skills or aspirations
+
+Avoid vague, overly general, or interchangeable phrases.

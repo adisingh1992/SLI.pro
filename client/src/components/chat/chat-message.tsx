@@ -17,7 +17,7 @@ export function ChatMessage({ content, role, isStreaming = false }: ChatMessageP
         <div className="flex-shrink-0 mr-3">
           {role === 'user' ? (
             <Avatar className="h-8 w-8 bg-primary text-white">
-              <AvatarFallback>U</AvatarFallback>
+              <AvatarFallback>C</AvatarFallback>
             </Avatar>
           ) : (
             <Avatar className="h-8 w-8 bg-secondary text-secondary-foreground">
