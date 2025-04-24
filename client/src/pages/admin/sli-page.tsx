@@ -13,9 +13,6 @@ import { ArrowLeft, RefreshCw, CheckCircle2 } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { formatDistanceToNow } from "date-fns";
 import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Label } from "@/components/ui/label";
 
 export default function SliPage() {
   const { user } = useAuth();
@@ -151,11 +148,6 @@ export default function SliPage() {
     } catch (error) {
       return 'Invalid date';
     }
-  };
-
-  // Handle selecting an SLI
-  const handleSelectSli = (sli: Sli, index: number | null) => {
-    updateSliMutation.mutate({ id: sli.id, selectedSliIndex: index });
   };
 
   return (
