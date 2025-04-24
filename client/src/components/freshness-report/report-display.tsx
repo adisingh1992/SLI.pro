@@ -73,6 +73,10 @@ interface FreshnessReportProps {
           grade: string;
           explanation: string;
         };
+        sliClarity?: {
+          grade: string;
+          explanation: string;
+        };
       };
     };
     createdAt: string;
@@ -258,19 +262,43 @@ const ReportDisplay: React.FC<FreshnessReportProps> = ({ report, userName }) => 
               </div>
             )}
             
-            {/* SLI Clarity - Placeholder */}
-            <div className="mb-4 p-3 bg-muted/30 rounded-md border border-dashed">
-              <div className="flex items-center justify-between mb-1 opacity-60">
-                <h4 className="text-sm font-semibold">SLI Clarity</h4>
-                <div className="flex items-center gap-1">
-                  <span className="text-xs text-muted-foreground">Grade:</span>
-                  <span className="text-sm font-bold px-2 py-0.5 rounded bg-gray-100 text-gray-500">-</span>
+            {/* SLI Clarity */}
+            {detailedMetrics?.sliClarity ? (
+              <div className="mb-4 p-4 bg-muted/50 rounded-md border">
+                <div className="flex items-center justify-between mb-2">
+                  <h4 className="text-sm font-semibold">SLI Clarity</h4>
+                  <div className="flex items-center gap-1">
+                    <span className="text-xs text-muted-foreground">Grade:</span>
+                    <span className={`text-sm font-bold px-2 py-0.5 rounded ${
+                      detailedMetrics.sliClarity.grade === 'A' ? 'bg-green-100 text-green-700' :
+                      detailedMetrics.sliClarity.grade === 'B' ? 'bg-blue-100 text-blue-700' :
+                      detailedMetrics.sliClarity.grade === 'C' ? 'bg-yellow-100 text-yellow-700' :
+                      detailedMetrics.sliClarity.grade === 'D' ? 'bg-orange-100 text-orange-700' :
+                      detailedMetrics.sliClarity.grade === 'N/A' ? 'bg-gray-100 text-gray-700' :
+                      'bg-red-100 text-red-700'
+                    }`}>
+                      {detailedMetrics.sliClarity.grade}
+                    </span>
+                  </div>
                 </div>
+                <p className="text-sm text-muted-foreground">
+                  {detailedMetrics.sliClarity.explanation}
+                </p>
               </div>
-              <p className="text-xs text-muted-foreground opacity-60 italic">
-                Coming soon: Measures how clearly your Single Lasting Impression is defined across your materials.
-              </p>
-            </div>
+            ) : (
+              <div className="mb-4 p-3 bg-muted/30 rounded-md border border-dashed">
+                <div className="flex items-center justify-between mb-1 opacity-60">
+                  <h4 className="text-sm font-semibold">SLI Clarity</h4>
+                  <div className="flex items-center gap-1">
+                    <span className="text-xs text-muted-foreground">Grade:</span>
+                    <span className="text-sm font-bold px-2 py-0.5 rounded bg-gray-100 text-gray-500">-</span>
+                  </div>
+                </div>
+                <p className="text-xs text-muted-foreground opacity-60 italic">
+                  Measures how clearly your Single Lasting Impression is defined across your materials and aligns with coaching insights.
+                </p>
+              </div>
+            )}
             
             {/* Narrative Consistency */}
             {detailedMetrics?.narrativeConsistency ? (

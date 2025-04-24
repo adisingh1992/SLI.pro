@@ -1171,6 +1171,100 @@ Remember, respond with ONLY valid JSON with no explanatory text or comments outs
   }
 }
 
+// Calculate SLI Clarity based on questionnaire data and coaching notes
+async function calculateSLIClarity(userId: number, questionnaireAnalysis: any) {
+  try {
+    // Fetch the latest coaching note for the user
+    const storage = (await import("./storage")).storage;
+    const coachingNotes = await storage.getCoachingNotes(userId);
+    
+    // If no coaching notes are available, return a message indicating the assessment can't be made
+    if (!coachingNotes || coachingNotes.length === 0) {
+      log(`No coaching notes available for user ${userId}`, "freshness");
+      return {
+        grade: 'N/A',
+        explanation: 'SLI Clarity grade will be generated once coaching notes are available.'
+      };
+    }
+    
+    // Sort coaching notes by creation date (newest first)
+    const sortedNotes = coachingNotes.sort((a, b) => 
+      new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+    );
+    
+    // Get the most recent coaching note
+    const latestNote = sortedNotes[0];
+    
+    // Extract value proposition, career goals, and personal brand statement from questionnaire analysis
+    const valueProposition = questionnaireAnalysis?.recommendedPositioning?.valueProposition || '';
+    const careerGoals = questionnaireAnalysis?.careerAspirations?.shortTermGoals || '';
+    const personalBrandStatement = questionnaireAnalysis?.recommendedPositioning?.coreBrandingNarrative || '';
+    
+    // Create a prompt for Claude to analyze alignment and clarity
+    const systemPrompt = `You are an expert professional branding analyst for SLI.pro. Your task is to evaluate the Strategic Leadership Intelligence (SLI) Clarity of a client based on their questionnaire responses and the latest coaching notes.
+
+EXTREMELY IMPORTANT: You MUST respond with VALID JSON ONLY. Your entire response must be parseable by JSON.parse(). DO NOT include any explanatory text, comments, markdown formatting, or code blocks. Your response should start with '{' and end with '}' without any other characters.
+
+Evaluate the alignment and clarity between:
+1. The user's value proposition
+2. Their career goals and personal brand statement
+3. Insights from the latest coaching session
+
+Apply this grading rubric:
+- Grade A: Clear, distinctive value proposition; perfect alignment between career goals and personal brand statement; coaching notes reveal deep understanding of desired positioning
+- Grade B: Good value proposition; mostly aligned career goals and brand statement; coaching notes show solid understanding
+- Grade C: Basic value proposition present; some misalignment between goals and brand statement; partial understanding in coaching notes
+- Grade D: Vague value proposition; significant misalignment between goals and brand; limited understanding in coaching notes
+- Grade F: No clear value proposition; disconnected career goals and brand; coaching notes show no understanding of positioning
+
+The JSON output must strictly follow this structure:
+{
+  "grade": string, // "A", "B", "C", "D", or "F"
+  "explanation": string // 1-2 sentences justifying the grade
+}`;
+
+    const userPrompt = `Here is the client's questionnaire data:
+
+Value Proposition:
+${valueProposition}
+
+Career Goals:
+${careerGoals}
+
+Personal Brand Statement:
+${personalBrandStatement}
+
+Latest Coaching Note:
+${latestNote.content}
+
+Please evaluate the client's SLI Clarity based on these inputs. Use the grading rubric in your instructions to assign a letter grade (A-F) and provide a brief explanation (1-2 sentences) justifying the grade.`;
+
+    try {
+      const claudeResponse = await callClaude(systemPrompt, userPrompt);
+      log(`Claude analysis of SLI Clarity: ${claudeResponse.grade}`, "freshness");
+      
+      return {
+        grade: claudeResponse.grade,
+        explanation: claudeResponse.explanation
+      };
+    } catch (error) {
+      log(`Error analyzing SLI Clarity with Claude: ${error}`, "freshness");
+      
+      // Fallback if Claude analysis fails
+      return {
+        grade: 'C',
+        explanation: 'We were unable to automatically assess your SLI Clarity. This baseline grade will be updated in your next freshness report.'
+      };
+    }
+  } catch (error) {
+    log(`Error calculating SLI Clarity grade: ${error}`, "freshness");
+    return {
+      grade: 'N/A',
+      explanation: 'Could not assess SLI Clarity due to insufficient data.'
+    };
+  }
+}
+
 export async function generateFinalSynthesis(
   questionnaireAnalysis: any,
   resumeAnalysis: any,
@@ -1196,6 +1290,19 @@ export async function generateFinalSynthesis(
     // Calculate engagement activity
     const engagementActivity = calculateEngagementActivity(monthlyCheckIns);
     log(`Calculated engagement activity grade: ${engagementActivity.grade}`, "freshness");
+    
+    // Calculate SLI Clarity if we have a userId
+    let sliClarity = { grade: 'N/A', explanation: 'SLI Clarity grade will be generated once coaching notes are available.' };
+    
+    if (userId) {
+      try {
+        sliClarity = await calculateSLIClarity(userId, questionnaireAnalysis);
+        log(`Calculated SLI Clarity grade: ${sliClarity.grade}`, "freshness");
+      } catch (error) {
+        log(`Error calculating SLI Clarity: ${error}`, "freshness");
+        // Keep default values if calculation fails
+      }
+    }
     
     // Calculate recommendation implementation if we have a previous report and userId
     let recommendationImplementation = { grade: 'N/A', explanation: 'Recommendation implementation assessment requires a previous freshness report. This metric will be available after you generate your second report.' };
@@ -1294,6 +1401,10 @@ The JSON output must strictly follow this structure:
     "recommendationImplementation": {
       "grade": "${recommendationImplementation.grade}",
       "explanation": "${recommendationImplementation.explanation}"
+    },
+    "sliClarity": {
+      "grade": "${sliClarity.grade}",
+      "explanation": "${sliClarity.explanation}"
     }
   }
 }`;
@@ -1330,6 +1441,9 @@ ${JSON.stringify(engagementActivity, null, 2)}
 
 5. Recommendation Implementation Assessment:
 ${JSON.stringify(recommendationImplementation, null, 2)}
+
+6. SLI Clarity Assessment:
+${JSON.stringify(sliClarity, null, 2)}
 
 Your task is to synthesize these analyses into a JSON object exactly matching the structure I specified. Remember, your response must be ONLY valid JSON with no explanatory text, markdown, or other non-JSON content. Start with '{' and end with '}' with no other characters.
 
