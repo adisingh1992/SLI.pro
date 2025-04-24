@@ -38,7 +38,12 @@ export default function ConversationSummaryView({ id, isAdmin = false, userId }:
   // Function to generate/regenerate a summary
   const regenerateSummary = async () => {
     try {
-      await apiRequest('POST', `/api/conversations/${id}/summary`);
+      // Use the correct endpoint based on context
+      const regenerateEndpoint = isAdmin && userId
+        ? `/api/admin/users/${userId}/conversations/${id}/summary/regenerate`
+        : `/api/conversations/${id}/summary`;
+      
+      await apiRequest('POST', regenerateEndpoint);
       refetch();
     } catch (error) {
       console.error('Error regenerating summary:', error);
