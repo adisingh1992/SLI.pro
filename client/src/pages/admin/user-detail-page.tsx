@@ -92,13 +92,22 @@ export default function UserDetailPage() {
             <p className="text-red-600">
               Error loading user data. The user may not exist or there was a problem fetching the data.
             </p>
-            <Button 
-              variant="outline"
-              onClick={() => navigate("/admin/users")}
-              className="mt-4"
-            >
-              Return to Users List
-            </Button>
+            <div className="flex justify-center gap-3 mt-4">
+              <Button 
+                variant="outline"
+                onClick={() => navigate("/admin/users")}
+              >
+                Return to Users List
+              </Button>
+              <Button 
+                variant="outline"
+                onClick={() => navigate(`/admin/users/${userId}/coaching-notes`)}
+                className="flex items-center gap-2"
+              >
+                <FileText className="h-4 w-4" />
+                Coaching Notes
+              </Button>
+            </div>
           </div>
         </div>
       </AdminLayout>
@@ -135,6 +144,14 @@ export default function UserDetailPage() {
           </Link>
           <div className="flex items-center justify-between">
             <h1 className="text-3xl font-bold">User Profile</h1>
+            <Button 
+              variant="outline"
+              className="flex items-center gap-2"
+              onClick={() => navigate(`/admin/users/${userId}/coaching-notes`)}
+            >
+              <FileText className="h-4 w-4" />
+              Coaching Notes
+            </Button>
           </div>
           <p className="text-muted-foreground mt-1">
             Viewing complete profile information for {userData.firstName} {userData.lastName}
