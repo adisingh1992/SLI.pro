@@ -12,13 +12,24 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { AlertCircle, RefreshCw } from 'lucide-react';
 import { apiRequest } from '@/lib/queryClient';
 
-export default function ConversationSummaryView({ id }: { id: number }) {
+interface ConversationSummaryViewProps {
+  id: number;
+  isAdmin?: boolean;
+  userId?: number;
+}
+
+export default function ConversationSummaryView({ id, isAdmin = false, userId }: ConversationSummaryViewProps) {
   const [, navigate] = useLocation();
+
+  // Determine API endpoint based on admin vs. user context
+  const endpoint = isAdmin && userId
+    ? `/api/admin/users/${userId}/conversations/${id}/summary`
+    : `/api/conversations/${id}/summary`;
 
   // Fetch the conversation summary
   const { data: summary, isLoading, isError, refetch } = useQuery<ConversationSummary>({
-    queryKey: ['/api/conversations', id, 'summary'],
-    queryFn: () => fetch(`/api/conversations/${id}/summary`).then(res => {
+    queryKey: [endpoint],
+    queryFn: () => fetch(endpoint).then(res => {
       if (!res.ok) throw new Error('Failed to load summary');
       return res.json();
     }),
@@ -53,17 +64,28 @@ export default function ConversationSummaryView({ id }: { id: number }) {
     );
   }
 
+  // Determine the correct back button URL
+  const getBackUrl = () => {
+    if (isAdmin && userId) {
+      return `/admin/users/${userId}`;
+    } else {
+      return `/conversations/${id}`;
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h2 className="text-2xl font-bold">Conversation Summary</h2>
         <div className="space-x-2">
-          <Button onClick={() => navigate(`/conversations/${id}`)} variant="outline">
-            Back to Conversation
+          <Button onClick={() => navigate(getBackUrl())} variant="outline">
+            {isAdmin ? 'Back to User Details' : 'Back to Conversation'}
           </Button>
-          <Button onClick={regenerateSummary} variant="outline">
-            <RefreshCw className="mr-2 h-4 w-4" /> Regenerate
-          </Button>
+          {!isAdmin && (
+            <Button onClick={regenerateSummary} variant="outline">
+              <RefreshCw className="mr-2 h-4 w-4" /> Regenerate
+            </Button>
+          )}
         </div>
       </div>
 

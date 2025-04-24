@@ -55,12 +55,20 @@ export default function SummaryList({ userId, isAdmin = false }: SummaryListProp
     return (
       <div className="text-center py-10">
         <h2 className="text-xl font-semibold mb-4">No conversation summaries yet</h2>
-        <p className="text-muted-foreground mb-6">
-          Start a conversation and complete it to generate a summary.
-        </p>
-        <Button onClick={() => navigate('/chat')} variant="default">
-          Start a Conversation
-        </Button>
+        {isAdmin ? (
+          <p className="text-muted-foreground mb-6">
+            This user has no conversation summaries to display.
+          </p>
+        ) : (
+          <>
+            <p className="text-muted-foreground mb-6">
+              Start a conversation and complete it to generate a summary.
+            </p>
+            <Button onClick={() => navigate('/chat')} variant="default">
+              Start a Conversation
+            </Button>
+          </>
+        )}
       </div>
     );
   }
@@ -69,14 +77,21 @@ export default function SummaryList({ userId, isAdmin = false }: SummaryListProp
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h2 className="text-2xl font-bold">Conversation Summaries</h2>
-        <Button onClick={() => navigate('/chat')} variant="default">
-          New Conversation
-        </Button>
+        {!isAdmin && (
+          <Button onClick={() => navigate('/chat')} variant="default">
+            New Conversation
+          </Button>
+        )}
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {summaries.map((summary) => (
-          <SummaryCard key={summary.id} summary={summary} />
+          <SummaryCard 
+            key={summary.id} 
+            summary={summary} 
+            isAdmin={isAdmin}
+            userId={userId}
+          />
         ))}
       </div>
     </div>
