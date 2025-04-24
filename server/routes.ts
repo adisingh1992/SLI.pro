@@ -5,6 +5,7 @@ import { setupAuth } from "./auth";
 import { z } from "zod";
 import { scrypt, randomBytes } from "crypto";
 import { promisify } from "util";
+import { registerSliRoutes } from "./sli-routes";
 import {
   insertExperienceSchema,
   insertEducationSchema,
@@ -33,6 +34,11 @@ import { registerFreshnessRoutes } from "./freshness-routes";
 export async function registerRoutes(app: Express): Promise<Server> {
   // Set up authentication routes
   setupAuth(app);
+  
+  // Register other route modules
+  registerConversationRoutes(app);
+  registerFreshnessRoutes(app);
+  registerSliRoutes(app, storage);
 
   // Middleware to check if user is authenticated
   const isAuthenticated = (req: Request, res: Response, next: NextFunction) => {
