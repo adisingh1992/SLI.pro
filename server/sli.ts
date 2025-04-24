@@ -1,6 +1,6 @@
 import { Anthropic } from '@anthropic-ai/sdk';
 import { InsertSli, Sli, UserProfile } from '@shared/schema';
-import { log } from './utils/logger';
+import { log } from './vite';
 
 const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY;
 const CLAUDE_MODEL = process.env.CLAUDE_MODEL || 'claude-3-7-sonnet-20250219';
@@ -253,7 +253,7 @@ Please generate three distinct, compelling SLI options that this person can use 
     });
 
     // Parse the response content to extract the JSON
-    const responseContent = response.content[0]?.text || '';
+    const responseContent = response.content.find(item => item.type === 'text')?.text || '';
     
     // Extract JSON from the response (it might be wrapped in code blocks)
     let jsonStr = responseContent;
@@ -284,11 +284,11 @@ Please generate three distinct, compelling SLI options that this person can use 
       
       return sli;
     } catch (error) {
-      log(`Error parsing Claude's SLI response: ${error}`, "claude", "error");
+      log(`Error parsing Claude's SLI response: ${error}`, "claude");
       return null;
     }
   } catch (error) {
-    log(`Error generating SLIs: ${error}`, "claude", "error");
+    log(`Error generating SLIs: ${error}`, "claude");
     return null;
   }
 }

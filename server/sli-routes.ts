@@ -1,9 +1,9 @@
 import { Express, Request, Response, NextFunction } from 'express';
-import { InsertSli, UpdateSli } from '@shared/schema';
-import { Storage } from './storage';
+import { InsertSli, UpdateSli, Sli } from '@shared/schema';
+import { IStorage } from './storage';
 import { generateSLIs } from './sli';
 
-export function registerSliRoutes(app: Express, storage: Storage) {
+export function registerSliRoutes(app: Express, storage: IStorage) {
   // Middleware to check if user is authenticated
   const isAuthenticated = (req: Request, res: Response, next: NextFunction) => {
     if (req.isAuthenticated() && req.user) {
@@ -157,7 +157,7 @@ export function registerSliRoutes(app: Express, storage: Storage) {
       }
       
       // Find the selected SLI
-      const selectedSli = slis.find(sli => sli.selectedSliIndex !== null);
+      const selectedSli = slis.find((sli: Sli) => sli.selectedSliIndex !== null);
       
       if (!selectedSli) {
         return res.status(404).json({ message: "No selected SLI found" });

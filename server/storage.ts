@@ -12,6 +12,9 @@ import {
   messages, type Message, type InsertMessage,
   conversationSummaries, type ConversationSummary, type InsertConversationSummary,
   monthlyCheckIns, type MonthlyCheckIn, type InsertMonthlyCheckIn,
+  freshnessReports, type FreshnessReport, type InsertFreshnessReport,
+  coachingNotes, type CoachingNote, type InsertCoachingNote,
+  slis, type Sli, type InsertSli, type UpdateSli,
   type UpdateUser, type UpdateProfile, type UserProfile
 } from "@shared/schema";
 import session from "express-session";
