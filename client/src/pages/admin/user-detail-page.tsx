@@ -14,7 +14,8 @@ import {
   Phone, 
   User,
   UserCircle, 
-  FileIcon
+  FileIcon,
+  MessageSquare
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -101,6 +102,14 @@ export default function UserDetailPage() {
               </Button>
               <Button 
                 variant="outline"
+                onClick={() => navigate(`/admin/users/${userId}/summary`)}
+                className="flex items-center gap-2"
+              >
+                <MessageSquare className="h-4 w-4" />
+                View Conversation Summary
+              </Button>
+              <Button 
+                variant="outline"
                 onClick={() => navigate(`/admin/users/${userId}/coaching-notes`)}
                 className="flex items-center gap-2"
               >
@@ -144,14 +153,24 @@ export default function UserDetailPage() {
           </Link>
           <div className="flex items-center justify-between">
             <h1 className="text-3xl font-bold">User Profile</h1>
-            <Button 
-              variant="outline"
-              className="flex items-center gap-2"
-              onClick={() => navigate(`/admin/users/${userId}/coaching-notes`)}
-            >
-              <FileText className="h-4 w-4" />
-              Coaching Notes
-            </Button>
+            <div className="flex space-x-2">
+              <Button 
+                variant="outline"
+                className="flex items-center gap-2"
+                onClick={() => navigate(`/admin/users/${userId}/summary`)}
+              >
+                <MessageSquare className="h-4 w-4" />
+                View Conversation Summary
+              </Button>
+              <Button 
+                variant="outline"
+                className="flex items-center gap-2"
+                onClick={() => navigate(`/admin/users/${userId}/coaching-notes`)}
+              >
+                <FileText className="h-4 w-4" />
+                Coaching Notes
+              </Button>
+            </div>
           </div>
           <p className="text-muted-foreground mt-1">
             Viewing complete profile information for {userData.firstName} {userData.lastName}

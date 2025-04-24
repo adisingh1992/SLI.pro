@@ -21,7 +21,7 @@ export default function AdminUserSummaryPage() {
   const params = useParams<AdminUserSummaryParams>();
   const [_, navigate] = useLocation();
   const userId = params.userId ? parseInt(params.userId) : undefined;
-  const summaryId = params.summaryId;
+  const summaryId = params.summaryId ? parseInt(params.summaryId) : undefined;
 
   // Redirect if not admin
   useEffect(() => {
@@ -59,7 +59,7 @@ export default function AdminUserSummaryPage() {
 
         {summaryId ? (
           // Show specific summary if ID is provided
-          <ConversationSummaryView id={parseInt(summaryId)} isAdmin={true} userId={userId} />
+          <ConversationSummaryView id={summaryId} isAdmin={true} userId={userId} />
         ) : (
           // Show list of summaries for this user
           <div>
