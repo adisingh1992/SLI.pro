@@ -2,6 +2,7 @@ import { Anthropic } from '@anthropic-ai/sdk';
 import { InsertSli, Sli, UserProfile } from '@shared/schema';
 import { log } from './vite';
 import { storage } from './storage';
+import { analyzeDocument } from './claude';
 
 const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY;
 const CLAUDE_MODEL = process.env.CLAUDE_MODEL || 'claude-3-7-sonnet-20250219';
@@ -45,35 +46,14 @@ async function summarizeResume(document: any): Promise<string> {
     if (document.fileData) {
       log(`Analyzing resume content for document: ${document.name}`, "claude");
       
-      const systemPrompt = `You are an expert resume analyst. Your task is to analyze a resume and extract the key information in a structured summary. 
-      Focus on work experience, skills, education, achievements, and any unique qualifications. 
-      Be concise but comprehensive, capturing the essence of the person's professional background.`;
+      // Use the shared document analysis function
+      const summary = await analyzeDocument(document);
       
-      const userPrompt = `Please analyze this resume and provide a structured summary of the key information:
-
-${document.fileData}`;
-      
-      const response = await anthropic.messages.create({
-        model: CLAUDE_MODEL,
-        system: systemPrompt,
-        max_tokens: 1024,
-        temperature: 0.5,
-        messages: [{ role: "user", content: userPrompt }]
-      });
-      
-      const summary = response.content.find(item => item.type === 'text')?.text || '';
-      
-      // Save the analysis to the database
       if (summary) {
-        try {
-          await storage.updateDocument(document.id, { analysisContent: summary });
-          log(`Saved resume analysis for document: ${document.name}`, "claude");
-        } catch (saveError) {
-          log(`Error saving resume analysis: ${saveError}`, "claude");
-        }
+        return `Resume Analysis (${document.fileName}):\n${summary}`;
+      } else {
+        return `Resume filename: ${document.fileName}\nNote: The resume content is not available for detailed analysis.`;
       }
-      
-      return `Resume Analysis (${document.fileName}):\n${summary}`;
     } else {
       return `Resume filename: ${document.fileName}\nNote: The resume content is not available for detailed analysis.`;
     }
@@ -100,41 +80,20 @@ async function summarizeLinkedIn(document: any): Promise<string> {
     if (document.fileData) {
       log(`Analyzing LinkedIn profile content for document: ${document.name}`, "claude");
       
-      const systemPrompt = `You are an expert LinkedIn profile analyst. Your task is to analyze a LinkedIn profile and extract the key information in a structured summary. 
-      Focus on work experience, skills, endorsements, recommendations, education, and any unique qualifications or networking patterns. 
-      Be concise but comprehensive, capturing the essence of the person's professional presence and personal brand.`;
+      // Use the shared document analysis function
+      const summary = await analyzeDocument(document);
       
-      const userPrompt = `Please analyze this LinkedIn profile and provide a structured summary of the key information:
-
-${document.fileData}`;
-      
-      const response = await anthropic.messages.create({
-        model: CLAUDE_MODEL,
-        system: systemPrompt,
-        max_tokens: 1024,
-        temperature: 0.5,
-        messages: [{ role: "user", content: userPrompt }]
-      });
-      
-      const summary = response.content.find(item => item.type === 'text')?.text || '';
-      
-      // Save the analysis to the database
       if (summary) {
-        try {
-          await storage.updateDocument(document.id, { analysisContent: summary });
-          log(`Saved LinkedIn analysis for document: ${document.name}`, "claude");
-        } catch (saveError) {
-          log(`Error saving LinkedIn analysis: ${saveError}`, "claude");
-        }
+        return `LinkedIn Profile Analysis (${document.fileName}):\n${summary}`;
+      } else {
+        return `LinkedIn profile filename: ${document.fileName}\nNote: The profile content is not available for detailed analysis.`;
       }
-      
-      return `LinkedIn Profile Analysis (${document.fileName}):\n${summary}`;
     } else {
-      return `LinkedIn profile filename: ${document.fileName}\nNote: The LinkedIn profile content is not available for detailed analysis.`;
+      return `LinkedIn profile filename: ${document.fileName}\nNote: The profile content is not available for detailed analysis.`;
     }
   } catch (error) {
     log(`Error analyzing LinkedIn profile: ${error}`, "claude");
-    return `LinkedIn profile filename: ${document.fileName}\nNote: Could not analyze the LinkedIn profile content due to an error.`;
+    return `LinkedIn profile filename: ${document.fileName}\nNote: Could not analyze the profile content due to an error.`;
   }
 }
 
@@ -160,35 +119,14 @@ async function summarizeAdditionalDocs(documents: any[]): Promise<string> {
       if (doc.fileData) {
         log(`Analyzing additional document content for: ${doc.name}`, "claude");
         
-        const systemPrompt = `You are an expert document analyst. Your task is to analyze a document and extract the key information in a short summary. 
-        Focus on the type of document, its main content, key points, and how it relates to the person's professional background or aspirations.
-        Be concise but informative, capturing the essence of the document in a few paragraphs.`;
+        // Use the shared document analysis function
+        const summary = await analyzeDocument(doc);
         
-        const userPrompt = `Please analyze this document (${doc.name}) and provide a concise summary of its content and relevance:
-
-${doc.fileData}`;
-        
-        const response = await anthropic.messages.create({
-          model: CLAUDE_MODEL,
-          system: systemPrompt,
-          max_tokens: 512,
-          temperature: 0.5,
-          messages: [{ role: "user", content: userPrompt }]
-        });
-        
-        const summary = response.content.find(item => item.type === 'text')?.text || '';
-        
-        // Save the analysis to the database
         if (summary) {
-          try {
-            await storage.updateDocument(doc.id, { analysisContent: summary });
-            log(`Saved analysis for document: ${doc.name}`, "claude");
-          } catch (saveError) {
-            log(`Error saving document analysis: ${saveError}`, "claude");
-          }
+          summaries.push(`Document: ${doc.name} (${doc.fileName})\nSummary: ${summary}`);
+        } else {
+          summaries.push(`Document: ${doc.name} (${doc.fileName})\nNote: Content not available for analysis.`);
         }
-        
-        summaries.push(`Document: ${doc.name} (${doc.fileName})\nSummary: ${summary}`);
       } else {
         summaries.push(`Document: ${doc.name} (${doc.fileName})\nNote: Content not available for analysis.`);
       }
