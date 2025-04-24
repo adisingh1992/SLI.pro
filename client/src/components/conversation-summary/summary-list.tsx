@@ -10,13 +10,23 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { AlertCircle } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 
-export default function SummaryList() {
+interface SummaryListProps {
+  userId?: number;
+  isAdmin?: boolean;
+}
+
+export default function SummaryList({ userId, isAdmin = false }: SummaryListProps = {}) {
   const [, navigate] = useLocation();
+
+  // Determine API endpoint based on admin access and userId
+  const endpoint = isAdmin && userId 
+    ? `/api/admin/users/${userId}/conversation-summaries`
+    : '/api/conversation-summaries';
 
   // Fetch the conversation summaries
   const { data: summaries, isLoading, isError, refetch } = useQuery<ConversationSummary[]>({
-    queryKey: ['/api/conversation-summaries'],
-    queryFn: () => fetch('/api/conversation-summaries').then(res => {
+    queryKey: [endpoint],
+    queryFn: () => fetch(endpoint).then(res => {
       if (!res.ok) throw new Error('Failed to load summaries');
       return res.json();
     }),
@@ -73,7 +83,11 @@ export default function SummaryList() {
   );
 }
 
-function SummaryCard({ summary }: { summary: ConversationSummary }) {
+function SummaryCard({ summary, isAdmin, userId }: { 
+  summary: ConversationSummary; 
+  isAdmin?: boolean;
+  userId?: number;
+}) {
   const [, navigate] = useLocation();
 
   const formatDate = (dateString: string | Date) => {
@@ -116,6 +130,15 @@ function SummaryCard({ summary }: { summary: ConversationSummary }) {
     return highlights.length > 0 ? highlights : ['No details available'];
   };
 
+  // Determine the navigation URL based on admin vs. user role
+  const getNavigationUrl = () => {
+    if (isAdmin && userId) {
+      return `/admin/users/${userId}/summary/${summary.conversationId}`;
+    } else {
+      return `/conversations/${summary.conversationId}/summary`;
+    }
+  };
+
   return (
     <Card className="h-full flex flex-col">
       <CardHeader>
@@ -138,7 +161,7 @@ function SummaryCard({ summary }: { summary: ConversationSummary }) {
       <CardFooter>
         <div className="w-full flex justify-end">
           <Button 
-            onClick={() => navigate(`/conversations/${summary.conversationId}/summary`)}
+            onClick={() => navigate(getNavigationUrl())}
             variant="outline"
           >
             <Eye className="mr-2 h-4 w-4" /> View Details
