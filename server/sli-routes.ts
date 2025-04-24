@@ -166,12 +166,16 @@ export function registerSliRoutes(app: Express, storage: IStorage) {
       // Determine which SLI to return based on selectedSliIndex
       const index = selectedSli.selectedSliIndex;
       
+      if (index === null) {
+        return res.status(404).json({ message: "No selected SLI index found" });
+      }
+      
       // We'll return a simplified version for the user
       const userSli = {
         id: selectedSli.id,
-        title: selectedSli[`title${index}`],
-        statement: selectedSli[`statement${index}`],
-        rationale: selectedSli[`rationale${index}`],
+        title: selectedSli[`title${index}` as keyof Sli] as string,
+        statement: selectedSli[`statement${index}` as keyof Sli] as string,
+        rationale: selectedSli[`rationale${index}` as keyof Sli] as string,
         createdAt: selectedSli.createdAt
       };
       

@@ -120,6 +120,13 @@ export interface IStorage {
   createCoachingNote(note: InsertCoachingNote): Promise<CoachingNote>;
   updateCoachingNote(id: number, content: string): Promise<CoachingNote | undefined>;
   deleteCoachingNote(id: number): Promise<void>;
+  
+  // SLI operations
+  getSlisByUserId(userId: number): Promise<Sli[]>;
+  getSli(id: number): Promise<Sli | undefined>;
+  createSli(sli: InsertSli): Promise<Sli>;
+  updateSli(id: number, sli: UpdateSli): Promise<Sli | undefined>;
+  deleteSli(id: number): Promise<void>;
 
   // Session store
   sessionStore: session.Store;
@@ -141,6 +148,7 @@ export class MemStorage implements IStorage {
   private monthlyCheckIns: Map<number, MonthlyCheckIn>;
   private freshnessReports: Map<number, FreshnessReport>;
   private coachingNotes: Map<number, CoachingNote>;
+  private slis: Map<number, Sli>;
   
   private userId: number;
   private experienceId: number;
@@ -157,6 +165,7 @@ export class MemStorage implements IStorage {
   private monthlyCheckInId: number;
   private freshnessReportId: number;
   private coachingNoteId: number;
+  private sliId: number;
   
   sessionStore: session.Store;
 
@@ -176,6 +185,7 @@ export class MemStorage implements IStorage {
     this.monthlyCheckIns = new Map();
     this.freshnessReports = new Map();
     this.coachingNotes = new Map();
+    this.slis = new Map();
     
     this.userId = 1;
     this.experienceId = 1;
@@ -192,6 +202,7 @@ export class MemStorage implements IStorage {
     this.monthlyCheckInId = 1;
     this.freshnessReportId = 1;
     this.coachingNoteId = 1;
+    this.sliId = 1;
     
     this.sessionStore = new MemoryStore({
       checkPeriod: 86400000,
@@ -428,6 +439,7 @@ export class MemStorage implements IStorage {
     const monthlyCheckIns = await this.getMonthlyCheckIns(userId);
     const freshnessReports = await this.getFreshnessReports(userId);
     const coachingNotes = await this.getCoachingNotes(userId);
+    const slis = await this.getSlisByUserId(userId);
     
     console.log(`Fetched ${monthlyCheckIns.length} monthly check-ins for user ${userId}`);
     
@@ -443,7 +455,8 @@ export class MemStorage implements IStorage {
       conversations,
       monthlyCheckIns,
       freshnessReports,
-      coachingNotes
+      coachingNotes,
+      slis
     };
   }
   
@@ -708,6 +721,42 @@ export class MemStorage implements IStorage {
   
   async deleteCoachingNote(id: number): Promise<void> {
     this.coachingNotes.delete(id);
+  }
+
+  // SLI methods
+  async getSlisByUserId(userId: number): Promise<Sli[]> {
+    return Array.from(this.slis.values())
+      .filter(sli => sli.userId === userId)
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  }
+  
+  async getSli(id: number): Promise<Sli | undefined> {
+    return this.slis.get(id);
+  }
+  
+  async createSli(sli: InsertSli): Promise<Sli> {
+    const id = this.sliId++;
+    const newSli: Sli = {
+      ...sli,
+      id,
+      createdAt: new Date(),
+      updatedAt: new Date()
+    };
+    this.slis.set(id, newSli);
+    return newSli;
+  }
+  
+  async updateSli(id: number, sliData: UpdateSli): Promise<Sli | undefined> {
+    const sli = await this.getSli(id);
+    if (!sli) return undefined;
+    
+    const updatedSli = { ...sli, ...sliData, updatedAt: new Date() };
+    this.slis.set(id, updatedSli);
+    return updatedSli;
+  }
+  
+  async deleteSli(id: number): Promise<void> {
+    this.slis.delete(id);
   }
 }
 
