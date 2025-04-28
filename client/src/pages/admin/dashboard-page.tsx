@@ -86,6 +86,15 @@ export default function AdminDashboardPage() {
                 </div>
               )}
             </CardContent>
+            <CardFooter className="pt-0">
+              <Button 
+                className="w-full" 
+                onClick={() => navigate("/admin/users")}
+              >
+                <Users className="mr-2 h-4 w-4" />
+                View
+              </Button>
+            </CardFooter>
           </Card>
 
           <Card>
