@@ -11,9 +11,8 @@ if (!process.env.ANTHROPIC_API_KEY) {
   log("ANTHROPIC_API_KEY is available", "claude");
 }
 
-// Using the newest Anthropic model which was released February 24, 2025
-// the newest Anthropic model is "claude-3-7-sonnet-20250219" which was released February 24, 2025
-const CLAUDE_MODEL = 'claude-3-7-sonnet-20250219';
+// Using Claude-3 Opus model
+const CLAUDE_MODEL = process.env.CLAUDE_MODEL || 'claude-3-opus-20240229';
 log(`Using Claude model: ${CLAUDE_MODEL}`, "claude");
 
 // Initialize Anthropic client
@@ -335,19 +334,25 @@ export async function analyzeDocument(document: Document): Promise<string | null
 
     // Extract the analysis text from the response
     if (response.content && response.content.length > 0) {
-      const textContent = response.content[0].text;
+      // Get the correct text content based on type
+      const block = response.content[0];
+      let textContent = '';
       
-      // Save the analysis to the database
-      if (textContent) {
-        try {
-          await storage.updateDocument(document.id, { analysisContent: textContent });
-          log(`Saved analysis for document: ${document.name}`, "claude");
-        } catch (saveError) {
-          log(`Error saving document analysis: ${saveError}`, "claude");
+      if (block.type === 'text' && 'text' in block) {
+        textContent = block.text;
+        
+        // Save the analysis to the database
+        if (textContent) {
+          try {
+            await storage.updateDocument(document.id, { analysisContent: textContent });
+            log(`Saved analysis for document: ${document.name}`, "claude");
+          } catch (saveError) {
+            log(`Error saving document analysis: ${saveError}`, "claude");
+          }
         }
+        
+        return textContent;
       }
-      
-      return textContent;
     }
 
     return null;
