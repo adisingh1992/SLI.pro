@@ -35,8 +35,6 @@ export default function SliSelectionPage() {
   const { toast } = useToast();
   const [, navigate] = useLocation();
   const [selectedSliIndex, setSelectedSliIndex] = useState<number | null>(null);
-  const [customSli, setCustomSli] = useState<string>("");
-  const [showCustomTextField, setShowCustomTextField] = useState(false);
 
   // Fetch user's SLIs
   const { data: slis, isLoading: slisLoading } = useQuery<Sli[]>({
@@ -95,13 +93,7 @@ export default function SliSelectionPage() {
   });
 
   const handleSliSelection = (value: string) => {
-    if (value === "custom") {
-      setSelectedSliIndex(null);
-      setShowCustomTextField(true);
-    } else {
-      setSelectedSliIndex(parseInt(value));
-      setShowCustomTextField(false);
-    }
+    setSelectedSliIndex(parseInt(value));
   };
 
   const handleSubmit = () => {
@@ -116,16 +108,7 @@ export default function SliSelectionPage() {
 
     const sli = slis[0]; // Use the first SLI since that's the most recent one
 
-    if (showCustomTextField && !customSli.trim()) {
-      toast({
-        title: "Error",
-        description: "Please enter your custom SLI text",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    if (!showCustomTextField && selectedSliIndex === null) {
+    if (selectedSliIndex === null) {
       toast({
         title: "Error",
         description: "Please select an SLI option",
@@ -137,7 +120,7 @@ export default function SliSelectionPage() {
     updateSliMutation.mutate({
       id: sli.id,
       selectedSliIndex,
-      customSliText: showCustomTextField ? customSli : undefined,
+      customSliText: null
     });
   };
 
@@ -158,11 +141,6 @@ export default function SliSelectionPage() {
       
       if (sli.selectedSliIndex !== null) {
         setSelectedSliIndex(sli.selectedSliIndex);
-        setShowCustomTextField(false);
-      } else if (sli.customSliText) {
-        // If there's custom SLI text, show the custom field and populate it
-        setCustomSli(sli.customSliText);
-        setShowCustomTextField(true);
       }
     }
   }, [slis]);
@@ -200,13 +178,13 @@ export default function SliSelectionPage() {
                   <span>Single Lasting Impressions</span>
                 </CardTitle>
                 <CardDescription>
-                  Select one of the following options as your Single Lasting Impression (SLI) or create your own custom SLI.
+                  Select one of the following options as your Single Lasting Impression (SLI).
                 </CardDescription>
               </CardHeader>
               <CardContent>
                 <RadioGroup 
                   className="space-y-6" 
-                  value={showCustomTextField ? "custom" : selectedSliIndex?.toString()}
+                  value={selectedSliIndex?.toString()}
                   onValueChange={handleSliSelection}
                 >
                   {/* SLI Option 1 */}
@@ -256,27 +234,6 @@ export default function SliSelectionPage() {
                           <h4 className="text-sm font-medium text-primary mb-1">Why this works:</h4>
                           <p className="text-sm text-gray-600">{slis[0].rationale3}</p>
                         </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Custom SLI Option */}
-                  <div className="border rounded-lg p-4 bg-white hover:bg-gray-50 transition-colors">
-                    <div className="flex items-start space-x-2">
-                      <RadioGroupItem value="custom" id="sli-custom" className="mt-1" />
-                      <div className="space-y-2 w-full">
-                        <Label htmlFor="sli-custom" className="text-base font-medium flex items-center">
-                          <Edit className="h-4 w-4 mr-1" />
-                          Custom SLI
-                        </Label>
-                        {showCustomTextField && (
-                          <Textarea
-                            placeholder="Write your own SLI here..."
-                            className="mt-2 w-full"
-                            value={customSli}
-                            onChange={(e) => setCustomSli(e.target.value)}
-                          />
-                        )}
                       </div>
                     </div>
                   </div>
