@@ -1,6 +1,6 @@
 import { useAuth } from "@/hooks/use-auth";
 import { useQuery } from "@tanstack/react-query";
-import { FreshnessReport, UserProfile } from "@shared/schema";
+import { FreshnessReport, Sli, UserProfile } from "@shared/schema";
 import { useToast } from "@/hooks/use-toast";
 import { useLocation } from "wouter";
 import {
@@ -12,6 +12,7 @@ import {
   User,
   FileText,
   MessageSquare,
+  Award,
 } from "lucide-react";
 import MonthlyCheckInWidget from "@/components/monthly-check-in-widget";
 import { FreshnessReportWidget } from "@/components/freshness-report-widget";
@@ -39,6 +40,13 @@ export default function HomePage() {
   // Fetch the latest freshness report
   const { data: latestFreshnessReport } = useQuery<FreshnessReport>({
     queryKey: ["/api/freshness-reports/latest"],
+    enabled: !!user,
+    retry: false,
+  });
+  
+  // Fetch user's SLIs
+  const { data: userSli, isLoading: sliLoading } = useQuery<Sli>({
+    queryKey: ["/api/user/sli"],
     enabled: !!user,
     retry: false,
   });
@@ -268,6 +276,36 @@ export default function HomePage() {
                 userHasRequiredDocuments={hasRequiredDocuments}
                 latestReportDate={latestFreshnessReport?.createdAt ? new Date(latestFreshnessReport.createdAt) : undefined}
               />
+            </div>
+          )}
+
+          {/* SLI Section - Only visible when user has SLIs */}
+          {userSli && (
+            <div className="mt-6 bg-[#f9f5ff] border border-purple-200 rounded-lg p-6">
+              <div className="flex items-start">
+                <div className="p-3 rounded-full bg-purple-100 text-purple-600 mr-4">
+                  <Award className="h-6 w-6" />
+                </div>
+                <div className="flex-1">
+                  <h2 className="text-lg font-medium text-[#333333] mb-2">
+                    Single Lasting Impressions
+                  </h2>
+                  <p className="text-gray-600 mb-4">
+                    Your Single Lasting Impression (SLI) is a concise statement that captures your professional essence. 
+                    It's what you want people to remember about you after an interaction.
+                  </p>
+                  <Button
+                    className="flex items-center bg-purple-500 hover:bg-purple-600"
+                    onClick={() => {
+                      scrollToTop();
+                      navigate("/sli-selection");
+                    }}
+                  >
+                    View and Select Your SLI
+                    <ArrowRight className="ml-2 h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
             </div>
           )}
 

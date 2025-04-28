@@ -361,7 +361,8 @@ export const slis = pgTable("slis", {
   title3: text("title3").notNull(),
   statement3: text("statement3").notNull(),
   rationale3: text("rationale3").notNull(),
-  selectedSliIndex: integer("selected_sli_index"), // 1, 2, or 3, null if not selected yet
+  selectedSliIndex: integer("selected_sli_index"), // 1, 2, or 3, null if not selected yet or if custom SLI
+  customSliText: text("custom_sli_text"), // Custom SLI text if user chooses to write their own
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });

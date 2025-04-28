@@ -1,3 +1,4 @@
+import React from "react";
 import { Switch, Route } from "wouter";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
@@ -12,6 +13,7 @@ import ChatPage from "@/pages/chat-page";
 import SummaryPage from "@/pages/summary-page";
 import MonthlyCheckInPage from "@/pages/monthly-check-in-page";
 import FreshnessReportPage from "@/pages/freshness-report-page-new";
+import SliSelectionPage from "@/pages/sli-selection-page";
 import { AuthProvider } from "@/hooks/use-auth";
 import { ProtectedRoute } from "@/lib/protected-route";
 
@@ -42,6 +44,10 @@ function Router() {
       <ProtectedRoute
         path="/freshness-report"
         component={FreshnessReportPage}
+      />
+      <ProtectedRoute
+        path="/sli-selection"
+        component={SliSelectionPage}
       />
       
       {/* Admin routes */}

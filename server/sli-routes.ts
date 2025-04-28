@@ -185,4 +185,64 @@ export function registerSliRoutes(app: Express, storage: IStorage) {
       next(error);
     }
   });
+  
+  // Get all SLIs for the current user
+  app.get("/api/user/slis", isAuthenticated, async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const userId = req.user!.id;
+      
+      // Get all SLIs for user
+      const slis = await storage.getSlisByUserId(userId);
+      
+      if (!slis || slis.length === 0) {
+        return res.status(404).json({ message: "No SLIs found" });
+      }
+      
+      res.json(slis);
+    } catch (error) {
+      console.error('Error getting user SLIs:', error);
+      next(error);
+    }
+  });
+  
+  // Update a user's SLI selection
+  app.patch("/api/user/slis/:id", isAuthenticated, async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const sliId = parseInt(req.params.id);
+      const userId = req.user!.id;
+      const { selectedSliIndex, customSliText } = req.body;
+      
+      // Get the current SLI
+      const currentSli = await storage.getSli(sliId);
+      
+      if (!currentSli) {
+        return res.status(404).json({ message: "SLI not found" });
+      }
+      
+      // Ensure the SLI belongs to the user
+      if (currentSli.userId !== userId) {
+        return res.status(403).json({ message: "You don't have permission to update this SLI" });
+      }
+      
+      // Validate the selectedSliIndex
+      if (selectedSliIndex !== null && (selectedSliIndex < 1 || selectedSliIndex > 3)) {
+        return res.status(400).json({ message: "Invalid SLI index. Must be 1, 2, or 3" });
+      }
+      
+      const updateData: Partial<Sli> = { selectedSliIndex };
+      
+      // If custom SLI text is provided and selectedSliIndex is null, update the custom SLI text
+      if (customSliText && selectedSliIndex === null) {
+        updateData.customSliText = customSliText;
+      }
+      
+      // Update the SLI
+      const updatedSli = await storage.updateSli(sliId, updateData);
+      
+      res.json(updatedSli);
+    } catch (error) {
+      console.error('Error updating SLI selection:', error);
+      next(error);
+    }
+  });
 }
