@@ -363,6 +363,13 @@ export const slis = pgTable("slis", {
   rationale3: text("rationale3").notNull(),
   selectedSliIndex: integer("selected_sli_index"), // 1, 2, or 3, null if not selected yet or if custom SLI
   customSliText: text("custom_sli_text"), // Custom SLI text if user chooses to write their own
+  
+  // SLI Refinement fields
+  refinedSliText: text("refined_sli_text"), // The refined SLI created by Claude
+  refinementRationale: text("refinement_rationale"), // Explanation of the refinement
+  implementationGuidance: text("implementation_guidance"), // Guidance on implementing the refined SLI
+  refinedAt: timestamp("refined_at"), // When the SLI was refined
+  
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });

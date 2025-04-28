@@ -252,12 +252,28 @@ export default function SliSelectionPage() {
                   <div className="space-x-3">
                     <Button
                       variant="secondary"
-                      disabled={updateSliMutation.isPending}
+                      disabled={updateSliMutation.isPending || !selectedSliIndex}
                       onClick={() => {
-                        toast({
-                          title: "Refine SLI",
-                          description: "This feature will be available soon.",
-                        });
+                        // Save the current selection before redirecting
+                        if (selectedSliIndex) {
+                          const sli = slis[0];
+                          updateSliMutation.mutate({
+                            id: sli.id,
+                            selectedSliIndex,
+                            customSliText: undefined
+                          }, {
+                            onSuccess: () => {
+                              scrollToTop();
+                              navigate("/sli-refinement");
+                            }
+                          });
+                        } else {
+                          toast({
+                            title: "Selection Required",
+                            description: "Please select an SLI first before refining.",
+                            variant: "destructive"
+                          });
+                        }
                       }}
                     >
                       Refine SLI

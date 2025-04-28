@@ -14,6 +14,7 @@ import SummaryPage from "@/pages/summary-page";
 import MonthlyCheckInPage from "@/pages/monthly-check-in-page";
 import FreshnessReportPage from "@/pages/freshness-report-page-new";
 import SliSelectionPage from "@/pages/sli-selection-page";
+import SliRefinementPage from "@/pages/sli-refinement-page";
 import { AuthProvider } from "@/hooks/use-auth";
 import { ProtectedRoute } from "@/lib/protected-route";
 
@@ -48,6 +49,10 @@ function Router() {
       <ProtectedRoute
         path="/sli-selection"
         component={SliSelectionPage}
+      />
+      <ProtectedRoute
+        path="/sli-refinement"
+        component={SliRefinementPage}
       />
       
       {/* Admin routes */}
