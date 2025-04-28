@@ -297,7 +297,7 @@ export default function HomePage() {
                 </div>
                 <div className="flex-1">
                   <h2 className="text-lg font-medium mb-2">
-                    Single Lasting Impressions
+                    Single Lasting Impression
                   </h2>
                   
                   {/* Check if the SLI has been refined */}
@@ -312,6 +312,23 @@ export default function HomePage() {
                       </div>
                       <p className="text-gray-600 text-sm">
                         Your SLI has been refined to better reflect your professional brand. You can use this statement across your professional platforms.
+                      </p>
+                    </div>
+                  ) : userSlis[0]?.selectedSliIndex ? (
+                    <div className="mb-4">
+                      <div className="flex items-center mb-2">
+                        <CheckCircle2 className="text-blue-500 h-5 w-5 mr-2" />
+                        <span className="font-medium">Your Selected SLI:</span>
+                      </div>
+                      <div className="p-3 bg-white/60 border border-primary/10 rounded-md mb-3">
+                        <p className="font-medium text-primary">
+                          {userSlis[0].selectedSliIndex === 1 ? userSlis[0].statement1 :
+                           userSlis[0].selectedSliIndex === 2 ? userSlis[0].statement2 :
+                           userSlis[0].selectedSliIndex === 3 ? userSlis[0].statement3 : ""}
+                        </p>
+                      </div>
+                      <p className="text-gray-600 text-sm">
+                        You've selected your SLI. You can refine it to make it more personalized.
                       </p>
                     </div>
                   ) : (
