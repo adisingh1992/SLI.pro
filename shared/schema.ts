@@ -369,6 +369,7 @@ export const slis = pgTable("slis", {
   refinementRationale: text("refinement_rationale"), // Explanation of the refinement
   implementationGuidance: text("implementation_guidance"), // Guidance on implementing the refined SLI
   refinedAt: timestamp("refined_at"), // When the SLI was refined
+  refinementCount: integer("refinement_count").default(0), // Track number of times SLI has been refined (max 3)
   
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),

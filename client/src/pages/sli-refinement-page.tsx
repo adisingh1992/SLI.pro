@@ -260,24 +260,69 @@ export default function SliRefinementPage() {
                     </TabsContent>
                   </Tabs>
                 </CardContent>
-                <CardFooter className="flex justify-between border-t pt-6">
-                  <Button
-                    variant="outline"
-                    onClick={() => {
-                      scrollToTop();
-                      navigate("/");
-                    }}
-                  >
-                    Return to Home
-                  </Button>
-                  <Button
-                    onClick={() => {
-                      scrollToTop();
-                      navigate("/sli-selection");
-                    }}
-                  >
-                    Back to SLI Selection
-                  </Button>
+                <CardFooter className="flex flex-col border-t pt-6 gap-4">
+                  <div className="flex justify-between w-full">
+                    <Button
+                      variant="outline"
+                      onClick={() => {
+                        scrollToTop();
+                        navigate("/");
+                      }}
+                    >
+                      Return to Home
+                    </Button>
+                    <Button
+                      onClick={() => {
+                        scrollToTop();
+                        navigate("/sli-selection");
+                      }}
+                    >
+                      Back to SLI Selection
+                    </Button>
+                  </div>
+                  
+                  {/* Re-refinement section */}
+                  {slis[0]?.refinementCount < 3 ? (
+                    <div className="pt-2 border-t border-gray-100 mt-2 w-full">
+                      <div className="flex justify-between items-center">
+                        <div>
+                          <h4 className="text-sm font-medium">Not quite right?</h4>
+                          <p className="text-xs text-muted-foreground">
+                            You can refine your SLI {3 - (slis[0]?.refinementCount || 0)} more {(3 - (slis[0]?.refinementCount || 0)) === 1 ? 'time' : 'times'}.
+                          </p>
+                        </div>
+                        <Button 
+                          variant="secondary"
+                          size="sm"
+                          className="gap-1"
+                          onClick={() => {
+                            setFeedback(""); // Clear any previous feedback
+                            // Reset the UI to show the feedback form
+                            const element = document.getElementById('feedback-form');
+                            if (element) element.scrollIntoView({ behavior: 'smooth' });
+                            // Hide refined SLI display and show the feedback form
+                          }}
+                        >
+                          <RefreshCw className="h-3.5 w-3.5" />
+                          Re-refine SLI
+                        </Button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="pt-2 border-t border-gray-100 mt-2 w-full">
+                      <div className="flex justify-between items-center">
+                        <div className="flex items-start gap-2">
+                          <AlertCircle className="h-4 w-4 text-yellow-600 mt-0.5" />
+                          <div>
+                            <h4 className="text-sm font-medium">Maximum refinements reached</h4>
+                            <p className="text-xs text-muted-foreground">
+                              You've already refined this SLI the maximum number of times (3).
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </CardFooter>
               </Card>
             ) : (

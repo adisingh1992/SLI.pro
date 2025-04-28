@@ -299,9 +299,10 @@ export function registerSliRoutes(app: Express, storage: IStorage) {
         return res.status(403).json({ message: "You don't have permission to update this SLI" });
       }
       
-      // Check if the SLI has already been refined
-      if (currentSli.refinedSliText) {
-        return res.status(400).json({ message: "This SLI has already been refined and cannot be refined again" });
+      // Check if the SLI has been refined the maximum number of times (3)
+      const refinementCount = currentSli.refinementCount || 0;
+      if (refinementCount >= 3) {
+        return res.status(400).json({ message: "You've reached the maximum number of refinements (3) for this SLI" });
       }
       
       // Get the original statements to send to Claude
@@ -405,12 +406,13 @@ Please provide a refined SLI statement, rationale, and implementation guidance b
       const refinementRationale = splitByHeaders.length > 2 ? splitByHeaders[2].trim() : '';
       const implementationGuidance = splitByHeaders.length > 3 ? splitByHeaders[3].trim() : '';
       
-      // Update the SLI with the refined information
+      // Update the SLI with the refined information and increment refinement count
       const updateData: Partial<Sli> = {
         refinedSliText,
         refinementRationale,
         implementationGuidance,
-        refinedAt: new Date()
+        refinedAt: new Date(),
+        refinementCount: (refinementCount + 1) // Increment the refinement count
       };
       
       // Update the SLI in the database
