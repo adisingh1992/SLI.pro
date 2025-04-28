@@ -13,6 +13,8 @@ import {
   FileText,
   MessageSquare,
   Award,
+  CheckCircle2,
+  Sparkles
 } from "lucide-react";
 import MonthlyCheckInWidget from "@/components/monthly-check-in-widget";
 import { FreshnessReportWidget } from "@/components/freshness-report-widget";
@@ -44,14 +46,14 @@ export default function HomePage() {
     retry: false,
   });
   
-  // Fetch user's SLIs
+  // Fetch user's selected SLI
   const { data: userSli, isLoading: sliLoading } = useQuery<Sli>({
     queryKey: ["/api/user/sli"],
     enabled: !!user,
     retry: false,
   });
   
-  // Fetch all user's SLIs (to check if they exist, even if not selected)
+  // Fetch all user's SLIs to check refined status and whether they exist
   const { data: userSlis, isLoading: slisLoading } = useQuery<Sli[]>({
     queryKey: ["/api/user/slis"],
     enabled: !!user,
@@ -297,20 +299,54 @@ export default function HomePage() {
                   <h2 className="text-lg font-medium mb-2">
                     Single Lasting Impressions
                   </h2>
-                  <p className="text-gray-600 mb-4">
-                    Your Single Lasting Impression (SLI) is a concise statement that captures your professional essence. 
-                    It's what you want people to remember about you after an interaction.
-                  </p>
-                  <Button
-                    className="flex items-center"
-                    onClick={() => {
-                      scrollToTop();
-                      navigate("/sli-selection");
-                    }}
-                  >
-                    View and Select Your SLI
-                    <ArrowRight className="ml-2 h-4 w-4" />
-                  </Button>
+                  
+                  {/* Check if the SLI has been refined */}
+                  {userSlis[0]?.refinedSliText ? (
+                    <div className="mb-4">
+                      <div className="flex items-center mb-2">
+                        <CheckCircle2 className="text-green-500 h-5 w-5 mr-2" />
+                        <span className="font-medium">Your Refined SLI:</span>
+                      </div>
+                      <div className="p-3 bg-white/60 border border-primary/10 rounded-md mb-3">
+                        <p className="font-medium text-primary">{userSlis[0].refinedSliText}</p>
+                      </div>
+                      <p className="text-gray-600 text-sm">
+                        Your SLI has been refined to better reflect your professional brand. You can use this statement across your professional platforms.
+                      </p>
+                    </div>
+                  ) : (
+                    <p className="text-gray-600 mb-4">
+                      Your Single Lasting Impression (SLI) is a concise statement that captures your professional essence. 
+                      It's what you want people to remember about you after an interaction.
+                    </p>
+                  )}
+                  
+                  <div className="flex flex-wrap gap-3">
+                    <Button
+                      className="flex items-center"
+                      onClick={() => {
+                        scrollToTop();
+                        navigate("/sli-selection");
+                      }}
+                    >
+                      {userSlis[0]?.selectedSliIndex ? "View Selected SLI" : "Select Your SLI"}
+                      <ArrowRight className="ml-2 h-4 w-4" />
+                    </Button>
+                    
+                    {userSlis[0]?.selectedSliIndex && !userSlis[0]?.refinedSliText && (
+                      <Button
+                        variant="outline"
+                        className="flex items-center"
+                        onClick={() => {
+                          scrollToTop();
+                          navigate("/sli-refinement");
+                        }}
+                      >
+                        Refine Your SLI
+                        <Sparkles className="ml-2 h-4 w-4" />
+                      </Button>
+                    )}
+                  </div>
                 </div>
               </div>
             </div>
