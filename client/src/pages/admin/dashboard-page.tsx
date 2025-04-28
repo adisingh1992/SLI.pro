@@ -67,14 +67,14 @@ export default function AdminDashboardPage() {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <Card>
+          <Card className="flex flex-col">
             <CardHeader className="pb-2">
               <CardTitle className="text-sm font-medium">Total Users</CardTitle>
               <CardDescription>
                 Registered users in the platform
               </CardDescription>
             </CardHeader>
-            <CardContent>
+            <CardContent className="flex-grow">
               {isCountLoading ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
               ) : countError ? (
@@ -86,7 +86,7 @@ export default function AdminDashboardPage() {
                 </div>
               )}
             </CardContent>
-            <CardFooter className="pt-0">
+            <CardFooter className="mt-auto pt-0">
               <Button 
                 className="w-full" 
                 onClick={() => navigate("/admin/users")}
@@ -97,19 +97,19 @@ export default function AdminDashboardPage() {
             </CardFooter>
           </Card>
 
-          <Card>
+          <Card className="flex flex-col">
             <CardHeader className="pb-2">
               <CardTitle className="text-sm font-medium">My Schedule</CardTitle>
               <CardDescription>
                 Manage your appointments and availability
               </CardDescription>
             </CardHeader>
-            <CardContent>
+            <CardContent className="flex-grow">
               <div className="flex items-center justify-center py-4">
                 <Calendar className="h-12 w-12 text-primary" />
               </div>
             </CardContent>
-            <CardFooter className="pt-0">
+            <CardFooter className="mt-auto pt-0">
               <Button 
                 className="w-full" 
                 onClick={() => window.open("https://calendly.com/login", "_blank")}
