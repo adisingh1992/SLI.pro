@@ -131,14 +131,28 @@ export default function UserDetailPage() {
                 <FileText className="h-4 w-4" />
                 Coaching Notes
               </Button>
-              <Button
-                variant="outline"
-                onClick={() => navigate(`/admin/users/${userId}/sli`)}
-                className="flex items-center gap-2"
-              >
-                <Star className="h-4 w-4" />
-                Generate SLIs
-              </Button>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <div>
+                      <Button
+                        variant="outline"
+                        className="flex items-center gap-2"
+                        onClick={() => navigate(`/admin/users/${userId}/sli`)}
+                        disabled={!coachingNotes?.length}
+                      >
+                        <Star className="h-4 w-4" />
+                        Generate SLIs
+                      </Button>
+                    </div>
+                  </TooltipTrigger>
+                  {!coachingNotes?.length && (
+                    <TooltipContent>
+                      <p>At least one coaching note is required to generate SLIs</p>
+                    </TooltipContent>
+                  )}
+                </Tooltip>
+              </TooltipProvider>
             </div>
           </div>
         </div>
@@ -198,14 +212,28 @@ export default function UserDetailPage() {
                 <FileText className="h-4 w-4" />
                 Coaching Notes
               </Button>
-              <Button
-                variant="outline"
-                className="flex items-center gap-2"
-                onClick={() => navigate(`/admin/users/${userId}/sli`)}
-              >
-                <Star className="h-4 w-4" />
-                Generate SLIs
-              </Button>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <div>
+                      <Button
+                        variant="outline"
+                        className="flex items-center gap-2"
+                        onClick={() => navigate(`/admin/users/${userId}/sli`)}
+                        disabled={!coachingNotes?.length}
+                      >
+                        <Star className="h-4 w-4" />
+                        Generate SLIs
+                      </Button>
+                    </div>
+                  </TooltipTrigger>
+                  {!coachingNotes?.length && (
+                    <TooltipContent>
+                      <p>At least one coaching note is required to generate SLIs</p>
+                    </TooltipContent>
+                  )}
+                </Tooltip>
+              </TooltipProvider>
             </div>
           </div>
           <p className="text-muted-foreground mt-1">
