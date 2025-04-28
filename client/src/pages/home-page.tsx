@@ -11,7 +11,6 @@ import {
   Calendar,
   User,
   FileText,
-  MessageSquare,
   Award,
   CheckCircle2,
   Sparkles
@@ -308,7 +307,7 @@ export default function HomePage() {
                         <span className="font-medium">Your Refined SLI:</span>
                       </div>
                       <div className="p-3 bg-white/60 border border-primary/10 rounded-md mb-3">
-                        <p className="font-medium text-primary">{userSlis[0].refinedSliText}</p>
+                        <p className="font-medium text-secondary">{userSlis[0].refinedSliText}</p>
                       </div>
                       <p className="text-gray-600 text-sm">
                         Your SLI has been refined to better reflect your professional brand. You can use this statement across your professional platforms.
@@ -321,7 +320,7 @@ export default function HomePage() {
                         <span className="font-medium">Your Selected SLI:</span>
                       </div>
                       <div className="p-3 bg-white/60 border border-primary/10 rounded-md mb-3">
-                        <p className="font-medium text-primary">
+                        <p className="font-medium text-secondary">
                           {userSlis[0].selectedSliIndex === 1 ? userSlis[0].statement1 :
                            userSlis[0].selectedSliIndex === 2 ? userSlis[0].statement2 :
                            userSlis[0].selectedSliIndex === 3 ? userSlis[0].statement3 : ""}

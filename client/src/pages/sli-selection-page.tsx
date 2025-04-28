@@ -78,10 +78,10 @@ export default function SliSelectionPage() {
       });
       
       // Navigate back to home page after successful update
-      setTimeout(() => {
-        scrollToTop();
-        navigate("/");
-      }, 1500);
+      // setTimeout(() => {
+      //   scrollToTop();
+      //   navigate("/");
+      // }, 1500);
     },
     onError: (error) => {
       toast({
@@ -182,62 +182,80 @@ export default function SliSelectionPage() {
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <RadioGroup 
-                  className="space-y-6" 
-                  value={selectedSliIndex?.toString()}
-                  onValueChange={handleSliSelection}
-                >
-                  {/* SLI Option 1 */}
-                  <div className="border rounded-lg p-4 bg-white hover:bg-gray-50 transition-colors">
-                    <div className="flex items-start space-x-2">
-                      <RadioGroupItem value="1" id="sli-1" className="mt-1" />
-                      <div className="space-y-2 flex-1">
-                        <Label htmlFor="sli-1" className="text-base font-medium">
-                          {slis[0].title1}
-                        </Label>
-                        <p className="text-lg font-semibold text-secondary">{slis[0].statement1}</p>
-                        <div className="mt-3 pt-3 border-t border-gray-100">
-                          <h4 className="text-sm font-medium text-primary mb-1">Why this works:</h4>
-                          <p className="text-sm text-gray-600">{slis[0].rationale1}</p>
+                {/* Show a message when an SLI has been refined */}
+                {slis[0]?.refinedSliText ? (
+                  <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-lg">
+                    <div className="flex items-start">
+                      <CheckCircle2 className="h-5 w-5 text-green-500 mt-0.5 mr-2" />
+                      <div>
+                        <h3 className="font-medium text-green-800">SLI Already Refined</h3>
+                        <p className="text-sm text-green-700 mt-1">
+                          You've already selected and refined your SLI. You can view your refined SLI on the home page.
+                        </p>
+                        <div className="mt-3 p-3 bg-white border border-green-100 rounded-md">
+                          <p className="font-medium text-primary">{slis[0].refinedSliText}</p>
                         </div>
                       </div>
                     </div>
                   </div>
+                ) : (
+                  <RadioGroup 
+                    className="space-y-6" 
+                    value={selectedSliIndex?.toString()}
+                    onValueChange={handleSliSelection}
+                  >
+                    {/* SLI Option 1 */}
+                    <div className="border rounded-lg p-4 bg-white hover:bg-gray-50 transition-colors">
+                      <div className="flex items-start space-x-2">
+                        <RadioGroupItem value="1" id="sli-1" className="mt-1" />
+                        <div className="space-y-2 flex-1">
+                          <Label htmlFor="sli-1" className="text-base font-medium">
+                            {slis[0].title1}
+                          </Label>
+                          <p className="text-lg font-semibold text-secondary">{slis[0].statement1}</p>
+                          <div className="mt-3 pt-3 border-t border-gray-100">
+                            <h4 className="text-sm font-medium text-primary mb-1">Why this works:</h4>
+                            <p className="text-sm text-gray-600">{slis[0].rationale1}</p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
 
-                  {/* SLI Option 2 */}
-                  <div className="border rounded-lg p-4 bg-white hover:bg-gray-50 transition-colors">
-                    <div className="flex items-start space-x-2">
-                      <RadioGroupItem value="2" id="sli-2" className="mt-1" />
-                      <div className="space-y-2 flex-1">
-                        <Label htmlFor="sli-2" className="text-base font-medium">
-                          {slis[0].title2}
-                        </Label>
-                        <p className="text-lg font-semibold text-secondary">{slis[0].statement2}</p>
-                        <div className="mt-3 pt-3 border-t border-gray-100">
-                          <h4 className="text-sm font-medium text-primary mb-1">Why this works:</h4>
-                          <p className="text-sm text-gray-600">{slis[0].rationale2}</p>
+                    {/* SLI Option 2 */}
+                    <div className="border rounded-lg p-4 bg-white hover:bg-gray-50 transition-colors">
+                      <div className="flex items-start space-x-2">
+                        <RadioGroupItem value="2" id="sli-2" className="mt-1" />
+                        <div className="space-y-2 flex-1">
+                          <Label htmlFor="sli-2" className="text-base font-medium">
+                            {slis[0].title2}
+                          </Label>
+                          <p className="text-lg font-semibold text-secondary">{slis[0].statement2}</p>
+                          <div className="mt-3 pt-3 border-t border-gray-100">
+                            <h4 className="text-sm font-medium text-primary mb-1">Why this works:</h4>
+                            <p className="text-sm text-gray-600">{slis[0].rationale2}</p>
+                          </div>
                         </div>
                       </div>
                     </div>
-                  </div>
 
-                  {/* SLI Option 3 */}
-                  <div className="border rounded-lg p-4 bg-white hover:bg-gray-50 transition-colors">
-                    <div className="flex items-start space-x-2">
-                      <RadioGroupItem value="3" id="sli-3" className="mt-1" />
-                      <div className="space-y-2 flex-1">
-                        <Label htmlFor="sli-3" className="text-base font-medium">
-                          {slis[0].title3}
-                        </Label>
-                        <p className="text-lg font-semibold text-secondary">{slis[0].statement3}</p>
-                        <div className="mt-3 pt-3 border-t border-gray-100">
-                          <h4 className="text-sm font-medium text-primary mb-1">Why this works:</h4>
-                          <p className="text-sm text-gray-600">{slis[0].rationale3}</p>
+                    {/* SLI Option 3 */}
+                    <div className="border rounded-lg p-4 bg-white hover:bg-gray-50 transition-colors">
+                      <div className="flex items-start space-x-2">
+                        <RadioGroupItem value="3" id="sli-3" className="mt-1" />
+                        <div className="space-y-2 flex-1">
+                          <Label htmlFor="sli-3" className="text-base font-medium">
+                            {slis[0].title3}
+                          </Label>
+                          <p className="text-lg font-semibold text-secondary">{slis[0].statement3}</p>
+                          <div className="mt-3 pt-3 border-t border-gray-100">
+                            <h4 className="text-sm font-medium text-primary mb-1">Why this works:</h4>
+                            <p className="text-sm text-gray-600">{slis[0].rationale3}</p>
+                          </div>
                         </div>
                       </div>
                     </div>
-                  </div>
-                </RadioGroup>
+                  </RadioGroup>
+                )}
 
                 <div className="flex justify-between mt-8">
                   <Button
@@ -247,52 +265,55 @@ export default function SliSelectionPage() {
                       navigate("/");
                     }}
                   >
-                    Cancel
+                    {slis[0]?.refinedSliText ? "Return to Home" : "Cancel"}
                   </Button>
-                  <div className="space-x-3">
-                    <Button
-                      variant="secondary"
-                      disabled={updateSliMutation.isPending || !selectedSliIndex}
-                      onClick={() => {
-                        // Save the current selection before redirecting
-                        if (selectedSliIndex) {
-                          const sli = slis[0];
-                          updateSliMutation.mutate({
-                            id: sli.id,
-                            selectedSliIndex,
-                            customSliText: undefined
-                          }, {
-                            onSuccess: () => {
-                              scrollToTop();
-                              navigate("/sli-refinement");
-                            }
-                          });
-                        } else {
-                          toast({
-                            title: "Selection Required",
-                            description: "Please select an SLI first before refining.",
-                            variant: "destructive"
-                          });
-                        }
-                      }}
-                    >
-                      Refine SLI
-                    </Button>
-                    <Button
-                      onClick={handleSubmit}
-                      disabled={updateSliMutation.isPending}
-
-                    >
-                      {updateSliMutation.isPending ? (
-                        <>
-                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                          Saving...
-                        </>
-                      ) : (
-                        "Save Selection"
-                      )}
-                    </Button>
-                  </div>
+                  
+                  {/* Only show action buttons if the SLI hasn't been refined */}
+                  {!slis[0]?.refinedSliText && (
+                    <div className="space-x-3">
+                      <Button
+                        variant="secondary"
+                        disabled={updateSliMutation.isPending || !selectedSliIndex}
+                        onClick={() => {
+                          // Save the current selection before redirecting
+                          if (selectedSliIndex) {
+                            const sli = slis[0];
+                            updateSliMutation.mutate({
+                              id: sli.id,
+                              selectedSliIndex,
+                              customSliText: undefined
+                            }, {
+                              onSuccess: () => {
+                                scrollToTop();
+                                navigate("/sli-refinement");
+                              }
+                            });
+                          } else {
+                            toast({
+                              title: "Selection Required",
+                              description: "Please select an SLI first before refining.",
+                              variant: "destructive"
+                            });
+                          }
+                        }}
+                      >
+                        Refine SLI
+                      </Button>
+                      <Button
+                        onClick={handleSubmit}
+                        disabled={updateSliMutation.isPending}
+                      >
+                        {updateSliMutation.isPending ? (
+                          <>
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            Saving...
+                          </>
+                        ) : (
+                          "Save Selection"
+                        )}
+                      </Button>
+                    </div>
+                  )}
                 </div>
               </CardContent>
             </Card>

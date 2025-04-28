@@ -299,6 +299,11 @@ export function registerSliRoutes(app: Express, storage: IStorage) {
         return res.status(403).json({ message: "You don't have permission to update this SLI" });
       }
       
+      // Check if the SLI has already been refined
+      if (currentSli.refinedSliText) {
+        return res.status(400).json({ message: "This SLI has already been refined and cannot be refined again" });
+      }
+      
       // Get the original statements to send to Claude
       const originalStatements = {
         statement1: currentSli.statement1,

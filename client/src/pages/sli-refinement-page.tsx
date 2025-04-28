@@ -115,10 +115,10 @@ export default function SliRefinementPage() {
       });
       
       // Navigate back to home page after successful update
-      setTimeout(() => {
-        scrollToTop();
-        navigate("/");
-      }, 1500);
+      // setTimeout(() => {
+      //   scrollToTop();
+      //   navigate("/");
+      // }, 1500);
     } catch (error) {
       toast({
         title: "Error",
@@ -293,7 +293,7 @@ export default function SliRefinementPage() {
                 </CardHeader>
                 <CardContent className="space-y-6">
                   <div className="p-4 bg-primary/10 rounded-lg border border-primary/20">
-                    <p className="text-lg font-medium text-primary">
+                    <p className="text-lg font-medium text-secondary">
                       {getSelectedSliStatement()}
                     </p>
                   </div>
