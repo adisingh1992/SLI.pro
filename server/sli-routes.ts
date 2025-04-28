@@ -156,28 +156,42 @@ export function registerSliRoutes(app: Express, storage: IStorage) {
         return res.status(404).json({ message: "No SLIs found" });
       }
       
-      // Find the selected SLI
-      const selectedSli = slis.find((sli: Sli) => sli.selectedSliIndex !== null);
+      // Find the selected SLI or one with custom SLI text
+      const selectedSli = slis.find((sli: Sli) => sli.selectedSliIndex !== null || sli.customSliText);
       
       if (!selectedSli) {
         return res.status(404).json({ message: "No selected SLI found" });
       }
       
-      // Determine which SLI to return based on selectedSliIndex
-      const index = selectedSli.selectedSliIndex;
+      let userSli;
       
-      if (index === null) {
-        return res.status(404).json({ message: "No selected SLI index found" });
+      // Check if it's a custom SLI
+      if (selectedSli.customSliText && selectedSli.selectedSliIndex === null) {
+        userSli = {
+          id: selectedSli.id,
+          title: "Custom SLI",
+          statement: selectedSli.customSliText,
+          isCustom: true,
+          createdAt: selectedSli.createdAt
+        };
+      } else {
+        // It's a predefined SLI
+        const index = selectedSli.selectedSliIndex;
+        
+        if (index === null) {
+          return res.status(404).json({ message: "No selected SLI index found" });
+        }
+        
+        // We'll return a simplified version for the user
+        userSli = {
+          id: selectedSli.id,
+          title: selectedSli[`title${index}` as keyof Sli] as string,
+          statement: selectedSli[`statement${index}` as keyof Sli] as string,
+          rationale: selectedSli[`rationale${index}` as keyof Sli] as string,
+          isCustom: false,
+          createdAt: selectedSli.createdAt
+        };
       }
-      
-      // We'll return a simplified version for the user
-      const userSli = {
-        id: selectedSli.id,
-        title: selectedSli[`title${index}` as keyof Sli] as string,
-        statement: selectedSli[`statement${index}` as keyof Sli] as string,
-        rationale: selectedSli[`rationale${index}` as keyof Sli] as string,
-        createdAt: selectedSli.createdAt
-      };
       
       res.json(userSli);
     } catch (error) {
@@ -229,11 +243,19 @@ export function registerSliRoutes(app: Express, storage: IStorage) {
         return res.status(400).json({ message: "Invalid SLI index. Must be 1, 2, or 3" });
       }
       
+      // Set up the update data
       const updateData: Partial<Sli> = { selectedSliIndex };
       
-      // If custom SLI text is provided and selectedSliIndex is null, update the custom SLI text
-      if (customSliText && selectedSliIndex === null) {
+      // Handle custom SLI text
+      if (selectedSliIndex === null) {
+        // If selecting custom SLI, ensure we have text
+        if (!customSliText || customSliText.trim() === '') {
+          return res.status(400).json({ message: "Custom SLI text is required when not selecting a predefined SLI" });
+        }
         updateData.customSliText = customSliText;
+      } else {
+        // If selecting a predefined SLI, clear any existing custom text
+        updateData.customSliText = null;
       }
       
       // Update the SLI

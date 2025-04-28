@@ -51,6 +51,13 @@ export default function HomePage() {
     retry: false,
   });
   
+  // Fetch all user's SLIs (to check if they exist, even if not selected)
+  const { data: userSlis, isLoading: slisLoading } = useQuery<Sli[]>({
+    queryKey: ["/api/user/slis"],
+    enabled: !!user,
+    retry: false,
+  });
+  
   // Check if user has uploaded the required documents (resume and linkedin profile)
   const hasRequiredDocuments = userProfile?.documents?.some(doc => doc.type === 'resume') &&
                                userProfile?.documents?.some(doc => doc.type === 'linkedin');
@@ -279,8 +286,8 @@ export default function HomePage() {
             </div>
           )}
 
-          {/* SLI Section - Only visible when user has SLIs */}
-          {userSli && (
+          {/* SLI Section - Only visible when user has SLIs (whether selected or not) */}
+          {userSlis && userSlis.length > 0 && (
             <div className="mt-6 bg-[#f9f5ff] border border-purple-200 rounded-lg p-6">
               <div className="flex items-start">
                 <div className="p-3 rounded-full bg-purple-100 text-purple-600 mr-4">
