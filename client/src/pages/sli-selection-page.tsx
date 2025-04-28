@@ -120,7 +120,7 @@ export default function SliSelectionPage() {
     updateSliMutation.mutate({
       id: sli.id,
       selectedSliIndex,
-      customSliText: null
+      customSliText: undefined
     });
   };
 
