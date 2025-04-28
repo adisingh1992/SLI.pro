@@ -1,4 +1,3 @@
-import { useEffect, useState } from "react";
 import { useLocation, useParams } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Sli } from "@shared/schema";
@@ -6,11 +5,10 @@ import { queryClient } from "@/lib/queryClient";
 import { useAuth } from "@/hooks/use-auth";
 
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import Layout from "./layout";
 import { ArrowLeft, RefreshCw, CheckCircle2 } from "lucide-react";
-import { Separator } from "@/components/ui/separator";
 import { formatDistanceToNow } from "date-fns";
 import { Badge } from "@/components/ui/badge";
 
@@ -238,7 +236,7 @@ export default function SliPage() {
                     <div className="space-y-4">
                       <div className="grid grid-cols-1 gap-6">
                         <div className="p-4 rounded-lg border bg-card">
-                          <h3 className="text-lg font-medium text-primary mb-2">{sli.title1}</h3>
+                          <h3 className="text-lg font-medium text-secondary mb-2">{sli.title1}</h3>
                           <p className="mb-4">{sli.statement1}</p>
                           <div className="bg-muted/40 p-3 rounded-md">
                             <h4 className="text-sm font-medium mb-1">Rationale:</h4>
@@ -247,7 +245,7 @@ export default function SliPage() {
                         </div>
                         
                         <div className="p-4 rounded-lg border bg-card">
-                          <h3 className="text-lg font-medium text-primary mb-2">{sli.title2}</h3>
+                          <h3 className="text-lg font-medium text-secondary mb-2">{sli.title2}</h3>
                           <p className="mb-4">{sli.statement2}</p>
                           <div className="bg-muted/40 p-3 rounded-md">
                             <h4 className="text-sm font-medium mb-1">Rationale:</h4>
@@ -256,7 +254,7 @@ export default function SliPage() {
                         </div>
                         
                         <div className="p-4 rounded-lg border bg-card">
-                          <h3 className="text-lg font-medium text-primary mb-2">{sli.title3}</h3>
+                          <h3 className="text-lg font-medium text-secondary mb-2">{sli.title3}</h3>
                           <p className="mb-4">{sli.statement3}</p>
                           <div className="bg-muted/40 p-3 rounded-md">
                             <h4 className="text-sm font-medium mb-1">Rationale:</h4>

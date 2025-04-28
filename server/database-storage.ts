@@ -278,6 +278,11 @@ export class DatabaseStorage implements IStorage {
     const languages = await this.getLanguages(userId);
     const questionnaire = await this.getQuestionnaire(userId);
     const documents = await this.getDocuments(userId);
+    const conversations = await this.getConversations(userId);
+    const monthlyCheckIns = await this.getMonthlyCheckIns(userId);
+    const freshnessReports = await this.getFreshnessReports(userId);
+    const coachingNotes = await this.getCoachingNotes(userId);
+    const slis = await this.getSlisByUserId(userId);
     
     return {
       ...user,
@@ -287,7 +292,12 @@ export class DatabaseStorage implements IStorage {
       skills,
       languages,
       questionnaire,
-      documents
+      documents,
+      conversations,
+      monthlyCheckIns,
+      freshnessReports,
+      coachingNotes,
+      slis
     };
   }
 
