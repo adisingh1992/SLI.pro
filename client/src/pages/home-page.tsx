@@ -77,18 +77,18 @@ export default function HomePage() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-[#F5F5F5] flex flex-col">
+      <div className="min-h-screen bg-background flex flex-col">
         <NavBar />
         <div className="flex-1 flex items-center justify-center">
-          <Loader2 className="h-8 w-8 animate-spin text-[#bed6d1]" />
-          <span className="ml-2 text-[#333333]">Loading your profile...</span>
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          <span className="ml-2">Loading your profile...</span>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-[#F5F5F5] flex flex-col">
+    <div className="min-h-screen bg-background flex flex-col">
       <NavBar />
       <main className="flex-1 max-w-7xl mx-auto px-4 sm:px-6 py-8">
         <div className="bg-white shadow-card rounded-lg p-6">
@@ -288,13 +288,13 @@ export default function HomePage() {
 
           {/* SLI Section - Only visible when user has SLIs (whether selected or not) */}
           {userSlis && userSlis.length > 0 && (
-            <div className="mt-6 bg-[#f9f5ff] border border-purple-200 rounded-lg p-6">
+            <div className="mt-6 bg-primary/5 border border-primary/20 rounded-lg p-6">
               <div className="flex items-start">
-                <div className="p-3 rounded-full bg-purple-100 text-purple-600 mr-4">
+                <div className="p-3 rounded-full bg-primary/10 text-primary mr-4">
                   <Award className="h-6 w-6" />
                 </div>
                 <div className="flex-1">
-                  <h2 className="text-lg font-medium text-[#333333] mb-2">
+                  <h2 className="text-lg font-medium mb-2">
                     Single Lasting Impressions
                   </h2>
                   <p className="text-gray-600 mb-4">
@@ -302,7 +302,7 @@ export default function HomePage() {
                     It's what you want people to remember about you after an interaction.
                   </p>
                   <Button
-                    className="flex items-center bg-purple-500 hover:bg-purple-600"
+                    className="flex items-center"
                     onClick={() => {
                       scrollToTop();
                       navigate("/sli-selection");

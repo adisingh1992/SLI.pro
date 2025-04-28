@@ -163,7 +163,7 @@ export default function SliSelectionPage() {
   }, [slis]);
 
   return (
-    <div className="min-h-screen bg-[#F5F5F5] flex flex-col">
+    <div className="min-h-screen bg-background flex flex-col">
       <NavBar />
       <main className="flex-1 max-w-5xl mx-auto px-4 sm:px-6 py-8">
         <div className="mb-6 flex items-center gap-2">
@@ -191,7 +191,7 @@ export default function SliSelectionPage() {
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  <Award className="h-5 w-5 text-purple-500" />
+                  <Award className="h-5 w-5 text-primary" />
                   <span>Single Lasting Impressions</span>
                 </CardTitle>
                 <CardDescription>
@@ -311,8 +311,8 @@ export default function SliSelectionPage() {
           <Card>
             <CardContent className="p-6">
               <div className="text-center">
-                <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-yellow-100">
-                  <Award className="h-6 w-6 text-yellow-600" />
+                <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
+                  <Award className="h-6 w-6 text-primary" />
                 </div>
                 <h3 className="mt-3 text-lg font-medium">No SLIs Available</h3>
                 <p className="mt-2 text-sm text-gray-500">
