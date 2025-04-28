@@ -14,7 +14,9 @@ import {
   Loader2,
   MessageCircle,
   Lightbulb,
-  LightbulbOff
+  LightbulbOff,
+  RefreshCw,
+  AlertCircle
 } from "lucide-react";
 
 import { 
@@ -38,6 +40,7 @@ export default function SliRefinementPage() {
   const [, navigate] = useLocation();
   const [feedback, setFeedback] = useState<string>("");
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
+  const [showFeedbackForm, setShowFeedbackForm] = useState<boolean>(false);
 
   // Fetch user's selected SLI
   const { data: slis, isLoading: slisLoading } = useQuery<Sli[]>({
@@ -109,16 +112,13 @@ export default function SliRefinementPage() {
       // Invalidate queries to refresh data
       queryClient.invalidateQueries({ queryKey: ["/api/user/slis"] });
       
+      // Reset UI state
+      setShowFeedbackForm(false);
+      
       toast({
         title: "Success",
         description: "Your SLI has been refined and saved",
       });
-      
-      // Navigate back to home page after successful update
-      // setTimeout(() => {
-      //   scrollToTop();
-      //   navigate("/");
-      // }, 1500);
     } catch (error) {
       toast({
         title: "Error",
@@ -188,7 +188,7 @@ export default function SliRefinementPage() {
         ) : slis && slis.length > 0 && slis[0].selectedSliIndex !== null ? (
           <div className="space-y-8">
             {/* Show different views based on whether the SLI has been refined already */}
-            {slis[0].refinedSliText ? (
+            {slis[0].refinedSliText && !showFeedbackForm ? (
               <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
@@ -297,10 +297,7 @@ export default function SliRefinementPage() {
                           className="gap-1"
                           onClick={() => {
                             setFeedback(""); // Clear any previous feedback
-                            // Reset the UI to show the feedback form
-                            const element = document.getElementById('feedback-form');
-                            if (element) element.scrollIntoView({ behavior: 'smooth' });
-                            // Hide refined SLI display and show the feedback form
+                            setShowFeedbackForm(true); // Show the feedback form
                           }}
                         >
                           <RefreshCw className="h-3.5 w-3.5" />
@@ -358,15 +355,26 @@ export default function SliRefinementPage() {
                   </div>
 
                   <div className="flex justify-between mt-8">
-                    <Button
-                      variant="outline"
-                      onClick={() => {
-                        scrollToTop();
-                        navigate("/sli-selection");
-                      }}
-                    >
-                      Back
-                    </Button>
+                    {showFeedbackForm && slis[0].refinedSliText ? (
+                      <Button
+                        variant="outline"
+                        onClick={() => {
+                          setShowFeedbackForm(false); // Go back to viewing the refined SLI
+                        }}
+                      >
+                        Cancel
+                      </Button>
+                    ) : (
+                      <Button
+                        variant="outline"
+                        onClick={() => {
+                          scrollToTop();
+                          navigate("/sli-selection");
+                        }}
+                      >
+                        Back
+                      </Button>
+                    )}
                     <Button
                       onClick={handleSubmitRefinement}
                       disabled={isSubmitting}
@@ -380,7 +388,7 @@ export default function SliRefinementPage() {
                       ) : (
                         <>
                           <Sparkles className="h-4 w-4" />
-                          Refine My SLI
+                          {showFeedbackForm && slis[0].refinedSliText ? "Re-refine My SLI" : "Refine My SLI"}
                         </>
                       )}
                     </Button>
