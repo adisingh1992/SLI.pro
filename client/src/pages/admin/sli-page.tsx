@@ -233,10 +233,54 @@ export default function SliPage() {
                     </div>
                   </CardHeader>
                   <CardContent className="pt-6">
+                    {sli.refinedSliText && (
+                      <div className="mb-6">
+                        <div className="p-5 rounded-lg border-2 border-primary bg-primary/5">
+                          <div className="flex justify-between items-center mb-3">
+                            <h3 className="text-lg font-semibold text-primary">Refined SLI</h3>
+                            {sli.refinedAt && (
+                              <Badge variant="outline" className="bg-primary/10 text-primary border-primary/20">
+                                Refined {formatDistanceToNow(new Date(sli.refinedAt), { addSuffix: true })}
+                              </Badge>
+                            )}
+                          </div>
+                          <p className="mb-4 font-medium">{sli.refinedSliText}</p>
+                          
+                          {sli.refinementRationale && (
+                            <div className="bg-white p-3 rounded-md mb-3">
+                              <h4 className="text-sm font-medium mb-1">Refinement Rationale:</h4>
+                              <p className="text-sm text-muted-foreground">{sli.refinementRationale}</p>
+                            </div>
+                          )}
+                          
+                          {sli.implementationGuidance && (
+                            <div className="bg-white p-3 rounded-md">
+                              <h4 className="text-sm font-medium mb-1">Implementation Guidance:</h4>
+                              <p className="text-sm text-muted-foreground">{sli.implementationGuidance}</p>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                    
                     <div className="space-y-4">
                       <div className="grid grid-cols-1 gap-6">
-                        <div className="p-4 rounded-lg border bg-card">
-                          <h3 className="text-lg font-medium text-secondary mb-2">{sli.title1}</h3>
+                        <div className={`p-4 rounded-lg border ${sli.selectedSliIndex === 1 ? 'border-2 border-green-500 bg-green-50' : 'bg-card'}`}>
+                          <div className="flex justify-between items-center">
+                            <h3 className="text-lg font-medium text-secondary mb-2">{sli.title1}</h3>
+                            {sli.selectedSliIndex === 1 ? (
+                              <Badge className="bg-green-500">Selected</Badge>
+                            ) : (
+                              <Button 
+                                variant="outline" 
+                                size="sm" 
+                                onClick={() => updateSliMutation.mutate({ id: sli.id, selectedSliIndex: 1 })}
+                                disabled={updateSliMutation.isPending}
+                              >
+                                Select this SLI
+                              </Button>
+                            )}
+                          </div>
                           <p className="mb-4">{sli.statement1}</p>
                           <div className="bg-muted/40 p-3 rounded-md">
                             <h4 className="text-sm font-medium mb-1">Rationale:</h4>
@@ -244,8 +288,22 @@ export default function SliPage() {
                           </div>
                         </div>
                         
-                        <div className="p-4 rounded-lg border bg-card">
-                          <h3 className="text-lg font-medium text-secondary mb-2">{sli.title2}</h3>
+                        <div className={`p-4 rounded-lg border ${sli.selectedSliIndex === 2 ? 'border-2 border-green-500 bg-green-50' : 'bg-card'}`}>
+                          <div className="flex justify-between items-center">
+                            <h3 className="text-lg font-medium text-secondary mb-2">{sli.title2}</h3>
+                            {sli.selectedSliIndex === 2 ? (
+                              <Badge className="bg-green-500">Selected</Badge>
+                            ) : (
+                              <Button 
+                                variant="outline" 
+                                size="sm" 
+                                onClick={() => updateSliMutation.mutate({ id: sli.id, selectedSliIndex: 2 })}
+                                disabled={updateSliMutation.isPending}
+                              >
+                                Select this SLI
+                              </Button>
+                            )}
+                          </div>
                           <p className="mb-4">{sli.statement2}</p>
                           <div className="bg-muted/40 p-3 rounded-md">
                             <h4 className="text-sm font-medium mb-1">Rationale:</h4>
@@ -253,14 +311,49 @@ export default function SliPage() {
                           </div>
                         </div>
                         
-                        <div className="p-4 rounded-lg border bg-card">
-                          <h3 className="text-lg font-medium text-secondary mb-2">{sli.title3}</h3>
+                        <div className={`p-4 rounded-lg border ${sli.selectedSliIndex === 3 ? 'border-2 border-green-500 bg-green-50' : 'bg-card'}`}>
+                          <div className="flex justify-between items-center">
+                            <h3 className="text-lg font-medium text-secondary mb-2">{sli.title3}</h3>
+                            {sli.selectedSliIndex === 3 ? (
+                              <Badge className="bg-green-500">Selected</Badge>
+                            ) : (
+                              <Button 
+                                variant="outline"
+                                size="sm" 
+                                onClick={() => updateSliMutation.mutate({ id: sli.id, selectedSliIndex: 3 })}
+                                disabled={updateSliMutation.isPending}
+                              >
+                                Select this SLI
+                              </Button>
+                            )}
+                          </div>
                           <p className="mb-4">{sli.statement3}</p>
                           <div className="bg-muted/40 p-3 rounded-md">
                             <h4 className="text-sm font-medium mb-1">Rationale:</h4>
                             <p className="text-sm text-muted-foreground">{sli.rationale3}</p>
                           </div>
                         </div>
+                        
+                        {sli.customSliText && (
+                          <div className={`p-4 rounded-lg border ${sli.selectedSliIndex === null ? 'border-2 border-green-500 bg-green-50' : 'bg-card'}`}>
+                            <div className="flex justify-between items-center">
+                              <h3 className="text-lg font-medium text-secondary mb-2">Custom SLI</h3>
+                              {sli.selectedSliIndex === null ? (
+                                <Badge className="bg-green-500">Selected</Badge>
+                              ) : (
+                                <Button 
+                                  variant="outline" 
+                                  size="sm" 
+                                  onClick={() => updateSliMutation.mutate({ id: sli.id, selectedSliIndex: null })}
+                                  disabled={updateSliMutation.isPending}
+                                >
+                                  Select Custom SLI
+                                </Button>
+                              )}
+                            </div>
+                            <p className="mb-4">{sli.customSliText}</p>
+                          </div>
+                        )}
                       </div>
                     </div>
                   </CardContent>
