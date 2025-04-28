@@ -13,6 +13,7 @@ export const users = pgTable("users", {
   bio: text("bio"),
   location: text("location"),
   isAdmin: boolean("is_admin").default(false).notNull(),
+  lastLoginAt: timestamp("last_login_at"),
 });
 
 export const experiences = pgTable("experiences", {

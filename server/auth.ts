@@ -130,9 +130,18 @@ export function setupAuth(app: Express) {
   });
 
   app.post("/api/login", (req, res, next) => {
-    passport.authenticate("local", (err: any, user: any, info: any) => {
+    passport.authenticate("local", async (err: any, user: any, info: any) => {
       if (err) return next(err);
       if (!user) return res.status(401).json({ message: "Invalid username or password" });
+      
+      // Update the lastLoginAt timestamp
+      try {
+        await storage.updateUser(user.id, { lastLoginAt: new Date() });
+        // Refresh the user data with updated lastLoginAt
+        user = await storage.getUser(user.id);
+      } catch (updateError) {
+        console.error("Error updating last login time:", updateError);
+      }
       
       req.login(user, (err: any) => {
         if (err) return next(err);

@@ -135,7 +135,7 @@ export default function UsersPage() {
                     <TableHead>Email</TableHead>
                     <TableHead>Name</TableHead>
                     <TableHead>Phone</TableHead>
-                    <TableHead>Admin</TableHead>
+                    <TableHead>Last Login At</TableHead>
                     <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -149,15 +149,9 @@ export default function UsersPage() {
                       </TableCell>
                       <TableCell>{user.phoneNumber}</TableCell>
                       <TableCell>
-                        {user.isAdmin ? (
-                          <span className="bg-primary/10 text-primary px-2 py-1 rounded-full text-xs font-medium">
-                            Admin
-                          </span>
-                        ) : (
-                          <span className="bg-gray-100 text-gray-500 px-2 py-1 rounded-full text-xs font-medium">
-                            User
-                          </span>
-                        )}
+                        {user.lastLoginAt 
+                          ? new Date(user.lastLoginAt).toLocaleString() 
+                          : "Never"}
                       </TableCell>
                       <TableCell className="text-right">
                         <Button
