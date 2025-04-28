@@ -218,6 +218,10 @@ export default function SliSelectionPage() {
                           {slis[0].title1}
                         </Label>
                         <p className="text-lg font-semibold text-secondary">{slis[0].statement1}</p>
+                        <div className="mt-3 pt-3 border-t border-gray-100">
+                          <h4 className="text-sm font-medium text-primary mb-1">Why this works:</h4>
+                          <p className="text-sm text-gray-600">{slis[0].rationale1}</p>
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -231,6 +235,10 @@ export default function SliSelectionPage() {
                           {slis[0].title2}
                         </Label>
                         <p className="text-lg font-semibold text-secondary">{slis[0].statement2}</p>
+                        <div className="mt-3 pt-3 border-t border-gray-100">
+                          <h4 className="text-sm font-medium text-primary mb-1">Why this works:</h4>
+                          <p className="text-sm text-gray-600">{slis[0].rationale2}</p>
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -244,6 +252,10 @@ export default function SliSelectionPage() {
                           {slis[0].title3}
                         </Label>
                         <p className="text-lg font-semibold text-secondary">{slis[0].statement3}</p>
+                        <div className="mt-3 pt-3 border-t border-gray-100">
+                          <h4 className="text-sm font-medium text-primary mb-1">Why this works:</h4>
+                          <p className="text-sm text-gray-600">{slis[0].rationale3}</p>
+                        </div>
                       </div>
                     </div>
                   </div>
