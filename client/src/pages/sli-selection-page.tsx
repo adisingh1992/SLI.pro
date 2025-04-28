@@ -192,8 +192,24 @@ export default function SliSelectionPage() {
                         <p className="text-sm text-green-700 mt-1">
                           You've already selected and refined your SLI. You can view your refined SLI on the home page.
                         </p>
-                        <div className="mt-3 p-3 bg-white border border-green-100 rounded-md">
-                          <p className="font-medium text-primary">{slis[0].refinedSliText}</p>
+                        {/* Original SLI */}
+                        <div className="mt-3 mb-2">
+                          <h4 className="text-xs font-medium uppercase text-green-700">Original SLI</h4>
+                          <div className="mt-1 p-3 bg-white border border-green-100 rounded-md">
+                            <p className="text-sm text-gray-600">
+                              {slis[0].selectedSliIndex === 1 && slis[0].statement1}
+                              {slis[0].selectedSliIndex === 2 && slis[0].statement2}
+                              {slis[0].selectedSliIndex === 3 && slis[0].statement3}
+                            </p>
+                          </div>
+                        </div>
+                        
+                        {/* Refined SLI */}
+                        <div>
+                          <h4 className="text-xs font-medium uppercase text-green-700">Refined SLI</h4>
+                          <div className="mt-1 p-3 bg-white border border-green-100 rounded-md">
+                            <p className="font-medium text-secondary">{slis[0].refinedSliText}</p>
+                          </div>
                         </div>
                       </div>
                     </div>

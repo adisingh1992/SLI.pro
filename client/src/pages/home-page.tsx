@@ -349,7 +349,7 @@ export default function HomePage() {
                       <ArrowRight className="ml-2 h-4 w-4" />
                     </Button>
                     
-                    {userSlis[0]?.selectedSliIndex && !userSlis[0]?.refinedSliText && (
+                    {userSlis[0]?.selectedSliIndex && (
                       <Button
                         variant="outline"
                         className="flex items-center"
@@ -358,7 +358,7 @@ export default function HomePage() {
                           navigate("/sli-refinement");
                         }}
                       >
-                        Refine Your SLI
+                        {userSlis[0]?.refinedSliText ? "View Refined SLI" : "Refine Your SLI"}
                         <Sparkles className="ml-2 h-4 w-4" />
                       </Button>
                     )}
