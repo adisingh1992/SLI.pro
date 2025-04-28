@@ -158,6 +158,11 @@ export default function SliSelectionPage() {
       
       if (sli.selectedSliIndex !== null) {
         setSelectedSliIndex(sli.selectedSliIndex);
+        setShowCustomTextField(false);
+      } else if (sli.customSliText) {
+        // If there's custom SLI text, show the custom field and populate it
+        setCustomSli(sli.customSliText);
+        setShowCustomTextField(true);
       }
     }
   }, [slis]);
@@ -212,7 +217,7 @@ export default function SliSelectionPage() {
                         <Label htmlFor="sli-1" className="text-base font-medium">
                           {slis[0].title1}
                         </Label>
-                        <p className="text-lg font-semibold text-primary">{slis[0].statement1}</p>
+                        <p className="text-lg font-semibold text-secondary">{slis[0].statement1}</p>
                       </div>
                     </div>
                   </div>
@@ -225,7 +230,7 @@ export default function SliSelectionPage() {
                         <Label htmlFor="sli-2" className="text-base font-medium">
                           {slis[0].title2}
                         </Label>
-                        <p className="text-lg font-semibold text-primary">{slis[0].statement2}</p>
+                        <p className="text-lg font-semibold text-secondary">{slis[0].statement2}</p>
                       </div>
                     </div>
                   </div>
@@ -238,7 +243,7 @@ export default function SliSelectionPage() {
                         <Label htmlFor="sli-3" className="text-base font-medium">
                           {slis[0].title3}
                         </Label>
-                        <p className="text-lg font-semibold text-primary">{slis[0].statement3}</p>
+                        <p className="text-lg font-semibold text-secondary">{slis[0].statement3}</p>
                       </div>
                     </div>
                   </div>
