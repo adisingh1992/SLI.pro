@@ -178,13 +178,13 @@ export default function SliSelectionPage() {
           >
             <ArrowLeft className="h-4 w-4" />
           </Button>
-          <h1 className="text-2xl font-bold text-[#333333]">Select Your SLI</h1>
+          <h1 className="text-2xl font-bold">Select Your SLI</h1>
         </div>
 
         {slisLoading ? (
           <div className="flex-1 flex items-center justify-center">
-            <Loader2 className="h-8 w-8 animate-spin text-[#bed6d1]" />
-            <span className="ml-2 text-[#333333]">Loading your SLIs...</span>
+            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            <span className="ml-2">Loading your SLIs...</span>
           </div>
         ) : slis && slis.length > 0 ? (
           <div className="space-y-8">
@@ -212,10 +212,7 @@ export default function SliSelectionPage() {
                         <Label htmlFor="sli-1" className="text-base font-medium">
                           {slis[0].title1}
                         </Label>
-                        <p className="text-lg font-semibold text-purple-700">{slis[0].statement1}</p>
-                        <div className="text-sm text-gray-600 mt-2">
-                          <span className="font-medium">Why this works:</span> {slis[0].rationale1}
-                        </div>
+                        <p className="text-lg font-semibold text-primary">{slis[0].statement1}</p>
                       </div>
                     </div>
                   </div>
@@ -228,10 +225,7 @@ export default function SliSelectionPage() {
                         <Label htmlFor="sli-2" className="text-base font-medium">
                           {slis[0].title2}
                         </Label>
-                        <p className="text-lg font-semibold text-purple-700">{slis[0].statement2}</p>
-                        <div className="text-sm text-gray-600 mt-2">
-                          <span className="font-medium">Why this works:</span> {slis[0].rationale2}
-                        </div>
+                        <p className="text-lg font-semibold text-primary">{slis[0].statement2}</p>
                       </div>
                     </div>
                   </div>
@@ -244,10 +238,7 @@ export default function SliSelectionPage() {
                         <Label htmlFor="sli-3" className="text-base font-medium">
                           {slis[0].title3}
                         </Label>
-                        <p className="text-lg font-semibold text-purple-700">{slis[0].statement3}</p>
-                        <div className="text-sm text-gray-600 mt-2">
-                          <span className="font-medium">Why this works:</span> {slis[0].rationale3}
-                        </div>
+                        <p className="text-lg font-semibold text-primary">{slis[0].statement3}</p>
                       </div>
                     </div>
                   </div>
@@ -287,7 +278,6 @@ export default function SliSelectionPage() {
                   <div className="space-x-3">
                     <Button
                       variant="secondary"
-                      className="border-purple-200"
                       disabled={updateSliMutation.isPending}
                       onClick={() => {
                         toast({
@@ -301,7 +291,7 @@ export default function SliSelectionPage() {
                     <Button
                       onClick={handleSubmit}
                       disabled={updateSliMutation.isPending}
-                      className="bg-purple-600 hover:bg-purple-700"
+
                     >
                       {updateSliMutation.isPending ? (
                         <>
