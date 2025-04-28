@@ -38,7 +38,8 @@ import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { getQueryFn } from "@/lib/queryClient";
 import AdminLayout from "./layout";
-import { UserProfile } from "@shared/schema";
+import { UserProfile, CoachingNote } from "@shared/schema";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 type UserProfileWithoutPassword = Omit<UserProfile, "password">;
 
@@ -58,6 +59,16 @@ export default function UserDetailPage() {
     queryFn: getQueryFn({ on401: "throw" }),
     enabled: !!userId && !!user?.isAdmin,
   });
+  
+  // Fetch coaching notes to check if there are any
+  const {
+    data: coachingNotes,
+    isLoading: isCoachingNotesLoading,
+  } = useQuery<CoachingNote[]>({
+    queryKey: [`/api/admin/users/${userId}/coaching-notes`],
+    queryFn: getQueryFn({ on401: "throw" }),
+    enabled: !!userId && !!user?.isAdmin,
+  });
 
   // Redirect if not admin
   useEffect(() => {
@@ -66,7 +77,7 @@ export default function UserDetailPage() {
     }
   }, [user, authLoading, navigate]);
 
-  if (authLoading || isUserLoading) {
+  if (authLoading || isUserLoading || isCoachingNotesLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
