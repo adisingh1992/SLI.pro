@@ -23,7 +23,7 @@ async function callWithRetry<T>(
       return await fn();
     } catch (error: any) {
       if (error.status === 429) {
-        console.log(`[claude] Rate limit exceeded. Retrying in ${backoff / 1000} seconds...`);
+        console.log(`[claude] Rate limit exceeded. Retrying in ${backoff / 60000} seconds...`);
         await new Promise((resolve) => setTimeout(resolve, backoff));
         backoff *= 2; // Exponential backoff
         continue;
