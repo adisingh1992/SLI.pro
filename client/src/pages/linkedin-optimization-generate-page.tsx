@@ -32,15 +32,27 @@ export default function LinkedinOptimizationGeneratePage() {
   // Mutation for generating LinkedIn optimization
   const generateMutation = useMutation({
     mutationFn: async () => {
-      return fetch("/api/linkedin-optimizations/generate", {
+      const response = await fetch("/api/linkedin-optimizations/generate", {
         method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        credentials: "include"
       });
+      
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `API request failed with status ${response.status}`);
+      }
+      
+      return response.json();
     },
     onSuccess: (data: any) => {
       console.log("LinkedIn optimization generated successfully:", data);
       queryClient.invalidateQueries({ queryKey: ["/api/linkedin-optimizations/latest"] });
       
       if (data && data.id) {
+        console.log("Generated LinkedIn optimization with ID:", data.id);
         queryClient.invalidateQueries({ queryKey: [`/api/linkedin-optimizations/${data.id}`] });
         navigate(`/linkedin-optimization/${data.id}`);
       } else {
@@ -54,6 +66,12 @@ export default function LinkedinOptimizationGeneratePage() {
       setError(error.message || "Failed to generate LinkedIn optimization");
       setGenerating(false);
     },
+    onSettled: () => {
+      // Ensure generating state is cleared in all cases
+      if (generating) {
+        setGenerating(false);
+      }
+    }
   });
 
   // Check if user has the required documents (resume and LinkedIn)
