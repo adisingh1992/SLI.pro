@@ -1,68 +1,34 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
-import { useLocation, useRoute, Link } from "wouter";
-import { Loader2, ChevronLeft, Clock, CheckCircle, ExternalLink } from "lucide-react";
+import { useLocation, useParams } from "wouter";
+import { Loader2, ChevronLeft, ArrowRight, FileText, MessageSquare, Lightbulb, ArrowUpRight } from "lucide-react";
 import { LinkedinOptimization } from "@shared/schema";
 import { Button } from "@/components/ui/button";
+import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import NavBar from "@/components/nav-bar";
+import { formatDate } from "@/lib/utils";
 
 export default function LinkedinOptimizationPage() {
   const { user } = useAuth();
-  const { toast } = useToast();
-  const [match, params] = useRoute("/linkedin-optimization/:id?");
+  const params = useParams();
   const [_, navigate] = useLocation();
+  const [activeTab, setActiveTab] = useState("headline");
 
-  // Fetch the latest LinkedIn optimization if no ID is provided
+  // Determine if we are viewing a specific optimization or the latest
+  const isViewingSpecific = !!params.id;
+
+  // Fetch a specific optimization if ID is provided, otherwise fetch the latest
   const {
-    data: latestOptimization,
-    isLoading: isLatestLoading,
-    isError: isLatestError,
-    error: latestError,
+    data: optimization,
+    isLoading,
+    isError,
+    error
   } = useQuery<LinkedinOptimization>({
-    queryKey: ["/api/linkedin-optimizations/latest"],
-    enabled: !!user && !params?.id,
+    queryKey: isViewingSpecific ? [`/api/linkedin-optimizations/${params.id}`] : ["/api/linkedin-optimizations/latest"],
+    enabled: !!user,
   });
-
-  // Fetch specific LinkedIn optimization if ID is provided
-  const {
-    data: specificOptimization,
-    isLoading: isSpecificLoading,
-    isError: isSpecificError,
-    error: specificError,
-  } = useQuery<LinkedinOptimization>({
-    queryKey: ["/api/linkedin-optimizations", params?.id],
-    enabled: !!user && !!params?.id,
-  });
-
-  // Use the appropriate optimization data
-  const optimization = params?.id ? specificOptimization : latestOptimization;
-  const isLoading = params?.id ? isSpecificLoading : isLatestLoading;
-  const isError = params?.id ? isSpecificError : isLatestError;
-  const error = params?.id ? specificError : latestError;
-
-  // Format date
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return new Intl.DateTimeFormat("en-US", {
-      year: "numeric",
-      month: "long",
-      day: "numeric",
-      hour: "numeric",
-      minute: "numeric",
-    }).format(date);
-  };
-
-  useEffect(() => {
-    if (isError && error) {
-      toast({
-        title: "Error",
-        description: "Failed to load LinkedIn optimization data.",
-        variant: "destructive",
-      });
-    }
-  }, [isError, error, toast]);
 
   if (isLoading) {
     return (
@@ -70,17 +36,17 @@ export default function LinkedinOptimizationPage() {
         <NavBar />
         <div className="flex-1 flex items-center justify-center">
           <Loader2 className="h-8 w-8 animate-spin text-primary" />
-          <span className="ml-2">Loading LinkedIn optimization data...</span>
+          <span className="ml-2">Loading optimization data...</span>
         </div>
       </div>
     );
   }
 
-  if (!optimization) {
+  if (isError || !optimization) {
     return (
       <div className="min-h-screen bg-background flex flex-col">
         <NavBar />
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 py-8 w-full">
+        <main className="max-w-6xl mx-auto px-4 sm:px-6 py-8 w-full">
           <Button
             variant="ghost"
             className="mb-6 flex items-center text-gray-600"
@@ -89,29 +55,37 @@ export default function LinkedinOptimizationPage() {
             <ChevronLeft className="mr-2 h-4 w-4" />
             Back to Home
           </Button>
-          
+
           <div className="bg-white shadow-card rounded-lg p-8 text-center">
-            <div className="mb-6 mx-auto w-16 h-16 flex items-center justify-center rounded-full bg-blue-50">
-              <Clock className="h-8 w-8 text-blue-500" />
+            <div className="mx-auto w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mb-4">
+              <FileText className="h-8 w-8 text-red-600" />
             </div>
-            <h1 className="text-2xl font-semibold mb-4">No LinkedIn Optimization Found</h1>
-            <p className="text-gray-600 mb-6 max-w-md mx-auto">
-              You haven't generated any LinkedIn optimization recommendations yet.
-              Return to the home page to start the optimization process.
+            <h1 className="text-2xl font-semibold text-gray-800 mb-2">Optimization Not Found</h1>
+            <p className="text-gray-600 mb-6">
+              {isError 
+                ? `Error: ${error instanceof Error ? error.message : "Unknown error"}`
+                : "No LinkedIn optimization found. Generate your first optimization to view recommendations."}
             </p>
-            <Button onClick={() => navigate("/")}>
-              Return to Home
+            <Button 
+              className="flex items-center mx-auto"
+              onClick={() => navigate("/linkedin-optimization/generate")}
+            >
+              Generate Optimization
+              <ArrowRight className="ml-2 h-4 w-4" />
             </Button>
           </div>
-        </div>
+        </main>
       </div>
     );
   }
 
+  // Format the date
+  const formattedDate = formatDate(new Date(optimization.createdAt));
+
   return (
     <div className="min-h-screen bg-background flex flex-col">
       <NavBar />
-      <main className="max-w-4xl mx-auto px-4 sm:px-6 py-8 w-full">
+      <main className="max-w-6xl mx-auto px-4 sm:px-6 py-8 w-full">
         <Button
           variant="ghost"
           className="mb-6 flex items-center text-gray-600"
@@ -121,292 +95,270 @@ export default function LinkedinOptimizationPage() {
           Back to Home
         </Button>
 
-        <div className="bg-white shadow-md rounded-lg overflow-hidden">
+        <div className="bg-white shadow-card rounded-lg overflow-hidden">
           <div className="bg-blue-50 p-6 border-b border-blue-100">
-            <h1 className="text-2xl font-semibold text-blue-900">LinkedIn Profile Optimization</h1>
-            <p className="text-blue-700 mt-1">
-              Generated on {formatDate(optimization.createdAt.toString())}
-            </p>
-          </div>
-
-          <div className="p-6">
-            {/* SLI Alignment Assessment */}
-            <section className="mb-10">
-              <h2 className="text-xl font-semibold text-gray-800 mb-4 pb-2 border-b border-gray-100">
-                SLI Alignment Assessment
-              </h2>
-              <div className="bg-blue-50 p-4 rounded-md border border-blue-100 text-blue-800">
-                {optimization.alignmentAssessment}
+            <div className="flex flex-col md:flex-row md:items-center md:justify-between">
+              <div>
+                <h1 className="text-2xl font-semibold text-blue-900">LinkedIn Profile Optimization</h1>
+                <p className="text-blue-700 mt-1">Generated on {formattedDate}</p>
               </div>
-            </section>
-
-            {/* Headline Optimization */}
-            {optimization.headlineOptimization && (
-              <section className="mb-10">
-                <h2 className="text-xl font-semibold text-gray-800 mb-4 pb-2 border-b border-gray-100">
-                  Headline Optimization
-                </h2>
-                <div className="space-y-4">
-                  <div>
-                    <h3 className="font-medium text-gray-700 mb-1">Current Headline</h3>
-                    <p className="text-gray-600 border-l-4 border-gray-200 pl-3 py-1">
-                      {optimization.headlineOptimization.currentHeadline || "No current headline provided"}
-                    </p>
-                  </div>
-                  <div>
-                    <h3 className="font-medium text-gray-700 mb-1">Recommended Headline</h3>
-                    <p className="text-blue-700 border-l-4 border-blue-300 pl-3 py-1 bg-blue-50">
-                      {optimization.headlineOptimization.recommendedHeadline}
-                    </p>
-                  </div>
-                  <div>
-                    <h3 className="font-medium text-gray-700 mb-1">Rationale</h3>
-                    <p className="text-gray-600">
-                      {optimization.headlineOptimization.rationale}
-                    </p>
-                  </div>
-                </div>
-              </section>
-            )}
-
-            {/* About Section Enhancement */}
-            {optimization.aboutSection && (
-              <section className="mb-10">
-                <h2 className="text-xl font-semibold text-gray-800 mb-4 pb-2 border-b border-gray-100">
-                  About Section Enhancement
-                </h2>
-                <div className="space-y-4">
-                  {optimization.aboutSection.currentWeaknesses && (
-                    <div>
-                      <h3 className="font-medium text-gray-700 mb-2">Current Weaknesses</h3>
-                      <ul className="list-disc pl-5 space-y-1 text-gray-600">
-                        {optimization.aboutSection.currentWeaknesses.map((weakness, index) => (
-                          <li key={index}>{weakness}</li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
-                  {optimization.aboutSection.recommendedAbout && (
-                    <div>
-                      <h3 className="font-medium text-gray-700 mb-2">Recommended About Section</h3>
-                      <div className="bg-blue-50 p-4 rounded-md border border-blue-100 text-gray-800 whitespace-pre-line">
-                        {optimization.aboutSection.recommendedAbout}
-                      </div>
-                    </div>
-                  )}
-                  {optimization.aboutSection.keyElements && (
-                    <div>
-                      <h3 className="font-medium text-gray-700 mb-2">Key Elements</h3>
-                      <ul className="list-disc pl-5 space-y-1 text-gray-600">
-                        {optimization.aboutSection.keyElements.map((element, index) => (
-                          <li key={index}>{element}</li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
-                </div>
-              </section>
-            )}
-
-            {/* Experience Descriptions */}
-            {optimization.experienceDescriptions && optimization.experienceDescriptions.positions && (
-              <section className="mb-10">
-                <h2 className="text-xl font-semibold text-gray-800 mb-4 pb-2 border-b border-gray-100">
-                  Experience Descriptions
-                </h2>
-                <div className="space-y-8">
-                  {optimization.experienceDescriptions.positions.map((position, index) => (
-                    <div key={index} className="p-4 border border-gray-200 rounded-md">
-                      <h3 className="font-medium text-gray-800 mb-3">{position.position}</h3>
-                      
-                      <div className="mb-4">
-                        <h4 className="text-sm font-medium text-gray-600 mb-1">Current Description</h4>
-                        <p className="text-gray-600 text-sm border-l-4 border-gray-200 pl-3 py-1">
-                          {position.currentDescription || "No current description provided"}
-                        </p>
-                      </div>
-                      
-                      <div className="mb-4">
-                        <h4 className="text-sm font-medium text-gray-600 mb-1">Recommended Description</h4>
-                        <p className="text-gray-800 text-sm border-l-4 border-blue-300 pl-3 py-1 bg-blue-50">
-                          {position.recommendedDescription}
-                        </p>
-                      </div>
-                      
-                      {position.rationale && (
-                        <div>
-                          <h4 className="text-sm font-medium text-gray-600 mb-1">Rationale</h4>
-                          <p className="text-gray-600 text-sm">{position.rationale}</p>
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              </section>
-            )}
-
-            {/* Skills & Endorsements */}
-            {optimization.skillsAndEndorsements && (
-              <section className="mb-10">
-                <h2 className="text-xl font-semibold text-gray-800 mb-4 pb-2 border-b border-gray-100">
-                  Skills & Endorsements
-                </h2>
-                <div className="space-y-4">
-                  {optimization.skillsAndEndorsements.recommendedSkills && (
-                    <div>
-                      <h3 className="font-medium text-gray-700 mb-2">Recommended Skills</h3>
-                      <div className="flex flex-wrap gap-2">
-                        {optimization.skillsAndEndorsements.recommendedSkills.map((skill, index) => (
-                          <span
-                            key={index}
-                            className="px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm"
-                          >
-                            {skill}
-                          </span>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                  
-                  {optimization.skillsAndEndorsements.skillsToRemove && (
-                    <div>
-                      <h3 className="font-medium text-gray-700 mb-2">Skills to Remove</h3>
-                      <div className="flex flex-wrap gap-2">
-                        {optimization.skillsAndEndorsements.skillsToRemove.map((skill, index) => (
-                          <span
-                            key={index}
-                            className="px-3 py-1 bg-red-100 text-red-800 rounded-full text-sm"
-                          >
-                            {skill}
-                          </span>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                  
-                  {optimization.skillsAndEndorsements.rationale && (
-                    <div>
-                      <h3 className="font-medium text-gray-700 mb-2">Rationale</h3>
-                      <p className="text-gray-600">{optimization.skillsAndEndorsements.rationale}</p>
-                    </div>
-                  )}
-                </div>
-              </section>
-            )}
-
-            {/* Additional Sections */}
-            {optimization.additionalSections && (
-              <section className="mb-10">
-                <h2 className="text-xl font-semibold text-gray-800 mb-4 pb-2 border-b border-gray-100">
-                  Additional Sections
-                </h2>
-                <div className="bg-gray-50 p-4 rounded-md border border-gray-200 whitespace-pre-line">
-                  {optimization.additionalSections}
-                </div>
-              </section>
-            )}
-
-            {/* Visual Elements */}
-            {optimization.visualElements && (
-              <section className="mb-10">
-                <h2 className="text-xl font-semibold text-gray-800 mb-4 pb-2 border-b border-gray-100">
-                  Visual Elements
-                </h2>
-                <div className="space-y-4">
-                  {optimization.visualElements.profilePhotoSuggestions && (
-                    <div>
-                      <h3 className="font-medium text-gray-700 mb-2">Profile Photo Suggestions</h3>
-                      <p className="text-gray-600">{optimization.visualElements.profilePhotoSuggestions}</p>
-                    </div>
-                  )}
-                  
-                  {optimization.visualElements.backgroundImageRecommendations && (
-                    <div>
-                      <h3 className="font-medium text-gray-700 mb-2">Background Image Recommendations</h3>
-                      <p className="text-gray-600">{optimization.visualElements.backgroundImageRecommendations}</p>
-                    </div>
-                  )}
-                  
-                  {optimization.visualElements.activityFeedContentIdeas && (
-                    <div>
-                      <h3 className="font-medium text-gray-700 mb-2">Activity Feed Content Ideas</h3>
-                      <p className="text-gray-600">{optimization.visualElements.activityFeedContentIdeas}</p>
-                    </div>
-                  )}
-                </div>
-              </section>
-            )}
-
-            {/* Content Strategy */}
-            {optimization.contentStrategy && (
-              <section className="mb-10">
-                <h2 className="text-xl font-semibold text-gray-800 mb-4 pb-2 border-b border-gray-100">
-                  Content Strategy
-                </h2>
-                <div className="space-y-6">
-                  {optimization.contentStrategy.themes && (
-                    <div>
-                      <h3 className="font-medium text-gray-700 mb-2">Recommended Themes</h3>
-                      <ul className="list-disc pl-5 space-y-1 text-gray-600">
-                        {optimization.contentStrategy.themes.map((theme, index) => (
-                          <li key={index}>{theme}</li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
-                  
-                  {optimization.contentStrategy.postIdeas && optimization.contentStrategy.postIdeas.length > 0 && (
-                    <div>
-                      <h3 className="font-medium text-gray-700 mb-2">Post Ideas</h3>
-                      <div className="space-y-4">
-                        {optimization.contentStrategy.postIdeas.map((idea, index) => (
-                          <div key={index} className="p-4 bg-blue-50 rounded-md border border-blue-100">
-                            <h4 className="font-medium text-blue-800 mb-2">{idea.title}</h4>
-                            <p className="text-gray-700">{idea.content}</p>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                  
-                  {optimization.contentStrategy.engagementTips && (
-                    <div>
-                      <h3 className="font-medium text-gray-700 mb-2">Engagement Tips</h3>
-                      <p className="text-gray-600 whitespace-pre-line">{optimization.contentStrategy.engagementTips}</p>
-                    </div>
-                  )}
-                </div>
-              </section>
-            )}
-
-            {/* Implementation Priorities */}
-            {optimization.implementationPriorities && (
-              <section className="mb-10">
-                <h2 className="text-xl font-semibold text-gray-800 mb-4 pb-2 border-b border-gray-100">
-                  Implementation Priorities
-                </h2>
-                <div className="bg-yellow-50 p-4 rounded-md border border-yellow-100 text-gray-800 whitespace-pre-line">
-                  {optimization.implementationPriorities}
-                </div>
-              </section>
-            )}
-
-            {/* Action Button */}
-            <div className="flex justify-between items-center mt-8">
               <Button
                 variant="outline"
-                className="flex items-center"
-                onClick={() => navigate("/")}
+                className="mt-4 md:mt-0 flex items-center border-blue-300 text-blue-700 hover:bg-blue-50"
+                onClick={() => navigate("/linkedin-optimization/generate")}
               >
-                <ChevronLeft className="mr-2 h-4 w-4" />
-                Back to Home
+                Generate New
+                <ArrowRight className="ml-2 h-4 w-4" />
               </Button>
-              <Button 
+            </div>
+          </div>
+
+          {/* Alignment Assessment Section */}
+          {optimization.alignmentAssessment && (
+            <div className="p-6 border-b border-gray-200">
+              <h2 className="text-xl font-medium text-gray-800 mb-4">SLI Alignment Assessment</h2>
+              <div className="bg-blue-50 rounded-lg p-4 border border-blue-100">
+                <p className="text-gray-700 whitespace-pre-line">{optimization.alignmentAssessment}</p>
+              </div>
+            </div>
+          )}
+
+          {/* Main Content Tabs */}
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="p-6">
+            <TabsList className="grid grid-cols-2 md:grid-cols-4 mb-6">
+              <TabsTrigger 
+                value="headline"
+                disabled={!optimization.headlineOptimization}
+                className={!optimization.headlineOptimization ? "text-gray-400" : ""}
+              >
+                Headline
+              </TabsTrigger>
+              <TabsTrigger 
+                value="about"
+                disabled={!optimization.aboutSection}
+                className={!optimization.aboutSection ? "text-gray-400" : ""}
+              >
+                About Section
+              </TabsTrigger>
+              <TabsTrigger 
+                value="content"
+                disabled={!optimization.contentStrategy}
+                className={!optimization.contentStrategy ? "text-gray-400" : ""}
+              >
+                Content Strategy
+              </TabsTrigger>
+              <TabsTrigger 
+                value="profile"
+                disabled={!optimization.profileEnhancements}
+                className={!optimization.profileEnhancements ? "text-gray-400" : ""}
+              >
+                Profile Enhancements
+              </TabsTrigger>
+            </TabsList>
+
+            {/* Headline Optimization Tab */}
+            <TabsContent value="headline" className="space-y-6">
+              {optimization.headlineOptimization && (
+                <>
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Current Headline</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <p className="text-gray-700 italic">"{optimization.headlineOptimization.currentHeadline}"</p>
+                    </CardContent>
+                  </Card>
+
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="flex items-center">
+                        <Lightbulb className="h-5 w-5 text-amber-500 mr-2" />
+                        Recommended Headline
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <p className="text-gray-700 font-medium">{optimization.headlineOptimization.recommendedHeadline}</p>
+                      {optimization.headlineOptimization.rationale && (
+                        <div className="mt-4 pt-4 border-t border-gray-100">
+                          <h4 className="text-sm font-medium text-gray-700 mb-2 flex items-center">
+                            <MessageSquare className="h-4 w-4 mr-2 text-blue-600" />
+                            Why this works better:
+                          </h4>
+                          <p className="text-gray-600 text-sm">{optimization.headlineOptimization.rationale}</p>
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                </>
+              )}
+            </TabsContent>
+
+            {/* About Section Tab */}
+            <TabsContent value="about" className="space-y-6">
+              {optimization.aboutSection && (
+                <>
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Current About Section Analysis</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <p className="text-gray-700 whitespace-pre-line">{optimization.aboutSection.currentAnalysis}</p>
+                    </CardContent>
+                  </Card>
+
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="flex items-center">
+                        <Lightbulb className="h-5 w-5 text-amber-500 mr-2" />
+                        Recommended Improvements
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <p className="text-gray-700 whitespace-pre-line">{optimization.aboutSection.recommendations}</p>
+                      
+                      {optimization.aboutSection.suggestedStructure && (
+                        <div className="mt-4 pt-4 border-t border-gray-100">
+                          <h4 className="text-sm font-medium text-gray-700 mb-2">Suggested Structure:</h4>
+                          <p className="text-gray-600 text-sm whitespace-pre-line">{optimization.aboutSection.suggestedStructure}</p>
+                        </div>
+                      )}
+                      
+                      {optimization.aboutSection.keyElements && (
+                        <div className="mt-4 pt-4 border-t border-gray-100">
+                          <h4 className="text-sm font-medium text-gray-700 mb-2">Key Elements to Include:</h4>
+                          <p className="text-gray-600 text-sm whitespace-pre-line">{optimization.aboutSection.keyElements}</p>
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                  
+                  {optimization.aboutSection.draftContent && (
+                    <Card>
+                      <CardHeader>
+                        <CardTitle className="flex items-center">
+                          <FileText className="h-5 w-5 text-green-500 mr-2" />
+                          Sample Draft
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <p className="text-gray-700 whitespace-pre-line">{optimization.aboutSection.draftContent}</p>
+                      </CardContent>
+                    </Card>
+                  )}
+                </>
+              )}
+            </TabsContent>
+
+            {/* Content Strategy Tab */}
+            <TabsContent value="content" className="space-y-6">
+              {optimization.contentStrategy && (
+                <>
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Content Themes</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <p className="text-gray-700 whitespace-pre-line">{optimization.contentStrategy.themes}</p>
+                    </CardContent>
+                  </Card>
+
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Post Ideas</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <p className="text-gray-700 whitespace-pre-line">{optimization.contentStrategy.postIdeas}</p>
+                    </CardContent>
+                  </Card>
+
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Engagement Tips</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <p className="text-gray-700 whitespace-pre-line">{optimization.contentStrategy.engagementTips}</p>
+                    </CardContent>
+                  </Card>
+                </>
+              )}
+            </TabsContent>
+
+            {/* Profile Enhancements Tab */}
+            <TabsContent value="profile" className="space-y-6">
+              {optimization.profileEnhancements && (
+                <>
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Experience Section</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <p className="text-gray-700 whitespace-pre-line">{optimization.profileEnhancements.experienceSection}</p>
+                    </CardContent>
+                  </Card>
+
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Skills & Endorsements</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <p className="text-gray-700 whitespace-pre-line">{optimization.profileEnhancements.skillsEndorsements}</p>
+                    </CardContent>
+                  </Card>
+
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Activity & Engagement</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <p className="text-gray-700 whitespace-pre-line">{optimization.profileEnhancements.activityEngagement}</p>
+                    </CardContent>
+                  </Card>
+
+                  {optimization.profileEnhancements.visualImprovements && (
+                    <Card>
+                      <CardHeader>
+                        <CardTitle>Visual Improvements</CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <p className="text-gray-700 whitespace-pre-line">{optimization.profileEnhancements.visualImprovements}</p>
+                      </CardContent>
+                    </Card>
+                  )}
+                </>
+              )}
+            </TabsContent>
+          </Tabs>
+
+          {/* Implementation Priorities Section */}
+          {optimization.implementationPriorities && (
+            <div className="p-6 border-t border-gray-200 bg-gray-50">
+              <h2 className="text-xl font-medium text-gray-800 mb-4">Implementation Priorities</h2>
+              <div className="bg-white rounded-lg p-4 border border-gray-200">
+                <p className="text-gray-700 whitespace-pre-line">{optimization.implementationPriorities}</p>
+              </div>
+              
+              <div className="mt-6 flex items-center text-sm text-gray-600">
+                <Lightbulb className="h-4 w-4 text-amber-500 mr-2" />
+                <p>
+                  Implement these recommendations in the suggested order for maximum impact on your professional brand.
+                </p>
+              </div>
+            </div>
+          )}
+
+          {/* Call to Action Footer */}
+          <div className="p-6 border-t border-gray-200">
+            <div className="flex flex-col md:flex-row md:justify-between md:items-center">
+              <div className="mb-4 md:mb-0">
+                <h3 className="text-lg font-medium text-gray-800">Ready to update your LinkedIn profile?</h3>
+                <p className="text-gray-600">Apply these recommendations to strengthen your professional presence.</p>
+              </div>
+              <Button
                 className="flex items-center"
-                onClick={() => window.open("https://www.linkedin.com", "_blank")}
+                onClick={() => window.open("https://linkedin.com/in/", "_blank")}
               >
                 Go to LinkedIn
-                <ExternalLink className="ml-2 h-4 w-4" />
+                <ArrowUpRight className="ml-2 h-4 w-4" />
               </Button>
             </div>
           </div>

@@ -1,16 +1,10 @@
 import { useState } from "react";
-import { Button } from "@/components/ui/button";
-import { Loader2, Briefcase, ArrowRight, Info } from "lucide-react";
-import { useQuery } from "@tanstack/react-query";
 import { useLocation } from "wouter";
-import { Document, FreshnessReport, LinkedinOptimization, Sli } from "@shared/schema";
-import { scrollToTop } from "@/lib/utils";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
+import { ArrowRight, FileText, Award, BarChart4, Linkedin } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card";
+import { formatDate, scrollToTop } from "@/lib/utils";
+import { LinkedinOptimization } from "@shared/schema";
 
 interface LinkedinOptimizationWidgetProps {
   userHasQuestionnaire: boolean;
@@ -20,128 +14,169 @@ interface LinkedinOptimizationWidgetProps {
   latestLinkedinOptimization?: LinkedinOptimization;
 }
 
-export function LinkedinOptimizationWidget({
+export default function LinkedinOptimizationWidget({
   userHasQuestionnaire,
   userHasRequiredDocuments,
   userHasSli,
   userHasFreshnessReport,
-  latestLinkedinOptimization,
+  latestLinkedinOptimization
 }: LinkedinOptimizationWidgetProps) {
   const [_, navigate] = useLocation();
 
-  // Check if all prerequisites are met
-  const allPrerequisitesMet = userHasQuestionnaire && userHasRequiredDocuments && userHasSli && userHasFreshnessReport;
+  // All requirements must be met to generate optimization
+  const allRequirementsMet = userHasQuestionnaire && userHasRequiredDocuments && userHasSli && userHasFreshnessReport;
 
-  // Format the date if available
-  const formatDate = (date?: Date) => {
-    if (!date) return "N/A";
-    return new Intl.DateTimeFormat("en-US", {
-      year: "numeric",
-      month: "long",
-      day: "numeric",
-    }).format(date);
-  };
+  // Check if there is a latest optimization
+  const hasOptimization = !!latestLinkedinOptimization;
 
-  // Get the date of the latest optimization
-  const optimizationDate = latestLinkedinOptimization?.createdAt
-    ? new Date(latestLinkedinOptimization.createdAt)
-    : undefined;
+  // Format the date from the latest optimization
+  const formattedDate = hasOptimization && latestLinkedinOptimization?.createdAt
+    ? formatDate(new Date(latestLinkedinOptimization.createdAt))
+    : null;
 
   return (
-    <div className="bg-[#f7fbff] border border-blue-200 rounded-lg p-6">
-      <div className="flex items-start">
-        <div className="p-3 rounded-full bg-blue-100 text-blue-600 mr-4">
-          <Briefcase className="h-6 w-6" />
-        </div>
-        <div className="flex-1">
-          <div className="flex items-center mb-2">
-            <h2 className="text-lg font-medium text-[#333333]">
-              LinkedIn Optimization
-            </h2>
-            {!allPrerequisitesMet && (
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Info className="h-4 w-4 ml-2 text-blue-500" />
-                  </TooltipTrigger>
-                  <TooltipContent className="max-w-sm">
-                    <p>
-                      This section will unlock once you've uploaded your resume and 
-                      LinkedIn profile, selected/refined your SLI, and generated a 
-                      Freshness Report.
-                    </p>
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-            )}
+    <Card className={hasOptimization ? "bg-[#f0f5ff] border-blue-200" : "bg-[#f5f7ff] border-blue-100"}>
+      <CardHeader className="pb-2">
+        <div className="flex items-center">
+          <div className={`p-3 rounded-full ${hasOptimization ? "bg-blue-200 text-blue-700" : "bg-blue-100 text-blue-500"} mr-4`}>
+            <Linkedin className="h-6 w-6" />
           </div>
-
-          {latestLinkedinOptimization ? (
+          <div>
+            <CardTitle className="text-lg font-medium text-[#333333]">
+              LinkedIn Profile Optimization
+            </CardTitle>
+            <CardDescription className="text-gray-600">
+              {hasOptimization 
+                ? `Last optimized on ${formattedDate}`
+                : "Enhance your LinkedIn profile to make a stronger professional impact"}
+            </CardDescription>
+          </div>
+        </div>
+      </CardHeader>
+      <CardContent className="pt-4 pb-2">
+        {hasOptimization ? (
+          <div className="space-y-4">
+            <p className="text-gray-700">
+              Your latest optimization includes recommendations for:
+            </p>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              {latestLinkedinOptimization?.headlineOptimization && (
+                <div className="bg-white rounded-md p-3 border border-blue-100 flex items-start">
+                  <div className="p-2 bg-blue-50 rounded-full text-blue-600 mr-3">
+                    <FileText className="h-4 w-4" />
+                  </div>
+                  <div>
+                    <h3 className="font-medium text-gray-700 text-sm">Headline Optimization</h3>
+                    <p className="text-xs text-gray-500">Enhance your professional headline</p>
+                  </div>
+                </div>
+              )}
+              {latestLinkedinOptimization?.aboutSection && (
+                <div className="bg-white rounded-md p-3 border border-blue-100 flex items-start">
+                  <div className="p-2 bg-blue-50 rounded-full text-blue-600 mr-3">
+                    <FileText className="h-4 w-4" />
+                  </div>
+                  <div>
+                    <h3 className="font-medium text-gray-700 text-sm">About Section</h3>
+                    <p className="text-xs text-gray-500">Improve your professional story</p>
+                  </div>
+                </div>
+              )}
+              {latestLinkedinOptimization?.contentStrategy && (
+                <div className="bg-white rounded-md p-3 border border-blue-100 flex items-start">
+                  <div className="p-2 bg-blue-50 rounded-full text-blue-600 mr-3">
+                    <FileText className="h-4 w-4" />
+                  </div>
+                  <div>
+                    <h3 className="font-medium text-gray-700 text-sm">Content Strategy</h3>
+                    <p className="text-xs text-gray-500">Build your thought leadership</p>
+                  </div>
+                </div>
+              )}
+              {latestLinkedinOptimization?.profileEnhancements && (
+                <div className="bg-white rounded-md p-3 border border-blue-100 flex items-start">
+                  <div className="p-2 bg-blue-50 rounded-full text-blue-600 mr-3">
+                    <FileText className="h-4 w-4" />
+                  </div>
+                  <div>
+                    <h3 className="font-medium text-gray-700 text-sm">Profile Enhancements</h3>
+                    <p className="text-xs text-gray-500">Strengthen your overall presence</p>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            <p className="text-gray-700">
+              Get tailored recommendations to optimize your LinkedIn profile and enhance your professional brand.
+            </p>
+            <div className="space-y-2 text-sm text-gray-600">
+              <div className="flex items-start">
+                <div className={`p-1.5 rounded-full mr-2 mt-0.5 ${userHasRequiredDocuments ? "bg-green-100 text-green-600" : "bg-gray-100 text-gray-400"}`}>
+                  <FileText className="h-3.5 w-3.5" />
+                </div>
+                <span>Resume & LinkedIn Profile {userHasRequiredDocuments ? "✓" : "required"}</span>
+              </div>
+              <div className="flex items-start">
+                <div className={`p-1.5 rounded-full mr-2 mt-0.5 ${userHasSli ? "bg-green-100 text-green-600" : "bg-gray-100 text-gray-400"}`}>
+                  <Award className="h-3.5 w-3.5" />
+                </div>
+                <span>Single Lasting Impression (SLI) {userHasSli ? "✓" : "required"}</span>
+              </div>
+              <div className="flex items-start">
+                <div className={`p-1.5 rounded-full mr-2 mt-0.5 ${userHasFreshnessReport ? "bg-green-100 text-green-600" : "bg-gray-100 text-gray-400"}`}>
+                  <BarChart4 className="h-3.5 w-3.5" />
+                </div>
+                <span>Freshness Report {userHasFreshnessReport ? "✓" : "required"}</span>
+              </div>
+            </div>
+          </div>
+        )}
+      </CardContent>
+      <CardFooter className="pt-2">
+        <div className="flex flex-wrap gap-3">
+          {hasOptimization ? (
             <>
-              <p className="text-gray-600 mb-2">
-                Your LinkedIn profile optimization recommendations are ready. These personalized 
-                suggestions will help strengthen your professional presence.
-              </p>
-              <p className="text-sm text-blue-700 mb-4">
-                Generated on {formatDate(optimizationDate)}
-              </p>
               <Button
                 className="flex items-center bg-blue-600 hover:bg-blue-700"
                 onClick={() => {
                   scrollToTop();
-                  navigate("/linkedin-optimization");
+                  navigate(`/linkedin-optimization/${latestLinkedinOptimization.id}`);
                 }}
               >
                 View Optimization
                 <ArrowRight className="ml-2 h-4 w-4" />
               </Button>
-            </>
-          ) : (
-            <>
-              <p className="text-gray-600 mb-4">
-                {allPrerequisitesMet
-                  ? "Get personalized recommendations to enhance your LinkedIn profile based on your SLI and professional details. Our AI analyzes your profile and suggests improvements for content, engagement, and networking."
-                  : "Optimize your LinkedIn profile with personalized recommendations aligned with your professional brand. This feature will be available after completing the prerequisites."}
-              </p>
               <Button
-                className="flex items-center"
-                disabled={!allPrerequisitesMet}
+                variant="outline"
+                className="flex items-center border-blue-300 text-blue-700 hover:bg-blue-50"
                 onClick={() => {
                   scrollToTop();
                   navigate("/linkedin-optimization/generate");
                 }}
               >
-                {allPrerequisitesMet ? "Start Optimization" : "Prerequisites Required"}
+                Generate New
                 <ArrowRight className="ml-2 h-4 w-4" />
               </Button>
             </>
-          )}
-
-          {!allPrerequisitesMet && (
-            <div className="mt-4 space-y-2">
-              <h3 className="text-sm font-medium text-gray-700">Prerequisites:</h3>
-              <ul className="space-y-1 text-sm">
-                <li className="flex items-center">
-                  <div className={`h-2 w-2 rounded-full mr-2 ${userHasQuestionnaire ? "bg-green-500" : "bg-gray-300"}`}></div>
-                  <span className={userHasQuestionnaire ? "text-gray-700" : "text-gray-500"}>Complete the questionnaire</span>
-                </li>
-                <li className="flex items-center">
-                  <div className={`h-2 w-2 rounded-full mr-2 ${userHasRequiredDocuments ? "bg-green-500" : "bg-gray-300"}`}></div>
-                  <span className={userHasRequiredDocuments ? "text-gray-700" : "text-gray-500"}>Upload resume and LinkedIn profile</span>
-                </li>
-                <li className="flex items-center">
-                  <div className={`h-2 w-2 rounded-full mr-2 ${userHasSli ? "bg-green-500" : "bg-gray-300"}`}></div>
-                  <span className={userHasSli ? "text-gray-700" : "text-gray-500"}>Select or refine your SLI</span>
-                </li>
-                <li className="flex items-center">
-                  <div className={`h-2 w-2 rounded-full mr-2 ${userHasFreshnessReport ? "bg-green-500" : "bg-gray-300"}`}></div>
-                  <span className={userHasFreshnessReport ? "text-gray-700" : "text-gray-500"}>Generate a Freshness Report</span>
-                </li>
-              </ul>
-            </div>
+          ) : (
+            <Button
+              className={`flex items-center ${allRequirementsMet ? "bg-blue-600 hover:bg-blue-700" : "bg-gray-400 cursor-not-allowed"}`}
+              onClick={() => {
+                if (allRequirementsMet) {
+                  scrollToTop();
+                  navigate("/linkedin-optimization/generate");
+                }
+              }}
+              disabled={!allRequirementsMet}
+            >
+              Generate Optimization
+              <ArrowRight className="ml-2 h-4 w-4" />
+            </Button>
           )}
         </div>
-      </div>
-    </div>
+      </CardFooter>
+    </Card>
   );
 }

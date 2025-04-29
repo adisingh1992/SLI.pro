@@ -7,7 +7,7 @@ import { Loader2, ChevronLeft, FileText, Award, BarChart4 } from "lucide-react";
 import { LinkedinOptimization } from "@shared/schema";
 import { Button } from "@/components/ui/button";
 import NavBar from "@/components/nav-bar";
-import { apiRequest } from "@/lib/query-client";
+import { apiRequest } from "../lib/query-client";
 
 export default function LinkedinOptimizationGeneratePage() {
   const { user } = useAuth();

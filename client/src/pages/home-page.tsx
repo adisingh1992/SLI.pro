@@ -17,7 +17,7 @@ import {
 } from "lucide-react";
 import MonthlyCheckInWidget from "@/components/monthly-check-in-widget";
 import { FreshnessReportWidget } from "@/components/freshness-report-widget";
-import { LinkedinOptimizationWidget } from "@/components/linkedin-optimization/linkedin-optimization-widget";
+import LinkedinOptimizationWidget from "@/components/linkedin-optimization/linkedin-optimization-widget";
 import { Button } from "@/components/ui/button";
 import { useEffect } from "react";
 import NavBar from "@/components/nav-bar";
