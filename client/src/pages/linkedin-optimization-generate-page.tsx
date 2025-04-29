@@ -36,12 +36,21 @@ export default function LinkedinOptimizationGeneratePage() {
         method: "POST",
       });
     },
-    onSuccess: (data) => {
+    onSuccess: (data: any) => {
+      console.log("LinkedIn optimization generated successfully:", data);
       queryClient.invalidateQueries({ queryKey: ["/api/linkedin-optimizations/latest"] });
-      queryClient.invalidateQueries({ queryKey: [`/api/linkedin-optimizations/${data.id}`] });
-      navigate(`/linkedin-optimization/${data.id}`);
+      
+      if (data && data.id) {
+        queryClient.invalidateQueries({ queryKey: [`/api/linkedin-optimizations/${data.id}`] });
+        navigate(`/linkedin-optimization/${data.id}`);
+      } else {
+        console.error("LinkedIn optimization response is missing ID:", data);
+        setError("Response missing ID. Please try again.");
+        setGenerating(false);
+      }
     },
     onError: (error: any) => {
+      console.error("LinkedIn optimization generation error:", error);
       setError(error.message || "Failed to generate LinkedIn optimization");
       setGenerating(false);
     },

@@ -71,32 +71,50 @@ export function registerLinkedinOptimizationRoutes(app: Express) {
   app.post("/api/linkedin-optimizations/generate", isAuthenticated, async (req, res) => {
     try {
       const userId = req.user!.id;
+      console.log(`[LinkedIn Optimization] Starting generation for user ${userId}`);
       
       // Check if the user has the necessary documents
       const documents = await storage.getDocuments(userId);
+      console.log(`[LinkedIn Optimization] User has ${documents.length} documents`);
+      
       const resumeDoc = documents.find(doc => doc.type === "resume");
       const linkedinDoc = documents.find(doc => doc.type === "linkedin");
       
       if (!resumeDoc || !linkedinDoc) {
-        res.status(400).json({ error: "Both resume and LinkedIn profile documents are required" });
+        const error = "Both resume and LinkedIn profile documents are required";
+        console.log(`[LinkedIn Optimization] Error: ${error}`);
+        res.status(400).json({ error });
         return;
       }
+      
+      console.log(`[LinkedIn Optimization] Found resume doc ID ${resumeDoc.id} and LinkedIn doc ID ${linkedinDoc.id}`);
       
       // Check if the user has a SLI
       const slis = await storage.getSlisByUserId(userId);
-      const selectedSli = slis.find(sli => sli.selectedSliIndex !== null);
+      console.log(`[LinkedIn Optimization] User has ${slis.length} SLIs`);
+      
+      const selectedSli = slis.find(sli => sli.selectedSliIndex !== null || sli.refinedSliText);
       
       if (!selectedSli) {
-        res.status(400).json({ error: "A selected or refined SLI is required" });
+        const error = "A selected or refined SLI is required";
+        console.log(`[LinkedIn Optimization] Error: ${error}`);
+        res.status(400).json({ error });
         return;
       }
+      
+      console.log(`[LinkedIn Optimization] Found selected SLI ID ${selectedSli.id}`);
       
       // Check if the user has a freshness report
       const freshnessReport = await storage.getLatestFreshnessReport(userId);
       if (!freshnessReport) {
-        res.status(400).json({ error: "A freshness report is required" });
+        const error = "A freshness report is required";
+        console.log(`[LinkedIn Optimization] Error: ${error}`);
+        res.status(400).json({ error });
         return;
       }
+      
+      console.log(`[LinkedIn Optimization] Found freshness report ID ${freshnessReport.id}`);
+      console.log(`[LinkedIn Optimization] Calling Claude API to generate optimization...`);
       
       // Generate the LinkedIn optimization
       const optimizationData = await generateLinkedInOptimization(
@@ -106,7 +124,10 @@ export function registerLinkedinOptimizationRoutes(app: Express) {
         freshnessReport
       );
       
+      console.log(`[LinkedIn Optimization] Successfully generated recommendations from Claude`);
+      
       // Save the optimization to the database
+      console.log(`[LinkedIn Optimization] Saving data to database...`);
       const newOptimization = await storage.createLinkedinOptimization({
         userId,
         contentStrategy: optimizationData.contentStrategy,
@@ -117,10 +138,23 @@ export function registerLinkedinOptimizationRoutes(app: Express) {
         implementationPriorities: optimizationData.implementationPriorities
       });
       
+      console.log(`[LinkedIn Optimization] Created new optimization with ID ${newOptimization.id}`);
+      
       res.status(201).json(newOptimization);
-    } catch (error) {
-      console.error("Error generating LinkedIn optimization:", error);
-      res.status(500).json({ error: "Failed to generate LinkedIn optimization" });
+    } catch (error: any) {
+      console.error("[LinkedIn Optimization] Error generating optimization:", error);
+      console.error("[LinkedIn Optimization] Error details:", error.stack);
+      
+      // More specific error messages based on the type of error
+      if (error.name === 'SyntaxError') {
+        res.status(500).json({ error: "Failed to parse API response. Please try again." });
+      } else if (error.status === 429) {
+        res.status(429).json({ error: "API rate limit exceeded. Please try again in a few minutes." });
+      } else if (error.status === 401 || error.status === 403) {
+        res.status(error.status).json({ error: "Authentication error with AI service. Please contact support." });
+      } else {
+        res.status(500).json({ error: error.message || "Failed to generate LinkedIn optimization" });
+      }
     }
   });
 }
