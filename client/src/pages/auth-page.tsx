@@ -9,7 +9,7 @@ import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/compone
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
-import { useLocation } from "wouter";
+import { useLocation, useRoute } from "wouter";
 import ForgotPasswordForm from "@/components/forgot-password-form";
 import {
   Form,
@@ -141,8 +141,8 @@ export default function AuthPage() {
       const userData = await response.json();
       console.log('Login successful, redirecting to homepage');
       
-      // Force immediate navigation to home page
-      window.location.href = '/';
+      // Use react router navigation to prevent page refresh
+      navigate("/");
     } catch (error) {
       console.error('Login error:', error);
       // Show error message
@@ -186,8 +186,8 @@ export default function AuthPage() {
       const userData = await response.json();
       console.log('Registration successful, redirecting to homepage');
       
-      // Force immediate navigation to home page
-      window.location.href = '/';
+      // Use react router navigation to prevent page refresh
+      navigate("/");
     } catch (error) {
       console.error('Registration error:', error);
       // Show error message

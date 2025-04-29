@@ -31,8 +31,9 @@ export default function NavBar() {
       // First perform the logout
       await logoutMutation.mutateAsync();
       
-      // Then forcefully redirect to auth page with browser navigation
-      window.location.href = '/auth';
+      // Then use the router navigation to go to auth page
+      // This prevents a full page refresh
+      navigate("/auth");
     } catch (error) {
       console.error('Logout failed:', error);
     }
