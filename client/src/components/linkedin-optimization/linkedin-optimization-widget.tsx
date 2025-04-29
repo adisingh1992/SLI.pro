@@ -1,181 +1,143 @@
-import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { useLocation } from "wouter";
-import { ArrowRight, FileText, Award, BarChart4, Linkedin } from "lucide-react";
+import { ChevronRight, Plus, Linkedin, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card";
-import { formatDate, scrollToTop } from "@/lib/utils";
-import { LinkedinOptimization } from "@shared/schema";
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
+import { formatDistanceToNow } from "date-fns";
 
-interface LinkedinOptimizationWidgetProps {
-  userHasQuestionnaire: boolean;
-  userHasRequiredDocuments: boolean;
-  userHasSli: boolean;
-  userHasFreshnessReport: boolean;
-  latestLinkedinOptimization?: LinkedinOptimization;
-}
-
-export default function LinkedinOptimizationWidget({
-  userHasQuestionnaire,
-  userHasRequiredDocuments,
-  userHasSli,
-  userHasFreshnessReport,
-  latestLinkedinOptimization
-}: LinkedinOptimizationWidgetProps) {
+export default function LinkedinOptimizationWidget() {
   const [_, navigate] = useLocation();
+  
+  // Fetch latest LinkedIn optimization
+  const { data: latestOptimization, isLoading: isOptimizationLoading, error: optimizationError } = useQuery({
+    queryKey: ["/api/linkedin-optimizations/latest"],
+    retry: false,
+  });
+  
+  // Function to handle generate button click
+  const handleGenerateClick = () => {
+    navigate("/linkedin-optimization/generate");
+  };
+  
+  // Function to handle view details click
+  const handleViewDetailsClick = () => {
+    if (latestOptimization?.id) {
+      navigate(`/linkedin-optimization/${latestOptimization.id}`);
+    }
+  };
 
-  // All requirements must be met to generate optimization
-  const allRequirementsMet = userHasQuestionnaire && userHasRequiredDocuments && userHasSli && userHasFreshnessReport;
-
-  // Check if there is a latest optimization
-  const hasOptimization = !!latestLinkedinOptimization;
-
-  // Format the date from the latest optimization
-  const formattedDate = hasOptimization && latestLinkedinOptimization?.createdAt
-    ? formatDate(new Date(latestLinkedinOptimization.createdAt))
-    : null;
-
-  return (
-    <Card className={hasOptimization ? "bg-[#f0f5ff] border-blue-200" : "bg-[#f5f7ff] border-blue-100"}>
-      <CardHeader className="pb-2">
-        <div className="flex items-center">
-          <div className={`p-3 rounded-full ${hasOptimization ? "bg-blue-200 text-blue-700" : "bg-blue-100 text-blue-500"} mr-4`}>
-            <Linkedin className="h-6 w-6" />
+  // Loading state
+  if (isOptimizationLoading) {
+    return (
+      <Card className="overflow-hidden">
+        <CardHeader className="bg-blue-50 pb-4">
+          <div className="flex items-center mb-2">
+            <Linkedin className="mr-2 h-5 w-5 text-blue-600" />
+            <Skeleton className="h-6 w-52" />
           </div>
-          <div>
-            <CardTitle className="text-lg font-medium text-[#333333]">
-              LinkedIn Profile Optimization
-            </CardTitle>
-            <CardDescription className="text-gray-600">
-              {hasOptimization 
-                ? `Last optimized on ${formattedDate}`
-                : "Enhance your LinkedIn profile to make a stronger professional impact"}
-            </CardDescription>
+          <Skeleton className="h-4 w-96 mt-1" />
+        </CardHeader>
+        <CardContent className="p-5">
+          <Skeleton className="h-24 w-full" />
+        </CardContent>
+        <CardFooter className="bg-gray-50 py-3 px-6 flex justify-between">
+          <Skeleton className="h-9 w-24" />
+          <Skeleton className="h-9 w-28" />
+        </CardFooter>
+      </Card>
+    );
+  }
+
+  // No optimization available yet
+  if (!latestOptimization || optimizationError) {
+    return (
+      <Card className="overflow-hidden">
+        <CardHeader className="bg-blue-50 pb-4">
+          <div className="flex items-center">
+            <Linkedin className="mr-2 h-5 w-5 text-blue-600" />
+            <CardTitle className="text-lg font-semibold">LinkedIn Optimization</CardTitle>
           </div>
-        </div>
-      </CardHeader>
-      <CardContent className="pt-4 pb-2">
-        {hasOptimization ? (
-          <div className="space-y-4">
-            <p className="text-gray-700">
-              Your latest optimization includes recommendations for:
-            </p>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              {latestLinkedinOptimization?.headlineOptimization && (
-                <div className="bg-white rounded-md p-3 border border-blue-100 flex items-start">
-                  <div className="p-2 bg-blue-50 rounded-full text-blue-600 mr-3">
-                    <FileText className="h-4 w-4" />
-                  </div>
-                  <div>
-                    <h3 className="font-medium text-gray-700 text-sm">Headline Optimization</h3>
-                    <p className="text-xs text-gray-500">Enhance your professional headline</p>
-                  </div>
-                </div>
-              )}
-              {latestLinkedinOptimization?.aboutSection && (
-                <div className="bg-white rounded-md p-3 border border-blue-100 flex items-start">
-                  <div className="p-2 bg-blue-50 rounded-full text-blue-600 mr-3">
-                    <FileText className="h-4 w-4" />
-                  </div>
-                  <div>
-                    <h3 className="font-medium text-gray-700 text-sm">About Section</h3>
-                    <p className="text-xs text-gray-500">Improve your professional story</p>
-                  </div>
-                </div>
-              )}
-              {latestLinkedinOptimization?.contentStrategy && (
-                <div className="bg-white rounded-md p-3 border border-blue-100 flex items-start">
-                  <div className="p-2 bg-blue-50 rounded-full text-blue-600 mr-3">
-                    <FileText className="h-4 w-4" />
-                  </div>
-                  <div>
-                    <h3 className="font-medium text-gray-700 text-sm">Content Strategy</h3>
-                    <p className="text-xs text-gray-500">Build your thought leadership</p>
-                  </div>
-                </div>
-              )}
-              {latestLinkedinOptimization?.profileEnhancements && (
-                <div className="bg-white rounded-md p-3 border border-blue-100 flex items-start">
-                  <div className="p-2 bg-blue-50 rounded-full text-blue-600 mr-3">
-                    <FileText className="h-4 w-4" />
-                  </div>
-                  <div>
-                    <h3 className="font-medium text-gray-700 text-sm">Profile Enhancements</h3>
-                    <p className="text-xs text-gray-500">Strengthen your overall presence</p>
-                  </div>
-                </div>
-              )}
+          <CardDescription className="text-blue-700">
+            Enhance your LinkedIn profile with AI-powered recommendations
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="p-5">
+          <div className="flex flex-col items-center justify-center text-center py-6">
+            <div className="bg-blue-100 p-3 rounded-full mb-3">
+              <Plus className="h-6 w-6 text-blue-600" />
             </div>
-          </div>
-        ) : (
-          <div className="space-y-4">
-            <p className="text-gray-700">
-              Get tailored recommendations to optimize your LinkedIn profile and enhance your professional brand.
+            <h3 className="font-semibold text-gray-800 mb-1">No optimizations yet</h3>
+            <p className="text-gray-600 text-sm mb-4">
+              Generate your first LinkedIn profile optimization to align with your SLI
             </p>
-            <div className="space-y-2 text-sm text-gray-600">
-              <div className="flex items-start">
-                <div className={`p-1.5 rounded-full mr-2 mt-0.5 ${userHasRequiredDocuments ? "bg-green-100 text-green-600" : "bg-gray-100 text-gray-400"}`}>
-                  <FileText className="h-3.5 w-3.5" />
-                </div>
-                <span>Resume & LinkedIn Profile {userHasRequiredDocuments ? "✓" : "required"}</span>
-              </div>
-              <div className="flex items-start">
-                <div className={`p-1.5 rounded-full mr-2 mt-0.5 ${userHasSli ? "bg-green-100 text-green-600" : "bg-gray-100 text-gray-400"}`}>
-                  <Award className="h-3.5 w-3.5" />
-                </div>
-                <span>Single Lasting Impression (SLI) {userHasSli ? "✓" : "required"}</span>
-              </div>
-              <div className="flex items-start">
-                <div className={`p-1.5 rounded-full mr-2 mt-0.5 ${userHasFreshnessReport ? "bg-green-100 text-green-600" : "bg-gray-100 text-gray-400"}`}>
-                  <BarChart4 className="h-3.5 w-3.5" />
-                </div>
-                <span>Freshness Report {userHasFreshnessReport ? "✓" : "required"}</span>
-              </div>
-            </div>
-          </div>
-        )}
-      </CardContent>
-      <CardFooter className="pt-2">
-        <div className="flex flex-wrap gap-3">
-          {hasOptimization ? (
-            <>
-              <Button
-                className="flex items-center bg-blue-600 hover:bg-blue-700"
-                onClick={() => {
-                  scrollToTop();
-                  navigate(`/linkedin-optimization/${latestLinkedinOptimization.id}`);
-                }}
-              >
-                View Optimization
-                <ArrowRight className="ml-2 h-4 w-4" />
-              </Button>
-              <Button
-                variant="outline"
-                className="flex items-center border-blue-300 text-blue-700 hover:bg-blue-50"
-                onClick={() => {
-                  scrollToTop();
-                  navigate("/linkedin-optimization/generate");
-                }}
-              >
-                Generate New
-                <ArrowRight className="ml-2 h-4 w-4" />
-              </Button>
-            </>
-          ) : (
-            <Button
-              className={`flex items-center ${allRequirementsMet ? "bg-blue-600 hover:bg-blue-700" : "bg-gray-400 cursor-not-allowed"}`}
-              onClick={() => {
-                if (allRequirementsMet) {
-                  scrollToTop();
-                  navigate("/linkedin-optimization/generate");
-                }
-              }}
-              disabled={!allRequirementsMet}
-            >
+            <Button onClick={handleGenerateClick} className="mt-2">
               Generate Optimization
-              <ArrowRight className="ml-2 h-4 w-4" />
             </Button>
-          )}
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  // Format date
+  const timeAgo = latestOptimization.createdAt 
+    ? formatDistanceToNow(new Date(latestOptimization.createdAt), { addSuffix: true })
+    : "recently";
+
+  // Show optimization preview
+  return (
+    <Card className="overflow-hidden">
+      <CardHeader className="bg-blue-50 pb-4">
+        <div className="flex items-center">
+          <Linkedin className="mr-2 h-5 w-5 text-blue-600" />
+          <CardTitle className="text-lg font-semibold">LinkedIn Optimization</CardTitle>
         </div>
+        <CardDescription className="text-blue-700">
+          Profile optimization generated {timeAgo}
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="p-5">
+        <div className="space-y-4">
+          {latestOptimization.alignmentAssessment && (
+            <div className="mb-3">
+              <h3 className="font-medium text-sm text-gray-700 mb-1">SLI Alignment Assessment</h3>
+              <p className="text-gray-600 text-sm line-clamp-3">
+                {latestOptimization.alignmentAssessment}
+              </p>
+            </div>
+          )}
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {latestOptimization.headlineOptimization?.recommendedHeadline && (
+              <div className="bg-gray-50 p-3 rounded-md">
+                <h3 className="font-medium text-sm text-gray-700 mb-1">Headline</h3>
+                <p className="text-gray-800 text-sm">
+                  {latestOptimization.headlineOptimization.recommendedHeadline}
+                </p>
+              </div>
+            )}
+            
+            {latestOptimization.profileEnhancements?.experienceSection && (
+              <div className="bg-gray-50 p-3 rounded-md">
+                <h3 className="font-medium text-sm text-gray-700 mb-1">Experience Section</h3>
+                <p className="text-gray-800 text-sm line-clamp-3">
+                  {latestOptimization.profileEnhancements.experienceSection}
+                </p>
+              </div>
+            )}
+          </div>
+        </div>
+      </CardContent>
+      <CardFooter className="bg-gray-50 py-3 px-6 flex justify-between">
+        <Button variant="outline" size="sm" onClick={handleGenerateClick}>
+          <Plus className="mr-1 h-4 w-4" />
+          New
+        </Button>
+        <Button size="sm" onClick={handleViewDetailsClick} className="flex items-center">
+          View Details
+          <ChevronRight className="ml-1 h-4 w-4" />
+        </Button>
       </CardFooter>
     </Card>
   );

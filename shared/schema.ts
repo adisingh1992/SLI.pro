@@ -405,35 +405,21 @@ export const linkedinOptimizations = pgTable("linkedin_optimizations", {
     rationale?: string;
   }>(),
   aboutSection: jsonb("about_section").$type<{
-    currentWeaknesses?: string[];
-    recommendedAbout?: string;
-    keyElements?: string[];
+    currentAnalysis?: string;
+    recommendations?: string;
+    suggestedStructure?: string;
+    keyElements?: string;
+    draftContent?: string;
   }>(),
-  experienceDescriptions: jsonb("experience_descriptions").$type<{
-    positions: Array<{
-      position?: string;
-      currentDescription?: string;
-      recommendedDescription?: string;
-      rationale?: string;
-    }>;
-  }>(),
-  skillsAndEndorsements: jsonb("skills_and_endorsements").$type<{
-    recommendedSkills?: string[];
-    skillsToRemove?: string[];
-    rationale?: string;
-  }>(),
-  additionalSections: text("additional_sections"), // Suggestions for other sections
-  visualElements: jsonb("visual_elements").$type<{
-    profilePhotoSuggestions?: string;
-    backgroundImageRecommendations?: string;
-    activityFeedContentIdeas?: string;
+  profileEnhancements: jsonb("profile_enhancements").$type<{
+    experienceSection?: string;
+    skillsEndorsements?: string;
+    activityEngagement?: string;
+    visualImprovements?: string;
   }>(),
   contentStrategy: jsonb("content_strategy").$type<{
-    themes?: string[];
-    postIdeas?: Array<{
-      title?: string;
-      content?: string;
-    }>;
+    themes?: string;
+    postIdeas?: string;
     engagementTips?: string;
   }>(),
   implementationPriorities: text("implementation_priorities"), // Prioritized roadmap for changes

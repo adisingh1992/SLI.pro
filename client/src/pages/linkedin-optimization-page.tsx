@@ -1,55 +1,47 @@
-import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { useAuth } from "@/hooks/use-auth";
 import { useLocation, useParams } from "wouter";
-import { Loader2, ChevronLeft, ArrowRight, FileText, MessageSquare, Lightbulb, ArrowUpRight } from "lucide-react";
-import { LinkedinOptimization } from "@shared/schema";
+import { ChevronLeft, Loader2, Linkedin, Stars, Award, ArrowRight, Lightbulb, BarChart4 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { formatDistanceToNow } from "date-fns";
 import NavBar from "@/components/nav-bar";
-import { formatDate } from "@/lib/utils";
 
 export default function LinkedinOptimizationPage() {
-  const { user } = useAuth();
-  const params = useParams();
   const [_, navigate] = useLocation();
-  const [activeTab, setActiveTab] = useState("headline");
+  const params = useParams();
+  const id = params?.id;
 
-  // Determine if we are viewing a specific optimization or the latest
-  const isViewingSpecific = !!params.id;
-
-  // Fetch a specific optimization if ID is provided, otherwise fetch the latest
-  const {
-    data: optimization,
-    isLoading,
-    isError,
-    error
-  } = useQuery<LinkedinOptimization>({
-    queryKey: isViewingSpecific ? [`/api/linkedin-optimizations/${params.id}`] : ["/api/linkedin-optimizations/latest"],
-    enabled: !!user,
+  // Fetch the specific LinkedIn optimization if ID is provided, otherwise fetch the latest
+  const { data: optimization, isLoading } = useQuery({
+    queryKey: id ? [`/api/linkedin-optimizations/${id}`] : ["/api/linkedin-optimizations/latest"],
   });
+
+  // Handle generate new optimization
+  const handleGenerateNew = () => {
+    navigate("/linkedin-optimization/generate");
+  };
 
   if (isLoading) {
     return (
       <div className="min-h-screen bg-background flex flex-col">
         <NavBar />
         <div className="flex-1 flex items-center justify-center">
-          <Loader2 className="h-8 w-8 animate-spin text-primary" />
-          <span className="ml-2">Loading optimization data...</span>
+          <Loader2 className="h-10 w-10 animate-spin text-primary" />
         </div>
       </div>
     );
   }
 
-  if (isError || !optimization) {
+  if (!optimization) {
     return (
       <div className="min-h-screen bg-background flex flex-col">
         <NavBar />
-        <main className="max-w-6xl mx-auto px-4 sm:px-6 py-8 w-full">
+        <main className="flex-1 container max-w-5xl mx-auto px-4 py-8">
           <Button
             variant="ghost"
-            className="mb-6 flex items-center text-gray-600"
+            className="mb-6 flex items-center text-muted-foreground"
             onClick={() => navigate("/")}
           >
             <ChevronLeft className="mr-2 h-4 w-4" />
@@ -57,311 +49,271 @@ export default function LinkedinOptimizationPage() {
           </Button>
 
           <div className="bg-white shadow-card rounded-lg p-8 text-center">
-            <div className="mx-auto w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mb-4">
-              <FileText className="h-8 w-8 text-red-600" />
+            <div className="my-8">
+              <div className="bg-blue-100 h-20 w-20 rounded-full flex items-center justify-center mx-auto mb-4">
+                <Linkedin className="h-10 w-10 text-blue-600" />
+              </div>
+              <h1 className="text-2xl font-semibold">No LinkedIn Optimization Found</h1>
+              <p className="mt-2 text-gray-600 max-w-md mx-auto">
+                You haven't generated a LinkedIn optimization yet. Generate one to get AI-powered recommendations
+                for enhancing your LinkedIn profile.
+              </p>
+              <Button className="mt-6" onClick={handleGenerateNew}>
+                Generate Your First Optimization
+              </Button>
             </div>
-            <h1 className="text-2xl font-semibold text-gray-800 mb-2">Optimization Not Found</h1>
-            <p className="text-gray-600 mb-6">
-              {isError 
-                ? `Error: ${error instanceof Error ? error.message : "Unknown error"}`
-                : "No LinkedIn optimization found. Generate your first optimization to view recommendations."}
-            </p>
-            <Button 
-              className="flex items-center mx-auto"
-              onClick={() => navigate("/linkedin-optimization/generate")}
-            >
-              Generate Optimization
-              <ArrowRight className="ml-2 h-4 w-4" />
-            </Button>
           </div>
         </main>
       </div>
     );
   }
 
-  // Format the date
-  const formattedDate = formatDate(new Date(optimization.createdAt));
+  // Format date
+  const timeAgo = optimization.createdAt
+    ? formatDistanceToNow(new Date(optimization.createdAt), { addSuffix: true })
+    : "recently";
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
       <NavBar />
-      <main className="max-w-6xl mx-auto px-4 sm:px-6 py-8 w-full">
+      <main className="flex-1 container max-w-5xl mx-auto px-4 py-8">
         <Button
           variant="ghost"
-          className="mb-6 flex items-center text-gray-600"
+          className="mb-6 flex items-center text-muted-foreground"
           onClick={() => navigate("/")}
         >
           <ChevronLeft className="mr-2 h-4 w-4" />
           Back to Home
         </Button>
 
-        <div className="bg-white shadow-card rounded-lg overflow-hidden">
+        <div className="bg-white shadow-card rounded-lg overflow-hidden mb-8">
           <div className="bg-blue-50 p-6 border-b border-blue-100">
-            <div className="flex flex-col md:flex-row md:items-center md:justify-between">
-              <div>
-                <h1 className="text-2xl font-semibold text-blue-900">LinkedIn Profile Optimization</h1>
-                <p className="text-blue-700 mt-1">Generated on {formattedDate}</p>
-              </div>
-              <Button
-                variant="outline"
-                className="mt-4 md:mt-0 flex items-center border-blue-300 text-blue-700 hover:bg-blue-50"
-                onClick={() => navigate("/linkedin-optimization/generate")}
-              >
-                Generate New
-                <ArrowRight className="ml-2 h-4 w-4" />
-              </Button>
+            <div className="flex items-center gap-2 mb-1">
+              <Linkedin className="h-5 w-5 text-blue-600" />
+              <h1 className="text-2xl font-semibold text-blue-900">LinkedIn Optimization</h1>
+              <Badge variant="outline" className="ml-auto text-blue-700 border-blue-200 bg-blue-50">
+                Generated {timeAgo}
+              </Badge>
             </div>
+            <p className="text-blue-700">
+              AI-generated recommendations to enhance your professional presence on LinkedIn
+            </p>
           </div>
 
-          {/* Alignment Assessment Section */}
-          {optimization.alignmentAssessment && (
-            <div className="p-6 border-b border-gray-200">
-              <h2 className="text-xl font-medium text-gray-800 mb-4">SLI Alignment Assessment</h2>
-              <div className="bg-blue-50 rounded-lg p-4 border border-blue-100">
-                <p className="text-gray-700 whitespace-pre-line">{optimization.alignmentAssessment}</p>
-              </div>
-            </div>
-          )}
-
-          {/* Main Content Tabs */}
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="p-6">
-            <TabsList className="grid grid-cols-2 md:grid-cols-4 mb-6">
-              <TabsTrigger 
-                value="headline"
-                disabled={!optimization.headlineOptimization}
-                className={!optimization.headlineOptimization ? "text-gray-400" : ""}
-              >
-                Headline
-              </TabsTrigger>
-              <TabsTrigger 
-                value="about"
-                disabled={!optimization.aboutSection}
-                className={!optimization.aboutSection ? "text-gray-400" : ""}
-              >
-                About Section
-              </TabsTrigger>
-              <TabsTrigger 
-                value="content"
-                disabled={!optimization.contentStrategy}
-                className={!optimization.contentStrategy ? "text-gray-400" : ""}
-              >
-                Content Strategy
-              </TabsTrigger>
-              <TabsTrigger 
-                value="profile"
-                disabled={!optimization.profileEnhancements}
-                className={!optimization.profileEnhancements ? "text-gray-400" : ""}
-              >
-                Profile Enhancements
-              </TabsTrigger>
+          <Tabs defaultValue="overview" className="p-6">
+            <TabsList className="mb-6">
+              <TabsTrigger value="overview">Overview</TabsTrigger>
+              <TabsTrigger value="headline">Headline</TabsTrigger>
+              <TabsTrigger value="about">About Section</TabsTrigger>
+              <TabsTrigger value="profile">Profile Enhancements</TabsTrigger>
+              <TabsTrigger value="content">Content Strategy</TabsTrigger>
             </TabsList>
 
-            {/* Headline Optimization Tab */}
-            <TabsContent value="headline" className="space-y-6">
-              {optimization.headlineOptimization && (
-                <>
-                  <Card>
-                    <CardHeader>
-                      <CardTitle>Current Headline</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <p className="text-gray-700 italic">"{optimization.headlineOptimization.currentHeadline}"</p>
-                    </CardContent>
-                  </Card>
+            {/* Overview Tab */}
+            <TabsContent value="overview" className="space-y-6">
+              <div className="bg-blue-50 p-5 rounded-lg border border-blue-100">
+                <h2 className="text-lg font-medium flex items-center gap-2 mb-3 text-blue-800">
+                  <Stars className="h-5 w-5 text-blue-600" />
+                  SLI Alignment Assessment
+                </h2>
+                <div className="text-blue-900 whitespace-pre-line">
+                  {optimization.alignmentAssessment}
+                </div>
+              </div>
 
-                  <Card>
-                    <CardHeader>
-                      <CardTitle className="flex items-center">
-                        <Lightbulb className="h-5 w-5 text-amber-500 mr-2" />
-                        Recommended Headline
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <p className="text-gray-700 font-medium">{optimization.headlineOptimization.recommendedHeadline}</p>
-                      {optimization.headlineOptimization.rationale && (
-                        <div className="mt-4 pt-4 border-t border-gray-100">
-                          <h4 className="text-sm font-medium text-gray-700 mb-2 flex items-center">
-                            <MessageSquare className="h-4 w-4 mr-2 text-blue-600" />
-                            Why this works better:
-                          </h4>
-                          <p className="text-gray-600 text-sm">{optimization.headlineOptimization.rationale}</p>
-                        </div>
-                      )}
-                    </CardContent>
-                  </Card>
+              <div className="bg-amber-50 p-5 rounded-lg border border-amber-100">
+                <h2 className="text-lg font-medium flex items-center gap-2 mb-3 text-amber-800">
+                  <Award className="h-5 w-5 text-amber-600" />
+                  Implementation Priorities
+                </h2>
+                <div className="text-amber-900 whitespace-pre-line">
+                  {optimization.implementationPriorities}
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
+                <Button 
+                  className="flex items-center justify-center gap-2" 
+                  onClick={handleGenerateNew}
+                >
+                  <Lightbulb className="h-4 w-4" />
+                  Generate New Optimization
+                </Button>
+              </div>
+            </TabsContent>
+
+            {/* Headline Tab */}
+            <TabsContent value="headline" className="space-y-6">
+              {optimization.headlineOptimization ? (
+                <>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="bg-gray-50 p-5 rounded-lg border border-gray-200">
+                      <h3 className="font-medium text-gray-700 mb-2">Current Headline</h3>
+                      <p className="text-gray-800">
+                        {optimization.headlineOptimization.currentHeadline || "No current headline provided"}
+                      </p>
+                    </div>
+                    <div className="bg-green-50 p-5 rounded-lg border border-green-100">
+                      <h3 className="font-medium text-green-700 mb-2">Recommended Headline</h3>
+                      <p className="text-green-800 font-medium">
+                        {optimization.headlineOptimization.recommendedHeadline || "No recommendation available"}
+                      </p>
+                    </div>
+                  </div>
+                  
+                  <div className="bg-blue-50 p-5 rounded-lg border border-blue-100">
+                    <h3 className="font-medium text-blue-700 mb-2">Rationale</h3>
+                    <p className="text-blue-800 whitespace-pre-line">
+                      {optimization.headlineOptimization.rationale || "No rationale provided"}
+                    </p>
+                  </div>
                 </>
+              ) : (
+                <div className="text-center p-8">
+                  <p className="text-gray-500">No headline optimization data available</p>
+                </div>
               )}
             </TabsContent>
 
             {/* About Section Tab */}
             <TabsContent value="about" className="space-y-6">
-              {optimization.aboutSection && (
+              {optimization.aboutSection ? (
                 <>
-                  <Card>
-                    <CardHeader>
-                      <CardTitle>Current About Section Analysis</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <p className="text-gray-700 whitespace-pre-line">{optimization.aboutSection.currentAnalysis}</p>
-                    </CardContent>
-                  </Card>
-
-                  <Card>
-                    <CardHeader>
-                      <CardTitle className="flex items-center">
-                        <Lightbulb className="h-5 w-5 text-amber-500 mr-2" />
-                        Recommended Improvements
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <p className="text-gray-700 whitespace-pre-line">{optimization.aboutSection.recommendations}</p>
-                      
-                      {optimization.aboutSection.suggestedStructure && (
-                        <div className="mt-4 pt-4 border-t border-gray-100">
-                          <h4 className="text-sm font-medium text-gray-700 mb-2">Suggested Structure:</h4>
-                          <p className="text-gray-600 text-sm whitespace-pre-line">{optimization.aboutSection.suggestedStructure}</p>
-                        </div>
-                      )}
-                      
-                      {optimization.aboutSection.keyElements && (
-                        <div className="mt-4 pt-4 border-t border-gray-100">
-                          <h4 className="text-sm font-medium text-gray-700 mb-2">Key Elements to Include:</h4>
-                          <p className="text-gray-600 text-sm whitespace-pre-line">{optimization.aboutSection.keyElements}</p>
-                        </div>
-                      )}
-                    </CardContent>
-                  </Card>
+                  <div className="bg-gray-50 p-5 rounded-lg border border-gray-200">
+                    <h3 className="font-medium text-gray-700 mb-2">Current Analysis</h3>
+                    <p className="text-gray-800 whitespace-pre-line">
+                      {optimization.aboutSection.currentAnalysis || "No current analysis provided"}
+                    </p>
+                  </div>
                   
-                  {optimization.aboutSection.draftContent && (
-                    <Card>
-                      <CardHeader>
-                        <CardTitle className="flex items-center">
-                          <FileText className="h-5 w-5 text-green-500 mr-2" />
-                          Sample Draft
-                        </CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        <p className="text-gray-700 whitespace-pre-line">{optimization.aboutSection.draftContent}</p>
-                      </CardContent>
-                    </Card>
-                  )}
+                  <div className="bg-blue-50 p-5 rounded-lg border border-blue-100">
+                    <h3 className="font-medium text-blue-700 mb-2">Recommendations</h3>
+                    <p className="text-blue-800 whitespace-pre-line">
+                      {optimization.aboutSection.recommendations || "No recommendations provided"}
+                    </p>
+                  </div>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="bg-gray-50 p-5 rounded-lg border border-gray-200">
+                      <h3 className="font-medium text-gray-700 mb-2">Suggested Structure</h3>
+                      <p className="text-gray-800 whitespace-pre-line">
+                        {optimization.aboutSection.suggestedStructure || "No structure suggestion provided"}
+                      </p>
+                    </div>
+                    
+                    <div className="bg-gray-50 p-5 rounded-lg border border-gray-200">
+                      <h3 className="font-medium text-gray-700 mb-2">Key Elements</h3>
+                      <p className="text-gray-800 whitespace-pre-line">
+                        {optimization.aboutSection.keyElements || "No key elements provided"}
+                      </p>
+                    </div>
+                  </div>
+                  
+                  <div className="bg-green-50 p-5 rounded-lg border border-green-100">
+                    <h3 className="font-medium text-green-700 mb-2">Draft Content</h3>
+                    <p className="text-green-800 whitespace-pre-line">
+                      {optimization.aboutSection.draftContent || "No draft content provided"}
+                    </p>
+                  </div>
                 </>
-              )}
-            </TabsContent>
-
-            {/* Content Strategy Tab */}
-            <TabsContent value="content" className="space-y-6">
-              {optimization.contentStrategy && (
-                <>
-                  <Card>
-                    <CardHeader>
-                      <CardTitle>Content Themes</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <p className="text-gray-700 whitespace-pre-line">{optimization.contentStrategy.themes}</p>
-                    </CardContent>
-                  </Card>
-
-                  <Card>
-                    <CardHeader>
-                      <CardTitle>Post Ideas</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <p className="text-gray-700 whitespace-pre-line">{optimization.contentStrategy.postIdeas}</p>
-                    </CardContent>
-                  </Card>
-
-                  <Card>
-                    <CardHeader>
-                      <CardTitle>Engagement Tips</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <p className="text-gray-700 whitespace-pre-line">{optimization.contentStrategy.engagementTips}</p>
-                    </CardContent>
-                  </Card>
-                </>
+              ) : (
+                <div className="text-center p-8">
+                  <p className="text-gray-500">No about section optimization data available</p>
+                </div>
               )}
             </TabsContent>
 
             {/* Profile Enhancements Tab */}
             <TabsContent value="profile" className="space-y-6">
-              {optimization.profileEnhancements && (
+              {optimization.profileEnhancements ? (
                 <>
-                  <Card>
-                    <CardHeader>
-                      <CardTitle>Experience Section</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <p className="text-gray-700 whitespace-pre-line">{optimization.profileEnhancements.experienceSection}</p>
-                    </CardContent>
-                  </Card>
-
-                  <Card>
-                    <CardHeader>
-                      <CardTitle>Skills & Endorsements</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <p className="text-gray-700 whitespace-pre-line">{optimization.profileEnhancements.skillsEndorsements}</p>
-                    </CardContent>
-                  </Card>
-
-                  <Card>
-                    <CardHeader>
-                      <CardTitle>Activity & Engagement</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <p className="text-gray-700 whitespace-pre-line">{optimization.profileEnhancements.activityEngagement}</p>
-                    </CardContent>
-                  </Card>
-
-                  {optimization.profileEnhancements.visualImprovements && (
-                    <Card>
-                      <CardHeader>
-                        <CardTitle>Visual Improvements</CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        <p className="text-gray-700 whitespace-pre-line">{optimization.profileEnhancements.visualImprovements}</p>
-                      </CardContent>
-                    </Card>
-                  )}
+                  <div className="bg-blue-50 p-5 rounded-lg border border-blue-100">
+                    <h3 className="font-medium text-blue-700 mb-2">Experience Section</h3>
+                    <p className="text-blue-800 whitespace-pre-line">
+                      {optimization.profileEnhancements.experienceSection || "No experience section recommendations provided"}
+                    </p>
+                  </div>
+                  
+                  <div className="bg-blue-50 p-5 rounded-lg border border-blue-100">
+                    <h3 className="font-medium text-blue-700 mb-2">Skills & Endorsements</h3>
+                    <p className="text-blue-800 whitespace-pre-line">
+                      {optimization.profileEnhancements.skillsEndorsements || "No skills recommendations provided"}
+                    </p>
+                  </div>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="bg-blue-50 p-5 rounded-lg border border-blue-100">
+                      <h3 className="font-medium text-blue-700 mb-2">Activity & Engagement</h3>
+                      <p className="text-blue-800 whitespace-pre-line">
+                        {optimization.profileEnhancements.activityEngagement || "No activity recommendations provided"}
+                      </p>
+                    </div>
+                    
+                    <div className="bg-blue-50 p-5 rounded-lg border border-blue-100">
+                      <h3 className="font-medium text-blue-700 mb-2">Visual Improvements</h3>
+                      <p className="text-blue-800 whitespace-pre-line">
+                        {optimization.profileEnhancements.visualImprovements || "No visual recommendations provided"}
+                      </p>
+                    </div>
+                  </div>
                 </>
+              ) : (
+                <div className="text-center p-8">
+                  <p className="text-gray-500">No profile enhancement data available</p>
+                </div>
+              )}
+            </TabsContent>
+
+            {/* Content Strategy Tab */}
+            <TabsContent value="content" className="space-y-6">
+              {optimization.contentStrategy ? (
+                <>
+                  <div className="bg-amber-50 p-5 rounded-lg border border-amber-100">
+                    <h3 className="font-medium text-amber-700 mb-2">Content Themes</h3>
+                    <p className="text-amber-800 whitespace-pre-line">
+                      {optimization.contentStrategy.themes || "No content themes provided"}
+                    </p>
+                  </div>
+                  
+                  <div className="bg-amber-50 p-5 rounded-lg border border-amber-100">
+                    <h3 className="font-medium text-amber-700 mb-2">Post Ideas</h3>
+                    <p className="text-amber-800 whitespace-pre-line">
+                      {optimization.contentStrategy.postIdeas || "No post ideas provided"}
+                    </p>
+                  </div>
+                  
+                  <div className="bg-amber-50 p-5 rounded-lg border border-amber-100">
+                    <h3 className="font-medium text-amber-700 mb-2">Engagement Tips</h3>
+                    <p className="text-amber-800 whitespace-pre-line">
+                      {optimization.contentStrategy.engagementTips || "No engagement tips provided"}
+                    </p>
+                  </div>
+                </>
+              ) : (
+                <div className="text-center p-8">
+                  <p className="text-gray-500">No content strategy data available</p>
+                </div>
               )}
             </TabsContent>
           </Tabs>
+        </div>
 
-          {/* Implementation Priorities Section */}
-          {optimization.implementationPriorities && (
-            <div className="p-6 border-t border-gray-200 bg-gray-50">
-              <h2 className="text-xl font-medium text-gray-800 mb-4">Implementation Priorities</h2>
-              <div className="bg-white rounded-lg p-4 border border-gray-200">
-                <p className="text-gray-700 whitespace-pre-line">{optimization.implementationPriorities}</p>
-              </div>
-              
-              <div className="mt-6 flex items-center text-sm text-gray-600">
-                <Lightbulb className="h-4 w-4 text-amber-500 mr-2" />
-                <p>
-                  Implement these recommendations in the suggested order for maximum impact on your professional brand.
-                </p>
-              </div>
-            </div>
-          )}
-
-          {/* Call to Action Footer */}
-          <div className="p-6 border-t border-gray-200">
-            <div className="flex flex-col md:flex-row md:justify-between md:items-center">
-              <div className="mb-4 md:mb-0">
-                <h3 className="text-lg font-medium text-gray-800">Ready to update your LinkedIn profile?</h3>
-                <p className="text-gray-600">Apply these recommendations to strengthen your professional presence.</p>
-              </div>
-              <Button
-                className="flex items-center"
-                onClick={() => window.open("https://linkedin.com/in/", "_blank")}
-              >
-                Go to LinkedIn
-                <ArrowUpRight className="ml-2 h-4 w-4" />
-              </Button>
-            </div>
-          </div>
+        <div className="flex justify-between items-center">
+          <Button
+            variant="outline"
+            onClick={() => navigate("/")}
+            className="flex items-center"
+          >
+            <ChevronLeft className="mr-2 h-4 w-4" />
+            Back to Home
+          </Button>
+          <Button
+            onClick={handleGenerateNew}
+            className="flex items-center"
+          >
+            <Lightbulb className="mr-2 h-4 w-4" />
+            Generate New
+          </Button>
         </div>
       </main>
     </div>

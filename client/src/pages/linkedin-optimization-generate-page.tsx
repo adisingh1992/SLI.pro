@@ -1,107 +1,84 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useToast } from "@/hooks/use-toast";
-import { useAuth } from "@/hooks/use-auth";
 import { useLocation } from "wouter";
-import { Loader2, ChevronLeft, FileText, Award, BarChart4 } from "lucide-react";
-import { LinkedinOptimization } from "@shared/schema";
+import { ChevronLeft, Linkedin, ArrowRight, Loader2, CheckCircle, AlertCircle, FileCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import NavBar from "@/components/nav-bar";
-import { apiRequest } from "../lib/query-client";
+import { apiRequest } from "@/lib/query-client";
 
 export default function LinkedinOptimizationGeneratePage() {
-  const { user } = useAuth();
-  const { toast } = useToast();
   const [_, navigate] = useLocation();
   const queryClient = useQueryClient();
-  const [generationStarted, setGenerationStarted] = useState(false);
+  const [generating, setGenerating] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  // Check data requirements
-  const { data: userProfile, isLoading: isUserLoading } = useQuery({
+  // Fetch user profile to check for required documents
+  const { data: userProfile, isLoading: isProfileLoading } = useQuery({
     queryKey: ["/api/user/profile"],
-    enabled: !!user,
   });
 
-  // Fetch the user's selected SLI
-  const { data: userSli, isLoading: isSliLoading } = useQuery({
+  // Fetch user's SLI
+  const { data: sli, isLoading: isSliLoading } = useQuery({
     queryKey: ["/api/user/sli"],
-    enabled: !!user,
-    retry: false,
   });
 
-  // Fetch the latest freshness report
-  const { data: freshnessReport, isLoading: isFreshnessLoading } = useQuery({
+  // Fetch latest freshness report
+  const { data: freshnessReport, isLoading: isFreshnessReportLoading } = useQuery({
     queryKey: ["/api/freshness-reports/latest"],
-    enabled: !!user,
-    retry: false,
   });
 
-  // Check if the user has the required documents (resume and linkedin)
-  const hasResume = userProfile?.documents?.some(doc => doc.type === 'resume');
-  const hasLinkedin = userProfile?.documents?.some(doc => doc.type === 'linkedin');
-  const hasRequiredDocuments = hasResume && hasLinkedin;
-
-  // Check if the user has selected or refined an SLI
-  const hasSli = !!userSli;
-
-  // Check if the user has a freshness report
-  const hasFreshnessReport = !!freshnessReport;
-
-  // Check if all requirements are met
-  const allRequirementsMet = hasRequiredDocuments && hasSli && hasFreshnessReport;
-
-  // Setup mutation for generating optimization
-  const generateOptimization = useMutation({
+  // Mutation for generating LinkedIn optimization
+  const generateMutation = useMutation({
     mutationFn: async () => {
-      const response = await apiRequest<LinkedinOptimization>({
-        url: "/api/linkedin-optimizations/generate",
+      return apiRequest("/api/linkedin-optimizations/generate", {
         method: "POST",
       });
-      return response;
     },
     onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ["/api/linkedin-optimizations"] });
       queryClient.invalidateQueries({ queryKey: ["/api/linkedin-optimizations/latest"] });
-      toast({
-        title: "Success!",
-        description: "LinkedIn optimization recommendations have been generated",
-      });
+      queryClient.invalidateQueries({ queryKey: [`/api/linkedin-optimizations/${data.id}`] });
       navigate(`/linkedin-optimization/${data.id}`);
     },
-    onError: (error) => {
-      toast({
-        title: "Error",
-        description: "Failed to generate LinkedIn optimization. Please try again later.",
-        variant: "destructive",
-      });
-      setGenerationStarted(false);
+    onError: (error: any) => {
+      setError(error.message || "Failed to generate LinkedIn optimization");
+      setGenerating(false);
     },
   });
 
-  const handleGenerateOptimization = () => {
-    if (!allRequirementsMet) {
-      toast({
-        title: "Cannot generate optimization",
-        description: "Please ensure all requirements are met before generating optimization.",
-        variant: "destructive",
-      });
-      return;
-    }
+  // Check if user has the required documents (resume and LinkedIn)
+  const resumeDoc = userProfile?.documents?.find((doc: any) => doc.type === "resume");
+  const linkedinDoc = userProfile?.documents?.find((doc: any) => doc.type === "linkedin");
+  const hasRequiredDocuments = !!resumeDoc && !!linkedinDoc;
 
-    setGenerationStarted(true);
-    generateOptimization.mutate();
+  // Check if user has a selected SLI
+  const hasSli = !!sli && (sli.selectedSliIndex !== null || sli.refinedSliText);
+
+  // Check if user has a freshness report
+  const hasFreshnessReport = !!freshnessReport;
+
+  // All requirements met
+  const canGenerate = hasRequiredDocuments && hasSli && hasFreshnessReport;
+
+  // Handle generation
+  const handleGenerate = () => {
+    if (!canGenerate) return;
+    setGenerating(true);
+    setError(null);
+    generateMutation.mutate();
   };
 
-  // Combined loading state
-  const isLoading = isUserLoading || isSliLoading || isFreshnessLoading;
-
-  if (isLoading) {
+  // Loading state
+  if (isProfileLoading || isSliLoading || isFreshnessReportLoading) {
     return (
       <div className="min-h-screen bg-background flex flex-col">
         <NavBar />
         <div className="flex-1 flex items-center justify-center">
-          <Loader2 className="h-8 w-8 animate-spin text-primary" />
-          <span className="ml-2">Checking requirements...</span>
+          <div className="text-center">
+            <Loader2 className="h-10 w-10 animate-spin text-primary mx-auto mb-4" />
+            <p className="text-muted-foreground">Loading...</p>
+          </div>
         </div>
       </div>
     );
@@ -110,132 +87,166 @@ export default function LinkedinOptimizationGeneratePage() {
   return (
     <div className="min-h-screen bg-background flex flex-col">
       <NavBar />
-      <main className="max-w-4xl mx-auto px-4 sm:px-6 py-8 w-full">
+      <main className="flex-1 container max-w-5xl mx-auto px-4 py-8">
         <Button
           variant="ghost"
-          className="mb-6 flex items-center text-gray-600"
+          className="mb-6 flex items-center text-muted-foreground"
           onClick={() => navigate("/")}
-          disabled={generateOptimization.isPending}
         >
           <ChevronLeft className="mr-2 h-4 w-4" />
           Back to Home
         </Button>
 
-        <div className="bg-white shadow-card rounded-lg overflow-hidden">
-          <div className="bg-blue-50 p-6 border-b border-blue-100">
-            <h1 className="text-2xl font-semibold text-blue-900">Generate LinkedIn Optimization</h1>
-            <p className="text-blue-700 mt-1">
-              Create personalized recommendations to enhance your LinkedIn profile
-            </p>
-          </div>
+        <Card className="mb-8">
+          <CardHeader className="bg-blue-50 border-b border-blue-100">
+            <div className="flex items-center">
+              <Linkedin className="mr-2 h-5 w-5 text-blue-600" />
+              <CardTitle className="text-xl text-blue-900">Generate LinkedIn Optimization</CardTitle>
+            </div>
+            <CardDescription className="text-blue-700">
+              Create AI-powered recommendations to enhance your LinkedIn profile and align it with your SLI
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="p-6">
+            <div className="space-y-6">
+              <div className="bg-gray-50 p-5 rounded-lg border border-gray-100">
+                <h2 className="text-lg font-medium mb-4">Requirements</h2>
+                <div className="space-y-3">
+                  <div className="flex items-start">
+                    {hasRequiredDocuments ? (
+                      <CheckCircle className="h-5 w-5 text-green-500 mt-0.5 mr-2 flex-shrink-0" />
+                    ) : (
+                      <AlertCircle className="h-5 w-5 text-amber-500 mt-0.5 mr-2 flex-shrink-0" />
+                    )}
+                    <div>
+                      <h3 className="font-medium">Resume & LinkedIn Profile Documents</h3>
+                      <p className="text-sm text-gray-600">
+                        {hasRequiredDocuments
+                          ? "You have uploaded both your resume and LinkedIn profile"
+                          : "You need to upload both your resume and LinkedIn profile"}
+                      </p>
+                      {!hasRequiredDocuments && (
+                        <Button
+                          variant="link"
+                          className="text-sm p-0 h-auto mt-1"
+                          onClick={() => navigate("/documents")}
+                        >
+                          Go to Documents
+                          <ArrowRight className="ml-1 h-3 w-3" />
+                        </Button>
+                      )}
+                    </div>
+                  </div>
 
-          <div className="p-6">
-            <div className="mb-8">
-              <h2 className="text-lg font-medium text-gray-800 mb-4">
-                Requirements Check
-              </h2>
-              <div className="space-y-4">
-                <div className="flex items-start">
-                  <div className={`p-2 rounded-full ${hasRequiredDocuments ? 'bg-green-100 text-green-600' : 'bg-gray-100 text-gray-400'} mr-3`}>
-                    <FileText className="h-5 w-5" />
+                  <div className="flex items-start">
+                    {hasSli ? (
+                      <CheckCircle className="h-5 w-5 text-green-500 mt-0.5 mr-2 flex-shrink-0" />
+                    ) : (
+                      <AlertCircle className="h-5 w-5 text-amber-500 mt-0.5 mr-2 flex-shrink-0" />
+                    )}
+                    <div>
+                      <h3 className="font-medium">Single Lasting Impression (SLI)</h3>
+                      <p className="text-sm text-gray-600">
+                        {hasSli
+                          ? `You have selected or refined an SLI: "${
+                              sli.refinedSliText ||
+                              (sli.selectedSliIndex === 1
+                                ? sli.statement1
+                                : sli.selectedSliIndex === 2
+                                ? sli.statement2
+                                : sli.selectedSliIndex === 3
+                                ? sli.statement3
+                                : sli.customSliText)
+                            }"`
+                          : "You need to select an SLI statement"}
+                      </p>
+                      {!hasSli && (
+                        <Button
+                          variant="link"
+                          className="text-sm p-0 h-auto mt-1"
+                          onClick={() => navigate("/sli")}
+                        >
+                          Go to SLI
+                          <ArrowRight className="ml-1 h-3 w-3" />
+                        </Button>
+                      )}
+                    </div>
                   </div>
-                  <div>
-                    <h3 className="font-medium text-gray-700">Resume & LinkedIn Profile</h3>
-                    <p className="text-sm text-gray-500">
-                      {hasRequiredDocuments 
-                        ? "Both documents are uploaded"
-                        : !hasResume && !hasLinkedin
-                          ? "Missing both resume and LinkedIn profile"
-                          : !hasResume
-                            ? "Missing resume document"
-                            : "Missing LinkedIn profile document"}
-                    </p>
-                  </div>
-                </div>
 
-                <div className="flex items-start">
-                  <div className={`p-2 rounded-full ${hasSli ? 'bg-green-100 text-green-600' : 'bg-gray-100 text-gray-400'} mr-3`}>
-                    <Award className="h-5 w-5" />
-                  </div>
-                  <div>
-                    <h3 className="font-medium text-gray-700">Single Lasting Impression (SLI)</h3>
-                    <p className="text-sm text-gray-500">
-                      {hasSli 
-                        ? userSli?.refinedSliText 
-                          ? "Refined SLI is available" 
-                          : "Selected SLI is available"
-                        : "No SLI selected or refined"}
-                    </p>
-                  </div>
-                </div>
-
-                <div className="flex items-start">
-                  <div className={`p-2 rounded-full ${hasFreshnessReport ? 'bg-green-100 text-green-600' : 'bg-gray-100 text-gray-400'} mr-3`}>
-                    <BarChart4 className="h-5 w-5" />
-                  </div>
-                  <div>
-                    <h3 className="font-medium text-gray-700">Freshness Report</h3>
-                    <p className="text-sm text-gray-500">
-                      {hasFreshnessReport 
-                        ? "Freshness report is available"
-                        : "No freshness report found"}
-                    </p>
+                  <div className="flex items-start">
+                    {hasFreshnessReport ? (
+                      <CheckCircle className="h-5 w-5 text-green-500 mt-0.5 mr-2 flex-shrink-0" />
+                    ) : (
+                      <AlertCircle className="h-5 w-5 text-amber-500 mt-0.5 mr-2 flex-shrink-0" />
+                    )}
+                    <div>
+                      <h3 className="font-medium">Brand Freshness Report</h3>
+                      <p className="text-sm text-gray-600">
+                        {hasFreshnessReport
+                          ? "You have a brand freshness report"
+                          : "You need to generate a brand freshness report"}
+                      </p>
+                      {!hasFreshnessReport && (
+                        <Button
+                          variant="link"
+                          className="text-sm p-0 h-auto mt-1"
+                          onClick={() => navigate("/freshness-report")}
+                        >
+                          Go to Freshness Report
+                          <ArrowRight className="ml-1 h-3 w-3" />
+                        </Button>
+                      )}
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
 
-            <div className="bg-blue-50 p-6 rounded-lg border border-blue-100 mb-8">
-              <h2 className="text-lg font-medium text-blue-900 mb-3">What to Expect</h2>
-              <p className="text-blue-800 mb-4">
-                The LinkedIn optimization process will analyze your:
-              </p>
-              <ul className="space-y-2 text-blue-700">
-                <li className="flex items-start">
-                  <span className="inline-block w-4 h-4 bg-blue-200 rounded-full mr-2 mt-1"></span>
-                  <span>Resume and LinkedIn profile to identify strengths and opportunities</span>
-                </li>
-                <li className="flex items-start">
-                  <span className="inline-block w-4 h-4 bg-blue-200 rounded-full mr-2 mt-1"></span>
-                  <span>Single Lasting Impression to ensure profile alignment</span>
-                </li>
-                <li className="flex items-start">
-                  <span className="inline-block w-4 h-4 bg-blue-200 rounded-full mr-2 mt-1"></span>
-                  <span>Freshness Report insights to enhance your professional presence</span>
-                </li>
-              </ul>
-              <div className="mt-6 text-sm text-blue-800">
-                <strong>Note:</strong> Generation can take up to 2-3 minutes as our AI carefully analyzes your documents and creates personalized recommendations.
-              </div>
-            </div>
+              {error && (
+                <Alert variant="destructive">
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertTitle>Error</AlertTitle>
+                  <AlertDescription>{error}</AlertDescription>
+                </Alert>
+              )}
 
-            <div className="flex justify-between items-center">
-              <Button
-                variant="outline"
-                className="flex items-center"
-                onClick={() => navigate("/")}
-                disabled={generateOptimization.isPending}
-              >
-                <ChevronLeft className="mr-2 h-4 w-4" />
-                Cancel
-              </Button>
-              <Button
-                className="flex items-center"
-                onClick={handleGenerateOptimization}
-                disabled={!allRequirementsMet || generateOptimization.isPending}
-              >
-                {generateOptimization.isPending ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Generating...
-                  </>
-                ) : (
-                  "Generate Optimization"
-                )}
-              </Button>
+              {canGenerate && (
+                <div className="bg-blue-50 p-5 rounded-lg border border-blue-100">
+                  <h3 className="font-medium text-blue-800 mb-2">Ready to Generate</h3>
+                  <p className="text-blue-700 text-sm mb-4">
+                    Our AI will analyze your uploaded documents, SLI, and freshness report to create tailored
+                    recommendations for optimizing your LinkedIn profile.
+                  </p>
+                  <p className="text-blue-700 text-sm mb-4">
+                    This process may take up to 2 minutes as our AI carefully crafts personalized guidance for maximum
+                    professional impact.
+                  </p>
+                </div>
+              )}
             </div>
-          </div>
-        </div>
+          </CardContent>
+          <CardFooter className="flex justify-between border-t p-6 bg-gray-50">
+            <Button variant="outline" onClick={() => navigate("/")}>
+              Cancel
+            </Button>
+            <Button
+              onClick={handleGenerate}
+              disabled={!canGenerate || generating}
+              className="flex items-center"
+            >
+              {generating ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Generating...
+                </>
+              ) : (
+                <>
+                  <FileCheck className="mr-2 h-4 w-4" />
+                  Generate Optimization
+                </>
+              )}
+            </Button>
+          </CardFooter>
+        </Card>
       </main>
     </div>
   );

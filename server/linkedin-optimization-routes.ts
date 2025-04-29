@@ -113,10 +113,7 @@ export function registerLinkedinOptimizationRoutes(app: Express) {
         alignmentAssessment: optimizationData.alignmentAssessment,
         headlineOptimization: optimizationData.headlineOptimization,
         aboutSection: optimizationData.aboutSection,
-        experienceDescriptions: optimizationData.experienceDescriptions,
-        skillsAndEndorsements: optimizationData.skillsAndEndorsements,
-        additionalSections: optimizationData.additionalSections,
-        visualElements: optimizationData.visualElements,
+        profileEnhancements: optimizationData.profileEnhancements,
         implementationPriorities: optimizationData.implementationPriorities
       });
       

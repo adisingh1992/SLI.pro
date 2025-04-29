@@ -58,35 +58,21 @@ export async function generateLinkedInOptimization(
     rationale?: string;
   };
   aboutSection: {
-    currentWeaknesses?: string[];
-    recommendedAbout?: string;
-    keyElements?: string[];
+    currentAnalysis?: string;
+    recommendations?: string;
+    suggestedStructure?: string;
+    keyElements?: string;
+    draftContent?: string;
   };
-  experienceDescriptions: {
-    positions: Array<{
-      position?: string;
-      currentDescription?: string;
-      recommendedDescription?: string;
-      rationale?: string;
-    }>;
-  };
-  skillsAndEndorsements: {
-    recommendedSkills?: string[];
-    skillsToRemove?: string[];
-    rationale?: string;
-  };
-  additionalSections: string;
-  visualElements: {
-    profilePhotoSuggestions?: string;
-    backgroundImageRecommendations?: string;
-    activityFeedContentIdeas?: string;
+  profileEnhancements: {
+    experienceSection?: string;
+    skillsEndorsements?: string;
+    activityEngagement?: string;
+    visualImprovements?: string;
   };
   contentStrategy: {
-    themes?: string[];
-    postIdeas?: Array<{
-      title?: string;
-      content?: string;
-    }>;
+    themes?: string;
+    postIdeas?: string;
     engagementTips?: string;
   };
   implementationPriorities: string;
@@ -105,63 +91,31 @@ You need to respond with structured data that I can parse programmatically. Your
 
 Structure your response in the following format:
 {
-  "alignmentAssessment": "Comprehensive evaluation of LinkedIn profile SLI alignment",
+  "alignmentAssessment": "Comprehensive evaluation of LinkedIn profile SLI alignment that spans 2-3 paragraphs",
   "headlineOptimization": {
     "currentHeadline": "The client's current headline from LinkedIn",
     "recommendedHeadline": "Your optimized headline recommendation",
-    "rationale": "Concise explanation of optimization"
+    "rationale": "Concise explanation of why this headline better aligns with their SLI"
   },
   "aboutSection": {
-    "currentWeaknesses": ["Issue 1", "Issue 2", "Issue 3"],
-    "recommendedAbout": "Complete rewritten about section (3-4 paragraphs)",
-    "keyElements": ["Key element 1", "Key element 2", "Key element 3"]
+    "currentAnalysis": "Analysis of strengths and weaknesses in current About section (2 paragraphs)",
+    "recommendations": "Strategic recommendations for improving the About section",
+    "suggestedStructure": "Paragraph-by-paragraph structure recommendation",
+    "keyElements": "Key elements and phrases that should be included to reinforce SLI",
+    "draftContent": "A complete draft of the new About section (3-4 paragraphs)"
   },
-  "experienceDescriptions": {
-    "positions": [
-      {
-        "position": "Job title at Company",
-        "currentDescription": "Current job description text",
-        "recommendedDescription": "Optimized job description",
-        "rationale": "Why this optimization strengthens SLI"
-      },
-      {
-        "position": "Second job title",
-        "currentDescription": "Current description",
-        "recommendedDescription": "Optimized description",
-        "rationale": "Rationale for changes"
-      }
-    ]
-  },
-  "skillsAndEndorsements": {
-    "recommendedSkills": ["Skill 1", "Skill 2", "Skill 3", "Skill 4", "Skill 5"],
-    "skillsToRemove": ["Weak skill 1", "Irrelevant skill 2"],
-    "rationale": "Explanation of skill recommendations"
-  },
-  "additionalSections": "Detailed suggestions for Education, Volunteer Experience, etc.",
-  "visualElements": {
-    "profilePhotoSuggestions": "Specific recommendations about profile photo style and presentation",
-    "backgroundImageRecommendations": "Guidance on professional background image selection",
-    "activityFeedContentIdeas": "Types of content to highlight in activity section"
+  "profileEnhancements": {
+    "experienceSection": "Specific recommendations to enhance job descriptions with action verbs, metrics, and SLI keywords",
+    "skillsEndorsements": "Detailed assessment of skills to add, remove, or prioritize with explanation",
+    "activityEngagement": "Guidance on engagement strategy to build thought leadership",
+    "visualImprovements": "Recommendations for profile photo, background image, and other visual elements"
   },
   "contentStrategy": {
-    "themes": ["Theme 1", "Theme 2", "Theme 3"],
-    "postIdeas": [
-      {
-        "title": "Post idea 1",
-        "content": "Example copy for post 1"
-      },
-      {
-        "title": "Post idea 2",
-        "content": "Example copy for post 2"
-      },
-      {
-        "title": "Post idea 3",
-        "content": "Example copy for post 3"
-      }
-    ],
-    "engagementTips": "Specific strategies to grow professional presence"
+    "themes": "3-5 content themes that align with the client's SLI and industry positioning",
+    "postIdeas": "5-7 specific post ideas including suggested structure and topics",
+    "engagementTips": "Specific strategies to increase meaningful engagement and grow professional network"
   },
-  "implementationPriorities": "Prioritized roadmap of changes in order of impact"
+  "implementationPriorities": "Prioritized roadmap of changes in order of impact, with timeframes"
 }`;
 
   // Preparing user prompt
