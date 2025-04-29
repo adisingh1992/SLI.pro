@@ -15,6 +15,7 @@ import {
   freshnessReports, type FreshnessReport, type InsertFreshnessReport,
   coachingNotes, type CoachingNote, type InsertCoachingNote,
   slis, type Sli, type InsertSli, type UpdateSli,
+  linkedinOptimizations, type LinkedinOptimization, type InsertLinkedinOptimization,
   type UpdateUser, type UpdateProfile, type UserProfile
 } from "@shared/schema";
 import session from "express-session";
@@ -126,6 +127,12 @@ export interface IStorage {
   createSli(sli: InsertSli): Promise<Sli>;
   updateSli(id: number, sli: UpdateSli): Promise<Sli | undefined>;
   deleteSli(id: number): Promise<void>;
+  
+  // LinkedIn Optimization operations
+  getLinkedinOptimizations(userId: number): Promise<LinkedinOptimization[]>;
+  getLinkedinOptimization(id: number): Promise<LinkedinOptimization | undefined>;
+  getLatestLinkedinOptimization(userId: number): Promise<LinkedinOptimization | undefined>;
+  createLinkedinOptimization(optimization: InsertLinkedinOptimization): Promise<LinkedinOptimization>;
 
   // Session store
   sessionStore: session.Store;
@@ -148,6 +155,7 @@ export class MemStorage implements IStorage {
   private freshnessReports: Map<number, FreshnessReport>;
   private coachingNotes: Map<number, CoachingNote>;
   private slis: Map<number, Sli>;
+  private linkedinOptimizations: Map<number, LinkedinOptimization>;
   
   private userId: number;
   private experienceId: number;
@@ -165,6 +173,7 @@ export class MemStorage implements IStorage {
   private freshnessReportId: number;
   private coachingNoteId: number;
   private sliId: number;
+  private linkedinOptimizationId: number;
   
   sessionStore: session.Store;
 
@@ -185,6 +194,7 @@ export class MemStorage implements IStorage {
     this.freshnessReports = new Map();
     this.coachingNotes = new Map();
     this.slis = new Map();
+    this.linkedinOptimizations = new Map();
     
     this.userId = 1;
     this.experienceId = 1;
@@ -202,6 +212,7 @@ export class MemStorage implements IStorage {
     this.freshnessReportId = 1;
     this.coachingNoteId = 1;
     this.sliId = 1;
+    this.linkedinOptimizationId = 1;
     
     this.sessionStore = new MemoryStore({
       checkPeriod: 86400000,
@@ -765,6 +776,34 @@ export class MemStorage implements IStorage {
   
   async deleteSli(id: number): Promise<void> {
     this.slis.delete(id);
+  }
+  
+  // LinkedIn Optimization methods
+  async getLinkedinOptimizations(userId: number): Promise<LinkedinOptimization[]> {
+    return Array.from(this.linkedinOptimizations.values())
+      .filter(optimization => optimization.userId === userId)
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  }
+  
+  async getLinkedinOptimization(id: number): Promise<LinkedinOptimization | undefined> {
+    return this.linkedinOptimizations.get(id);
+  }
+  
+  async getLatestLinkedinOptimization(userId: number): Promise<LinkedinOptimization | undefined> {
+    const optimizations = await this.getLinkedinOptimizations(userId);
+    if (optimizations.length === 0) return undefined;
+    return optimizations[0]; // Already sorted by createdAt desc
+  }
+  
+  async createLinkedinOptimization(optimization: InsertLinkedinOptimization): Promise<LinkedinOptimization> {
+    const id = this.linkedinOptimizationId++;
+    const newOptimization: LinkedinOptimization = {
+      ...optimization,
+      id,
+      createdAt: new Date()
+    };
+    this.linkedinOptimizations.set(id, newOptimization);
+    return newOptimization;
   }
 }
 
