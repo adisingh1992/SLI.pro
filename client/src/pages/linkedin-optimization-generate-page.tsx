@@ -75,7 +75,45 @@ export default function LinkedinOptimizationGeneratePage() {
     if (!canGenerate) return;
     setGenerating(true);
     setError(null);
-    generateMutation.mutate();
+    
+    // Call the API directly instead of using the mutation
+    console.log("Starting LinkedIn optimization generation...");
+    
+    fetch("/api/linkedin-optimizations/generate", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+    })
+      .then(response => {
+        console.log("Response status:", response.status);
+        
+        if (!response.ok) {
+          return response.json().then(errorData => {
+            throw new Error(errorData.error || "Failed to generate LinkedIn optimization");
+          });
+        }
+        
+        return response.json();
+      })
+      .then(data => {
+        console.log("LinkedIn optimization generated successfully", data);
+        if (data && data.id) {
+          console.log("Redirecting to:", `/linkedin-optimization/${data.id}`);
+          queryClient.invalidateQueries({ queryKey: ["/api/linkedin-optimizations/latest"] });
+          queryClient.invalidateQueries({ queryKey: [`/api/linkedin-optimizations/${data.id}`] });
+          navigate(`/linkedin-optimization/${data.id}`);
+        } else {
+          console.error("Response missing ID:", data);
+          setError("Server returned a response without an ID. Please try again.");
+          setGenerating(false);
+        }
+      })
+      .catch(error => {
+        console.error("LinkedIn optimization generation error:", error);
+        setError(error.message || "Failed to generate LinkedIn optimization");
+        setGenerating(false);
+      });
   };
 
   // Loading state
