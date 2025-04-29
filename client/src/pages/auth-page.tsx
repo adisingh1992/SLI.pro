@@ -116,6 +116,11 @@ export default function AuthPage() {
     loginMutation.mutate({
       username: data.username,
       password: data.password,
+    }, {
+      onSuccess: () => {
+        // Force navigation to home page after successful login
+        navigate("/");
+      }
     });
   };
 
@@ -128,8 +133,12 @@ export default function AuthPage() {
       phoneNumber: data.phoneNumber,
       password: data.password,
       confirmPassword: data.confirmPassword,
+    }, {
+      onSuccess: () => {
+        // Force navigation to home page after successful registration
+        navigate("/");
+      }
     });
-    // Navigation will be handled by useEffect when user state changes
   };
 
   return (
