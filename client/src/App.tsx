@@ -1,6 +1,6 @@
 import React from "react";
 import { Switch, Route } from "wouter";
-import { queryClient } from "./lib/queryClient";
+import { queryClient } from "./lib/query-client";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import NotFound from "@/pages/not-found";
@@ -15,6 +15,8 @@ import MonthlyCheckInPage from "@/pages/monthly-check-in-page";
 import FreshnessReportPage from "@/pages/freshness-report-page-new";
 import SliSelectionPage from "@/pages/sli-selection-page";
 import SliRefinementPage from "@/pages/sli-refinement-page";
+import LinkedinOptimizationPage from "@/pages/linkedin-optimization-page";
+import LinkedinOptimizationGeneratePage from "@/pages/linkedin-optimization-generate-page";
 import { AuthProvider } from "@/hooks/use-auth";
 import { ProtectedRoute } from "@/lib/protected-route";
 
@@ -53,6 +55,18 @@ function Router() {
       <ProtectedRoute
         path="/sli-refinement"
         component={SliRefinementPage}
+      />
+      <ProtectedRoute
+        path="/linkedin-optimization/generate"
+        component={LinkedinOptimizationGeneratePage}
+      />
+      <ProtectedRoute
+        path="/linkedin-optimization/:id"
+        component={LinkedinOptimizationPage}
+      />
+      <ProtectedRoute
+        path="/linkedin-optimization"
+        component={LinkedinOptimizationPage}
       />
       
       {/* Admin routes */}
