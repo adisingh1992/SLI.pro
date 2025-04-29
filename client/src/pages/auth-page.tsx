@@ -68,8 +68,8 @@ const registerSchema = z
     path: ["confirmPassword"],
   });
 
-type LoginFormValues = z.infer<typeof loginSchema> & { isSubmitting?: boolean };
-type RegisterFormValues = z.infer<typeof registerSchema>;
+type LoginFormValues = z.infer<typeof loginSchema>;
+type RegisterFormValues = z.infer<typeof registerSchema> & { isSubmitting?: boolean };
 
 export default function AuthPage() {
   const [activeTab, setActiveTab] = useState("login");

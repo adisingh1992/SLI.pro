@@ -26,9 +26,16 @@ export default function NavBar() {
   const [location] = useLocation();
   const navigate = useSafeNavigation();
 
-  const handleLogout = () => {
-    logoutMutation.mutate();
-    navigate("/auth");
+  const handleLogout = async () => {
+    try {
+      // First perform the logout
+      await logoutMutation.mutateAsync();
+      
+      // Then forcefully redirect to auth page with browser navigation
+      window.location.href = '/auth';
+    } catch (error) {
+      console.error('Logout failed:', error);
+    }
   };
 
   const getInitials = () => {
