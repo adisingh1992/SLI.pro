@@ -1,6 +1,6 @@
 import { useAuth } from "@/hooks/use-auth";
 import { useQuery } from "@tanstack/react-query";
-import { FreshnessReport, Sli, UserProfile } from "@shared/schema";
+import { FreshnessReport, LinkedinOptimization, Sli, UserProfile } from "@shared/schema";
 import { useToast } from "@/hooks/use-toast";
 import { useLocation } from "wouter";
 import {
@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import MonthlyCheckInWidget from "@/components/monthly-check-in-widget";
 import { FreshnessReportWidget } from "@/components/freshness-report-widget";
+import { LinkedinOptimizationWidget } from "@/components/linkedin-optimization/linkedin-optimization-widget";
 import { Button } from "@/components/ui/button";
 import { useEffect } from "react";
 import NavBar from "@/components/nav-bar";
@@ -55,6 +56,13 @@ export default function HomePage() {
   // Fetch all user's SLIs to check refined status and whether they exist
   const { data: userSlis, isLoading: slisLoading } = useQuery<Sli[]>({
     queryKey: ["/api/user/slis"],
+    enabled: !!user,
+    retry: false,
+  });
+  
+  // Fetch the latest LinkedIn optimization
+  const { data: latestLinkedinOptimization } = useQuery<LinkedinOptimization>({
+    queryKey: ["/api/linkedin-optimizations/latest"],
     enabled: !!user,
     retry: false,
   });
@@ -365,6 +373,19 @@ export default function HomePage() {
                   </div>
                 </div>
               </div>
+            </div>
+          )}
+          
+          {/* LinkedIn Optimization Widget - Placed between SLI and Monthly Check-in */}
+          {userProfile?.questionnaire && userProfile.questionnaire.isDraft !== true && (
+            <div className="mt-6">
+              <LinkedinOptimizationWidget 
+                userHasQuestionnaire={!!userProfile?.questionnaire && userProfile.questionnaire.isDraft !== true}
+                userHasRequiredDocuments={hasRequiredDocuments}
+                userHasSli={!!userSli}
+                userHasFreshnessReport={!!latestFreshnessReport}
+                latestLinkedinOptimization={latestLinkedinOptimization}
+              />
             </div>
           )}
 
