@@ -394,6 +394,60 @@ export type InsertSli = z.infer<typeof insertSliSchema>;
 export type UpdateSli = z.infer<typeof updateSliSchema>;
 export type Sli = typeof slis.$inferSelect;
 
+// LinkedIn Optimization schema
+export const linkedinOptimizations = pgTable("linkedin_optimizations", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
+  alignmentAssessment: text("alignment_assessment"), // Claude's evaluation of profile alignment with SLI
+  headlineOptimization: jsonb("headline_optimization").$type<{
+    currentHeadline?: string;
+    recommendedHeadline?: string;
+    rationale?: string;
+  }>(),
+  aboutSection: jsonb("about_section").$type<{
+    currentWeaknesses?: string[];
+    recommendedAbout?: string;
+    keyElements?: string[];
+  }>(),
+  experienceDescriptions: jsonb("experience_descriptions").$type<{
+    positions: Array<{
+      position?: string;
+      currentDescription?: string;
+      recommendedDescription?: string;
+      rationale?: string;
+    }>;
+  }>(),
+  skillsAndEndorsements: jsonb("skills_and_endorsements").$type<{
+    recommendedSkills?: string[];
+    skillsToRemove?: string[];
+    rationale?: string;
+  }>(),
+  additionalSections: text("additional_sections"), // Suggestions for other sections
+  visualElements: jsonb("visual_elements").$type<{
+    profilePhotoSuggestions?: string;
+    backgroundImageRecommendations?: string;
+    activityFeedContentIdeas?: string;
+  }>(),
+  contentStrategy: jsonb("content_strategy").$type<{
+    themes?: string[];
+    postIdeas?: Array<{
+      title?: string;
+      content?: string;
+    }>;
+    engagementTips?: string;
+  }>(),
+  implementationPriorities: text("implementation_priorities"), // Prioritized roadmap for changes
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const insertLinkedinOptimizationSchema = createInsertSchema(linkedinOptimizations).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type InsertLinkedinOptimization = z.infer<typeof insertLinkedinOptimizationSchema>;
+export type LinkedinOptimization = typeof linkedinOptimizations.$inferSelect;
+
 export type UserProfile = User & {
   experiences?: Experience[];
   education?: Education[];
@@ -408,4 +462,5 @@ export type UserProfile = User & {
   freshnessReports?: FreshnessReport[];
   coachingNotes?: CoachingNote[];
   slis?: Sli[];
+  linkedinOptimizations?: LinkedinOptimization[];
 };
