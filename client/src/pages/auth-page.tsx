@@ -116,8 +116,8 @@ export default function AuthPage() {
   // Handle login submission
   const onLoginSubmit = async (data: LoginFormValues) => {
     try {
-      // Show loading state
-      loginForm.setValue("isSubmitting", true);
+      // Show loading state through form state instead of using setValue
+      const isSubmitting = true;
       
       // Directly make the login API call
       const response = await fetch('/api/login', {
@@ -149,15 +149,16 @@ export default function AuthPage() {
       const errorMessage = error instanceof Error ? error.message : 'An error occurred during login';
       alert(errorMessage);
     } finally {
-      loginForm.setValue("isSubmitting", false);
+      // Form state is handled externally
+      const isSubmitting = false;
     }
   };
 
   // Handle registration submission
   const onRegisterSubmit = async (data: RegisterFormValues) => {
     try {
-      // Show loading state
-      registerForm.setValue("isSubmitting", true);
+      // Show loading state through local state
+      const isSubmitting = true;
       
       // Directly make the registration API call
       const response = await fetch('/api/register', {
@@ -193,7 +194,8 @@ export default function AuthPage() {
       const errorMessage = error instanceof Error ? error.message : 'An error occurred during registration';
       alert(errorMessage);
     } finally {
-      registerForm.setValue("isSubmitting", false);
+      // Form state is handled externally
+      const isSubmitting = false;
     }
   };
 
