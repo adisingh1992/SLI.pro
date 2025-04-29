@@ -1,4 +1,4 @@
-import { Anthropic } from "@anthropic-ai/sdk";
+import Anthropic from "@anthropic-ai/sdk";
 import type { Document, FreshnessReport, Sli } from "@shared/schema";
 
 // Initialize Anthropic client
@@ -151,25 +151,43 @@ ${freshnessReport.finalSynthesis?.contentRecommendations?.linkedInEnhancements?.
 Please analyze this information and provide detailed, actionable recommendations to optimize the client's LinkedIn profile to align with and reinforce their SLI.`;
 
   return await callWithRetry(async () => {
-    const response = await anthropic.messages.create({
-      model: process.env.CLAUDE_MODEL || "claude-3-opus-20240229",
-      max_tokens: 4000,
-      system: systemPrompt,
-      messages: [
-        {
-          role: "user",
-          content: userPrompt,
-        },
-      ],
-    });
-
+    console.log("[claude] Calling Anthropic API with model:", process.env.CLAUDE_MODEL || "claude-3-opus-20240229");
+    
     try {
+      const response = await anthropic.messages.create({
+        model: process.env.CLAUDE_MODEL || "claude-3-7-sonnet-20250219", // the newest Anthropic model is "claude-3-7-sonnet-20250219" which was released February 24, 2025
+        max_tokens: 4000,
+        system: systemPrompt,
+        messages: [
+          {
+            role: "user",
+            content: userPrompt,
+          },
+        ],
+      });
+
+      console.log("[claude] Received response from Anthropic API:", 
+        JSON.stringify({
+          id: response.id,
+          model: response.model,
+          contentTypes: response.content.map(c => c.type),
+          usage: response.usage
+        })
+      );
+
       // Get the text content from Claude's response
       const content = response.content.find(c => c.type === 'text')?.text || '';
-      return JSON.parse(content);
+      console.log("[claude] Extracted text content:", content.substring(0, 200) + "...");
+      
+      const parsedContent = JSON.parse(content);
+      console.log("[claude] Successfully parsed JSON response");
+      return parsedContent;
     } catch (error) {
-      console.error("[claude] Error parsing Claude's response:", error);
-      throw new Error("Failed to parse LinkedIn optimization recommendations");
+      console.error("[claude] Error in LinkedIn optimization function:", error);
+      if (error instanceof SyntaxError) {
+        console.error("[claude] JSON parse error - likely invalid response format");
+      }
+      throw error;
     }
   });
 }
