@@ -176,12 +176,30 @@ Please analyze this information and provide detailed, actionable recommendations
       );
 
       // Get the text content from Claude's response
-      const content = response.content.find(c => c.type === 'text')?.text || '';
+      let content = response.content.find(c => c.type === 'text')?.text || '';
       console.log("[claude] Extracted text content:", content.substring(0, 200) + "...");
       
-      const parsedContent = JSON.parse(content);
-      console.log("[claude] Successfully parsed JSON response");
-      return parsedContent;
+      // Clean up the response if it's wrapped in markdown code blocks
+      if (content.startsWith("```json") || content.startsWith("```")) {
+        console.log("[claude] Detected markdown code block, removing delimiters");
+        content = content.replace(/^```json\s*\n|\n```$/g, "");  // Remove ```json and ``` markers
+        content = content.replace(/^```\s*\n|\n```$/g, "");      // In case there's no "json" specified
+      }
+      
+      // Further cleanup - sometimes Claude adds spaces or newlines
+      content = content.trim();
+      
+      console.log("[claude] Cleaned response for parsing:", content.substring(0, 100) + "...");
+      
+      try {
+        const parsedContent = JSON.parse(content);
+        console.log("[claude] Successfully parsed JSON response");
+        return parsedContent;
+      } catch (parseError) {
+        console.error("[claude] JSON parse error after cleanup:", parseError);
+        console.error("[claude] First 500 chars of content:", content.substring(0, 500));
+        throw parseError;
+      }
     } catch (error) {
       console.error("[claude] Error in LinkedIn optimization function:", error);
       if (error instanceof SyntaxError) {

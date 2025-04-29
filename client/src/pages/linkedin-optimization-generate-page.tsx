@@ -32,7 +32,7 @@ export default function LinkedinOptimizationGeneratePage() {
   // Mutation for generating LinkedIn optimization
   const generateMutation = useMutation({
     mutationFn: async () => {
-      return apiRequest("/api/linkedin-optimizations/generate", {
+      return fetch("/api/linkedin-optimizations/generate", {
         method: "POST",
       });
     },
