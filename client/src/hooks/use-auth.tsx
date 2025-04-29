@@ -5,7 +5,7 @@ import {
   UseMutationResult,
 } from "@tanstack/react-query";
 import { User, insertUserSchema } from "@shared/schema";
-import { getQueryFn, apiRequest, queryClient } from "../lib/queryClient";
+import { apiRequest, queryClient } from "../lib/query-client";
 import { useToast } from "@/hooks/use-toast";
 import { z } from "zod";
 
@@ -52,15 +52,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     data: user,
     error,
     isLoading,
-  } = useQuery<User | undefined, Error>({
+  } = useQuery<User, Error>({
     queryKey: ["/api/user"],
-    queryFn: getQueryFn({ on401: "returnNull" }),
+    queryFn: async () => {
+      try {
+        const response = await apiRequest<User>({ url: "/api/user" });
+        return response as User;
+      } catch (error) {
+        if (error instanceof Error && error.message.includes("401")) {
+          return undefined as unknown as User;
+        }
+        throw error;
+      }
+    },
   });
 
   const loginMutation = useMutation({
     mutationFn: async (credentials: LoginData) => {
-      const res = await apiRequest("POST", "/api/login", credentials);
-      return await res.json();
+      return await apiRequest({
+        url: "/api/login",
+        method: "POST",
+        body: credentials
+      });
     },
     onSuccess: (userData: User) => {
       queryClient.setQueryData(["/api/user"], userData);
@@ -80,8 +93,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const registerMutation = useMutation({
     mutationFn: async (credentials: RegisterData) => {
-      const res = await apiRequest("POST", "/api/register", credentials);
-      return await res.json();
+      return await apiRequest({
+        url: "/api/register",
+        method: "POST",
+        body: credentials
+      });
     },
     onSuccess: (userData: User) => {
       queryClient.setQueryData(["/api/user"], userData);
@@ -111,7 +127,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const logoutMutation = useMutation({
     mutationFn: async () => {
-      await apiRequest("POST", "/api/logout");
+      await apiRequest({
+        url: "/api/logout",
+        method: "POST"
+      });
     },
     onSuccess: () => {
       queryClient.setQueryData(["/api/user"], null);
