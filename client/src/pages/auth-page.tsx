@@ -28,6 +28,7 @@ const loginSchema = z.object({
   username: z.string().email("Please enter a valid email"),
   password: z.string().min(1, "Password is required"),
   rememberMe: z.boolean().optional(),
+  isSubmitting: z.boolean().optional(),
 });
 
 // Registration schema with extended validation
@@ -67,7 +68,7 @@ const registerSchema = z
     path: ["confirmPassword"],
   });
 
-type LoginFormValues = z.infer<typeof loginSchema>;
+type LoginFormValues = z.infer<typeof loginSchema> & { isSubmitting?: boolean };
 type RegisterFormValues = z.infer<typeof registerSchema>;
 
 export default function AuthPage() {
@@ -83,6 +84,7 @@ export default function AuthPage() {
       username: "aditya@cooeyhealth.com",
       password: "@lec177fig600",
       rememberMe: false,
+      isSubmitting: false,
     },
   });
 
@@ -112,33 +114,87 @@ export default function AuthPage() {
   }
 
   // Handle login submission
-  const onLoginSubmit = (data: LoginFormValues) => {
-    loginMutation.mutate({
-      username: data.username,
-      password: data.password,
-    }, {
-      onSuccess: () => {
-        // Force navigation to home page after successful login
-        navigate("/");
+  const onLoginSubmit = async (data: LoginFormValues) => {
+    try {
+      // Show loading state
+      loginForm.setValue("isSubmitting", true);
+      
+      // Directly make the login API call
+      const response = await fetch('/api/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          username: data.username,
+          password: data.password,
+        }),
+        credentials: 'include',
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        const errorMessage = errorData.message || `Login failed with status ${response.status}`;
+        throw new Error(errorMessage);
       }
-    });
+      
+      const userData = await response.json();
+      console.log('Login successful, redirecting to homepage');
+      
+      // Force immediate navigation to home page
+      window.location.href = '/';
+    } catch (error) {
+      console.error('Login error:', error);
+      // Show error message
+      const errorMessage = error instanceof Error ? error.message : 'An error occurred during login';
+      alert(errorMessage);
+    } finally {
+      loginForm.setValue("isSubmitting", false);
+    }
   };
 
   // Handle registration submission
-  const onRegisterSubmit = (data: RegisterFormValues) => {
-    registerMutation.mutate({
-      firstName: data.firstName,
-      lastName: data.lastName,
-      username: data.username,
-      phoneNumber: data.phoneNumber,
-      password: data.password,
-      confirmPassword: data.confirmPassword,
-    }, {
-      onSuccess: () => {
-        // Force navigation to home page after successful registration
-        navigate("/");
+  const onRegisterSubmit = async (data: RegisterFormValues) => {
+    try {
+      // Show loading state
+      registerForm.setValue("isSubmitting", true);
+      
+      // Directly make the registration API call
+      const response = await fetch('/api/register', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          firstName: data.firstName,
+          lastName: data.lastName,
+          username: data.username,
+          phoneNumber: data.phoneNumber,
+          password: data.password,
+          confirmPassword: data.confirmPassword,
+        }),
+        credentials: 'include',
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        const errorMessage = errorData.message || `Registration failed with status ${response.status}`;
+        throw new Error(errorMessage);
       }
-    });
+      
+      const userData = await response.json();
+      console.log('Registration successful, redirecting to homepage');
+      
+      // Force immediate navigation to home page
+      window.location.href = '/';
+    } catch (error) {
+      console.error('Registration error:', error);
+      // Show error message
+      const errorMessage = error instanceof Error ? error.message : 'An error occurred during registration';
+      alert(errorMessage);
+    } finally {
+      registerForm.setValue("isSubmitting", false);
+    }
   };
 
   return (
