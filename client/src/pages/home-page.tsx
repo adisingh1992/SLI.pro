@@ -379,13 +379,7 @@ export default function HomePage() {
           {/* LinkedIn Optimization Widget - Placed between SLI and Monthly Check-in */}
           {userProfile?.questionnaire && userProfile.questionnaire.isDraft !== true && (
             <div className="mt-6">
-              <LinkedinOptimizationWidget 
-                userHasQuestionnaire={!!userProfile?.questionnaire && userProfile.questionnaire.isDraft !== true}
-                userHasRequiredDocuments={hasRequiredDocuments}
-                userHasSli={!!userSli}
-                userHasFreshnessReport={!!latestFreshnessReport}
-                latestLinkedinOptimization={latestLinkedinOptimization}
-              />
+              <LinkedinOptimizationWidget />
             </div>
           )}
 
