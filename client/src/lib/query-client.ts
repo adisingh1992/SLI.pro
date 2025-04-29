@@ -2,9 +2,16 @@ import { QueryClient } from "@tanstack/react-query";
 
 interface ApiRequestOptions {
   url: string;
-  method?: "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
+  method?: "GET" | "POST" | "PUT" | "DELETE" | "PATCH";
   body?: any;
   headers?: Record<string, string>;
+}
+
+interface ApiRequestConfig {
+  credentials?: RequestCredentials;
+  headers?: Record<string, string>;
+  method?: string;
+  body?: string;
 }
 
 export async function apiRequest<T>({
@@ -13,42 +20,50 @@ export async function apiRequest<T>({
   body,
   headers = {},
 }: ApiRequestOptions): Promise<T> {
-  const options: RequestInit = {
-    method,
+  const config: ApiRequestConfig = {
+    credentials: "include",
     headers: {
       "Content-Type": "application/json",
       ...headers,
     },
-    credentials: "include",
+    method,
   };
 
-  if (body && method !== "GET") {
-    options.body = JSON.stringify(body);
+  if (body) {
+    config.body = JSON.stringify(body);
   }
 
-  const response = await fetch(url, options);
+  const response = await fetch(url, config);
 
   if (!response.ok) {
-    const error = await response.json().catch(() => ({}));
-    throw new Error(error.message || `HTTP error! status: ${response.status}`);
+    const errorData = await response.json().catch(() => ({}));
+    const error = new Error(
+      errorData.error || `API request failed with status ${response.status}`
+    );
+    throw Object.assign(error, { status: response.status, data: errorData });
+  }
+
+  // Handle empty responses (like for 204 No Content)
+  if (response.status === 204) {
+    return {} as T;
   }
 
   return response.json();
 }
 
+// Set up Query Client with default fetcher
+const defaultQueryFn = async ({ queryKey }: { queryKey: string[] }) => {
+  const [url] = queryKey;
+  return apiRequest({ url });
+};
+
 export const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
+      queryFn: defaultQueryFn,
       retry: 1,
-      staleTime: 30 * 1000, // 30 seconds
       refetchOnWindowFocus: false,
-      queryFn: async ({ queryKey }) => {
-        const url = Array.isArray(queryKey) ? queryKey[0] : queryKey;
-        if (typeof url !== "string") {
-          throw new Error("Invalid query key. Expected a string or an array with a string as the first element.");
-        }
-        return apiRequest({ url });
-      },
+      staleTime: 1000 * 60 * 5, // 5 minutes
     },
   },
 });
