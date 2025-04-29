@@ -98,18 +98,18 @@ export default function LinkedinOptimizationGeneratePage() {
         </Button>
 
         <Card className="mb-8">
-          <CardHeader className="bg-blue-50 border-b border-blue-100">
+          <CardHeader className="bg-primary/5 border-b border-primary/20">
             <div className="flex items-center">
-              <Linkedin className="mr-2 h-5 w-5 text-blue-600" />
-              <CardTitle className="text-xl text-blue-900">Generate LinkedIn Optimization</CardTitle>
+              <Linkedin className="mr-2 h-5 w-5 text-primary" />
+              <CardTitle className="text-xl">Generate LinkedIn Optimization</CardTitle>
             </div>
-            <CardDescription className="text-blue-700">
+            <CardDescription>
               Create AI-powered recommendations to enhance your LinkedIn profile and align it with your SLI
             </CardDescription>
           </CardHeader>
           <CardContent className="p-6">
             <div className="space-y-6">
-              <div className="bg-gray-50 p-5 rounded-lg border border-gray-100">
+              <div className="bg-card p-5 rounded-lg border">
                 <h2 className="text-lg font-medium mb-4">Requirements</h2>
                 <div className="space-y-3">
                   <div className="flex items-start">
@@ -120,7 +120,7 @@ export default function LinkedinOptimizationGeneratePage() {
                     )}
                     <div>
                       <h3 className="font-medium">Resume & LinkedIn Profile Documents</h3>
-                      <p className="text-sm text-gray-600">
+                      <p className="text-sm text-muted-foreground">
                         {hasRequiredDocuments
                           ? "You have uploaded both your resume and LinkedIn profile"
                           : "You need to upload both your resume and LinkedIn profile"}
@@ -146,7 +146,7 @@ export default function LinkedinOptimizationGeneratePage() {
                     )}
                     <div>
                       <h3 className="font-medium">Single Lasting Impression (SLI)</h3>
-                      <p className="text-sm text-gray-600">
+                      <p className="text-sm text-muted-foreground">
                         {hasSli
                           ? `You have selected or refined an SLI: "${
                               (sli?.refinedSliText) ||
@@ -181,7 +181,7 @@ export default function LinkedinOptimizationGeneratePage() {
                     )}
                     <div>
                       <h3 className="font-medium">Brand Freshness Report</h3>
-                      <p className="text-sm text-gray-600">
+                      <p className="text-sm text-muted-foreground">
                         {hasFreshnessReport
                           ? "You have a brand freshness report"
                           : "You need to generate a brand freshness report"}
@@ -210,13 +210,13 @@ export default function LinkedinOptimizationGeneratePage() {
               )}
 
               {canGenerate && (
-                <div className="bg-blue-50 p-5 rounded-lg border border-blue-100">
-                  <h3 className="font-medium text-blue-800 mb-2">Ready to Generate</h3>
-                  <p className="text-blue-700 text-sm mb-4">
+                <div className="bg-primary/5 p-5 rounded-lg border border-primary/20">
+                  <h3 className="font-medium text-primary-foreground mb-2">Ready to Generate</h3>
+                  <p className="text-muted-foreground text-sm mb-4">
                     Our AI will analyze your uploaded documents, SLI, and freshness report to create tailored
                     recommendations for optimizing your LinkedIn profile.
                   </p>
-                  <p className="text-blue-700 text-sm mb-4">
+                  <p className="text-muted-foreground text-sm mb-4">
                     This process may take up to 2 minutes as our AI carefully crafts personalized guidance for maximum
                     professional impact.
                   </p>
@@ -224,7 +224,7 @@ export default function LinkedinOptimizationGeneratePage() {
               )}
             </div>
           </CardContent>
-          <CardFooter className="flex justify-between border-t p-6 bg-gray-50">
+          <CardFooter className="flex justify-between border-t p-6 bg-muted/50">
             <Button variant="outline" onClick={() => navigate("/")}>
               Cancel
             </Button>
