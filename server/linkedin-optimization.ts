@@ -151,7 +151,7 @@ ${freshnessReport.finalSynthesis?.contentRecommendations?.linkedInEnhancements?.
 Please analyze this information and provide detailed, actionable recommendations to optimize the client's LinkedIn profile to align with and reinforce their SLI.`;
 
   return await callWithRetry(async () => {
-    console.log("[claude] Calling Anthropic API with model:", process.env.CLAUDE_MODEL || "claude-3-opus-20240229");
+    console.log("[claude] Calling Anthropic API with model:", process.env.CLAUDE_MODEL || "claude-3-7-sonnet-20250219");
     
     try {
       const response = await anthropic.messages.create({
