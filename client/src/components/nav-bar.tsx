@@ -28,12 +28,18 @@ export default function NavBar() {
 
   const handleLogout = async () => {
     try {
+      console.log('Logging out...');
+      
       // First perform the logout
       await logoutMutation.mutateAsync();
+      console.log('Logout successful, redirecting to auth page');
       
-      // Then use the router navigation to go to auth page
-      // This prevents a full page refresh
-      navigate("/auth");
+      // We need a small delay to allow the mutation to complete
+      setTimeout(() => {
+        // Then use the router navigation to go to auth page
+        // This prevents a full page refresh
+        navigate("/auth");
+      }, 300);
     } catch (error) {
       console.error('Logout failed:', error);
     }

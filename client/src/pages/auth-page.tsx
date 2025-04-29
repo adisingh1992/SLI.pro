@@ -116,86 +116,53 @@ export default function AuthPage() {
   // Handle login submission
   const onLoginSubmit = async (data: LoginFormValues) => {
     try {
-      // Show loading state through form state instead of using setValue
-      const isSubmitting = true;
-      
-      // Directly make the login API call
-      const response = await fetch('/api/login', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          username: data.username,
-          password: data.password,
-        }),
-        credentials: 'include',
+      console.log('Logging in user...');
+      // Use the React Query mutation
+      await loginMutation.mutateAsync({
+        username: data.username,
+        password: data.password,
       });
       
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        const errorMessage = errorData.message || `Login failed with status ${response.status}`;
-        throw new Error(errorMessage);
-      }
-      
-      const userData = await response.json();
       console.log('Login successful, redirecting to homepage');
       
-      // Use react router navigation to prevent page refresh
-      navigate("/");
+      // Manual navigation after successful login
+      // We need a small delay to allow the mutation to complete and update the auth context
+      setTimeout(() => {
+        navigate("/");
+      }, 300);
+
     } catch (error) {
       console.error('Login error:', error);
-      // Show error message
-      const errorMessage = error instanceof Error ? error.message : 'An error occurred during login';
-      alert(errorMessage);
-    } finally {
-      // Form state is handled externally
-      const isSubmitting = false;
+      // Error is handled by the mutation's onError callback
     }
   };
 
   // Handle registration submission
   const onRegisterSubmit = async (data: RegisterFormValues) => {
     try {
-      // Show loading state through local state
-      const isSubmitting = true;
+      console.log('Registering user...');
       
-      // Directly make the registration API call
-      const response = await fetch('/api/register', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          firstName: data.firstName,
-          lastName: data.lastName,
-          username: data.username,
-          phoneNumber: data.phoneNumber,
-          password: data.password,
-          confirmPassword: data.confirmPassword,
-        }),
-        credentials: 'include',
+      // Use the React Query mutation
+      await registerMutation.mutateAsync({
+        firstName: data.firstName,
+        lastName: data.lastName,
+        username: data.username,
+        phoneNumber: data.phoneNumber,
+        password: data.password,
+        confirmPassword: data.confirmPassword,
       });
       
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        const errorMessage = errorData.message || `Registration failed with status ${response.status}`;
-        throw new Error(errorMessage);
-      }
-      
-      const userData = await response.json();
       console.log('Registration successful, redirecting to homepage');
       
-      // Use react router navigation to prevent page refresh
-      navigate("/");
+      // Manual navigation after successful registration
+      // We need a small delay to allow the mutation to complete and update the auth context
+      setTimeout(() => {
+        navigate("/");
+      }, 300);
+      
     } catch (error) {
       console.error('Registration error:', error);
-      // Show error message
-      const errorMessage = error instanceof Error ? error.message : 'An error occurred during registration';
-      alert(errorMessage);
-    } finally {
-      // Form state is handled externally
-      const isSubmitting = false;
+      // Error is handled by the mutation's onError callback
     }
   };
 
