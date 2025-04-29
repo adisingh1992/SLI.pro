@@ -15,6 +15,7 @@ import {
   freshnessReports, type FreshnessReport, type InsertFreshnessReport,
   coachingNotes, type CoachingNote, type InsertCoachingNote,
   slis, type Sli, type InsertSli, type UpdateSli,
+  linkedinOptimizations, type LinkedinOptimization, type InsertLinkedinOptimization,
   type UpdateUser, type UpdateProfile, type UserProfile
 } from "@shared/schema";
 import session from "express-session";
@@ -266,6 +267,30 @@ export class DatabaseStorage implements IStorage {
     await db.delete(documents).where(eq(documents.id, id));
   }
 
+  // LinkedIn Optimization methods
+  async getLinkedinOptimizations(userId: number): Promise<LinkedinOptimization[]> {
+    return db.select().from(linkedinOptimizations).where(eq(linkedinOptimizations.userId, userId))
+      .orderBy(desc(linkedinOptimizations.createdAt));
+  }
+  
+  async getLinkedinOptimization(id: number): Promise<LinkedinOptimization | undefined> {
+    const [optimization] = await db.select().from(linkedinOptimizations).where(eq(linkedinOptimizations.id, id));
+    return optimization || undefined;
+  }
+  
+  async getLatestLinkedinOptimization(userId: number): Promise<LinkedinOptimization | undefined> {
+    const [optimization] = await db.select().from(linkedinOptimizations)
+      .where(eq(linkedinOptimizations.userId, userId))
+      .orderBy(desc(linkedinOptimizations.createdAt))
+      .limit(1);
+    return optimization || undefined;
+  }
+  
+  async createLinkedinOptimization(optimization: InsertLinkedinOptimization): Promise<LinkedinOptimization> {
+    const [newOptimization] = await db.insert(linkedinOptimizations).values(optimization).returning();
+    return newOptimization;
+  }
+  
   // User profile operations
   async getUserProfile(userId: number): Promise<UserProfile | undefined> {
     const user = await this.getUser(userId);
@@ -273,7 +298,7 @@ export class DatabaseStorage implements IStorage {
     
     const profile = await this.getProfile(userId);
     const experiences = await this.getExperiences(userId);
-    const educations = await this.getEducations(userId);
+    const education = await this.getEducations(userId);
     const skills = await this.getSkills(userId);
     const languages = await this.getLanguages(userId);
     const questionnaire = await this.getQuestionnaire(userId);
@@ -283,12 +308,13 @@ export class DatabaseStorage implements IStorage {
     const freshnessReports = await this.getFreshnessReports(userId);
     const coachingNotes = await this.getCoachingNotes(userId);
     const slis = await this.getSlisByUserId(userId);
+    const linkedinOptimizations = await this.getLinkedinOptimizations(userId);
     
     return {
       ...user,
       profile,
       experiences,
-      educations,
+      education,
       skills,
       languages,
       questionnaire,
@@ -297,7 +323,8 @@ export class DatabaseStorage implements IStorage {
       monthlyCheckIns,
       freshnessReports,
       coachingNotes,
-      slis
+      slis,
+      linkedinOptimizations
     };
   }
 
