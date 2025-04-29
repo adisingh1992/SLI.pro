@@ -149,14 +149,14 @@ export default function LinkedinOptimizationGeneratePage() {
                       <p className="text-sm text-gray-600">
                         {hasSli
                           ? `You have selected or refined an SLI: "${
-                              sli.refinedSliText ||
-                              (sli.selectedSliIndex === 1
-                                ? sli.statement1
-                                : sli.selectedSliIndex === 2
-                                ? sli.statement2
-                                : sli.selectedSliIndex === 3
-                                ? sli.statement3
-                                : sli.customSliText)
+                              (sli?.refinedSliText) ||
+                              (sli?.selectedSliIndex === 1 
+                                ? sli?.statement1 
+                                : sli?.selectedSliIndex === 2 
+                                ? sli?.statement2 
+                                : sli?.selectedSliIndex === 3 
+                                ? sli?.statement3 
+                                : sli?.customSliText || "Custom SLI")
                             }"`
                           : "You need to select an SLI statement"}
                       </p>
