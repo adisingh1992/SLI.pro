@@ -50,7 +50,47 @@ export async function generateLinkedInOptimization(
   linkedinDocument: Document,
   sli: Sli,
   freshnessReport: FreshnessReport
-): Promise<any> {
+): Promise<{
+  alignmentAssessment: string;
+  headlineOptimization: {
+    currentHeadline?: string;
+    recommendedHeadline?: string;
+    rationale?: string;
+  };
+  aboutSection: {
+    currentWeaknesses?: string[];
+    recommendedAbout?: string;
+    keyElements?: string[];
+  };
+  experienceDescriptions: {
+    positions: Array<{
+      position?: string;
+      currentDescription?: string;
+      recommendedDescription?: string;
+      rationale?: string;
+    }>;
+  };
+  skillsAndEndorsements: {
+    recommendedSkills?: string[];
+    skillsToRemove?: string[];
+    rationale?: string;
+  };
+  additionalSections: string;
+  visualElements: {
+    profilePhotoSuggestions?: string;
+    backgroundImageRecommendations?: string;
+    activityFeedContentIdeas?: string;
+  };
+  contentStrategy: {
+    themes?: string[];
+    postIdeas?: Array<{
+      title?: string;
+      content?: string;
+    }>;
+    engagementTips?: string;
+  };
+  implementationPriorities: string;
+}> {
   // Prepare SLI text (either refined or selected)
   const sliText = sli.refinedSliText || 
     (sli.selectedSliIndex === 1 ? sli.statement1 : 

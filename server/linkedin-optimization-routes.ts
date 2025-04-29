@@ -112,9 +112,9 @@ export function registerLinkedinOptimizationRoutes(app: Express) {
         contentStrategy: optimizationData.contentStrategy,
         alignmentAssessment: optimizationData.alignmentAssessment,
         headlineOptimization: optimizationData.headlineOptimization,
-        aboutSectionEnhancement: optimizationData.aboutSectionEnhancement,
+        aboutSection: optimizationData.aboutSection,
         experienceDescriptions: optimizationData.experienceDescriptions,
-        skillsRecommendations: optimizationData.skillsRecommendations,
+        skillsAndEndorsements: optimizationData.skillsAndEndorsements,
         additionalSections: optimizationData.additionalSections,
         visualElements: optimizationData.visualElements,
         implementationPriorities: optimizationData.implementationPriorities
