@@ -191,7 +191,7 @@ export default function HomePage() {
         
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {/* Questionnaire Section - Always first and visible */}
-          <Card className={`overflow-hidden shadow-sm ${
+          <Card className={`overflow-hidden shadow-sm flex flex-col h-full ${
             userProfile?.questionnaire 
               ? userProfile.questionnaire.isDraft === true
                 ? "border-amber-200"
@@ -235,7 +235,7 @@ export default function HomePage() {
                   : "Start with this comprehensive assessment (~5 minutes)"}
               </CardDescription>
             </CardHeader>
-            <CardContent className="p-5">
+            <CardContent className="p-5 flex-grow">
               <p className="text-sm text-muted-foreground mb-2">
                 {userProfile?.questionnaire
                   ? userProfile.questionnaire.isDraft === true
@@ -244,14 +244,15 @@ export default function HomePage() {
                   : "This assessment helps customize your personal branding strategy and shapes your Single Lasting Impression (SLI)."}
               </p>
             </CardContent>
-            <CardFooter className="bg-gray-50 py-3 px-5">
+            <CardFooter className="bg-gray-50 py-3 px-5 mt-auto">
               <Button
+                variant="outline"
                 className={`w-full ${
                   userProfile?.questionnaire
                     ? userProfile.questionnaire.isDraft === true
-                      ? "bg-amber-500 hover:bg-amber-600"
-                      : "bg-green-600 hover:bg-green-700"
-                    : "bg-orange-500 hover:bg-orange-600"
+                      ? "border-amber-500 text-amber-600 hover:bg-amber-50"
+                      : "border-green-600 text-green-700 hover:bg-green-50"
+                    : "border-orange-500 text-orange-600 hover:bg-orange-50"
                 }`}
                 onClick={() => {
                   scrollToTop();
@@ -269,7 +270,7 @@ export default function HomePage() {
           </Card>
 
           {/* Document Upload Section */}
-          <Card className={`overflow-hidden shadow-sm ${
+          <Card className={`overflow-hidden shadow-sm flex flex-col h-full ${
             !userProfile?.questionnaire || userProfile.questionnaire.isDraft === true
               ? "border-gray-200 opacity-75"
               : !hasRequiredDocuments
@@ -308,7 +309,7 @@ export default function HomePage() {
                     : "All required documents have been uploaded"}
               </CardDescription>
             </CardHeader>
-            <CardContent className="p-5">
+            <CardContent className="p-5 flex-grow">
               <div className={`${!userProfile?.questionnaire || userProfile.questionnaire.isDraft === true ? "opacity-50" : ""}`}>
                 <ul className="space-y-3 text-sm">
                   <li className="flex items-center gap-2">
@@ -341,14 +342,14 @@ export default function HomePage() {
                 </ul>
               </div>
             </CardContent>
-            <CardFooter className="bg-gray-50 py-3 px-5">
+            <CardFooter className="bg-gray-50 py-3 px-5 mt-auto">
               <Button
-                variant={hasRequiredDocuments ? "outline" : "default"}
+                variant="outline"
                 className={`w-full ${
                   !userProfile?.questionnaire || userProfile.questionnaire.isDraft === true
-                    ? "bg-gray-100 text-gray-500 cursor-not-allowed"
+                    ? "border-gray-300 text-gray-500 cursor-not-allowed"
                     : !hasRequiredDocuments
-                      ? "bg-blue-600 hover:bg-blue-700"
+                      ? "border-blue-500 text-blue-600 hover:bg-blue-50"
                       : "border-green-500 text-green-700 hover:bg-green-50"
                 }`}
                 onClick={() => {
@@ -366,22 +367,22 @@ export default function HomePage() {
           </Card>
           
           {/* Profile Section */}
-          <Card className={`overflow-hidden shadow-sm ${
+          <Card className={`overflow-hidden shadow-sm flex flex-col h-full ${
             !userProfile?.questionnaire
               ? "border-gray-200 opacity-75"
-              : "border-[#dcede9]"
+              : "border-primary/20"
           }`}>
             <CardHeader className={`pb-4 ${
               !userProfile?.questionnaire
                 ? "bg-gray-50"
-                : "bg-[#f5faf9]"
+                : "bg-primary/5"
             }`}>
               <div className="flex items-center justify-between">
                 <div className="flex items-center">
                   <div className={`p-2 rounded-full mr-3 ${
                     !userProfile?.questionnaire
                       ? "bg-gray-100 text-gray-500"
-                      : "bg-[#dcede9] text-[#6c8083]"
+                      : "bg-primary/10 text-primary"
                   }`}>
                     <User className="h-5 w-5" />
                   </div>
@@ -391,8 +392,8 @@ export default function HomePage() {
                 </div>
                 <Badge variant="outline" className={`${
                   !userProfile?.questionnaire
-                    ? "bg-gray-100 text-gray-500"
-                    : "bg-[#dcede9] text-[#6c8083]"
+                    ? "bg-muted text-muted-foreground"
+                    : "bg-primary/10 text-primary"
                 }`}>
                   {userProfile?.questionnaire ? "Available" : "Unavailable"}
                 </Badge>
@@ -403,8 +404,8 @@ export default function HomePage() {
                   : "View and manage your professional profile details"}
               </CardDescription>
             </CardHeader>
-            <CardContent className="p-5">
-              <p className={`text-sm ${!userProfile?.questionnaire ? "text-gray-400" : "text-gray-600"}`}>
+            <CardContent className="p-5 flex-grow">
+              <p className={`text-sm ${!userProfile?.questionnaire ? "text-muted-foreground/70" : "text-muted-foreground"}`}>
                 {!userProfile?.questionnaire
                   ? "Your profile will be created after completing the questionnaire"
                   : userProfile.questionnaire.isDraft === true
@@ -412,12 +413,13 @@ export default function HomePage() {
                     : "Your profile reflects information from your completed questionnaire"}
               </p>
             </CardContent>
-            <CardFooter className="bg-gray-50 py-3 px-5">
+            <CardFooter className="bg-gray-50 py-3 px-5 mt-auto">
               <Button
+                variant="outline"
                 className={`w-full ${
                   !userProfile?.questionnaire
-                    ? "bg-gray-100 text-gray-500 cursor-not-allowed"
-                    : "bg-[#bed6d1] hover:bg-[#6c8083]"
+                    ? "border-gray-300 text-gray-500 cursor-not-allowed"
+                    : "border-primary text-primary hover:bg-primary/5"
                 }`}
                 onClick={() => {
                   if (userProfile?.questionnaire) {
@@ -434,22 +436,22 @@ export default function HomePage() {
           </Card>
           
           {/* Strategy Session (Coaching) Section */}
-          <Card className={`overflow-hidden shadow-sm ${
+          <Card className={`overflow-hidden shadow-sm flex flex-col h-full ${
             !userProfile?.questionnaire || userProfile.questionnaire.isDraft === true || !hasRequiredDocuments
               ? "border-gray-200 opacity-75"
-              : "border-green-200"
+              : "border-success/20"
           }`}>
             <CardHeader className={`pb-4 ${
               !userProfile?.questionnaire || userProfile.questionnaire.isDraft === true || !hasRequiredDocuments
                 ? "bg-gray-50"
-                : "bg-green-50"
+                : "bg-success/5"
             }`}>
               <div className="flex items-center justify-between">
                 <div className="flex items-center">
                   <div className={`p-2 rounded-full mr-3 ${
                     !userProfile?.questionnaire || userProfile.questionnaire.isDraft === true || !hasRequiredDocuments
                       ? "bg-gray-100 text-gray-500"
-                      : "bg-green-100 text-green-600"
+                      : "bg-success/10 text-success"
                   }`}>
                     <Calendar className="h-5 w-5" />
                   </div>
@@ -469,19 +471,20 @@ export default function HomePage() {
                       : "Book a session to sharpen your professional positioning"}
               </CardDescription>
             </CardHeader>
-            <CardContent className="p-5">
-              <p className={`text-sm ${!userProfile?.questionnaire || userProfile.questionnaire.isDraft === true || !hasRequiredDocuments ? "text-gray-400" : "text-gray-600"}`}>
+            <CardContent className="p-5 flex-grow">
+              <p className={`text-sm ${!userProfile?.questionnaire || userProfile.questionnaire.isDraft === true || !hasRequiredDocuments ? "text-muted-foreground/70" : "text-muted-foreground"}`}>
                 {!userProfile?.questionnaire || userProfile.questionnaire.isDraft === true || !hasRequiredDocuments
                   ? `You must ${!userProfile?.questionnaire ? "complete the questionnaire" : userProfile.questionnaire.isDraft === true ? "complete the questionnaire" : "upload your documents"} first`
                   : "Stand out in your market with clarity and confidence. These sessions help you define your professional presence."}
               </p>
             </CardContent>
-            <CardFooter className="bg-gray-50 py-3 px-5">
+            <CardFooter className="bg-gray-50 py-3 px-5 mt-auto">
               <Button
+                variant="outline"
                 className={`w-full ${
                   !userProfile?.questionnaire || userProfile.questionnaire.isDraft === true || !hasRequiredDocuments
-                    ? "bg-gray-100 text-gray-500 cursor-not-allowed"
-                    : "bg-green-600 hover:bg-green-700"
+                    ? "border-gray-300 text-gray-500 cursor-not-allowed"
+                    : "border-success text-success hover:bg-success/5"
                 }`}
                 onClick={() => {
                   if (userProfile?.questionnaire && userProfile.questionnaire.isDraft !== true && hasRequiredDocuments) {
@@ -498,22 +501,22 @@ export default function HomePage() {
           </Card>
 
           {/* Freshness Report Section */}
-          <Card className={`overflow-hidden shadow-sm ${
+          <Card className={`overflow-hidden shadow-sm flex flex-col h-full ${
             !userProfile?.questionnaire || userProfile.questionnaire.isDraft === true || !hasRequiredDocuments
               ? "border-gray-200 opacity-75"
-              : "border-blue-200"
+              : "border-info/20"
           }`}>
             <CardHeader className={`pb-4 ${
               !userProfile?.questionnaire || userProfile.questionnaire.isDraft === true || !hasRequiredDocuments
                 ? "bg-gray-50"
-                : "bg-blue-50"
+                : "bg-info/5"
             }`}>
               <div className="flex items-center justify-between">
                 <div className="flex items-center">
                   <div className={`p-2 rounded-full mr-3 ${
                     !userProfile?.questionnaire || userProfile.questionnaire.isDraft === true || !hasRequiredDocuments
                       ? "bg-gray-100 text-gray-500"
-                      : "bg-blue-100 text-blue-600"
+                      : "bg-info/10 text-info"
                   }`}>
                     <Sparkles className="h-5 w-5" />
                   </div>
@@ -533,38 +536,36 @@ export default function HomePage() {
                       : "Generate a comprehensive analysis of your brand presence"}
               </CardDescription>
             </CardHeader>
-            <CardContent className="p-5">
+            <CardContent className="p-5 flex-grow">
               <div className={`${!userProfile?.questionnaire || userProfile.questionnaire.isDraft === true || !hasRequiredDocuments ? "opacity-50" : ""}`}>
                 <ul className="space-y-3 text-sm">
                   <li className="flex items-center gap-2">
-                    <span className={`mr-2 ${userProfile?.questionnaire && userProfile.questionnaire.isDraft !== true ? 'text-green-500' : 'text-gray-400'}`}>
+                    <span className={`mr-2 ${userProfile?.questionnaire && userProfile.questionnaire.isDraft !== true ? 'text-success' : 'text-muted-foreground/50'}`}>
                       {userProfile?.questionnaire && userProfile.questionnaire.isDraft !== true ? '✓' : '→'}
                     </span>
-                    <span className={`${!userProfile?.questionnaire || userProfile.questionnaire.isDraft === true ? "text-gray-400" : ""}`}>
+                    <span className={`${!userProfile?.questionnaire || userProfile.questionnaire.isDraft === true ? "text-muted-foreground/50" : "text-muted-foreground"}`}>
                       Complete professional questionnaire
                     </span>
                   </li>
                   <li className="flex items-center gap-2">
-                    <span className={`mr-2 ${hasRequiredDocuments ? 'text-green-500' : 'text-amber-500'}`}>
+                    <span className={`mr-2 ${hasRequiredDocuments ? 'text-success' : 'text-warning'}`}>
                       {hasRequiredDocuments ? '✓' : '→'}
                     </span>
-                    <span className={`${!hasRequiredDocuments ? "text-gray-400" : ""}`}>
+                    <span className={`${!hasRequiredDocuments ? "text-muted-foreground/50" : "text-muted-foreground"}`}>
                       Upload resume and LinkedIn profile
                     </span>
                   </li>
                 </ul>
               </div>
             </CardContent>
-            <CardFooter className="bg-gray-50 py-3 px-5">
+            <CardFooter className="bg-gray-50 py-3 px-5 mt-auto">
               <Button
+                variant="outline"
                 className={`w-full ${
                   !userProfile?.questionnaire || userProfile.questionnaire.isDraft === true || !hasRequiredDocuments
-                    ? "bg-gray-100 text-gray-500 cursor-not-allowed"
-                    : latestFreshnessReport
-                      ? "border-blue-500 text-blue-700 hover:bg-blue-50"
-                      : "bg-blue-600 hover:bg-blue-700"
+                    ? "border-gray-300 text-gray-500 cursor-not-allowed"
+                    : "border-info text-info hover:bg-info/5"
                 }`}
-                variant={latestFreshnessReport ? "outline" : "default"}
                 onClick={() => {
                   if (userProfile?.questionnaire && userProfile.questionnaire.isDraft !== true && hasRequiredDocuments) {
                     scrollToTop();
