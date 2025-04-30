@@ -127,15 +127,32 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const logoutMutation = useMutation<void, Error, void>({
     mutationFn: async () => {
-      // Make a direct fetch call for logout since it doesn't return JSON
-      await fetch('/api/logout', {
-        method: 'POST',
-        credentials: 'include',
-      });
-      // Return void instead of null to match the expected type
+      try {
+        // Make a direct fetch call for logout since it doesn't return JSON
+        const response = await fetch('/api/logout', {
+          method: 'POST',
+          credentials: 'include',
+        });
+        
+        if (!response.ok) {
+          throw new Error(`Logout failed with status ${response.status}`);
+        }
+        
+        // Explicitly clear query cache here to ensure it happens even on server error
+        queryClient.clear();
+        
+        // Also invalidate the user query to force a refetch
+        queryClient.invalidateQueries({ queryKey: ["/api/user"] });
+        
+        return;
+      } catch (error) {
+        console.error("Logout error:", error);
+        throw error;
+      }
     },
     onSuccess: () => {
-      queryClient.setQueryData(["/api/user"], null);
+      // Clear all query cache again for extra safety
+      queryClient.clear();
       toast({
         title: "Logout successful",
         description: "You have been logged out.",
