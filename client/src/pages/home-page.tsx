@@ -124,18 +124,18 @@ export default function HomePage() {
   const getStatusBadge = (isActive: boolean, isComplete: boolean) => {
     if (!isActive) {
       return (
-        <Badge variant="outline" className="bg-gray-100 text-gray-500 border-gray-300">
+        <Badge variant="outline" className="bg-muted text-muted-foreground border-muted">
           Locked
         </Badge>
       );
     }
     
     return isComplete ? (
-      <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
+      <Badge variant="outline" className="bg-success/10 text-success border-success/20">
         Completed
       </Badge>
     ) : (
-      <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200">
+      <Badge variant="outline" className="bg-warning/10 text-warning border-warning/20">
         Action Needed
       </Badge>
     );
@@ -148,21 +148,21 @@ export default function HomePage() {
   
   const documentsBadge = getStatusBadge(
     !!userProfile?.questionnaire && userProfile.questionnaire.isDraft !== true,
-    hasRequiredDocuments
+    !!hasRequiredDocuments
   );
   
   const freshnessReportBadge = getStatusBadge(
-    hasRequiredDocuments && !!userProfile?.questionnaire && userProfile.questionnaire.isDraft !== true,
+    !!hasRequiredDocuments && !!userProfile?.questionnaire && userProfile.questionnaire.isDraft !== true,
     !!latestFreshnessReport
   );
   
   const sliBadge = getStatusBadge(
     true,
-    hasSliSelected || hasSliRefined
+    !!hasSliSelected || !!hasSliRefined
   );
   
   const linkedInBadge = getStatusBadge(
-    canGenerateLinkedInOptimization,
+    !!canGenerateLinkedInOptimization,
     !!latestLinkedinOptimization
   );
   
@@ -172,19 +172,19 @@ export default function HomePage() {
   );
   
   const coachingBadge = getStatusBadge(
-    !!userProfile?.questionnaire && userProfile.questionnaire.isDraft !== true && hasRequiredDocuments,
+    !!userProfile?.questionnaire && userProfile.questionnaire.isDraft !== true && !!hasRequiredDocuments,
     false // Always available once prerequisites are met
   );
 
   return (
-    <div className="min-h-screen bg-[#f5f7fa] flex flex-col">
+    <div className="min-h-screen bg-background flex flex-col">
       <NavBar />
       <main className="flex-1 max-w-7xl mx-auto px-4 sm:px-6 py-8">
         <div className="mb-6">
-          <h1 className="text-2xl font-semibold text-[#333333]">
+          <h1 className="text-2xl font-semibold text-foreground">
             Welcome, {user?.firstName}!
           </h1>
-          <p className="text-gray-600 mt-2">
+          <p className="text-muted-foreground mt-2">
             Your professional brand journey dashboard helps you track and improve your professional presence.
           </p>
         </div>
@@ -236,7 +236,7 @@ export default function HomePage() {
               </CardDescription>
             </CardHeader>
             <CardContent className="p-5">
-              <p className="text-sm text-gray-600 mb-2">
+              <p className="text-sm text-muted-foreground mb-2">
                 {userProfile?.questionnaire
                   ? userProfile.questionnaire.isDraft === true
                     ? "Continue where you left off to complete your assessment."
@@ -845,11 +845,11 @@ export default function HomePage() {
 }
 
 // Helper function to format time ago
-function formatTimeAgo(dateString?: string): string {
+function formatTimeAgo(dateString?: string | Date): string {
   if (!dateString) return "recently";
   
   try {
-    const date = new Date(dateString);
+    const date = typeof dateString === 'string' ? new Date(dateString) : dateString;
     const now = new Date();
     const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000);
     
