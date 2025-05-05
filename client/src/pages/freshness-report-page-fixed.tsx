@@ -211,23 +211,39 @@ const FreshnessReportPage: React.FC = () => {
     }
   }, [progress, isGenerating]);
   
-  // Additional check to ensure reportData actually has finalSynthesis
+  // Additional check to ensure reportData actually has finalSynthesis - but only run once on mount
+  // We use a ref to make sure this only runs once to prevent continuous polling
+  const hasCheckedFinalSynthesis = useRef(false);
+  
   useEffect(() => {
+    // Skip if we've already checked once
+    if (hasCheckedFinalSynthesis.current) return;
+    
     const currentReport = selectedReport || latestReport;
     
-    if (currentReport && (!currentReport.finalSynthesis || currentReport.finalSynthesis === "null")) {
-      console.log("Report data missing finalSynthesis, forcing refresh...");
+    // Only proceed if we have a report and we haven't checked before
+    if (currentReport && !hasCheckedFinalSynthesis.current) {
+      console.log("First report check, checking for finalSynthesis data");
       
-      queryClient.invalidateQueries({
-        queryKey: ["/api/freshness-reports/latest"],
-        refetchType: 'all',
-      });
+      // Mark that we've checked regardless of outcome
+      hasCheckedFinalSynthesis.current = true;
       
-      if (selectedReportId) {
+      // Only refresh if missing finalSynthesis data
+      if (!currentReport.finalSynthesis || currentReport.finalSynthesis === "null") {
+        console.log("Report data missing finalSynthesis, forcing ONE refresh...");
+        
+        // Only do one single refresh, no continuous polling
         queryClient.invalidateQueries({
-          queryKey: ["/api/freshness-reports", selectedReportId],
+          queryKey: ["/api/freshness-reports/latest"],
           refetchType: 'all',
         });
+        
+        if (selectedReportId) {
+          queryClient.invalidateQueries({
+            queryKey: ["/api/freshness-reports", selectedReportId],
+            refetchType: 'all',
+          });
+        }
       }
     }
   }, [selectedReport, latestReport, selectedReportId, queryClient]);
@@ -280,25 +296,23 @@ const FreshnessReportPage: React.FC = () => {
         description: "Your professional brand assessment has been generated.",
       });
       
-      // Force a complete cache refresh for these queries
-      await queryClient.invalidateQueries({
-        queryKey: ["/api/freshness-reports"],
-        refetchType: 'all',
-      });
-      
-      await queryClient.invalidateQueries({
-        queryKey: ["/api/freshness-reports/latest"],
-        refetchType: 'all',
-      });
-      
-      // Directly fetch new data
+      // Force a one-time cache refresh and get the new data
       try {
+        // Manual fetch to avoid triggering automatic refetches
         const response = await apiRequest("GET", `/api/freshness-reports/latest`);
         if (response && typeof response === 'object' && 'id' in response) {
           const newReportData = processReportData(response);
           if (newReportData) {
             setSelectedReportId(newReportData.id);
-            refetchAllReports();
+            
+            // Set the data manually in the cache instead of refetching
+            queryClient.setQueryData(["/api/freshness-reports/latest"], response);
+            
+            // Also fetch all reports once
+            const allReportsResponse = await apiRequest("GET", `/api/freshness-reports`);
+            if (allReportsResponse) {
+              queryClient.setQueryData(["/api/freshness-reports"], allReportsResponse);
+            }
           }
         }
       } catch (error) {
