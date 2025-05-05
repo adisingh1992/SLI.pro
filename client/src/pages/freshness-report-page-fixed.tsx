@@ -73,7 +73,9 @@ const FreshnessReportPage: React.FC = () => {
     },
     enabled: isAuthenticated,
     retry: 1,
-    staleTime: 30000,
+    staleTime: Infinity, // Prevent automatic refetching
+    refetchOnWindowFocus: false, // Prevent refetch on window focus
+    refetchInterval: false, // Disable polling
   });
   
   // QUERY 2: Fetch the latest report (initial load)
@@ -94,6 +96,9 @@ const FreshnessReportPage: React.FC = () => {
     },
     enabled: isAuthenticated,
     retry: 1,
+    staleTime: Infinity, // Prevent automatic refetching
+    refetchOnWindowFocus: false, // Prevent refetch on window focus
+    refetchInterval: false, // Disable polling
   });
   
   // QUERY 3: Fetch a specific report if one is selected
@@ -115,6 +120,9 @@ const FreshnessReportPage: React.FC = () => {
     },
     enabled: isAuthenticated && !!selectedReportId,
     retry: 1,
+    staleTime: Infinity, // Prevent automatic refetching
+    refetchOnWindowFocus: false, // Prevent refetch on window focus
+    refetchInterval: false, // Disable polling
   });
   
   // Process the raw data from the API responses to parse JSON strings
