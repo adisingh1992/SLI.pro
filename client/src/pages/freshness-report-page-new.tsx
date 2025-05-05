@@ -208,10 +208,13 @@ const FreshnessReportPage = () => {
   });
   
   // Set selected report ID when latest report data changes
+  // This useEffect should always execute and not be conditionally skipped
   useEffect(() => {
+    // If we have latest report data and no selected report ID
     if (latestReportData && !selectedReportId) {
       // Type assertion to safely access id
       const report = latestReportData as FreshnessReportData;
+      console.log("Setting initial selectedReportId to latest report:", report.id);
       setSelectedReportId(report.id);
     }
   }, [latestReportData, selectedReportId]);
@@ -268,12 +271,14 @@ const FreshnessReportPage = () => {
   // Combine loading states
   const isLoading = isLoadingAllReports || isLoadingLatestReport || isLoadingSelectedReport;
   
-  // Determine which report data to use
-  const reportData = selectedReportId && selectedReportData 
-    ? selectedReportData 
-    : (selectedReportId && latestReportData && (latestReportData as FreshnessReportData).id === selectedReportId 
-      ? latestReportData 
-      : latestReportData);
+  // Determine which report data to use - moved before hooks
+  const reportData = React.useMemo(() => {
+    return selectedReportId && selectedReportData 
+      ? selectedReportData 
+      : (selectedReportId && latestReportData && (latestReportData as FreshnessReportData).id === selectedReportId 
+        ? latestReportData 
+        : latestReportData);
+  }, [selectedReportId, selectedReportData, latestReportData]);
   
   // Additional check to ensure reportData actually has finalSynthesis
   useEffect(() => {
@@ -290,7 +295,7 @@ const FreshnessReportPage = () => {
         });
       }
     }
-  }, [reportData, selectedReportId]);
+  }, [reportData, selectedReportId, queryClient]);
 
   // Mutation for generating a new report
   const generateReportMutation = useMutation<any, Error, void, unknown>({
@@ -505,7 +510,7 @@ const FreshnessReportPage = () => {
     setSelectedReportId(reportId);
   };
   
-  // Convert reports to summary format for the history component
+  // Convert reports to summary format for the history component - place this before any conditionals
   const reportSummaries = React.useMemo(() => {
     console.log("Building report summaries from:", allReports);
     
