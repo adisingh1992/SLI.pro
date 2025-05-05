@@ -132,12 +132,19 @@ const FreshnessReportPage = () => {
   const {
     data: selectedReportData,
     isLoading: isLoadingSelectedReport,
-  } = useQuery<FreshnessReportData>({
+  } = useQuery<FreshnessReportData | null>({
     queryKey: ["/api/freshness-reports", selectedReportId],
     queryFn: async () => {
-      if (!selectedReportId) return null;
-      const response = await apiRequest("GET", `/api/freshness-reports/${selectedReportId}`);
-      return response as FreshnessReportData;
+      try {
+        if (!selectedReportId) return null;
+        const response = await apiRequest("GET", `/api/freshness-reports/${selectedReportId}`);
+        if (!response) return null;
+        console.log("Selected report data:", response);
+        return response as FreshnessReportData;
+      } catch (error) {
+        console.error("Error fetching selected report:", error);
+        return null;
+      }
     },
     enabled: isAuthenticated && !!selectedReportId && (latestReportData?.id !== selectedReportId),
     retry: false,

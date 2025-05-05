@@ -17,68 +17,7 @@ interface FreshnessReportProps {
     resumeAnalysis: any;
     linkedinAnalysis: any;
     additionalDocumentsAnalysis: any[];
-    finalSynthesis: {
-      brandAudit: {
-        currentBrandStrength: string;
-        coreStrengths: string[];
-        criticalGaps: string[];
-        brandConsistency: string;
-      };
-      personalBrandStrategy: {
-        uniqueValueProposition: string;
-        coreNarrative: string;
-        recommendedPositioning: string;
-        targetAudience: string[];
-        keyDifferentiators: string[];
-      };
-      contentRecommendations: {
-        resumeImprovements: string[];
-        linkedInEnhancements: string[];
-        thoughtLeadershipTopics: string[];
-      };
-      digitalPresenceStrategy: {
-        platformPriorities: string[];
-        engagementTactics: string[];
-        networkingApproach: string;
-        contentCalendarFramework: string;
-      };
-      implementationRoadmap: {
-        immediateNextSteps: string[];
-        thirtyDayMilestones: string[];
-        ninetyDayGoals: string[];
-      };
-      competitiveAnalysis: {
-        marketPositioning: string;
-        industryTrendAlignment: string;
-        distinctionOpportunities: string;
-      };
-      detailedMetrics?: {
-        profileContentQuality: {
-          grade: string;
-          explanation: string;
-        };
-        narrativeConsistency?: {
-          grade: string;
-          explanation: string;
-        };
-        contentCreationActivity?: {
-          grade: string;
-          explanation: string;
-        };
-        engagementActivity?: {
-          grade: string;
-          explanation: string;
-        };
-        recommendationImplementation?: {
-          grade: string;
-          explanation: string;
-        };
-        sliClarity?: {
-          grade: string;
-          explanation: string;
-        };
-      };
-    };
+    finalSynthesis: any; // Use any type since we need to handle multiple formats
     createdAt: string;
   };
   userName?: string;
@@ -127,24 +66,96 @@ const getProgressColor = (score: number): string => {
 };
 
 const ReportDisplay: React.FC<FreshnessReportProps> = ({ report, userName }) => {
-  if (!report || !report.finalSynthesis) {
+  // Debug report structure to console for troubleshooting
+  console.log("Report data structure:", report);
+  
+  if (!report) {
     return <Card className="mb-8"><CardContent className="pt-6">No report data available</CardContent></Card>;
+  }
+  
+  // Check if finalSynthesis exists in any format
+  if (!report.finalSynthesis) {
+    return <Card className="mb-8"><CardContent className="pt-6">Report is missing final synthesis data</CardContent></Card>;
   }
 
   const freshnessGrade = calculateFreshnessGrade(report);
   const freshnessScore = calculateFreshnessScore(freshnessGrade);
   const progressColor = getProgressColor(freshnessScore);
 
-  // Extract relevant data from report
-  const {
-    brandAudit,
-    personalBrandStrategy,
-    contentRecommendations,
-    digitalPresenceStrategy,
-    implementationRoadmap,
-    competitiveAnalysis,
-    detailedMetrics
-  } = report.finalSynthesis;
+  // Extract relevant data based on the format
+  // Use type-safe property checking with "in" operator
+  const isOldFormat = 'overallGrade' in report.finalSynthesis;
+  const isNewFormat = 'brandAudit' in report.finalSynthesis;
+  
+  // Initialize with default empty values
+  let brandAudit: any = {
+    currentBrandStrength: 'No brand strength data available',
+    coreStrengths: [],
+    criticalGaps: []
+  };
+  
+  let personalBrandStrategy: any = {
+    uniqueValueProposition: 'No value proposition data available',
+    coreNarrative: 'No core narrative data available',
+    recommendedPositioning: '',
+    targetAudience: [],
+    keyDifferentiators: []
+  };
+  
+  let contentRecommendations: any = {};
+  let digitalPresenceStrategy: any = {};
+  let implementationRoadmap: any = {};
+  let competitiveAnalysis: any = {};
+  let detailedMetrics: any = {};
+  
+  // Populate data based on format
+  if (isOldFormat) {
+    // Map the old format data to display in the new format structure
+    detailedMetrics = {
+      profileContentQuality: {
+        grade: report.finalSynthesis.profileContentQuality?.grade || 'C',
+        explanation: report.finalSynthesis.profileContentQuality?.explanation || 'No data available'
+      },
+      narrativeConsistency: report.finalSynthesis.narrativeConsistency,
+      contentCreationActivity: report.finalSynthesis.contentCreationActivity,
+      engagementActivity: report.finalSynthesis.engagementActivity,
+      recommendationImplementation: report.finalSynthesis.recommendationImplementation,
+      sliClarity: report.finalSynthesis.sliClarity
+    };
+    
+    brandAudit = {
+      currentBrandStrength: report.finalSynthesis.overallExplanation || 'No brand strength data available',
+      coreStrengths: report.finalSynthesis.actionableSuggestions?.slice(0, 2) || [],
+      criticalGaps: report.finalSynthesis.actionableSuggestions?.slice(2, 4) || []
+    };
+    
+    personalBrandStrategy = {
+      uniqueValueProposition: 'See detailed metrics for insights',
+      coreNarrative: report.finalSynthesis.overallExplanation || 'No core narrative data available'
+    };
+  } else if (isNewFormat) {
+    // Use the new format data directly
+    const {
+      brandAudit: ba,
+      personalBrandStrategy: pbs,
+      contentRecommendations: cr,
+      digitalPresenceStrategy: dps,
+      implementationRoadmap: ir,
+      competitiveAnalysis: ca,
+      detailedMetrics: dm
+    } = report.finalSynthesis;
+    
+    brandAudit = ba || brandAudit;
+    personalBrandStrategy = pbs || personalBrandStrategy;
+    contentRecommendations = cr || contentRecommendations;
+    digitalPresenceStrategy = dps || digitalPresenceStrategy;
+    implementationRoadmap = ir || implementationRoadmap;
+    competitiveAnalysis = ca || competitiveAnalysis;
+    detailedMetrics = dm || detailedMetrics;
+  } else {
+    // Neither format is recognized, use placeholder data
+    console.error("Unrecognized report format:", report.finalSynthesis);
+  }
 
   return (
     <div className="space-y-6">
