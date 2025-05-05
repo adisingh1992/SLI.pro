@@ -130,27 +130,51 @@ const FreshnessReportPage: React.FC = () => {
     if (!rawData) return null;
     
     try {
-      // Special handling for finalSynthesis which might be a JSON string
-      let finalSynthesis = rawData.finalSynthesis;
+      console.log("Processing raw report data:", rawData);
       
-      if (typeof finalSynthesis === 'string') {
+      // Helper function to parse JSON fields
+      const parseJsonField = (field: any) => {
+        if (typeof field === 'string') {
+          try {
+            return JSON.parse(field);
+          } catch (e) {
+            console.error(`Failed to parse JSON string for field:`, e);
+            return null;
+          }
+        }
+        return field || null;
+      };
+      
+      // Parse all potential JSON fields
+      const finalSynthesis = parseJsonField(rawData.finalSynthesis);
+      const questionnaireAnalysis = parseJsonField(rawData.questionnaireAnalysis);
+      const resumeAnalysis = parseJsonField(rawData.resumeAnalysis);
+      const linkedinAnalysis = parseJsonField(rawData.linkedinAnalysis);
+      
+      // Handle array field
+      let additionalDocsAnalysis = rawData.additionalDocumentsAnalysis || [];
+      if (typeof additionalDocsAnalysis === 'string') {
         try {
-          finalSynthesis = JSON.parse(finalSynthesis);
+          additionalDocsAnalysis = JSON.parse(additionalDocsAnalysis);
         } catch (e) {
-          console.error("Failed to parse finalSynthesis JSON string:", e);
+          console.error("Failed to parse additionalDocumentsAnalysis JSON string:", e);
+          additionalDocsAnalysis = [];
         }
       }
       
-      return {
+      const result = {
         id: rawData.id,
         userId: rawData.userId,
-        questionnaireAnalysis: rawData.questionnaireAnalysis || null,
-        resumeAnalysis: rawData.resumeAnalysis || null,
-        linkedinAnalysis: rawData.linkedinAnalysis || null,
-        additionalDocumentsAnalysis: rawData.additionalDocumentsAnalysis || [],
+        questionnaireAnalysis: questionnaireAnalysis,
+        resumeAnalysis: resumeAnalysis,
+        linkedinAnalysis: linkedinAnalysis,
+        additionalDocumentsAnalysis: additionalDocsAnalysis,
         finalSynthesis: finalSynthesis,
         createdAt: rawData.createdAt
       };
+      
+      console.log("Processed report data:", result);
+      return result;
     } catch (error) {
       console.error("Error processing report data:", error);
       return null;
@@ -257,10 +281,25 @@ const FreshnessReportPage: React.FC = () => {
   
   // Determine which report to display (selected or latest)
   const currentReport = React.useMemo(() => {
-    if (selectedReport) return selectedReport;
-    if (latestReport) return latestReport;
+    console.log("REPORT DEBUG - selectedReport:", selectedReport);
+    console.log("REPORT DEBUG - latestReport:", latestReport);
+    console.log("REPORT DEBUG - selectedReportId:", selectedReportId);
+    console.log("REPORT DEBUG - latestReportRaw:", latestReportRaw);
+    console.log("REPORT DEBUG - selectedReportRaw:", selectedReportRaw);
+    
+    if (selectedReport) {
+      console.log("REPORT DEBUG - Using selectedReport");
+      return selectedReport;
+    }
+    
+    if (latestReport) {
+      console.log("REPORT DEBUG - Using latestReport");
+      return latestReport;
+    }
+    
+    console.log("REPORT DEBUG - No report available");
     return null;
-  }, [selectedReport, latestReport]);
+  }, [selectedReport, latestReport, selectedReportId, latestReportRaw, selectedReportRaw]);
   
   // Create summary list for report history
   const reportSummaries: ReportSummaryItem[] = React.useMemo(() => {
@@ -294,7 +333,7 @@ const FreshnessReportPage: React.FC = () => {
   // Mutation for generating a new report
   const generateReportMutation = useMutation({
     mutationFn: async () => {
-      return await apiRequest("POST", "/api/freshness-reports");
+      return await apiRequest("POST", "/api/freshness-reports") as any;
     },
     onSuccess: async (data) => {
       console.log("Report generation successful:", data);
@@ -320,10 +359,11 @@ const FreshnessReportPage: React.FC = () => {
         });
         
         // Get the latest report to update selectedReportId
-        const response = await apiRequest<{id: number}>("GET", `/api/freshness-reports/latest`);
+        const response = await apiRequest("GET", `/api/freshness-reports/latest`);
         if (response && typeof response === 'object' && 'id' in response) {
-          console.log("Setting selectedReportId to new report:", response.id);
-          setSelectedReportId(response.id as number); // Type assertion
+          const reportId = Number(response.id);
+          console.log("Setting selectedReportId to new report:", reportId);
+          setSelectedReportId(reportId);
         }
       } catch (error) {
         console.error("Error fetching new report after generation:", error);
