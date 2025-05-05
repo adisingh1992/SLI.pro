@@ -66,17 +66,20 @@ const getProgressColor = (score: number): string => {
 };
 
 const ReportDisplay: React.FC<FreshnessReportProps> = ({ report, userName }) => {
-  // Debug report structure to console for troubleshooting
+  // Enhanced debugging for troubleshooting
   console.log("Report data structure:", report);
   console.log("Final synthesis available:", !!report?.finalSynthesis);
+  console.log("Final synthesis type:", report?.finalSynthesis ? typeof report.finalSynthesis : 'undefined');
   console.log("Final synthesis content:", report?.finalSynthesis);
   
   if (!report) {
     return <Card className="mb-8"><CardContent className="pt-6">No report data available</CardContent></Card>;
   }
   
-  // Check if finalSynthesis exists in any format - using a more lenient check
-  const hasFinalSynthesis = report.finalSynthesis && typeof report.finalSynthesis === 'object';
+  // More lenient check for finalSynthesis existence
+  // Accept any non-null value as valid finalSynthesis
+  const hasFinalSynthesis = report.finalSynthesis !== null && report.finalSynthesis !== undefined;
+  
   if (!hasFinalSynthesis) {
     return <Card className="mb-8"><CardContent className="pt-6">
       <div>
@@ -85,15 +88,37 @@ const ReportDisplay: React.FC<FreshnessReportProps> = ({ report, userName }) => 
       </div>
     </CardContent></Card>;
   }
+  
+  // If finalSynthesis is a string, try to parse it
+  let processedSynthesis = report.finalSynthesis;
+  if (typeof report.finalSynthesis === 'string') {
+    try {
+      processedSynthesis = JSON.parse(report.finalSynthesis);
+      console.log("Successfully parsed finalSynthesis string in report-display:", processedSynthesis);
+    } catch (e) {
+      console.error("Failed to parse finalSynthesis string in report-display:", e);
+      // Continue with the string value
+    }
+  }
 
-  const freshnessGrade = calculateFreshnessGrade(report);
+  // Use the processed synthesis if available, otherwise use the original
+  const finalSynthesisData = processedSynthesis || report.finalSynthesis;
+  
+  // Log the final data we'll use for rendering
+  console.log("Using finalSynthesis data:", finalSynthesisData);
+  
+  const freshnessGrade = calculateFreshnessGrade({...report, finalSynthesis: finalSynthesisData});
   const freshnessScore = calculateFreshnessScore(freshnessGrade);
   const progressColor = getProgressColor(freshnessScore);
 
   // Extract relevant data based on the format
-  // Use type-safe property checking with "in" operator
-  const isOldFormat = 'overallGrade' in report.finalSynthesis;
-  const isNewFormat = 'brandAudit' in report.finalSynthesis;
+  // Use safer type-safe property checking with optional chaining
+  const isOldFormat = typeof finalSynthesisData === 'object' && 
+                      finalSynthesisData !== null && 
+                      'overallGrade' in finalSynthesisData;
+  const isNewFormat = typeof finalSynthesisData === 'object' && 
+                      finalSynthesisData !== null && 
+                      'brandAudit' in finalSynthesisData;
   
   // Initialize with default empty values
   let brandAudit: any = {
@@ -119,7 +144,7 @@ const ReportDisplay: React.FC<FreshnessReportProps> = ({ report, userName }) => 
   // Populate data based on format
   if (isOldFormat) {
     // Map the old format data to display in the new format structure
-    const fs = report.finalSynthesis as any; // Use any type to access properties safely
+    const fs = finalSynthesisData as any; // Use any type to access properties safely
     
     detailedMetrics = {
       profileContentQuality: {
@@ -153,7 +178,7 @@ const ReportDisplay: React.FC<FreshnessReportProps> = ({ report, userName }) => 
       implementationRoadmap: ir,
       competitiveAnalysis: ca,
       detailedMetrics: dm
-    } = report.finalSynthesis;
+    } = finalSynthesisData as any;
     
     brandAudit = ba || brandAudit;
     personalBrandStrategy = pbs || personalBrandStrategy;
@@ -163,8 +188,35 @@ const ReportDisplay: React.FC<FreshnessReportProps> = ({ report, userName }) => 
     competitiveAnalysis = ca || competitiveAnalysis;
     detailedMetrics = dm || detailedMetrics;
   } else {
-    // Neither format is recognized, use placeholder data
-    console.error("Unrecognized report format:", report.finalSynthesis);
+    // Neither format is recognized, but try to extract data if possible
+    console.error("Unrecognized report format:", finalSynthesisData);
+    
+    // If finalSynthesisData exists but is in an unknown format, try to make use of it
+    try {
+      if (typeof finalSynthesisData === 'object' && finalSynthesisData !== null) {
+        // Common keys that might exist in any format
+        if (finalSynthesisData.grade || finalSynthesisData.overallGrade) {
+          const grade = finalSynthesisData.grade || finalSynthesisData.overallGrade;
+          detailedMetrics.profileContentQuality = {
+            grade: grade,
+            explanation: finalSynthesisData.explanation || 'Based on analysis of your professional content'
+          };
+        }
+        
+        if (finalSynthesisData.summary || finalSynthesisData.overview) {
+          const summary = finalSynthesisData.summary || finalSynthesisData.overview;
+          brandAudit.currentBrandStrength = summary;
+        }
+        
+        // Try to extract any array that might contain actionable suggestions
+        if (Array.isArray(finalSynthesisData.recommendations) && finalSynthesisData.recommendations.length > 0) {
+          brandAudit.coreStrengths = finalSynthesisData.recommendations.slice(0, 2);
+          brandAudit.criticalGaps = finalSynthesisData.recommendations.slice(2, 4);
+        }
+      }
+    } catch (e) {
+      console.error("Error extracting data from unknown format:", e);
+    }
   }
 
   return (
