@@ -140,7 +140,19 @@ const FreshnessReportPage = () => {
         const response = await apiRequest("GET", `/api/freshness-reports/${selectedReportId}`);
         if (!response) return null;
         console.log("Selected report data:", response);
-        return response as FreshnessReportData;
+        
+        // Type-safe approach to handle the response
+        const reportData = response as any;
+        return {
+          id: reportData.id,
+          userId: reportData.userId,
+          questionnaireAnalysis: reportData.questionnaireAnalysis || null,
+          resumeAnalysis: reportData.resumeAnalysis || null,
+          linkedinAnalysis: reportData.linkedinAnalysis || null,
+          additionalDocumentsAnalysis: reportData.additionalDocumentsAnalysis || [],
+          finalSynthesis: reportData.finalSynthesis || null,
+          createdAt: reportData.createdAt
+        } as FreshnessReportData;
       } catch (error) {
         console.error("Error fetching selected report:", error);
         return null;

@@ -111,27 +111,29 @@ const ReportDisplay: React.FC<FreshnessReportProps> = ({ report, userName }) => 
   // Populate data based on format
   if (isOldFormat) {
     // Map the old format data to display in the new format structure
+    const fs = report.finalSynthesis as any; // Use any type to access properties safely
+    
     detailedMetrics = {
       profileContentQuality: {
-        grade: report.finalSynthesis.profileContentQuality?.grade || 'C',
-        explanation: report.finalSynthesis.profileContentQuality?.explanation || 'No data available'
+        grade: fs.profileContentQuality?.grade || 'C',
+        explanation: fs.profileContentQuality?.explanation || 'No data available'
       },
-      narrativeConsistency: report.finalSynthesis.narrativeConsistency,
-      contentCreationActivity: report.finalSynthesis.contentCreationActivity,
-      engagementActivity: report.finalSynthesis.engagementActivity,
-      recommendationImplementation: report.finalSynthesis.recommendationImplementation,
-      sliClarity: report.finalSynthesis.sliClarity
+      narrativeConsistency: fs.narrativeConsistency,
+      contentCreationActivity: fs.contentCreationActivity,
+      engagementActivity: fs.engagementActivity,
+      recommendationImplementation: fs.recommendationImplementation,
+      sliClarity: fs.sliClarity
     };
     
     brandAudit = {
-      currentBrandStrength: report.finalSynthesis.overallExplanation || 'No brand strength data available',
-      coreStrengths: report.finalSynthesis.actionableSuggestions?.slice(0, 2) || [],
-      criticalGaps: report.finalSynthesis.actionableSuggestions?.slice(2, 4) || []
+      currentBrandStrength: fs.overallExplanation || 'No brand strength data available',
+      coreStrengths: fs.actionableSuggestions?.slice(0, 2) || [],
+      criticalGaps: fs.actionableSuggestions?.slice(2, 4) || []
     };
     
     personalBrandStrategy = {
       uniqueValueProposition: 'See detailed metrics for insights',
-      coreNarrative: report.finalSynthesis.overallExplanation || 'No core narrative data available'
+      coreNarrative: fs.overallExplanation || 'No core narrative data available'
     };
   } else if (isNewFormat) {
     // Use the new format data directly
