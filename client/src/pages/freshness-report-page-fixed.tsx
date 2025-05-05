@@ -173,9 +173,16 @@ const FreshnessReportPage: React.FC = () => {
   
   // Initialize selectedReportId with latest report when it's loaded
   useEffect(() => {
-    if (latestReport && !selectedReportId) {
-      console.log("Setting initial selectedReportId to latest report:", latestReport.id);
-      setSelectedReportId(latestReport.id);
+    if (latestReport) {
+      if (!selectedReportId) {
+        // First load - set to latest
+        console.log("Setting initial selectedReportId to latest report:", latestReport.id);
+        setSelectedReportId(latestReport.id);
+      } else if (latestReport.id > selectedReportId) {
+        // New report was generated and is newer than current - update to latest
+        console.log("Updating to newer report:", latestReport.id);
+        setSelectedReportId(latestReport.id);
+      }
     }
   }, [latestReport, selectedReportId]);
   
@@ -289,31 +296,34 @@ const FreshnessReportPage: React.FC = () => {
     mutationFn: async () => {
       return await apiRequest("POST", "/api/freshness-reports");
     },
-    onSuccess: async () => {
+    onSuccess: async (data) => {
+      console.log("Report generation successful:", data);
       setIsGenerating(false);
       toast({
         title: "Success!",
         description: "Your professional brand assessment has been generated.",
       });
       
-      // Force a one-time cache refresh and get the new data
+      // Force refresh both queries but with aggressive settings to prevent background polling
       try {
-        // Manual fetch to avoid triggering automatic refetches
-        const response = await apiRequest("GET", `/api/freshness-reports/latest`);
+        // Explicitly invalidate and force reload these specific queries
+        await queryClient.refetchQueries({
+          queryKey: ["/api/freshness-reports/latest"],
+          exact: true, 
+          type: 'active'
+        });
+        
+        await queryClient.refetchQueries({
+          queryKey: ["/api/freshness-reports"],
+          exact: true,
+          type: 'active'
+        });
+        
+        // Get the latest report to update selectedReportId
+        const response = await apiRequest<{id: number}>("GET", `/api/freshness-reports/latest`);
         if (response && typeof response === 'object' && 'id' in response) {
-          const newReportData = processReportData(response);
-          if (newReportData) {
-            setSelectedReportId(newReportData.id);
-            
-            // Set the data manually in the cache instead of refetching
-            queryClient.setQueryData(["/api/freshness-reports/latest"], response);
-            
-            // Also fetch all reports once
-            const allReportsResponse = await apiRequest("GET", `/api/freshness-reports`);
-            if (allReportsResponse) {
-              queryClient.setQueryData(["/api/freshness-reports"], allReportsResponse);
-            }
-          }
+          console.log("Setting selectedReportId to new report:", response.id);
+          setSelectedReportId(response.id as number); // Type assertion
         }
       } catch (error) {
         console.error("Error fetching new report after generation:", error);
