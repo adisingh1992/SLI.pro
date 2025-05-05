@@ -12,14 +12,8 @@ import {
   User,
   FileText,
   Award,
-  CheckCircle2,
   Sparkles,
-  AlertCircle,
-  Info
 } from "lucide-react";
-import MonthlyCheckInWidget from "@/components/monthly-check-in-widget";
-import { FreshnessReportWidget } from "@/components/freshness-report-widget";
-import LinkedinOptimizationWidget from "@/components/linkedin-optimization/linkedin-optimization-widget";
 import { Button } from "@/components/ui/button";
 import { useEffect } from "react";
 import NavBar from "@/components/nav-bar";
@@ -32,12 +26,6 @@ import {
   CardHeader, 
   CardTitle 
 } from "@/components/ui/card";
-import { 
-  Tooltip, 
-  TooltipContent, 
-  TooltipProvider, 
-  TooltipTrigger 
-} from "@/components/ui/tooltip";
 import { Badge } from "@/components/ui/badge";
 
 export default function HomePage() {
@@ -185,7 +173,7 @@ export default function HomePage() {
             Welcome, {user?.firstName}!
           </h1>
           <p className="text-muted-foreground mt-2">
-            Your professional brand journey dashboard helps you track and improve your professional presence.
+            Congratulations on joining SLI.pro! Your professional brand journey starts with few key actions
           </p>
         </div>
         
@@ -241,7 +229,7 @@ export default function HomePage() {
                   ? userProfile.questionnaire.isDraft === true
                     ? "Continue where you left off to complete your assessment."
                     : "This information helps us understand your professional goals and aspirations."
-                  : "This assessment helps customize your personal branding strategy and shapes your Single Lasting Impression (SLI)."}
+                  : "This comprehensive assessment helps customize your personal branding strategy and provide information to shape your Single Lasting Impression (SLI)."}
               </p>
             </CardContent>
             <CardFooter className="bg-gray-50 py-3 px-5 mt-auto">
@@ -375,14 +363,14 @@ export default function HomePage() {
             <CardHeader className={`pb-4 ${
               !userProfile?.questionnaire
                 ? "bg-gray-50"
-                : "bg-primary/5"
+                : "bg-green-50"
             }`}>
               <div className="flex items-center justify-between">
                 <div className="flex items-center">
                   <div className={`p-2 rounded-full mr-3 ${
                     !userProfile?.questionnaire
                       ? "bg-gray-100 text-gray-500"
-                      : "bg-primary/10 text-primary"
+                      : "bg-green-100 text-green-600"
                   }`}>
                     <User className="h-5 w-5" />
                   </div>
@@ -418,8 +406,8 @@ export default function HomePage() {
                 variant="outline"
                 className={`w-full ${
                   !userProfile?.questionnaire
-                    ? "border-gray-300 text-gray-500 cursor-not-allowed"
-                    : "border-primary text-primary hover:bg-primary/5"
+                    ? "border-blue-500 text-blue-600 hover:bg-blue-50 cursor-not-allowed"
+                    : "border-green-500 text-green-700 hover:bg-green-50"
                 }`}
                 onClick={() => {
                   if (userProfile?.questionnaire) {
@@ -444,14 +432,14 @@ export default function HomePage() {
             <CardHeader className={`pb-4 ${
               !userProfile?.questionnaire || userProfile.questionnaire.isDraft === true || !hasRequiredDocuments
                 ? "bg-gray-50"
-                : "bg-success/5"
+                : "bg-green-50"
             }`}>
               <div className="flex items-center justify-between">
                 <div className="flex items-center">
                   <div className={`p-2 rounded-full mr-3 ${
                     !userProfile?.questionnaire || userProfile.questionnaire.isDraft === true || !hasRequiredDocuments
                       ? "bg-gray-100 text-gray-500"
-                      : "bg-success/10 text-success"
+                      : "bg-green-100 text-green-600"
                   }`}>
                     <Calendar className="h-5 w-5" />
                   </div>
@@ -483,8 +471,8 @@ export default function HomePage() {
                 variant="outline"
                 className={`w-full ${
                   !userProfile?.questionnaire || userProfile.questionnaire.isDraft === true || !hasRequiredDocuments
-                    ? "border-gray-300 text-gray-500 cursor-not-allowed"
-                    : "border-success text-success hover:bg-success/5"
+                    ? "border-blue-500 text-blue-600 hover:bg-blue-50 cursor-not-allowed"
+                    : "border-green-500 text-green-700 hover:bg-green-50"
                 }`}
                 onClick={() => {
                   if (userProfile?.questionnaire && userProfile.questionnaire.isDraft !== true && hasRequiredDocuments) {
@@ -509,14 +497,14 @@ export default function HomePage() {
             <CardHeader className={`pb-4 ${
               !userProfile?.questionnaire || userProfile.questionnaire.isDraft === true || !hasRequiredDocuments
                 ? "bg-gray-50"
-                : "bg-info/5"
+                : "bg-green-50"
             }`}>
               <div className="flex items-center justify-between">
                 <div className="flex items-center">
                   <div className={`p-2 rounded-full mr-3 ${
                     !userProfile?.questionnaire || userProfile.questionnaire.isDraft === true || !hasRequiredDocuments
                       ? "bg-gray-100 text-gray-500"
-                      : "bg-info/10 text-info"
+                      : "bg-green-100 text-green-600"
                   }`}>
                     <Sparkles className="h-5 w-5" />
                   </div>
@@ -563,8 +551,8 @@ export default function HomePage() {
                 variant="outline"
                 className={`w-full ${
                   !userProfile?.questionnaire || userProfile.questionnaire.isDraft === true || !hasRequiredDocuments
-                    ? "border-gray-300 text-gray-500 cursor-not-allowed"
-                    : "border-info text-info hover:bg-info/5"
+                    ? "border-blue-500 text-blue-600 hover:bg-blue-50 cursor-not-allowed"
+                    : "border-green-500 text-green-700 hover:bg-green-50"
                 }`}
                 onClick={() => {
                   if (userProfile?.questionnaire && userProfile.questionnaire.isDraft !== true && hasRequiredDocuments) {
@@ -589,14 +577,14 @@ export default function HomePage() {
             <CardHeader className={`pb-4 ${
               !hasSli
                 ? "bg-gray-50"
-                : "bg-primary/5"
+                : "bg-green-50"
             }`}>
               <div className="flex items-center justify-between">
                 <div className="flex items-center">
                   <div className={`p-2 rounded-full mr-3 ${
                     !hasSli
                       ? "bg-gray-100 text-gray-500"
-                      : "bg-primary/10 text-primary"
+                      : "bg-green-100 text-green-600"
                   }`}>
                     <Award className="h-5 w-5" />
                   </div>
@@ -665,7 +653,7 @@ export default function HomePage() {
                 {hasSliSelected && (
                   <Button
                     variant="outline"
-                    className={`w-full border-primary/50 text-primary hover:bg-primary/5`}
+                    className={`w-full border-green-500 text-green-700 hover:bg-green-50`}
                     onClick={() => {
                       scrollToTop();
                       navigate("/sli-refinement");
@@ -688,14 +676,14 @@ export default function HomePage() {
             <CardHeader className={`pb-4 ${
               !canGenerateLinkedInOptimization
                 ? "bg-gray-50"
-                : "bg-blue-50"
+                : "bg-green-50"
             }`}>
               <div className="flex items-center justify-between">
                 <div className="flex items-center">
                   <div className={`p-2 rounded-full mr-3 ${
                     !canGenerateLinkedInOptimization
                       ? "bg-gray-100 text-gray-500"
-                      : "bg-blue-100 text-blue-600"
+                      : "bg-green-100 text-green-600"
                   }`}>
                     <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 24 24" fill="currentColor">
                       <path d="M19 3a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h14m-.5 15.5v-5.3a3.26 3.26 0 0 0-3.26-3.26c-.85 0-1.84.52-2.32 1.3v-1.11h-2.79v8.37h2.79v-4.93c0-.77.62-1.4 1.39-1.4a1.4 1.4 0 0 1 1.4 1.4v4.93h2.79M6.88 8.56a1.68 1.68 0 0 0 1.68-1.68c0-.93-.75-1.69-1.68-1.69a1.69 1.69 0 0 0-1.69 1.69c0 .93.76 1.68 1.69 1.68m1.39 9.94v-8.37H5.5v8.37h2.77z" />
@@ -756,10 +744,10 @@ export default function HomePage() {
               <Button
                 className={`w-full ${
                   !canGenerateLinkedInOptimization
-                    ? "bg-gray-100 text-gray-500 cursor-not-allowed"
+                    ? "border-gray-300 text-gray-500 cursor-not-allowed"
                     : latestLinkedinOptimization
-                      ? "border-blue-500 text-blue-700 hover:bg-blue-50"
-                      : "bg-blue-600 hover:bg-blue-700"
+                      ? "border-green-500 text-green-700 hover:bg-green-50"
+                      : "border-green-500 text-green-700 hover:bg-green-50"
                 }`}
                 variant={latestLinkedinOptimization ? "outline" : "default"}
                 onClick={() => {
@@ -787,14 +775,14 @@ export default function HomePage() {
             <CardHeader className={`pb-4 ${
               !userProfile?.questionnaire || userProfile.questionnaire.isDraft === true
                 ? "bg-gray-50"
-                : "bg-blue-50"
+                : "bg-green-50"
             }`}>
               <div className="flex items-center justify-between">
                 <div className="flex items-center">
                   <div className={`p-2 rounded-full mr-3 ${
                     !userProfile?.questionnaire || userProfile.questionnaire.isDraft === true
                       ? "bg-gray-100 text-gray-500"
-                      : "bg-blue-100 text-blue-600"
+                      : "bg-green-100 text-green-600"
                   }`}>
                     <Calendar className="h-5 w-5" />
                   </div>
@@ -821,10 +809,11 @@ export default function HomePage() {
             </CardContent>
             <CardFooter className="bg-gray-50 py-3 px-5">
               <Button
+                variant="outline"
                 className={`w-full ${
                   !userProfile?.questionnaire || userProfile.questionnaire.isDraft === true
-                    ? "bg-gray-100 text-gray-500 cursor-not-allowed"
-                    : "bg-blue-600 hover:bg-blue-700"
+                    ? "border-blue-500 text-blue-600 hover:bg-blue-50 cursor-not-allowed"
+                    : "border-green-500 text-green-700 hover:bg-green-50"
                 }`}
                 onClick={() => {
                   if (userProfile?.questionnaire && userProfile.questionnaire.isDraft !== true) {
