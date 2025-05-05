@@ -21,6 +21,12 @@ const ReportHistory: React.FC<ReportHistoryProps> = ({
   currentReportId,
   onSelectReport
 }) => {
+  // Log all reports for debugging
+  React.useEffect(() => {
+    console.log("HISTORY COMPONENT - Received reports:", reports);
+    console.log("HISTORY COMPONENT - Current report ID:", currentReportId);
+  }, [reports, currentReportId]);
+  
   // Format date for display - use a more compact format for the narrow column
   const formatDate = (dateString: string) => {
     console.log("Formatting date from string:", dateString);

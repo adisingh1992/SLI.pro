@@ -64,11 +64,11 @@ const FreshnessReportPage: React.FC = () => {
     queryFn: async () => {
       try {
         const response = await apiRequest("GET", `/api/freshness-reports`);
-        console.log("Raw reports from API:", response);
-        return response;
+        console.log("All reports API response:", response);
+        return response; // apiRequest already handles JSON parsing
       } catch (error) {
         console.error("Error fetching all reports:", error);
-        return null;
+        return [];
       }
     },
     enabled: isAuthenticated,
@@ -87,18 +87,16 @@ const FreshnessReportPage: React.FC = () => {
     queryFn: async () => {
       try {
         const response = await apiRequest("GET", `/api/freshness-reports/latest`);
-        console.log("Latest report data:", response);
+        console.log("Latest report API response:", response);
         return response;
       } catch (error) {
         console.error("Error fetching latest report:", error);
         return null;
       }
     },
-    enabled: isAuthenticated,
-    retry: 1,
     staleTime: Infinity, // Prevent automatic refetching
     refetchOnWindowFocus: false, // Prevent refetch on window focus
-    refetchInterval: false, // Disable polling
+    refetchInterval: false // Disable polling
   });
   
   // QUERY 3: Fetch a specific report if one is selected
@@ -111,7 +109,7 @@ const FreshnessReportPage: React.FC = () => {
       try {
         if (!selectedReportId) return null;
         const response = await apiRequest("GET", `/api/freshness-reports/${selectedReportId}`);
-        console.log("Selected report data:", response);
+        console.log("Selected report API response:", response);
         return response;
       } catch (error) {
         console.error("Error fetching selected report:", error);
@@ -183,11 +181,30 @@ const FreshnessReportPage: React.FC = () => {
   
   // Process multiple reports (for history list)
   const processReportList = (rawList: any): FreshnessReportData[] => {
-    if (!rawList || !Array.isArray(rawList)) return [];
+    console.log("HISTORY DEBUG - Processing raw list of reports:", rawList);
     
-    return rawList
-      .map((item) => processReportData(item))
-      .filter((item): item is FreshnessReportData => item !== null);
+    if (!rawList || !Array.isArray(rawList)) {
+      console.log("HISTORY DEBUG - rawList is not an array:", typeof rawList);
+      return [];
+    }
+    
+    console.log("HISTORY DEBUG - rawList.length:", rawList.length);
+    
+    const processedReports = rawList
+      .map((item) => {
+        console.log("HISTORY DEBUG - Processing report item:", item.id);
+        return processReportData(item);
+      })
+      .filter((item): item is FreshnessReportData => {
+        const isValid = item !== null;
+        if (!isValid) {
+          console.log("HISTORY DEBUG - Filtered out null report");
+        }
+        return isValid;
+      });
+    
+    console.log("HISTORY DEBUG - Processed reports count:", processedReports.length);
+    return processedReports;
   };
   
   // Derived data: Processed reports
