@@ -150,7 +150,7 @@ const FreshnessReportPage = () => {
     isLoading: isLoadingLatestReport,
     isError,
     error,
-  } = useQuery<FreshnessReportData>({
+  } = useQuery<FreshnessReportData | null>({
     queryKey: ["/api/freshness-reports/latest"],
     queryFn: async () => {
       try {
@@ -197,7 +197,9 @@ const FreshnessReportPage = () => {
   // Set selected report ID when latest report data changes
   useEffect(() => {
     if (latestReportData && !selectedReportId) {
-      setSelectedReportId(latestReportData.id);
+      // Type assertion to safely access id
+      const report = latestReportData as FreshnessReportData;
+      setSelectedReportId(report.id);
     }
   }, [latestReportData, selectedReportId]);
   
@@ -245,7 +247,7 @@ const FreshnessReportPage = () => {
         return null;
       }
     },
-    enabled: isAuthenticated && !!selectedReportId && (latestReportData?.id !== selectedReportId),
+    enabled: isAuthenticated && !!selectedReportId && latestReportData ? ((latestReportData as FreshnessReportData).id !== selectedReportId) : true,
     retry: false,
     throwOnError: false,
   });
@@ -254,8 +256,10 @@ const FreshnessReportPage = () => {
   const isLoading = isLoadingAllReports || isLoadingLatestReport || isLoadingSelectedReport;
   
   // Determine which report data to use
-  const reportData = selectedReportId && latestReportData?.id !== selectedReportId
-    ? selectedReportData
+  const reportData = selectedReportId && latestReportData 
+    ? ((latestReportData as FreshnessReportData).id !== selectedReportId 
+      ? selectedReportData 
+      : latestReportData)
     : latestReportData;
 
   // Mutation for generating a new report
