@@ -256,11 +256,28 @@ const FreshnessReportPage = () => {
   const isLoading = isLoadingAllReports || isLoadingLatestReport || isLoadingSelectedReport;
   
   // Determine which report data to use
-  const reportData = selectedReportId && latestReportData 
-    ? ((latestReportData as FreshnessReportData).id !== selectedReportId 
-      ? selectedReportData 
-      : latestReportData)
-    : latestReportData;
+  const reportData = selectedReportId && selectedReportData 
+    ? selectedReportData 
+    : (selectedReportId && latestReportData && (latestReportData as FreshnessReportData).id === selectedReportId 
+      ? latestReportData 
+      : latestReportData);
+  
+  // Additional check to ensure reportData actually has finalSynthesis
+  useEffect(() => {
+    if (reportData && (!reportData.finalSynthesis || reportData.finalSynthesis === "null")) {
+      console.log("Report data missing finalSynthesis, forcing refresh...");
+      queryClient.invalidateQueries({
+        queryKey: ["/api/freshness-reports/latest"],
+        refetchType: 'all',
+      });
+      if (selectedReportId) {
+        queryClient.invalidateQueries({
+          queryKey: ["/api/freshness-reports", selectedReportId],
+          refetchType: 'all',
+        });
+      }
+    }
+  }, [reportData, selectedReportId]);
 
   // Mutation for generating a new report
   const generateReportMutation = useMutation<any, Error, void, unknown>({
@@ -269,22 +286,39 @@ const FreshnessReportPage = () => {
       const response = await apiRequest("POST", "/api/freshness-reports");
       return response;
     },
-    onSuccess: (data) => {
-      // Update the query cache with the latest report and all reports
-      queryClient.invalidateQueries({
-        queryKey: ["/api/freshness-reports/latest"],
-      });
-      queryClient.invalidateQueries({
-        queryKey: ["/api/freshness-reports"],
-      });
+    onSuccess: async (data) => {
+      setIsGenerating(false);
       toast({
         title: "Success!",
         description: "Your professional brand assessment has been generated.",
       });
-      setIsGenerating(false);
-      // Set the selected report ID to the new report
-      if (data && data.id) {
-        setSelectedReportId(data.id);
+      
+      // Force a complete cache refresh for these queries
+      await queryClient.invalidateQueries({
+        queryKey: ["/api/freshness-reports"],
+        refetchType: 'all',
+      });
+      await queryClient.invalidateQueries({
+        queryKey: ["/api/freshness-reports/latest"],
+        refetchType: 'all',
+      });
+      
+      // Directly fetch new data
+      try {
+        const response = await apiRequest("GET", `/api/freshness-reports/latest`);
+        // Type check and conversion
+        if (response && typeof response === 'object' && 'id' in response) {
+          const newReportData = response as FreshnessReportData;
+          setSelectedReportId(newReportData.id);
+          
+          // Manually update the query cache with the new data
+          queryClient.setQueryData(["/api/freshness-reports/latest"], newReportData);
+          
+          // Update the specific report data too
+          queryClient.setQueryData(["/api/freshness-reports", newReportData.id], newReportData);
+        }
+      } catch (error) {
+        console.error("Error fetching new report after generation:", error);
       }
     },
     onError: (err: any) => {
