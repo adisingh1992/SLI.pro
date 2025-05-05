@@ -101,16 +101,28 @@ const FreshnessReportPage = () => {
   const {
     data: allReports,
     isLoading: isLoadingAllReports,
+    refetch: refetchAllReports,
   } = useQuery<FreshnessReportData[]>({
     queryKey: ["/api/freshness-reports"],
     queryFn: async () => {
       try {
         const response = await apiRequest("GET", `/api/freshness-reports`);
-        if (!response || !Array.isArray(response)) return [];
-        console.log("All reports data:", response);
+        console.log("Raw reports from API:", response);
+        
+        if (!response) return [];
+        if (!Array.isArray(response)) {
+          console.error("Expected array of reports but got:", typeof response);
+          return [];
+        }
         
         // Map and parse each report's finalSynthesis if needed
         return response.map((reportData: any) => {
+          // Ensure we have valid data with required fields
+          if (!reportData || typeof reportData !== 'object' || !reportData.id) {
+            console.warn("Skipping invalid report data:", reportData);
+            return null;
+          }
+          
           // Special handling for finalSynthesis which might be a JSON string
           let finalSynthesis = reportData.finalSynthesis;
           
@@ -133,15 +145,16 @@ const FreshnessReportPage = () => {
             finalSynthesis: finalSynthesis,
             createdAt: reportData.createdAt
           };
-        }) as FreshnessReportData[];
+        }).filter(report => report !== null) as FreshnessReportData[];
       } catch (error) {
         console.error("Error fetching all reports:", error);
         return [];
       }
     },
     enabled: isAuthenticated,
-    retry: false,
-    throwOnError: false,
+    retry: 1,
+    staleTime: 30000, // Consider data fresh for 30 seconds
+    refetchOnWindowFocus: true,
   });
   
   // Fetch the latest report (initial load)
@@ -308,7 +321,30 @@ const FreshnessReportPage = () => {
         const response = await apiRequest("GET", `/api/freshness-reports/latest`);
         // Type check and conversion
         if (response && typeof response === 'object' && 'id' in response) {
-          const newReportData = response as FreshnessReportData;
+          // Type assertion with proper conversion to ensure FreshnessReportData format
+          const rawData = response as any;
+          
+          // Special handling for finalSynthesis which might be a JSON string
+          let finalSynthesis = rawData.finalSynthesis;
+          if (typeof finalSynthesis === 'string') {
+            try {
+              finalSynthesis = JSON.parse(finalSynthesis);
+            } catch (e) {
+              console.error("Failed to parse finalSynthesis JSON string:", e);
+            }
+          }
+          
+          const newReportData: FreshnessReportData = {
+            id: rawData.id,
+            userId: rawData.userId,
+            questionnaireAnalysis: rawData.questionnaireAnalysis || null,
+            resumeAnalysis: rawData.resumeAnalysis || null,
+            linkedinAnalysis: rawData.linkedinAnalysis || null,
+            additionalDocumentsAnalysis: rawData.additionalDocumentsAnalysis || [],
+            finalSynthesis: finalSynthesis,
+            createdAt: rawData.createdAt
+          };
+          
           setSelectedReportId(newReportData.id);
           
           // Manually update the query cache with the new data
@@ -316,6 +352,9 @@ const FreshnessReportPage = () => {
           
           // Update the specific report data too
           queryClient.setQueryData(["/api/freshness-reports", newReportData.id], newReportData);
+          
+          // Also refresh the report list to ensure it includes the new report
+          refetchAllReports();
         }
       } catch (error) {
         console.error("Error fetching new report after generation:", error);
@@ -467,12 +506,28 @@ const FreshnessReportPage = () => {
   };
   
   // Convert reports to summary format for the history component
-  const reportSummaries = allReports 
-    ? allReports.map(report => ({
+  const reportSummaries = React.useMemo(() => {
+    console.log("Building report summaries from:", allReports);
+    
+    if (!allReports || !Array.isArray(allReports) || allReports.length === 0) {
+      // If we have the latest report but no report list, create a single item list
+      if (reportData) {
+        return [{
+          id: reportData.id,
+          createdAt: reportData.createdAt
+        }];
+      }
+      return [];
+    }
+    
+    // Sort reports by creation date, newest first
+    return [...allReports]
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+      .map(report => ({
         id: report.id,
         createdAt: report.createdAt
-      }))
-    : [];
+      }));
+  }, [allReports, reportData]);
 
   return (
     <div className="container px-4 py-8" style={{minWidth: '100%'}}>
