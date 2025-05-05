@@ -101,7 +101,7 @@ const FreshnessReportPage = () => {
   const {
     data: allReports,
     isLoading: isLoadingAllReports,
-  } = useQuery({
+  } = useQuery<FreshnessReportData[]>({
     queryKey: ["/api/freshness-reports"],
     enabled: isAuthenticated,
     retry: false,
@@ -132,7 +132,7 @@ const FreshnessReportPage = () => {
   const {
     data: selectedReportData,
     isLoading: isLoadingSelectedReport,
-  } = useQuery({
+  } = useQuery<FreshnessReportData>({
     queryKey: ["/api/freshness-reports", selectedReportId],
     enabled: isAuthenticated && !!selectedReportId && (latestReportData?.id !== selectedReportId),
     retry: false,
@@ -148,7 +148,7 @@ const FreshnessReportPage = () => {
     : latestReportData;
 
   // Mutation for generating a new report
-  const generateReportMutation = useMutation({
+  const generateReportMutation = useMutation<any, Error, void, unknown>({
     mutationFn: async () => {
       // API call to generate the report
       const response = await apiRequest("POST", "/api/freshness-reports");
@@ -311,6 +311,19 @@ const FreshnessReportPage = () => {
 
   // Main content with report data
   const report = reportData as FreshnessReportData;
+  
+  // Function to handle report selection from history
+  const handleSelectReport = (reportId: number) => {
+    setSelectedReportId(reportId);
+  };
+  
+  // Convert reports to summary format for the history component
+  const reportSummaries = allReports 
+    ? allReports.map(report => ({
+        id: report.id,
+        createdAt: report.createdAt
+      }))
+    : [];
 
   return (
     <div className="container px-4 py-8">
@@ -391,8 +404,22 @@ const FreshnessReportPage = () => {
           </div>
         </Card>
       ) : (
-        /* Full Report Content */
-        <ReportDisplay report={report} userName={user?.firstName} />
+        /* Two-column layout with report and history */
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Column 1: Report Content */}
+          <div className="lg:col-span-2">
+            <ReportDisplay report={report} userName={user?.firstName} />
+          </div>
+          
+          {/* Column 2: Report History */}
+          <div className="lg:col-span-1">
+            <ReportHistory 
+              reports={reportSummaries} 
+              currentReportId={report.id} 
+              onSelectReport={handleSelectReport}
+            />
+          </div>
+        </div>
       )}
     </div>
   );
