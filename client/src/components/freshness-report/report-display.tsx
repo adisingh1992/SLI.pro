@@ -68,14 +68,22 @@ const getProgressColor = (score: number): string => {
 const ReportDisplay: React.FC<FreshnessReportProps> = ({ report, userName }) => {
   // Debug report structure to console for troubleshooting
   console.log("Report data structure:", report);
+  console.log("Final synthesis available:", !!report?.finalSynthesis);
+  console.log("Final synthesis content:", report?.finalSynthesis);
   
   if (!report) {
     return <Card className="mb-8"><CardContent className="pt-6">No report data available</CardContent></Card>;
   }
   
-  // Check if finalSynthesis exists in any format
-  if (!report.finalSynthesis) {
-    return <Card className="mb-8"><CardContent className="pt-6">Report is missing final synthesis data</CardContent></Card>;
+  // Check if finalSynthesis exists in any format - using a more lenient check
+  const hasFinalSynthesis = report.finalSynthesis && typeof report.finalSynthesis === 'object';
+  if (!hasFinalSynthesis) {
+    return <Card className="mb-8"><CardContent className="pt-6">
+      <div>
+        <p>Report is missing final synthesis data</p>
+        <p className="text-xs text-muted-foreground mt-2">Debug: {JSON.stringify(report.finalSynthesis)}</p>
+      </div>
+    </CardContent></Card>;
   }
 
   const freshnessGrade = calculateFreshnessGrade(report);

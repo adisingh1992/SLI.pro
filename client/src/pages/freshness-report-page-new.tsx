@@ -103,6 +103,42 @@ const FreshnessReportPage = () => {
     isLoading: isLoadingAllReports,
   } = useQuery<FreshnessReportData[]>({
     queryKey: ["/api/freshness-reports"],
+    queryFn: async () => {
+      try {
+        const response = await apiRequest("GET", `/api/freshness-reports`);
+        if (!response || !Array.isArray(response)) return [];
+        console.log("All reports data:", response);
+        
+        // Map and parse each report's finalSynthesis if needed
+        return response.map((reportData: any) => {
+          // Special handling for finalSynthesis which might be a JSON string
+          let finalSynthesis = reportData.finalSynthesis;
+          
+          // If finalSynthesis is a string, try to parse it as JSON
+          if (typeof finalSynthesis === 'string') {
+            try {
+              finalSynthesis = JSON.parse(finalSynthesis);
+            } catch (e) {
+              console.error("Failed to parse finalSynthesis JSON string in report list:", e);
+            }
+          }
+          
+          return {
+            id: reportData.id,
+            userId: reportData.userId,
+            questionnaireAnalysis: reportData.questionnaireAnalysis || null,
+            resumeAnalysis: reportData.resumeAnalysis || null,
+            linkedinAnalysis: reportData.linkedinAnalysis || null,
+            additionalDocumentsAnalysis: reportData.additionalDocumentsAnalysis || [],
+            finalSynthesis: finalSynthesis,
+            createdAt: reportData.createdAt
+          };
+        }) as FreshnessReportData[];
+      } catch (error) {
+        console.error("Error fetching all reports:", error);
+        return [];
+      }
+    },
     enabled: isAuthenticated,
     retry: false,
     throwOnError: false,
@@ -116,6 +152,43 @@ const FreshnessReportPage = () => {
     error,
   } = useQuery<FreshnessReportData>({
     queryKey: ["/api/freshness-reports/latest"],
+    queryFn: async () => {
+      try {
+        const response = await apiRequest("GET", `/api/freshness-reports/latest`);
+        if (!response) return null;
+        console.log("Latest report data:", response);
+        
+        // Type-safe approach to handle the response
+        const reportData = response as any;
+        
+        // Special handling for finalSynthesis which might be a JSON string
+        let finalSynthesis = reportData.finalSynthesis;
+        
+        // If finalSynthesis is a string, try to parse it as JSON
+        if (typeof finalSynthesis === 'string') {
+          try {
+            finalSynthesis = JSON.parse(finalSynthesis);
+            console.log("Successfully parsed finalSynthesis from string in latest report:", finalSynthesis);
+          } catch (e) {
+            console.error("Failed to parse finalSynthesis JSON string in latest report:", e);
+          }
+        }
+        
+        return {
+          id: reportData.id,
+          userId: reportData.userId,
+          questionnaireAnalysis: reportData.questionnaireAnalysis || null,
+          resumeAnalysis: reportData.resumeAnalysis || null,
+          linkedinAnalysis: reportData.linkedinAnalysis || null,
+          additionalDocumentsAnalysis: reportData.additionalDocumentsAnalysis || [],
+          finalSynthesis: finalSynthesis,
+          createdAt: reportData.createdAt
+        } as FreshnessReportData;
+      } catch (error) {
+        console.error("Error fetching latest report:", error);
+        return null;
+      }
+    },
     enabled: isAuthenticated,
     retry: false,
     throwOnError: false,
@@ -143,6 +216,20 @@ const FreshnessReportPage = () => {
         
         // Type-safe approach to handle the response
         const reportData = response as any;
+        
+        // Special handling for finalSynthesis which might be a JSON string
+        let finalSynthesis = reportData.finalSynthesis;
+        
+        // If finalSynthesis is a string, try to parse it as JSON
+        if (typeof finalSynthesis === 'string') {
+          try {
+            finalSynthesis = JSON.parse(finalSynthesis);
+            console.log("Successfully parsed finalSynthesis from string:", finalSynthesis);
+          } catch (e) {
+            console.error("Failed to parse finalSynthesis JSON string:", e);
+          }
+        }
+        
         return {
           id: reportData.id,
           userId: reportData.userId,
@@ -150,7 +237,7 @@ const FreshnessReportPage = () => {
           resumeAnalysis: reportData.resumeAnalysis || null,
           linkedinAnalysis: reportData.linkedinAnalysis || null,
           additionalDocumentsAnalysis: reportData.additionalDocumentsAnalysis || [],
-          finalSynthesis: reportData.finalSynthesis || null,
+          finalSynthesis: finalSynthesis,
           createdAt: reportData.createdAt
         } as FreshnessReportData;
       } catch (error) {
