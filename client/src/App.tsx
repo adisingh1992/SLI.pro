@@ -12,7 +12,7 @@ import QuestionnairePage from "@/pages/questionnaire-simple";
 import ChatPage from "@/pages/chat-page";
 import SummaryPage from "@/pages/summary-page";
 import MonthlyCheckInPage from "@/pages/monthly-check-in-page";
-import FreshnessReportPage from "@/pages/freshness-report-page-new";
+import FreshnessReportPage from "@/pages/freshness-report-page-fixed";
 import SliSelectionPage from "@/pages/sli-selection-page";
 import SliRefinementPage from "@/pages/sli-refinement-page";
 import LinkedinOptimizationPage from "@/pages/linkedin-optimization-page";
