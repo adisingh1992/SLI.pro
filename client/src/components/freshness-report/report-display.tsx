@@ -26,22 +26,40 @@ interface FreshnessReportProps {
 const calculateFreshnessGrade = (report: FreshnessReportProps['report']): string => {
   // First check if we have a detailed metrics profile content quality grade
   try {
-    if (report.finalSynthesis.detailedMetrics?.profileContentQuality?.grade) {
-      return report.finalSynthesis.detailedMetrics.profileContentQuality.grade;
+    const synthData = typeof report.finalSynthesis === 'string' 
+      ? JSON.parse(report.finalSynthesis) 
+      : report.finalSynthesis;
+      
+    // Check for grade in detailedMetrics
+    if (synthData?.detailedMetrics?.profileContentQuality?.grade) {
+      return synthData.detailedMetrics.profileContentQuality.grade;
     }
     
-    // Fall back to extracting from brand strength if detailed metrics aren't available
-    const brandStrength = report.finalSynthesis.brandAudit.currentBrandStrength || '';
+    // Check for grade in older format or directly in finalSynthesis
+    if (synthData?.profileContentQuality?.grade) {
+      return synthData.profileContentQuality.grade;
+    }
     
-    if (brandStrength.toLowerCase().includes('strong')) return 'A';
-    if (brandStrength.toLowerCase().includes('good')) return 'B';
-    if (brandStrength.toLowerCase().includes('moderate')) return 'C';
-    if (brandStrength.toLowerCase().includes('weak')) return 'D';
-    if (brandStrength.toLowerCase().includes('poor')) return 'F';
+    // Fall back to extracting from brand strength
+    if (synthData?.brandAudit?.currentBrandStrength) {
+      const brandStrength = synthData.brandAudit.currentBrandStrength.toLowerCase();
+      
+      if (brandStrength.includes('strong')) return 'A';
+      if (brandStrength.includes('good')) return 'B';
+      if (brandStrength.includes('moderate')) return 'C';
+      if (brandStrength.includes('weak')) return 'D';
+      if (brandStrength.includes('poor')) return 'F';
+    }
+    
+    // Check for overall grade
+    if (synthData?.overallGrade) {
+      return synthData.overallGrade;
+    }
     
     // Default to C if we can't determine
     return 'C';
   } catch (error) {
+    console.error("Error calculating freshness grade:", error);
     return 'C'; // Default grade
   }
 };
@@ -66,21 +84,14 @@ const getProgressColor = (score: number): string => {
 };
 
 const ReportDisplay: React.FC<FreshnessReportProps> = ({ report, userName }) => {
-  // Enhanced debugging for troubleshooting
-  console.log("Report data structure:", report);
-  console.log("Final synthesis available:", !!report?.finalSynthesis);
-  console.log("Final synthesis type:", report?.finalSynthesis ? typeof report.finalSynthesis : 'undefined');
-  console.log("Final synthesis content:", report?.finalSynthesis);
+  console.log("Original report data:", report);
   
   if (!report) {
     return <Card className="mb-8"><CardContent className="pt-6">No report data available</CardContent></Card>;
   }
   
-  // More lenient check for finalSynthesis existence
-  // Accept any non-null value as valid finalSynthesis
-  const hasFinalSynthesis = report.finalSynthesis !== null && report.finalSynthesis !== undefined;
-  
-  if (!hasFinalSynthesis) {
+  // Simple check for finalSynthesis existence
+  if (!report.finalSynthesis) {
     return <Card className="mb-8"><CardContent className="pt-6">
       <div>
         <p>Report is missing final synthesis data</p>
@@ -89,37 +100,28 @@ const ReportDisplay: React.FC<FreshnessReportProps> = ({ report, userName }) => 
     </CardContent></Card>;
   }
   
-  // If finalSynthesis is a string, try to parse it
-  let processedSynthesis = report.finalSynthesis;
-  if (typeof report.finalSynthesis === 'string') {
-    try {
-      processedSynthesis = JSON.parse(report.finalSynthesis);
-      console.log("Successfully parsed finalSynthesis string in report-display:", processedSynthesis);
-    } catch (e) {
-      console.error("Failed to parse finalSynthesis string in report-display:", e);
-      // Continue with the string value
-    }
+  // Always convert to object if it's a string
+  let processedSynthesis;
+  try {
+    processedSynthesis = typeof report.finalSynthesis === 'string' 
+      ? JSON.parse(report.finalSynthesis) 
+      : report.finalSynthesis;
+    console.log("Processed synthesis:", processedSynthesis);
+  } catch (e) {
+    console.error("Error parsing finalSynthesis:", e);
+    return <Card className="mb-8"><CardContent className="pt-6">
+      <div>
+        <p>Error parsing report data</p>
+        <p className="text-xs text-muted-foreground mt-2">Please try refreshing the page or contact support.</p>
+      </div>
+    </CardContent></Card>;
   }
-
-  // Use the processed synthesis if available, otherwise use the original
-  const finalSynthesisData = processedSynthesis || report.finalSynthesis;
   
-  // Log the final data we'll use for rendering
-  console.log("Using finalSynthesis data:", finalSynthesisData);
-  
-  const freshnessGrade = calculateFreshnessGrade({...report, finalSynthesis: finalSynthesisData});
+  // Simple grade calculation
+  const freshnessGrade = calculateFreshnessGrade({...report, finalSynthesis: processedSynthesis});
   const freshnessScore = calculateFreshnessScore(freshnessGrade);
   const progressColor = getProgressColor(freshnessScore);
 
-  // Extract relevant data based on the format
-  // Use safer type-safe property checking with optional chaining
-  const isOldFormat = typeof finalSynthesisData === 'object' && 
-                      finalSynthesisData !== null && 
-                      'overallGrade' in finalSynthesisData;
-  const isNewFormat = typeof finalSynthesisData === 'object' && 
-                      finalSynthesisData !== null && 
-                      'brandAudit' in finalSynthesisData;
-  
   // Initialize with default empty values
   let brandAudit: any = {
     currentBrandStrength: 'No brand strength data available',
@@ -141,10 +143,31 @@ const ReportDisplay: React.FC<FreshnessReportProps> = ({ report, userName }) => 
   let competitiveAnalysis: any = {};
   let detailedMetrics: any = {};
   
-  // Populate data based on format
-  if (isOldFormat) {
+  // Check if we have the new format (with brandAudit field)
+  if (processedSynthesis?.brandAudit) {
+    // New format - extract data directly
+    const {
+      brandAudit: ba,
+      personalBrandStrategy: pbs,
+      contentRecommendations: cr,
+      digitalPresenceStrategy: dps,
+      implementationRoadmap: ir,
+      competitiveAnalysis: ca,
+      detailedMetrics: dm
+    } = processedSynthesis;
+    
+    brandAudit = ba || brandAudit;
+    personalBrandStrategy = pbs || personalBrandStrategy;
+    contentRecommendations = cr || contentRecommendations;
+    digitalPresenceStrategy = dps || digitalPresenceStrategy;
+    implementationRoadmap = ir || implementationRoadmap;
+    competitiveAnalysis = ca || competitiveAnalysis;
+    detailedMetrics = dm || detailedMetrics;
+  } 
+  // Old format with overallGrade field
+  else if (processedSynthesis?.overallGrade) {
     // Map the old format data to display in the new format structure
-    const fs = finalSynthesisData as any; // Use any type to access properties safely
+    const fs = processedSynthesis;
     
     detailedMetrics = {
       profileContentQuality: {
@@ -168,51 +191,34 @@ const ReportDisplay: React.FC<FreshnessReportProps> = ({ report, userName }) => 
       uniqueValueProposition: 'See detailed metrics for insights',
       coreNarrative: fs.overallExplanation || 'No core narrative data available'
     };
-  } else if (isNewFormat) {
-    // Use the new format data directly
-    const {
-      brandAudit: ba,
-      personalBrandStrategy: pbs,
-      contentRecommendations: cr,
-      digitalPresenceStrategy: dps,
-      implementationRoadmap: ir,
-      competitiveAnalysis: ca,
-      detailedMetrics: dm
-    } = finalSynthesisData as any;
+  } 
+  // Unknown format - try to extract useful data
+  else {
+    console.warn("Unknown report format, attempting to extract data:", processedSynthesis);
     
-    brandAudit = ba || brandAudit;
-    personalBrandStrategy = pbs || personalBrandStrategy;
-    contentRecommendations = cr || contentRecommendations;
-    digitalPresenceStrategy = dps || digitalPresenceStrategy;
-    implementationRoadmap = ir || implementationRoadmap;
-    competitiveAnalysis = ca || competitiveAnalysis;
-    detailedMetrics = dm || detailedMetrics;
-  } else {
-    // Neither format is recognized, but try to extract data if possible
-    console.error("Unrecognized report format:", finalSynthesisData);
-    
-    // If finalSynthesisData exists but is in an unknown format, try to make use of it
     try {
-      if (typeof finalSynthesisData === 'object' && finalSynthesisData !== null) {
-        // Common keys that might exist in any format
-        if (finalSynthesisData.grade || finalSynthesisData.overallGrade) {
-          const grade = finalSynthesisData.grade || finalSynthesisData.overallGrade;
-          detailedMetrics.profileContentQuality = {
-            grade: grade,
-            explanation: finalSynthesisData.explanation || 'Based on analysis of your professional content'
-          };
-        }
-        
-        if (finalSynthesisData.summary || finalSynthesisData.overview) {
-          const summary = finalSynthesisData.summary || finalSynthesisData.overview;
-          brandAudit.currentBrandStrength = summary;
-        }
-        
-        // Try to extract any array that might contain actionable suggestions
-        if (Array.isArray(finalSynthesisData.recommendations) && finalSynthesisData.recommendations.length > 0) {
-          brandAudit.coreStrengths = finalSynthesisData.recommendations.slice(0, 2);
-          brandAudit.criticalGaps = finalSynthesisData.recommendations.slice(2, 4);
-        }
+      // Try to find any useful fields
+      if (processedSynthesis.detailedMetrics?.profileContentQuality) {
+        detailedMetrics.profileContentQuality = processedSynthesis.detailedMetrics.profileContentQuality;
+      }
+      
+      if (processedSynthesis.grade || processedSynthesis.overallGrade) {
+        const grade = processedSynthesis.grade || processedSynthesis.overallGrade;
+        detailedMetrics.profileContentQuality = {
+          grade: grade,
+          explanation: processedSynthesis.explanation || 'Based on analysis of your professional content'
+        };
+      }
+      
+      if (processedSynthesis.summary || processedSynthesis.overview) {
+        const summary = processedSynthesis.summary || processedSynthesis.overview;
+        brandAudit.currentBrandStrength = summary;
+      }
+      
+      // Try to extract any array that might contain actionable suggestions
+      if (Array.isArray(processedSynthesis.recommendations) && processedSynthesis.recommendations.length > 0) {
+        brandAudit.coreStrengths = processedSynthesis.recommendations.slice(0, 2);
+        brandAudit.criticalGaps = processedSynthesis.recommendations.slice(2, 4);
       }
     } catch (e) {
       console.error("Error extracting data from unknown format:", e);
