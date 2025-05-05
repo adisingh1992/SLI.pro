@@ -134,6 +134,11 @@ const FreshnessReportPage = () => {
     isLoading: isLoadingSelectedReport,
   } = useQuery<FreshnessReportData>({
     queryKey: ["/api/freshness-reports", selectedReportId],
+    queryFn: async () => {
+      if (!selectedReportId) return null;
+      const response = await apiRequest("GET", `/api/freshness-reports/${selectedReportId}`);
+      return response as FreshnessReportData;
+    },
     enabled: isAuthenticated && !!selectedReportId && (latestReportData?.id !== selectedReportId),
     retry: false,
     throwOnError: false,
@@ -326,7 +331,7 @@ const FreshnessReportPage = () => {
     : [];
 
   return (
-    <div className="container px-4 py-8">
+    <div className="container px-4 py-8" style={{minWidth: '100%'}}>
       <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-6">
         <div>
           <h1 className="text-2xl font-bold">Freshness Report</h1>
@@ -372,7 +377,7 @@ const FreshnessReportPage = () => {
               </h3>
               <p className="text-muted-foreground mb-6">
                 Please wait while our AI analyzes your professional profile.
-                This may take a minute or two.
+                This may take 3 to 5 minutes.
               </p>
               <div className="mt-6 space-y-3">
                 <div className="flex items-start gap-2 text-sm text-muted-foreground text-left">
