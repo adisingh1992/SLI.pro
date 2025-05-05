@@ -9,6 +9,7 @@ import { FileText, Sparkles, CheckCircle2 } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { Progress } from "@/components/ui/progress";
 import ReportDisplay from "@/components/freshness-report/report-display";
+import ReportHistory, { FreshnessReportSummary } from "@/components/freshness-report/report-history";
 
 interface FreshnessReportData {
   id: number;
@@ -93,18 +94,58 @@ const FreshnessReportPage = () => {
     }
   }, [isGenerating]);
 
-  // Fetch the latest report
+  // State to track the currently selected report ID
+  const [selectedReportId, setSelectedReportId] = useState<number | null>(null);
+
+  // Fetch all reports for history list
   const {
-    data: reportData,
-    isLoading,
+    data: allReports,
+    isLoading: isLoadingAllReports,
+  } = useQuery({
+    queryKey: ["/api/freshness-reports"],
+    enabled: isAuthenticated,
+    retry: false,
+    throwOnError: false,
+  });
+  
+  // Fetch the latest report (initial load)
+  const {
+    data: latestReportData,
+    isLoading: isLoadingLatestReport,
     isError,
     error,
-  } = useQuery({
+  } = useQuery<FreshnessReportData>({
     queryKey: ["/api/freshness-reports/latest"],
     enabled: isAuthenticated,
     retry: false,
     throwOnError: false,
   });
+  
+  // Set selected report ID when latest report data changes
+  useEffect(() => {
+    if (latestReportData && !selectedReportId) {
+      setSelectedReportId(latestReportData.id);
+    }
+  }, [latestReportData, selectedReportId]);
+  
+  // Fetch the specific report if one is selected (not the latest)
+  const {
+    data: selectedReportData,
+    isLoading: isLoadingSelectedReport,
+  } = useQuery({
+    queryKey: ["/api/freshness-reports", selectedReportId],
+    enabled: isAuthenticated && !!selectedReportId && (latestReportData?.id !== selectedReportId),
+    retry: false,
+    throwOnError: false,
+  });
+  
+  // Combine loading states
+  const isLoading = isLoadingAllReports || isLoadingLatestReport || isLoadingSelectedReport;
+  
+  // Determine which report data to use
+  const reportData = selectedReportId && latestReportData?.id !== selectedReportId
+    ? selectedReportData
+    : latestReportData;
 
   // Mutation for generating a new report
   const generateReportMutation = useMutation({
@@ -114,15 +155,22 @@ const FreshnessReportPage = () => {
       return response;
     },
     onSuccess: (data) => {
-      // Update the query cache with the latest report
+      // Update the query cache with the latest report and all reports
       queryClient.invalidateQueries({
         queryKey: ["/api/freshness-reports/latest"],
+      });
+      queryClient.invalidateQueries({
+        queryKey: ["/api/freshness-reports"],
       });
       toast({
         title: "Success!",
         description: "Your professional brand assessment has been generated.",
       });
       setIsGenerating(false);
+      // Set the selected report ID to the new report
+      if (data && data.id) {
+        setSelectedReportId(data.id);
+      }
     },
     onError: (err: any) => {
       setIsGenerating(false);
