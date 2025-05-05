@@ -63,7 +63,7 @@ const FreshnessReportPage: React.FC = () => {
     queryKey: ["/api/freshness-reports"],
     queryFn: async () => {
       try {
-        const response = await apiRequest("GET", `/api/freshness-reports`);
+        const response = await (await apiRequest("GET", `/api/freshness-reports`)).json();
         console.log("All reports API response:", response);
         return response; // apiRequest already handles JSON parsing
       } catch (error) {
@@ -86,7 +86,7 @@ const FreshnessReportPage: React.FC = () => {
     queryKey: ["/api/freshness-reports/latest"],
     queryFn: async () => {
       try {
-        const response = await apiRequest("GET", `/api/freshness-reports/latest`);
+        const response = await (await apiRequest("GET", `/api/freshness-reports/latest`)).json();
         console.log("Latest report API response:", response);
         return response;
       } catch (error) {
@@ -108,7 +108,7 @@ const FreshnessReportPage: React.FC = () => {
     queryFn: async () => {
       try {
         if (!selectedReportId) return null;
-        const response = await apiRequest("GET", `/api/freshness-reports/${selectedReportId}`);
+        const response = await (await apiRequest("GET", `/api/freshness-reports/${selectedReportId}`)).json();
         console.log("Selected report API response:", response);
         return response;
       } catch (error) {
@@ -212,15 +212,19 @@ const FreshnessReportPage: React.FC = () => {
   const latestReport = processReportData(latestReportRaw);
   const selectedReport = processReportData(selectedReportRaw);
   
-  // Initialize selectedReportId with latest report when it's loaded
+  // Initialize selectedReportId with latest report ONLY on first load
+  // We track whether we've already selected a report with a ref to prevent auto-selection
+  const initialSelectionMade = useRef(false);
+  
   useEffect(() => {
     if (latestReport) {
-      if (!selectedReportId) {
-        // First load - set to latest
+      if (!selectedReportId && !initialSelectionMade.current) {
+        // First load only - set to latest and mark selection as done
         console.log("Setting initial selectedReportId to latest report:", latestReport.id);
         setSelectedReportId(latestReport.id);
-      } else if (latestReport.id > selectedReportId) {
-        // New report was generated and is newer than current - update to latest
+        initialSelectionMade.current = true;
+      } else if (selectedReportId !== null && latestReport.id > selectedReportId && !initialSelectionMade.current) {
+        // Only update to newer report if we haven't manually selected a report yet
         console.log("Updating to newer report:", latestReport.id);
         setSelectedReportId(latestReport.id);
       }
@@ -375,12 +379,18 @@ const FreshnessReportPage: React.FC = () => {
           type: 'active'
         });
         
-        // Get the latest report to update selectedReportId
+        // Get the latest report ID and set it as selected
         const response = await apiRequest("GET", `/api/freshness-reports/latest`);
         if (response && typeof response === 'object' && 'id' in response) {
           const reportId = Number(response.id);
           console.log("Setting selectedReportId to new report:", reportId);
+          
+          // When we generate a new report, we always want to show it
           setSelectedReportId(reportId);
+          
+          // Reset the initialSelectionMade to false so we can see newly generated reports
+          // This is the only case where we want to override the user's previous selection
+          initialSelectionMade.current = false;
         }
       } catch (error) {
         console.error("Error fetching new report after generation:", error);
@@ -408,6 +418,8 @@ const FreshnessReportPage: React.FC = () => {
   // Handler for selecting a report from history
   const handleSelectReport = (reportId: number) => {
     setSelectedReportId(reportId);
+    // When user manually selects a report, mark that this is a user selection
+    initialSelectionMade.current = true;
   };
   
   // Utility function to format dates
