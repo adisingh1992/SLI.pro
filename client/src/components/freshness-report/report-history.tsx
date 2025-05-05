@@ -23,7 +23,17 @@ const ReportHistory: React.FC<ReportHistoryProps> = ({
 }) => {
   // Format date for display - use a more compact format for the narrow column
   const formatDate = (dateString: string) => {
+    console.log("Formatting date from string:", dateString);
+    if (!dateString) return "No date";
+    
+    // Try to create a date object
     const date = new Date(dateString);
+    
+    // Check if the date is valid
+    if (isNaN(date.getTime())) {
+      console.error("Invalid date string:", dateString);
+      return "Invalid date";
+    }
     
     // For the 20% column view, we use a more compact date format
     return date.toLocaleDateString("en-US", {

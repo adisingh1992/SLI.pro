@@ -39,12 +39,12 @@ interface ReportSummaryItem {
  */
 const FreshnessReportPage: React.FC = () => {
   // Core state and hooks
-  const { user, isLoggedIn } = useAuth();
+  const { user, isLoading: authLoading } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   
-  // Use isLoggedIn as the authentication flag
-  const isAuthenticated = isLoggedIn;
+  // Use user object presence to determine authentication status
+  const isAuthenticated = !!user;
   
   // UI state
   const [isGenerating, setIsGenerating] = useState(false);
@@ -233,18 +233,24 @@ const FreshnessReportPage: React.FC = () => {
   
   // Create summary list for report history
   const reportSummaries: ReportSummaryItem[] = React.useMemo(() => {
+    console.log("Creating report summaries with allReports:", allReports);
+    
     // First try to use allReports
     if (allReports && allReports.length > 0) {
       return [...allReports]
         .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-        .map(report => ({
-          id: report.id,
-          createdAt: report.createdAt
-        }));
+        .map(report => {
+          console.log("Processing report for history:", report.id, "createdAt:", report.createdAt, "type:", typeof report.createdAt);
+          return {
+            id: report.id,
+            createdAt: report.createdAt
+          };
+        });
     }
     
     // Fallback to using the current report to ensure we at least have something in history
     if (currentReport) {
+      console.log("Using currentReport for history:", currentReport.id, "createdAt:", currentReport.createdAt);
       return [{
         id: currentReport.id,
         createdAt: currentReport.createdAt
