@@ -405,14 +405,14 @@ const FreshnessReportPage = () => {
         </Card>
       ) : (
         /* Two-column layout with report and history */
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Column 1: Report Content */}
-          <div className="lg:col-span-2">
+        <div className="flex flex-col lg:flex-row gap-6 w-full">
+          {/* Column 1: Report Content (80%) */}
+          <div className="w-full lg:w-4/5">
             <ReportDisplay report={report} userName={user?.firstName} />
           </div>
           
-          {/* Column 2: Report History */}
-          <div className="lg:col-span-1">
+          {/* Column 2: Report History (20%) */}
+          <div className="w-full lg:w-1/5">
             <ReportHistory 
               reports={reportSummaries} 
               currentReportId={report.id} 
