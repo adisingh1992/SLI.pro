@@ -551,20 +551,8 @@ export default function QuestionnairePage() {
     }
   };
 
-  // Auto-save when navigating away from the page
-  React.useEffect(() => {
-    // Create a function that will be called when the component unmounts
-    return () => {
-      // Don't auto-save if we're submitting the form (which would redirect anyway)
-      if (!questionnaireMutation.isPending) {
-        // Since this runs during unmount, we can't use async/await directly
-        // Use the save without validation function and don't wait for it
-        saveWithoutValidation().catch(err => {
-          console.error("Error auto-saving on page leave:", err);
-        });
-      }
-    };
-  }, []);
+  // We previously had auto-save when navigating away, but it's been removed per request
+  // Auto-save now only happens when clicking the next/prev buttons
 
   // Initialize form data from user profile if available
   React.useEffect(() => {
@@ -2028,8 +2016,17 @@ export default function QuestionnairePage() {
     // Create form data - conditionally include fields based on the current step
     // to prevent overwriting values from previous steps
     
-    // Define base form data
-    const formData = {
+    // Define base form data with all possible fields
+    const formData: Partial<{
+      industry: string;
+      background: string;
+      goals: string;
+      aspirations: string;
+      challenges: string;
+      interests: string;
+      timeframe: string;
+      isDraft: boolean;
+    }> = {
       isDraft: true, // Default to draft, can be overridden when calling this function
       challenges: "", // No longer using this field
     };
@@ -2066,7 +2063,7 @@ export default function QuestionnairePage() {
     }
     
     // Step 4 & 5 fields - only include when on these steps or when these fields have values
-    if (currentStep >= 4 || Object.values(interestsData).some(value => value === true)) {
+    if (currentStep >= 4 || Object.values(interestsData).some(value => typeof value === "boolean" && value === true)) {
       formData.interests = JSON.stringify(interestsData); // Store interests as structured JSON
     } else if (userProfile?.questionnaire?.interests) {
       // Preserve the existing interests value from the user profile
@@ -5475,10 +5472,9 @@ export default function QuestionnairePage() {
                 onClick={(e) => {
                   e.preventDefault();
                   
-                  // Try to save current progress without validation
-                  saveWithoutValidation().catch(err => console.error("Error saving before leaving:", err));
+                  // No longer auto-saving when leaving the page per user request
                   
-                  // Navigate back to home without waiting for save to complete
+                  // Just navigate back to home
                   navigate("/");
                 }}
               >
