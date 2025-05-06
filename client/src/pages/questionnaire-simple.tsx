@@ -2067,7 +2067,7 @@ export default function QuestionnairePage() {
       formData.interests = JSON.stringify(interestsData); // Store interests as structured JSON
     } else if (userProfile?.questionnaire?.interests) {
       // Preserve the existing interests value from the user profile
-      formData.interests = userProfile.questionnaire.interests;
+      formData.interests = userProfile.questionnaire.interests || "";
     }
     
     return formData;
