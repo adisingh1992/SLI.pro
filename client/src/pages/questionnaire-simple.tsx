@@ -1076,7 +1076,8 @@ export default function QuestionnairePage() {
               
               // Step 4: Posting barriers
               if (jsonData.postingBarriers) {
-                console.log("Loading posting barriers from JSON");
+                console.log("Loading posting barriers from JSON:", 
+                  Object.keys(jsonData.postingBarriers).join(", "));
                 
                 if (jsonData.postingBarriers.unsureWhatToSay) setUnsureWhatToSayChecked(true);
                 if (jsonData.postingBarriers.fearOfJudgment) setFearOfJudgmentChecked(true);
@@ -1091,6 +1092,148 @@ export default function QuestionnairePage() {
                     setOtherBarrier(jsonData.postingBarriers.other);
                   } else if (jsonData.postingBarriers.otherText) {
                     setOtherBarrier(jsonData.postingBarriers.otherText);
+                  }
+                }
+              }
+              
+              // Step 5: LinkedIn connections percentage
+              if (jsonData.linkedinConnectionsPercentage !== undefined) {
+                console.log("Setting LinkedIn connections percentage:", jsonData.linkedinConnectionsPercentage);
+                setIndustryConnectionsPercentage(jsonData.linkedinConnectionsPercentage);
+              }
+              
+              // Step 5: LinkedIn activity - detailed logging for troubleshooting
+              if (jsonData.linkedinActivity) {
+                console.log("Loading LinkedIn activity from JSON:", 
+                  Object.keys(jsonData.linkedinActivity).join(", "));
+                
+                if (jsonData.linkedinActivity.readNewsfeed) {
+                  console.log("Setting read newsfeed checked");
+                  setReadNewsfeedChecked(true);
+                }
+                if (jsonData.linkedinActivity.acceptedConnections) {
+                  console.log("Setting accepted connections checked");
+                  setAcceptedConnectionsChecked(true);
+                }
+                if (jsonData.linkedinActivity.notActive) {
+                  console.log("Setting not active checked");
+                  setNotActiveChecked(true);
+                }
+                if (jsonData.linkedinActivity.postedNever) {
+                  console.log("Setting posted never checked");
+                  setPostedNeverChecked(true);
+                }
+                if (jsonData.linkedinActivity.posted12Times) {
+                  console.log("Setting posted 1-2 times checked");
+                  setPosted12TimesChecked(true);
+                }
+                if (jsonData.linkedinActivity.posted35Times) {
+                  console.log("Setting posted 3-5 times checked");
+                  setPosted35TimesChecked(true);
+                }
+                if (jsonData.linkedinActivity.posted612Times) {
+                  console.log("Setting posted 6-12 times checked");
+                  setPosted612TimesChecked(true);
+                }
+                if (jsonData.linkedinActivity.posted12PlusMonthly) {
+                  console.log("Setting posted 12+ monthly checked");
+                  setPosted12PlusMonthlyChecked(true);
+                }
+                if (jsonData.linkedinActivity.postedRegularly) {
+                  console.log("Setting posted regularly checked");
+                  setPostedRegularlyChecked(true);
+                }
+              }
+              
+              // Step 5: Other fields
+              if (jsonData.careerGoals) {
+                console.log("Setting career goals");
+                setCareerGoals(jsonData.careerGoals);
+              }
+              
+              if (jsonData.brandOptimizationGoals) {
+                console.log("Setting brand optimization goals");
+                setBrandOptimizationGoals(jsonData.brandOptimizationGoals);
+              }
+              
+              // Step 5: Personality assessments
+              if (jsonData.personalityAssessments) {
+                console.log("Loading personality assessments from JSON:", 
+                  Object.keys(jsonData.personalityAssessments).join(", "));
+                
+                if (jsonData.personalityAssessments.mbti) {
+                  console.log("Setting MBTI checked");
+                  setMbtiChecked(true);
+                }
+                if (jsonData.personalityAssessments.strengthsFinder) {
+                  console.log("Setting Strengths Finder checked");
+                  setStrengthsFinderChecked(true);
+                }
+                if (jsonData.personalityAssessments.via) {
+                  console.log("Setting VIA checked");
+                  setViaChecked(true);
+                }
+                if (jsonData.personalityAssessments.enneagram) {
+                  console.log("Setting Enneagram checked");
+                  setEnneagramChecked(true);
+                }
+                if (jsonData.personalityAssessments.threeSixty) {
+                  console.log("Setting 360* checked");
+                  setThreeSixtyChecked(true);
+                }
+                
+                if (jsonData.personalityAssessments.other) {
+                  setOtherAssessmentChecked(true);
+                  // Handle both formats of other assessment
+                  if (typeof jsonData.personalityAssessments.other === 'string') {
+                    setOtherAssessment(jsonData.personalityAssessments.other);
+                  } else if (jsonData.personalityAssessments.otherText) {
+                    setOtherAssessment(jsonData.personalityAssessments.otherText);
+                  }
+                }
+              }
+              
+              // Step 5: Update time
+              if (jsonData.updateTime) {
+                console.log("Loading update time from JSON:", 
+                  Object.keys(jsonData.updateTime).join(", "));
+                
+                if (jsonData.updateTime.lastWeek) {
+                  console.log("Setting last week checked");
+                  setLastWeekChecked(true);
+                }
+                if (jsonData.updateTime.lastMonth) {
+                  console.log("Setting last month checked");
+                  setLastMonthChecked(true);
+                }
+                if (jsonData.updateTime.businessSchool) {
+                  console.log("Setting business school checked");
+                  setBusinessSchoolChecked(true);
+                }
+                if (jsonData.updateTime.careerCoach) {
+                  console.log("Setting career coach checked");
+                  setCareerCoachChecked(true);
+                }
+                if (jsonData.updateTime.jobChange) {
+                  console.log("Setting job change checked");
+                  setJobChangeChecked(true);
+                }
+                if (jsonData.updateTime.cantRemember) {
+                  console.log("Setting can't remember checked");
+                  setCantRememberChecked(true);
+                }
+                if (jsonData.updateTime.neverUpdated) {
+                  console.log("Setting never updated checked");
+                  setNeverUpdatedChecked(true);
+                }
+                
+                if (jsonData.updateTime.other) {
+                  setOtherUpdateTimeChecked(true);
+                  // Handle both formats of other update time
+                  if (typeof jsonData.updateTime.other === 'string') {
+                    setOtherUpdateTime(jsonData.updateTime.other);
+                  } else if (jsonData.updateTime.otherText) {
+                    setOtherUpdateTime(jsonData.updateTime.otherText);
                   }
                 }
               }
