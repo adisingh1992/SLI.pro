@@ -2025,17 +2025,55 @@ export default function QuestionnairePage() {
       postingBarriersArray: postingBarriers.length > 0 ? postingBarriers : []
     };
     
-    // Create form data
-    return {
-      background, // LinkedIn URL
-      goals: socialMediaDetails, // Social media details
-      aspirations: brandingDetails, // Branding challenges and all other data
-      challenges: "", // No longer using this field
-      interests: JSON.stringify(interestsData), // Store interests as structured JSON
-      timeframe: `Industry: ${industry}, Function: ${jobFunction}`, // Store both industry and function
-      industry, // Current/Prior industry
+    // Create form data - conditionally include fields based on the current step
+    // to prevent overwriting values from previous steps
+    
+    // Define base form data
+    const formData = {
       isDraft: true, // Default to draft, can be overridden when calling this function
+      challenges: "", // No longer using this field
     };
+
+    // Only include fields relevant to the current step or if we're saving the entire form
+    // This prevents overwriting fields from previous steps with empty values
+    
+    // Step 1 fields - only include when on step 1 or when these fields have values
+    if (currentStep === 1 || industry.trim() !== "") {
+      formData.industry = industry; // Current/Prior industry
+      formData.timeframe = `Industry: ${industry}, Function: ${jobFunction}`;
+    } else if (userProfile?.questionnaire?.industry) {
+      // Preserve the existing industry value from the user profile
+      formData.industry = userProfile.questionnaire.industry;
+      formData.timeframe = userProfile.questionnaire.timeframe;
+    }
+    
+    // Step 2 fields - only include when on step 2 or when these fields have values
+    if (currentStep === 2 || background.trim() !== "") {
+      formData.background = background; // LinkedIn URL
+      formData.goals = socialMediaDetails; // Social media details
+    } else if (userProfile?.questionnaire?.background) {
+      // Preserve the existing values from the user profile
+      formData.background = userProfile.questionnaire.background;
+      formData.goals = userProfile.questionnaire.goals;
+    }
+    
+    // Step 3 fields - only include when on step 3 or when these fields have values
+    if (currentStep === 3 || brandingChallenges.length > 0) {
+      formData.aspirations = brandingDetails; // Branding challenges and all other data
+    } else if (userProfile?.questionnaire?.aspirations) {
+      // Preserve the existing aspirations value from the user profile
+      formData.aspirations = userProfile.questionnaire.aspirations;
+    }
+    
+    // Step 4 & 5 fields - only include when on these steps or when these fields have values
+    if (currentStep >= 4 || Object.values(interestsData).some(value => value === true)) {
+      formData.interests = JSON.stringify(interestsData); // Store interests as structured JSON
+    } else if (userProfile?.questionnaire?.interests) {
+      // Preserve the existing interests value from the user profile
+      formData.interests = userProfile.questionnaire.interests;
+    }
+    
+    return formData;
   };
   
   // Auto-save the questionnaire as draft
