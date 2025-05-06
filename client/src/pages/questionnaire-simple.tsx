@@ -919,11 +919,86 @@ export default function QuestionnairePage() {
         }
       }
 
-      // Parse societal interests
+      // Try to parse the raw questionnaire JSON from aspirations field to get all saved data
+      let jsonData = null;
+      try {
+        // The raw data might be stored in a JSON structure
+        if (q.aspirations) {
+          // Extract any JSON-like data from the aspirations field
+          // Use a more compatible regex without the /s flag
+          const jsonMatch = q.aspirations.match(/\{[\s\S]*?\}/);
+          if (jsonMatch) {
+            try {
+              jsonData = JSON.parse(jsonMatch[0]);
+              console.log("Found JSON data in questionnaire:", jsonData);
+              
+              // Process the parsed JSON data to set form values
+              if (jsonData.industryInterests) {
+                console.log("Loading industry interests from JSON");
+                // Set industry interests checkboxes
+                if (jsonData.industryInterests.consulting) setConsultingChecked(true);
+                if (jsonData.industryInterests.consumerRetail) setConsumerRetailChecked(true);
+                if (jsonData.industryInterests.financialServices) setFinancialServicesChecked(true);
+                if (jsonData.industryInterests.government) setGovernmentChecked(true);
+                if (jsonData.industryInterests.healthcare) setHealthcareChecked(true);
+                if (jsonData.industryInterests.manufacturing) setManufacturingChecked(true);
+                if (jsonData.industryInterests.socialImpact) setSocialImpactChecked(true);
+                if (jsonData.industryInterests.technology) setTechnologyChecked(true);
+                // Map other fields as needed
+                if (jsonData.industryInterests.mediaEntertainment) setGlobalMarketsChecked(true);
+                if (jsonData.industryInterests.nonprofit) setInnovationChecked(true);
+              }
+              
+              // Handle cross-cutting interests
+              if (jsonData.crossCuttingInterests) {
+                console.log("Loading cross-cutting interests from JSON");
+                if (jsonData.crossCuttingInterests.climate) setClimateChecked(true);
+                if (jsonData.crossCuttingInterests.consumerBehavior) setConsumerBehaviorChecked(true);
+                if (jsonData.crossCuttingInterests.crimeJustice) setCrimeJusticeChecked(true);
+                if (jsonData.crossCuttingInterests.dei) setSocialImpactDEIChecked(true);
+                if (jsonData.crossCuttingInterests.digitalTransformation) setDigitalTransformationAIChecked(true);
+                if (jsonData.crossCuttingInterests.economics) setGlobalEconomyChecked(true);
+                if (jsonData.crossCuttingInterests.education) setEducationLearningChecked(true);
+                if (jsonData.crossCuttingInterests.governance) setGeopoliticsChecked(true);
+                if (jsonData.crossCuttingInterests.innovation) setFinancialInnovationChecked(true);
+                if (jsonData.crossCuttingInterests.leadership) setFutureOfWorkChecked(true);
+                if (jsonData.crossCuttingInterests.policy) setUsPoliticsChecked(true);
+                if (jsonData.crossCuttingInterests.sustainability) setClimateChecked(true);
+              }
+              
+              // Handle content format preferences
+              if (jsonData.contentFormatPreferences) {
+                console.log("Loading content format preferences from JSON");
+                if (jsonData.contentFormatPreferences.sharingNews) setSharingNewsChecked(true);
+                if (jsonData.contentFormatPreferences.writingExperiences) setWritingExperiencesChecked(true);
+                if (jsonData.contentFormatPreferences.analyzingTrends) setAnalyzingTrendsChecked(true);
+                if (jsonData.contentFormatPreferences.commentingPosts) setCommentingPostsChecked(true);
+                if (jsonData.contentFormatPreferences.howToContent) setHowToContentChecked(true);
+                if (jsonData.contentFormatPreferences.eventTakeaways) setEventTakeawaysChecked(true);
+                if (jsonData.contentFormatPreferences.personalAnecdote) setPersonalAnecdoteChecked(true);
+                if (jsonData.contentFormatPreferences.digitalCommunities) setDigitalCommunitiesChecked(true);
+                if (jsonData.contentFormatPreferences.other) {
+                  setOtherContentFormatChecked(true);
+                  setOtherContentFormat(jsonData.contentFormatPreferences.other);
+                }
+              }
+            } catch (err) {
+              console.log("Failed to parse JSON from aspirations:", err);
+            }
+          }
+        }
+      } catch (err) {
+        console.error("Error parsing questionnaire JSON data:", err);
+      }
+        
+      // Parse societal interests from text format if JSON data wasn't already loaded
       if (
         q.aspirations &&
-        q.aspirations.includes("Cross-cutting & societal interests:")
+        q.aspirations.includes("Cross-cutting & societal interests:") &&
+        // Only try this if we don't have crossCuttingInterests data from JSON parse already
+        !(jsonData && jsonData.crossCuttingInterests)
       ) {
+        console.log("Attempting to load cross-cutting interests from text format");
         const societalInterestsText = q.aspirations
           .split("Cross-cutting & societal interests:")[1]
           ?.trim()
@@ -1106,99 +1181,7 @@ export default function QuestionnairePage() {
         }
       }
 
-      // Try to parse the raw questionnaire JSON from aspirations field to get all saved data
-      try {
-        let jsonData = null;
-        
-        // The raw data might be stored in a JSON structure
-        if (q.aspirations) {
-          // Extract any JSON-like data from the aspirations field
-          const jsonMatch = q.aspirations.match(/\{.*\}/s);
-          if (jsonMatch) {
-            try {
-              jsonData = JSON.parse(jsonMatch[0]);
-              console.log("Found JSON data in questionnaire:", jsonData);
-            } catch (err) {
-              console.log("Failed to parse JSON from aspirations:", err);
-            }
-          }
-        }
-        
-        // Load Industry Interests from JSON if available
-        if (jsonData && jsonData.industryInterests) {
-          setConsultingChecked(jsonData.industryInterests.consulting || false);
-          setConsumerRetailChecked(jsonData.industryInterests.consumerRetail || false);
-          setFinancialServicesChecked(jsonData.industryInterests.financialServices || false);
-          setGovernmentChecked(jsonData.industryInterests.government || false);
-          setHealthcareChecked(jsonData.industryInterests.healthcare || false);
-          setHigherEducationChecked(jsonData.industryInterests.higherEducation || false);
-          setHospitalityChecked(jsonData.industryInterests.hospitality || false);
-          setManufacturingChecked(jsonData.industryInterests.manufacturing || false);
-          setMediaEntertainmentChecked(jsonData.industryInterests.mediaEntertainment || false);
-          setNonprofitChecked(jsonData.industryInterests.nonprofit || false);
-          setProfessionalServicesChecked(jsonData.industryInterests.professionalServices || false);
-          setRealEstateChecked(jsonData.industryInterests.realEstate || false);
-          setSocialImpactChecked(jsonData.industryInterests.socialImpact || false);
-          setTechnologyChecked(jsonData.industryInterests.technology || false);
-        }
-        
-        // Load Cross-Cutting Interests from JSON if available
-        if (jsonData && jsonData.crossCuttingInterests) {
-          setClimateChecked(jsonData.crossCuttingInterests.climate || false);
-          setConsumerBehaviorChecked(jsonData.crossCuttingInterests.consumerBehavior || false);
-          setCrimeJusticeChecked(jsonData.crossCuttingInterests.crimeJustice || false);
-          setDeiChecked(jsonData.crossCuttingInterests.dei || false);
-          setDigitalTransformationChecked(jsonData.crossCuttingInterests.digitalTransformation || false);
-          setEconomicsChecked(jsonData.crossCuttingInterests.economics || false);
-          setEducationChecked(jsonData.crossCuttingInterests.education || false);
-          setGovernanceChecked(jsonData.crossCuttingInterests.governance || false);
-          setInnovationChecked(jsonData.crossCuttingInterests.innovation || false);
-          setLeadershipChecked(jsonData.crossCuttingInterests.leadership || false);
-          setPolicyChecked(jsonData.crossCuttingInterests.policy || false);
-          setSocialBusinessChecked(jsonData.crossCuttingInterests.socialBusiness || false);
-          setSustainabilityChecked(jsonData.crossCuttingInterests.sustainability || false);
-          setWorkplaceChecked(jsonData.crossCuttingInterests.workplace || false);
-        }
-        
-        // Load Content Format Preferences from JSON if available
-        if (jsonData && jsonData.contentFormatPreferences) {
-          setSharingNewsChecked(jsonData.contentFormatPreferences.sharingNews || false);
-          setWritingExperiencesChecked(jsonData.contentFormatPreferences.writingExperiences || false);
-          setAnalyzingTrendsChecked(jsonData.contentFormatPreferences.analyzingTrends || false);
-          setCommentingPostsChecked(jsonData.contentFormatPreferences.commentingPosts || false);
-          setHowToContentChecked(jsonData.contentFormatPreferences.howToContent || false);
-          setEventTakeawaysChecked(jsonData.contentFormatPreferences.eventTakeaways || false);
-          setPersonalAnecdoteChecked(jsonData.contentFormatPreferences.personalAnecdote || false);
-          setDigitalCommunitiesChecked(jsonData.contentFormatPreferences.digitalCommunities || false);
-          
-          if (jsonData.contentFormatPreferences.other) {
-            setOtherContentFormatChecked(true);
-            setOtherContentFormat(jsonData.contentFormatPreferences.other);
-          }
-        }
-        
-        // Load Technology subcategories if technology is selected
-        if (technologyChecked && jsonData && jsonData.technologySubcategories) {
-          // AI/ML
-          setAiConsumerChecked(jsonData.technologySubcategories.aiConsumer || false);
-          setAiComputerVisionChecked(jsonData.technologySubcategories.aiComputerVision || false);
-          setAiEthicsChecked(jsonData.technologySubcategories.aiEthics || false);
-          setAiInfrastructureChecked(jsonData.technologySubcategories.aiInfrastructure || false);
-          setAiNlpChecked(jsonData.technologySubcategories.aiNlp || false);
-          setAiPredictiveChecked(jsonData.technologySubcategories.aiPredictive || false);
-          setAiRoboticsChecked(jsonData.technologySubcategories.aiRobotics || false);
-          setAiScientificChecked(jsonData.technologySubcategories.aiScientific || false);
-          setAiLearningChecked(jsonData.technologySubcategories.aiLearning || false);
-
-          // Consumer Technology
-          setConsumerDevicesChecked(jsonData.technologySubcategories.consumerDevices || false);
-          setConsumerGamingChecked(jsonData.technologySubcategories.consumerGaming || false);
-          setConsumerMobileChecked(jsonData.technologySubcategories.consumerMobile || false);
-          setConsumerSmartHomeChecked(jsonData.technologySubcategories.consumerSmartHome || false);
-        }
-      } catch (err) {
-        console.error("Error parsing questionnaire JSON data:", err);
-      }
+      // Json data was fully processed above
       
       // Try to parse personality assessments as before
       if (q.aspirations && q.aspirations.includes("Personality assessments:")) {
