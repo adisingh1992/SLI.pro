@@ -1449,42 +1449,59 @@ export default function QuestionnairePage() {
       interests: "",
       timeframe: `Industry: ${industry}, Function: ${jobFunction}`, // Store both industry and function
       industry, // Current/Prior industry
+      isDraft: true, // Default to draft, can be overridden when calling this function
     };
   };
   
-  // Function to auto-save the questionnaire based on its current state
-  const autoSaveQuestionnaire = async () => {
+  // Auto-save the questionnaire as draft
+  const autoSaveQuestionnaire = async (): Promise<boolean> => {
     if (!validateCurrentStep()) return false;
     
     try {
+      // Show saving indicator
       setSaveStatus("saving");
+      
+      // Get the form data
       const formData = prepareFormData();
       
-      // If the questionnaire is already published (not a draft), update it
-      // Otherwise, save as draft
+      // Check if the questionnaire is already published (not a draft)
       if (userProfile?.questionnaire && userProfile.questionnaire.isDraft === false) {
-        // Use the regular submit endpoint to update the published questionnaire
-        await apiRequest("PUT", "/api/questionnaire", formData);
+        // For published questionnaires, we don't allow auto-saving
+        // Just simulate a successful save
+        setSaveStatus("saved");
+        setTimeout(() => {
+          setSaveStatus("idle");
+        }, 2000);
+        return true;
       } else {
-        // Save as a draft
+        // For drafts or new questionnaires, save as draft
+        // Always save as draft during auto-save
+        formData.isDraft = true;
+        
+        // Save the questionnaire
         await saveAsDraftMutation.mutateAsync(formData);
+        
+        // Update save status to saved
+        setSaveStatus("saved");
+        
+        // Reset status after 2 seconds
+        setTimeout(() => {
+          setSaveStatus("idle");
+        }, 2000);
+        
+        // Invalidate the user profile query to refresh data
+        queryClient.invalidateQueries({ queryKey: ["/api/user/profile"] });
+        
+        return true;
       }
-      
-      // Update save status
-      setSaveStatus("saved");
-      
-      // Reset status to idle after 2 seconds
-      setTimeout(() => {
-        setSaveStatus("idle");
-      }, 2000);
-      
-      // Invalidate the user profile query to refresh data
-      queryClient.invalidateQueries({ queryKey: ["/api/user/profile"] });
-      
-      return true;
     } catch (error) {
-      console.error("Auto-save error:", error);
+      console.error("Error auto-saving questionnaire:", error);
       setSaveStatus("idle");
+      toast({
+        title: "Auto-save failed",
+        description: "Unable to save your progress automatically. Please try manually saving as draft.",
+        variant: "destructive",
+      });
       return false;
     }
   };
