@@ -502,6 +502,21 @@ export default function QuestionnairePage() {
     },
   });
 
+  // Auto-save when navigating away from the page
+  React.useEffect(() => {
+    // Create a function that will be called when the component unmounts
+    return () => {
+      // Don't auto-save if we're submitting the form (which would redirect anyway)
+      if (!questionnaireMutation.isPending) {
+        // Since this runs during unmount, we can't use async/await directly
+        // We'll use the auto-save function but won't wait for it
+        autoSaveQuestionnaire().catch(err => {
+          console.error("Error auto-saving on page leave:", err);
+        });
+      }
+    };
+  }, []);
+
   // Initialize form data from user profile if available
   React.useEffect(() => {
     console.log("UserProfile loaded:", userProfile);
@@ -1528,8 +1543,10 @@ export default function QuestionnairePage() {
     }
   };
 
-  const prevStep = () => {
+  const prevStep = async () => {
     if (currentStep > 1) {
+      // Auto-save data when navigating to previous step
+      await autoSaveQuestionnaire();
       setCurrentStep(currentStep - 1);
     }
   };
