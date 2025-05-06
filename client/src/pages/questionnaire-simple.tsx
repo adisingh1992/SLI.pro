@@ -1818,12 +1818,66 @@ export default function QuestionnairePage() {
     if (urbanDevelopmentChecked) societalInterests.push("Urban Development");
     if (usPoliticsChecked) societalInterests.push("US Politics & Governance");
     
-    // Format interests as JSON for better structure and easier parsing
+    // Format interests as JSON in a structured object format that matches how we load the data
     const interestsData = {
-      industryInterests: industryInterests.length > 0 ? industryInterests : [],
-      societalInterests: societalInterests.length > 0 ? societalInterests : [],
-      contentFormatPreferences: contentFormatPreferences.length > 0 ? contentFormatPreferences : [],
-      postingBarriers: postingBarriers.length > 0 ? postingBarriers : []
+      industryInterests: {
+        consulting: consultingChecked,
+        consumerRetail: consumerRetailChecked,
+        financialServices: financialServicesChecked,
+        globalMarkets: globalMarketsChecked, 
+        government: governmentChecked,
+        healthcare: healthcareChecked,
+        innovation: innovationChecked,
+        manufacturing: manufacturingChecked,
+        socialImpact: socialImpactChecked,
+        technology: technologyChecked
+      },
+      societalInterests: {
+        climate: climateChecked,
+        consumerBehavior: consumerBehaviorChecked,
+        crimeJustice: crimeJusticeChecked,
+        digitalTransformationAI: digitalTransformationAIChecked,
+        educationLearning: educationLearningChecked,
+        emergingMarkets: emergingMarketsChecked,
+        entertainmentArts: entertainmentArtsChecked,
+        financialInnovation: financialInnovationChecked,
+        futureOfWork: futureOfWorkChecked,
+        globalEconomy: globalEconomyChecked,
+        geopolitics: geopoliticsChecked,
+        healthWellness: healthWellnessChecked,
+        healthcareInnovation: healthcareInnovationChecked,
+        socialImpactDEI: socialImpactDEIChecked,
+        sportsRecreation: sportsRecreationChecked,
+        travelTourism: travelTourismChecked,
+        urbanDevelopment: urbanDevelopmentChecked,
+        usPolitics: usPoliticsChecked
+      },
+      contentFormatPreferences: {
+        sharingNews: sharingNewsChecked,
+        writingExperiences: writingExperiencesChecked,
+        analyzingTrends: analyzingTrendsChecked,
+        commentingPosts: commentingPostsChecked,
+        howToContent: howToContentChecked,
+        eventTakeaways: eventTakeawaysChecked,
+        personalAnecdote: personalAnecdoteChecked,
+        digitalCommunities: digitalCommunitiesChecked,
+        other: otherContentFormatChecked ? otherContentFormat : null,
+        otherText: otherContentFormatChecked ? otherContentFormat : null
+      },
+      postingBarriers: {
+        unsureWhatToSay: unsureWhatToSayChecked,
+        fearOfJudgment: fearOfJudgmentChecked,
+        timeManagement: timeManagementChecked,
+        dontKnowHowToStart: dontKnowHowToStartChecked,
+        unclearProfessionalVoice: unclearProfessionalVoiceChecked,
+        other: otherBarrierChecked ? otherBarrier : null,
+        otherText: otherBarrierChecked ? otherBarrier : null
+      },
+      // Also store the arrays for backward compatibility
+      industryInterestsArray: industryInterests.length > 0 ? industryInterests : [],
+      societalInterestsArray: societalInterests.length > 0 ? societalInterests : [],
+      contentFormatPreferencesArray: contentFormatPreferences.length > 0 ? contentFormatPreferences : [],
+      postingBarriersArray: postingBarriers.length > 0 ? postingBarriers : []
     };
     
     // Create form data
