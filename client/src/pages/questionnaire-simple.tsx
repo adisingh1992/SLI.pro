@@ -502,6 +502,55 @@ export default function QuestionnairePage() {
     },
   });
 
+  // Function to save without validation for when navigating away
+  const saveWithoutValidation = async (): Promise<boolean> => {
+    try {
+      // Show saving indicator
+      setSaveStatus("saving");
+      
+      // Get the form data without validation
+      const formData = prepareFormData();
+      
+      // Check if the questionnaire is already published (not a draft)
+      if (userProfile?.questionnaire && userProfile.questionnaire.isDraft === false) {
+        // For published questionnaires, just simulate a successful save
+        setSaveStatus("saved");
+        setTimeout(() => {
+          setSaveStatus("idle");
+        }, 2000);
+        return true;
+      } else {
+        // For drafts or new questionnaires, save as draft
+        formData.isDraft = true;
+        
+        try {
+          // Try to save, but don't block navigation if it fails
+          await saveAsDraftMutation.mutateAsync(formData);
+          
+          // Update save status to saved
+          setSaveStatus("saved");
+          
+          // Reset status after 2 seconds
+          setTimeout(() => {
+            setSaveStatus("idle");
+          }, 2000);
+          
+          // Invalidate the user profile query to refresh data
+          queryClient.invalidateQueries({ queryKey: ["/api/user/profile"] });
+          
+          return true;
+        } catch (error) {
+          console.error("Failed to save form data:", error);
+          return false;
+        }
+      }
+    } catch (error) {
+      console.error("Error saving without validation:", error);
+      setSaveStatus("idle");
+      return false;
+    }
+  };
+
   // Auto-save when navigating away from the page
   React.useEffect(() => {
     // Create a function that will be called when the component unmounts
@@ -509,8 +558,8 @@ export default function QuestionnairePage() {
       // Don't auto-save if we're submitting the form (which would redirect anyway)
       if (!questionnaireMutation.isPending) {
         // Since this runs during unmount, we can't use async/await directly
-        // We'll use the auto-save function but won't wait for it
-        autoSaveQuestionnaire().catch(err => {
+        // Use the save without validation function and don't wait for it
+        saveWithoutValidation().catch(err => {
           console.error("Error auto-saving on page leave:", err);
         });
       }
@@ -5387,7 +5436,11 @@ export default function QuestionnairePage() {
                 className="bg-white text-[#6c8083] hover:bg-gray-100 hover:text-[#4c5c5e]"
                 onClick={(e) => {
                   e.preventDefault();
-                  // Navigate without validation
+                  
+                  // Try to save current progress without validation
+                  saveWithoutValidation().catch(err => console.error("Error saving before leaving:", err));
+                  
+                  // Navigate back to home without waiting for save to complete
                   navigate("/");
                 }}
               >
