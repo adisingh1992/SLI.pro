@@ -2212,7 +2212,25 @@ export default function QuestionnairePage() {
         },
       };
 
-      await questionnaireMutation.mutateAsync(formData);
+      // Show saving indicator
+      setSaveStatus("saving");
+      
+      // Use the prepareFormData function to get the form data without duplicating all that logic
+      const autoFormData = prepareFormData();
+      
+      // Mark as not a draft when submitting the final version
+      autoFormData.isDraft = false;
+      
+      // Submit the questionnaire
+      await questionnaireMutation.mutateAsync(autoFormData);
+      
+      // Update save status
+      setSaveStatus("saved");
+      
+      // Reset status to idle after 2 seconds
+      setTimeout(() => {
+        setSaveStatus("idle");
+      }, 2000);
     } else {
       toast({
         title: "Please complete all required fields",
