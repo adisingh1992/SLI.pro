@@ -439,6 +439,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
           req.user.id,
         );
 
+        // If the questionnaire exists and is already published (not a draft),
+        // prevent changing it back to draft state
+        if (existingQuestionnaire && existingQuestionnaire.isDraft === false) {
+          return res.status(400).json({
+            message: "Cannot save as draft: Questionnaire has already been published",
+          });
+        }
+
         const validationResult = insertQuestionnaireSchema.safeParse({
           ...req.body,
           userId: req.user.id,

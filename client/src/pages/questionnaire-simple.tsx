@@ -4809,19 +4809,21 @@ export default function QuestionnairePage() {
                 </Button>
 
                 <div className="flex gap-2">
-                  {/* Save as Draft button - always visible */}
-                  <Button
-                    type="button"
-                    onClick={handleSaveAsDraft}
-                    className="w-[120px]"
-                    variant="outline"
-                    disabled={saveAsDraftMutation.isPending}
-                  >
-                    {saveAsDraftMutation.isPending ? (
-                      <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                    ) : null}
-                    Save as Draft
-                  </Button>
+                  {/* Save as Draft button - only shown if questionnaire doesn't exist or is a draft */}
+                  {(!userProfile?.questionnaire || userProfile?.questionnaire?.isDraft) && (
+                    <Button
+                      type="button"
+                      onClick={handleSaveAsDraft}
+                      className="w-[120px]"
+                      variant="outline"
+                      disabled={saveAsDraftMutation.isPending}
+                    >
+                      {saveAsDraftMutation.isPending ? (
+                        <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                      ) : null}
+                      Save as Draft
+                    </Button>
+                  )}
                 
                   {/* Submit or Next button */}
                   {isLastStep ? (
