@@ -504,7 +504,10 @@ export default function QuestionnairePage() {
 
   // Initialize form data from user profile if available
   React.useEffect(() => {
+    console.log("UserProfile loaded:", userProfile);
+    
     if (userProfile?.questionnaire) {
+      console.log("Questionnaire data found:", userProfile.questionnaire);
       const q = userProfile.questionnaire;
 
       // Step 1: Industry & Function
