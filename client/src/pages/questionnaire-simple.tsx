@@ -1671,7 +1671,7 @@ export default function QuestionnairePage() {
         }
       }
     }
-  }, [userProfile]);
+  }, [userProfile, saveAsDraftMutation.isPending, questionnaireMutation.isPending]);
 
   // Validate current step fields
   const validateCurrentStep = () => {
