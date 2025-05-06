@@ -442,6 +442,9 @@ export default function QuestionnairePage() {
   // Files and additional information for Step 4
   const [files, setFiles] = useState<File[]>([]);
   const [additionalInfo, setAdditionalInfo] = useState("");
+  
+  // Add state for auto-save status
+  const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved">("idle");
 
   // Fetch user profile data
   const { data: userProfile, isLoading: profileLoading } =
@@ -1366,9 +1369,135 @@ export default function QuestionnairePage() {
     return false;
   };
 
-  const nextStep = () => {
+  // Function to prepare form data for saving
+  const prepareFormData = () => {
+    // Prepare social media data
+    const socialMediaOptions = [];
+    if (twitterChecked) socialMediaOptions.push("Twitter/X");
+    if (mediumChecked) socialMediaOptions.push("Medium");
+    if (blogChecked) socialMediaOptions.push("Personal blog/Website");
+    if (otherChecked && otherSocialMedia.trim() !== "") {
+      socialMediaOptions.push(`Other: ${otherSocialMedia.trim()}`);
+    }
+
+    // Update goals field to include selected social media options
+    const socialMediaDetails =
+      goals.trim() !== ""
+        ? `${goals}\n\nSelected platforms: ${socialMediaOptions.join(", ")}`
+        : `Selected platforms: ${socialMediaOptions.join(", ")}`;
+        
+    // Prepare branding challenges data
+    const brandingChallenges = [];
+    if (consistentNarrativeChecked)
+      brandingChallenges.push("Building a consistent professional narrative");
+    if (valuePropositionChecked)
+      brandingChallenges.push("Identifying my unique value proposition");
+    if (engagingContentChecked)
+      brandingChallenges.push("Creating engaging content");
+    if (findingTimeChecked)
+      brandingChallenges.push("Finding time to maintain online presence");
+    if (growingNetworkChecked)
+      brandingChallenges.push("Growing my professional network");
+    if (sharingInsightsChecked)
+      brandingChallenges.push("Sharing industry insights and work experiences");
+    if (engagingNetworkChecked)
+      brandingChallenges.push("Engaging with my professional network");
+    if (industryEventsChecked)
+      brandingChallenges.push("Participating in industry discussions and events");
+    if (otherBrandingChecked && otherBrandingChallenge.trim() !== "") {
+      brandingChallenges.push(`Other: ${otherBrandingChallenge.trim()}`);
+    }
+    
+    // Prepare content format preferences
+    const contentFormatPreferences = [];
+    if (sharingNewsChecked) contentFormatPreferences.push("Sharing industry news with your perspective");
+    if (writingExperiencesChecked) contentFormatPreferences.push("Writing about your learned experiences");
+    if (analyzingTrendsChecked) contentFormatPreferences.push("Analyzing trends");
+    if (commentingPostsChecked) contentFormatPreferences.push("Commenting on others' posts");
+    if (howToContentChecked) contentFormatPreferences.push("Creating how-to content");
+    if (eventTakeawaysChecked) contentFormatPreferences.push("Sharing event takeaways");
+    if (personalAnecdoteChecked) contentFormatPreferences.push("Personal anecdote");
+    if (digitalCommunitiesChecked) contentFormatPreferences.push("Digital communities");
+    if (otherContentFormatChecked && otherContentFormat.trim() !== "") {
+      contentFormatPreferences.push(`Other: ${otherContentFormat.trim()}`);
+    }
+    
+    // Prepare posting barriers
+    const postingBarriers = [];
+    if (unsureWhatToSayChecked) postingBarriers.push("Unsure what to say");
+    if (fearOfJudgmentChecked) postingBarriers.push("Fear of judgment");
+    if (timeManagementChecked) postingBarriers.push("Time management");
+    if (dontKnowHowToStartChecked) postingBarriers.push("Don't know how to start");
+    if (unclearProfessionalVoiceChecked) postingBarriers.push("Unclear on professional voice");
+    if (otherBarrierChecked && otherBarrier.trim() !== "") {
+      postingBarriers.push(`Other: ${otherBarrier.trim()}`);
+    }
+    
+    // Format branding details
+    const brandingDetails = formatBrandingDetails(
+      brandingChallenges,
+      contentFormatPreferences,
+      postingBarriers
+    );
+    
+    // Create form data
+    return {
+      background, // LinkedIn URL
+      goals: socialMediaDetails, // Social media details
+      aspirations: brandingDetails, // Branding challenges and all other data
+      challenges: "", // No longer using this field
+      interests: "",
+      timeframe: `Industry: ${industry}, Function: ${jobFunction}`, // Store both industry and function
+      industry, // Current/Prior industry
+    };
+  };
+  
+  // Function to auto-save the questionnaire based on its current state
+  const autoSaveQuestionnaire = async () => {
+    if (!validateCurrentStep()) return false;
+    
+    try {
+      setSaveStatus("saving");
+      const formData = prepareFormData();
+      
+      // If the questionnaire is already published (not a draft), update it
+      // Otherwise, save as draft
+      if (userProfile?.questionnaire && userProfile.questionnaire.isDraft === false) {
+        // Use the regular submit endpoint to update the published questionnaire
+        await apiRequest("PUT", "/api/questionnaire", formData);
+      } else {
+        // Save as a draft
+        await saveAsDraftMutation.mutateAsync(formData);
+      }
+      
+      // Update save status
+      setSaveStatus("saved");
+      
+      // Reset status to idle after 2 seconds
+      setTimeout(() => {
+        setSaveStatus("idle");
+      }, 2000);
+      
+      // Invalidate the user profile query to refresh data
+      queryClient.invalidateQueries({ queryKey: ["/api/user/profile"] });
+      
+      return true;
+    } catch (error) {
+      console.error("Auto-save error:", error);
+      setSaveStatus("idle");
+      return false;
+    }
+  };
+
+  const nextStep = async () => {
     if (validateCurrentStep() && currentStep < totalSteps) {
-      setCurrentStep(currentStep + 1);
+      // Auto-save the current step data
+      const saveSuccessful = await autoSaveQuestionnaire();
+      
+      if (saveSuccessful) {
+        // Only proceed to next step if auto-save was successful
+        setCurrentStep(currentStep + 1);
+      }
     } else if (!validateCurrentStep()) {
       toast({
         title: "Please complete all fields",
@@ -1511,96 +1640,26 @@ export default function QuestionnairePage() {
   };
 
   const handleSaveAsDraft = async () => {
-    // Prepare social media data (similar to handleSubmit but without validation)
-    const socialMediaOptions = [];
-    if (twitterChecked) socialMediaOptions.push("Twitter/X");
-    if (mediumChecked) socialMediaOptions.push("Medium");
-    if (blogChecked) socialMediaOptions.push("Personal blog/Website");
-    if (otherChecked && otherSocialMedia.trim() !== "") {
-      socialMediaOptions.push(`Other: ${otherSocialMedia.trim()}`);
-    }
-
-    // Update goals field to include selected social media options
-    const socialMediaDetails =
-      goals.trim() !== ""
-        ? `${goals}\n\nSelected platforms: ${socialMediaOptions.join(", ")}`
-        : `Selected platforms: ${socialMediaOptions.join(", ")}`;
-        
-    // Prepare branding challenges data
-    const brandingChallenges = [];
-    if (consistentNarrativeChecked)
-      brandingChallenges.push("Building a consistent professional narrative");
-    if (valuePropositionChecked)
-      brandingChallenges.push("Identifying my unique value proposition");
-    if (engagingContentChecked)
-      brandingChallenges.push("Creating engaging content");
-    if (findingTimeChecked)
-      brandingChallenges.push("Finding time to maintain online presence");
-    if (growingNetworkChecked)
-      brandingChallenges.push("Growing my professional network");
-    if (sharingInsightsChecked)
-      brandingChallenges.push("Sharing industry insights and work experiences");
-    if (engagingNetworkChecked)
-      brandingChallenges.push("Engaging with my professional network");
-    if (industryEventsChecked)
-      brandingChallenges.push("Participating in industry discussions and events");
-    if (otherBrandingChecked && otherBrandingChallenge.trim() !== "") {
-      brandingChallenges.push(`Other: ${otherBrandingChallenge.trim()}`);
-    }
-    
-    // Prepare content format preferences
-    const contentFormatPreferences = [];
-    if (sharingNewsChecked) contentFormatPreferences.push("Sharing industry news with your perspective");
-    if (writingExperiencesChecked) contentFormatPreferences.push("Writing about your learned experiences");
-    if (analyzingTrendsChecked) contentFormatPreferences.push("Analyzing trends");
-    if (commentingPostsChecked) contentFormatPreferences.push("Commenting on others' posts");
-    if (howToContentChecked) contentFormatPreferences.push("Creating how-to content");
-    if (eventTakeawaysChecked) contentFormatPreferences.push("Sharing event takeaways");
-    if (personalAnecdoteChecked) contentFormatPreferences.push("Personal anecdote");
-    if (digitalCommunitiesChecked) contentFormatPreferences.push("Digital communities");
-    if (otherContentFormatChecked && otherContentFormat.trim() !== "") {
-      contentFormatPreferences.push(`Other: ${otherContentFormat.trim()}`);
-    }
-    
-    // Prepare posting barriers
-    const postingBarriers = [];
-    if (unsureWhatToSayChecked) postingBarriers.push("Unsure what to say");
-    if (fearOfJudgmentChecked) postingBarriers.push("Fear of judgment");
-    if (timeManagementChecked) postingBarriers.push("Time management");
-    if (dontKnowHowToStartChecked) postingBarriers.push("Don't know how to start");
-    if (unclearProfessionalVoiceChecked) postingBarriers.push("Unclear on professional voice");
-    if (otherBarrierChecked && otherBarrier.trim() !== "") {
-      postingBarriers.push(`Other: ${otherBarrier.trim()}`);
-    }
-    
-    // Format branding details
-    const brandingDetails = formatBrandingDetails(
-      brandingChallenges,
-      contentFormatPreferences,
-      postingBarriers
-    );
-    
-    // Create form data for the draft
-    const formData = {
-      background, // LinkedIn URL
-      goals: socialMediaDetails, // Social media details
-      aspirations: brandingDetails, // Branding challenges and all other data
-      challenges: "", // No longer using this field
-      interests: "",
-      timeframe: `Industry: ${industry}, Function: ${jobFunction}`, // Store both industry and function
-      industry, // Current/Prior industry
-    };
-    
     try {
+      // Use the prepareFormData function to get the form data
+      const formData = prepareFormData();
+      
+      setSaveStatus("saving");
       await saveAsDraftMutation.mutateAsync(formData);
+      
+      setSaveStatus("saved");
+      setTimeout(() => setSaveStatus("idle"), 2000);
+      
       toast({
         title: "Draft Saved",
         description: "Your questionnaire draft has been saved successfully.",
       });
+      
       // Redirect to home page after saving draft
       navigate("/");
     } catch (error) {
       console.error("Error saving draft:", error);
+      setSaveStatus("idle");
       toast({
         title: "Error",
         description: "Failed to save draft. Please try again.",
@@ -4808,7 +4867,21 @@ export default function QuestionnairePage() {
                   Previous
                 </Button>
 
-                <div className="flex gap-2">
+                <div className="flex items-center gap-2">
+                  {/* Auto-save indicator */}
+                  {saveStatus === "saving" && (
+                    <div className="text-xs text-muted-foreground flex items-center mr-2">
+                      <Loader2 className="h-3 w-3 animate-spin mr-1" />
+                      Saving...
+                    </div>
+                  )}
+                  {saveStatus === "saved" && (
+                    <div className="text-xs text-green-600 flex items-center mr-2">
+                      <CheckCircle className="h-3 w-3 mr-1" />
+                      Saved
+                    </div>
+                  )}
+                  
                   {/* Save as Draft button - only shown if questionnaire doesn't exist or is a draft */}
                   {(!userProfile?.questionnaire || userProfile?.questionnaire?.isDraft) && (
                     <Button
