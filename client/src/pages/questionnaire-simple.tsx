@@ -5386,11 +5386,8 @@ export default function QuestionnairePage() {
                 variant="outline" 
                 className="bg-white text-[#6c8083] hover:bg-gray-100 hover:text-[#4c5c5e]"
                 onClick={(e) => {
-                  // Auto-save current progress without validation
                   e.preventDefault();
-                  // Try to save data if possible, but don't block navigation if it fails
-                  autoSaveQuestionnaire().catch(err => console.error("Error saving before leaving:", err));
-                  // Navigate back to home without waiting for save to complete
+                  // Navigate without validation
                   navigate("/");
                 }}
               >
