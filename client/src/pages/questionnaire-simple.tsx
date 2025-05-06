@@ -919,46 +919,129 @@ export default function QuestionnairePage() {
         }
       }
 
-      // Try to parse the raw questionnaire JSON from aspirations field to get all saved data
+      // Enhanced JSON parsing from aspirations field
       let jsonData = null;
       try {
-        // The raw data might be stored in a JSON structure
+        // Only attempt to parse if aspirations field exists
         if (q.aspirations) {
-          // Extract any JSON-like data from the aspirations field
-          // Use a more compatible regex without the /s flag
+          console.log("Aspirations field exists, attempting to extract JSON");
+          
+          // Look for a JSON structure in the aspirations field using a reliable regex
           const jsonMatch = q.aspirations.match(/\{[\s\S]*?\}/);
+          
           if (jsonMatch) {
+            console.log("Found potential JSON match in aspirations");
+            
             try {
               jsonData = JSON.parse(jsonMatch[0]);
-              console.log("Found JSON data in questionnaire:", jsonData);
+              console.log("Successfully parsed JSON data with keys:", Object.keys(jsonData));
               
-              // Process the parsed JSON data to set form values
+              // Step 4: Industry Interests - detailed logging for troubleshooting
               if (jsonData.industryInterests) {
-                console.log("Loading industry interests from JSON");
-                // Set industry interests checkboxes
-                if (jsonData.industryInterests.consulting) setConsultingChecked(true);
-                if (jsonData.industryInterests.consumerRetail) setConsumerRetailChecked(true);
-                if (jsonData.industryInterests.financialServices) setFinancialServicesChecked(true);
-                if (jsonData.industryInterests.government) setGovernmentChecked(true);
-                if (jsonData.industryInterests.healthcare) setHealthcareChecked(true);
-                if (jsonData.industryInterests.manufacturing) setManufacturingChecked(true);
-                if (jsonData.industryInterests.socialImpact) setSocialImpactChecked(true);
-                if (jsonData.industryInterests.technology) setTechnologyChecked(true);
-                // Map other fields as needed
+                console.log("Loading industry interests from JSON:", 
+                  Object.keys(jsonData.industryInterests).join(", "));
+                
+                // Direct mappings
+                if (jsonData.industryInterests.consulting) {
+                  console.log("Setting consulting interest");
+                  setConsultingChecked(true);
+                }
+                if (jsonData.industryInterests.consumerRetail) {
+                  console.log("Setting consumer retail interest");
+                  setConsumerRetailChecked(true);
+                }
+                if (jsonData.industryInterests.financialServices) {
+                  console.log("Setting financial services interest");
+                  setFinancialServicesChecked(true);
+                }
+                if (jsonData.industryInterests.globalMarkets) {
+                  console.log("Setting global markets interest");
+                  setGlobalMarketsChecked(true);
+                }
+                if (jsonData.industryInterests.government) {
+                  console.log("Setting government interest");
+                  setGovernmentChecked(true);
+                }
+                if (jsonData.industryInterests.healthcare) {
+                  console.log("Setting healthcare interest");
+                  setHealthcareChecked(true);
+                }
+                if (jsonData.industryInterests.innovation) {
+                  console.log("Setting innovation interest");
+                  setInnovationChecked(true);
+                }
+                if (jsonData.industryInterests.manufacturing) {
+                  console.log("Setting manufacturing interest");
+                  setManufacturingChecked(true);
+                }
+                if (jsonData.industryInterests.socialImpact) {
+                  console.log("Setting social impact interest");
+                  setSocialImpactChecked(true);
+                }
+                if (jsonData.industryInterests.technology) {
+                  console.log("Setting technology interest");
+                  setTechnologyChecked(true);
+                }
+                
+                // Additional mappings for compatibility
                 if (jsonData.industryInterests.mediaEntertainment) setGlobalMarketsChecked(true);
                 if (jsonData.industryInterests.nonprofit) setInnovationChecked(true);
               }
               
-              // Handle cross-cutting interests
+              // Step 4: Cross-cutting interests - detailed logging
               if (jsonData.crossCuttingInterests) {
-                console.log("Loading cross-cutting interests from JSON");
-                if (jsonData.crossCuttingInterests.climate) setClimateChecked(true);
-                if (jsonData.crossCuttingInterests.consumerBehavior) setConsumerBehaviorChecked(true);
-                if (jsonData.crossCuttingInterests.crimeJustice) setCrimeJusticeChecked(true);
+                console.log("Loading cross-cutting interests from JSON:", 
+                  Object.keys(jsonData.crossCuttingInterests).join(", "));
+                
+                // Set checkboxes based on JSON data with detailed logging
+                if (jsonData.crossCuttingInterests.climate) {
+                  console.log("Setting climate interest");
+                  setClimateChecked(true);
+                }
+                if (jsonData.crossCuttingInterests.consumerBehavior) {
+                  console.log("Setting consumer behavior interest");
+                  setConsumerBehaviorChecked(true);
+                }
+                if (jsonData.crossCuttingInterests.crimeJustice) {
+                  console.log("Setting crime justice interest");
+                  setCrimeJusticeChecked(true);
+                }
+                if (jsonData.crossCuttingInterests.digitalTransformation) {
+                  console.log("Setting digital transformation interest");
+                  setDigitalTransformationAIChecked(true);
+                }
+                if (jsonData.crossCuttingInterests.education) {
+                  console.log("Setting education interest");
+                  setEducationLearningChecked(true);
+                }
+                if (jsonData.crossCuttingInterests.emergingMarkets) {
+                  console.log("Setting emerging markets interest");
+                  setEmergingMarketsChecked(true);
+                }
+                if (jsonData.crossCuttingInterests.entertainment) {
+                  console.log("Setting entertainment interest");
+                  setEntertainmentArtsChecked(true);
+                }
+                if (jsonData.crossCuttingInterests.financialInnovation) {
+                  console.log("Setting financial innovation interest");
+                  setFinancialInnovationChecked(true);
+                }
+                if (jsonData.crossCuttingInterests.futureOfWork) {
+                  console.log("Setting future of work interest");
+                  setFutureOfWorkChecked(true);
+                }
+                if (jsonData.crossCuttingInterests.globalEconomy) {
+                  console.log("Setting global economy interest");
+                  setGlobalEconomyChecked(true);
+                }
+                if (jsonData.crossCuttingInterests.geopolitics) {
+                  console.log("Setting geopolitics interest");
+                  setGeopoliticsChecked(true);
+                }
+                
+                // Alternative field names for compatibility
                 if (jsonData.crossCuttingInterests.dei) setSocialImpactDEIChecked(true);
-                if (jsonData.crossCuttingInterests.digitalTransformation) setDigitalTransformationAIChecked(true);
                 if (jsonData.crossCuttingInterests.economics) setGlobalEconomyChecked(true);
-                if (jsonData.crossCuttingInterests.education) setEducationLearningChecked(true);
                 if (jsonData.crossCuttingInterests.governance) setGeopoliticsChecked(true);
                 if (jsonData.crossCuttingInterests.innovation) setFinancialInnovationChecked(true);
                 if (jsonData.crossCuttingInterests.leadership) setFutureOfWorkChecked(true);
@@ -966,9 +1049,11 @@ export default function QuestionnairePage() {
                 if (jsonData.crossCuttingInterests.sustainability) setClimateChecked(true);
               }
               
-              // Handle content format preferences
+              // Step 4: Content format preferences
               if (jsonData.contentFormatPreferences) {
-                console.log("Loading content format preferences from JSON");
+                console.log("Loading content format preferences from JSON:", 
+                  Object.keys(jsonData.contentFormatPreferences).join(", "));
+                
                 if (jsonData.contentFormatPreferences.sharingNews) setSharingNewsChecked(true);
                 if (jsonData.contentFormatPreferences.writingExperiences) setWritingExperiencesChecked(true);
                 if (jsonData.contentFormatPreferences.analyzingTrends) setAnalyzingTrendsChecked(true);
@@ -977,18 +1062,49 @@ export default function QuestionnairePage() {
                 if (jsonData.contentFormatPreferences.eventTakeaways) setEventTakeawaysChecked(true);
                 if (jsonData.contentFormatPreferences.personalAnecdote) setPersonalAnecdoteChecked(true);
                 if (jsonData.contentFormatPreferences.digitalCommunities) setDigitalCommunitiesChecked(true);
+                
                 if (jsonData.contentFormatPreferences.other) {
                   setOtherContentFormatChecked(true);
-                  setOtherContentFormat(jsonData.contentFormatPreferences.other);
+                  // Handle both formats of other content
+                  if (typeof jsonData.contentFormatPreferences.other === 'string') {
+                    setOtherContentFormat(jsonData.contentFormatPreferences.other);
+                  } else if (jsonData.contentFormatPreferences.otherText) {
+                    setOtherContentFormat(jsonData.contentFormatPreferences.otherText);
+                  }
                 }
               }
-            } catch (err) {
-              console.log("Failed to parse JSON from aspirations:", err);
+              
+              // Step 4: Posting barriers
+              if (jsonData.postingBarriers) {
+                console.log("Loading posting barriers from JSON");
+                
+                if (jsonData.postingBarriers.unsureWhatToSay) setUnsureWhatToSayChecked(true);
+                if (jsonData.postingBarriers.fearOfJudgment) setFearOfJudgmentChecked(true);
+                if (jsonData.postingBarriers.timeManagement) setTimeManagementChecked(true);
+                if (jsonData.postingBarriers.dontKnowHowToStart) setDontKnowHowToStartChecked(true);
+                if (jsonData.postingBarriers.unclearProfessionalVoice) setUnclearProfessionalVoiceChecked(true);
+                
+                if (jsonData.postingBarriers.other) {
+                  setOtherBarrierChecked(true);
+                  // Handle both formats of other barrier
+                  if (typeof jsonData.postingBarriers.other === 'string') {
+                    setOtherBarrier(jsonData.postingBarriers.other);
+                  } else if (jsonData.postingBarriers.otherText) {
+                    setOtherBarrier(jsonData.postingBarriers.otherText);
+                  }
+                }
+              }
+            } catch (innerErr) {
+              console.error("Error parsing JSON from questionnaire:", innerErr);
             }
+          } else {
+            console.log("No JSON structure found in aspirations");
           }
+        } else {
+          console.log("No aspirations field in questionnaire");
         }
       } catch (err) {
-        console.error("Error parsing questionnaire JSON data:", err);
+        console.error("Error in JSON parsing process:", err);
       }
         
       // Parse societal interests from text format if JSON data wasn't already loaded
