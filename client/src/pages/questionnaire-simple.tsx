@@ -816,6 +816,102 @@ export default function QuestionnairePage() {
       setChallenges(q.challenges || "");
       setInterests(q.interests || "");
       setTimeframe(q.timeframe || "");
+      
+      // Try to parse JSON structure from the interests field
+      if (q.interests) {
+        try {
+          console.log("Attempting to parse JSON from interests field");
+          const parsedInterests = JSON.parse(q.interests);
+          console.log("Successfully parsed interests JSON data with keys:", Object.keys(parsedInterests));
+          
+          // Load industry interests
+          if (parsedInterests.industryInterests) {
+            console.log("Loading industry interests from JSON:", Object.keys(parsedInterests.industryInterests).join(", "));
+            
+            if (parsedInterests.industryInterests.consulting) setConsultingChecked(true);
+            if (parsedInterests.industryInterests.consumerRetail) setConsumerRetailChecked(true);
+            if (parsedInterests.industryInterests.financialServices) setFinancialServicesChecked(true);
+            if (parsedInterests.industryInterests.globalMarkets) setGlobalMarketsChecked(true);
+            if (parsedInterests.industryInterests.government) setGovernmentChecked(true);
+            if (parsedInterests.industryInterests.healthcare) setHealthcareChecked(true);
+            if (parsedInterests.industryInterests.innovation) setInnovationChecked(true);
+            if (parsedInterests.industryInterests.manufacturing) setManufacturingChecked(true);
+            if (parsedInterests.industryInterests.socialImpact) setSocialImpactChecked(true);
+            if (parsedInterests.industryInterests.technology) setTechnologyChecked(true);
+          }
+          
+          // Load societal interests
+          if (parsedInterests.societalInterests) {
+            console.log("Loading societal interests from JSON:", Object.keys(parsedInterests.societalInterests).join(", "));
+            
+            if (parsedInterests.societalInterests.climate) setClimateChecked(true);
+            if (parsedInterests.societalInterests.consumerBehavior) setConsumerBehaviorChecked(true);
+            if (parsedInterests.societalInterests.crimeJustice) setCrimeJusticeChecked(true);
+            if (parsedInterests.societalInterests.digitalTransformationAI) setDigitalTransformationAIChecked(true);
+            if (parsedInterests.societalInterests.educationLearning) setEducationLearningChecked(true);
+            if (parsedInterests.societalInterests.emergingMarkets) setEmergingMarketsChecked(true);
+            if (parsedInterests.societalInterests.entertainmentArts) setEntertainmentArtsChecked(true);
+            if (parsedInterests.societalInterests.financialInnovation) setFinancialInnovationChecked(true);
+            if (parsedInterests.societalInterests.futureOfWork) setFutureOfWorkChecked(true);
+            if (parsedInterests.societalInterests.globalEconomy) setGlobalEconomyChecked(true);
+            if (parsedInterests.societalInterests.geopolitics) setGeopoliticsChecked(true);
+            if (parsedInterests.societalInterests.healthWellness) setHealthWellnessChecked(true);
+            if (parsedInterests.societalInterests.healthcareInnovation) setHealthcareInnovationChecked(true);
+            if (parsedInterests.societalInterests.socialImpactDEI) setSocialImpactDEIChecked(true);
+            if (parsedInterests.societalInterests.sportsRecreation) setSportsRecreationChecked(true);
+            if (parsedInterests.societalInterests.travelTourism) setTravelTourismChecked(true);
+            if (parsedInterests.societalInterests.urbanDevelopment) setUrbanDevelopmentChecked(true);
+            if (parsedInterests.societalInterests.usPolitics) setUsPoliticsChecked(true);
+          }
+          
+          // Load content format preferences
+          if (parsedInterests.contentFormatPreferences) {
+            console.log("Loading content format preferences from JSON:", Object.keys(parsedInterests.contentFormatPreferences).join(", "));
+            
+            if (parsedInterests.contentFormatPreferences.sharingNews) setSharingNewsChecked(true);
+            if (parsedInterests.contentFormatPreferences.writingExperiences) setWritingExperiencesChecked(true);
+            if (parsedInterests.contentFormatPreferences.analyzingTrends) setAnalyzingTrendsChecked(true);
+            if (parsedInterests.contentFormatPreferences.commentingPosts) setCommentingPostsChecked(true);
+            if (parsedInterests.contentFormatPreferences.howToContent) setHowToContentChecked(true);
+            if (parsedInterests.contentFormatPreferences.eventTakeaways) setEventTakeawaysChecked(true);
+            if (parsedInterests.contentFormatPreferences.personalAnecdote) setPersonalAnecdoteChecked(true);
+            if (parsedInterests.contentFormatPreferences.digitalCommunities) setDigitalCommunitiesChecked(true);
+            
+            if (parsedInterests.contentFormatPreferences.other) {
+              setOtherContentFormatChecked(true);
+              // Handle both formats of other content
+              if (typeof parsedInterests.contentFormatPreferences.other === 'string') {
+                setOtherContentFormat(parsedInterests.contentFormatPreferences.other);
+              } else if (parsedInterests.contentFormatPreferences.otherText) {
+                setOtherContentFormat(parsedInterests.contentFormatPreferences.otherText);
+              }
+            }
+          }
+          
+          // Load posting barriers
+          if (parsedInterests.postingBarriers) {
+            console.log("Loading posting barriers from JSON:", Object.keys(parsedInterests.postingBarriers).join(", "));
+            
+            if (parsedInterests.postingBarriers.unsureWhatToSay) setUnsureWhatToSayChecked(true);
+            if (parsedInterests.postingBarriers.fearOfJudgment) setFearOfJudgmentChecked(true);
+            if (parsedInterests.postingBarriers.timeManagement) setTimeManagementChecked(true);
+            if (parsedInterests.postingBarriers.dontKnowHowToStart) setDontKnowHowToStartChecked(true);
+            if (parsedInterests.postingBarriers.unclearProfessionalVoice) setUnclearProfessionalVoiceChecked(true);
+            
+            if (parsedInterests.postingBarriers.other) {
+              setOtherBarrierChecked(true);
+              // Handle both formats of other barrier
+              if (typeof parsedInterests.postingBarriers.other === 'string') {
+                setOtherBarrier(parsedInterests.postingBarriers.other);
+              } else if (parsedInterests.postingBarriers.otherText) {
+                setOtherBarrier(parsedInterests.postingBarriers.otherText);
+              }
+            }
+          }
+        } catch (err) {
+          console.error("Failed to parse interests JSON:", err);
+        }
+      }
 
       // Step 5: Load professional goals
       // Try to parse career goals from aspirations field
