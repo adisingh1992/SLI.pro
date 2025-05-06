@@ -752,31 +752,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
   async function getAllUsers(excludeAdmins: boolean = false): Promise<User[]> {
     // If we need to exclude admins, use the storage method directly
     if (excludeAdmins) {
-      console.log("Debug - Using getNonAdminUsers() to get only non-admin users");
       const nonAdminUsers = await storage.getNonAdminUsers();
-      console.log("Debug - Non-admin users:", nonAdminUsers.map(u => ({ id: u.id, username: u.username, isAdmin: u.isAdmin })));
+
       return nonAdminUsers;
     }
     
     // Otherwise get all users
-    console.log("Debug - Getting all users, including admins");
     const users: User[] = [];
     let id = 1;
     let user = await storage.getUser(id);
     
     while (user) {
-      console.log(`Debug - User ${user.id}:`, {
-        username: user.username, 
-        isAdmin: user.isAdmin, 
-        excluded: false
-      });
-      
       users.push(user);
       id++;
       user = await storage.getUser(id);
     }
-    
-    console.log("Debug - Final users list:", users.map(u => ({ id: u.id, username: u.username, isAdmin: u.isAdmin })));
+
     return users;
   }
 
@@ -788,8 +779,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // FORCE filter admin users out - manual approach to bypass any caching issues
       const nonAdminUsers = allUsers.filter(user => user.isAdmin !== true);
-      
-      console.log('FORCED FILTERING - Non-admin users to display:', nonAdminUsers.map(u => ({ id: u.id, username: u.username, isAdmin: u.isAdmin })));
       
       // Remove passwords from the response
       const usersWithoutPasswords = nonAdminUsers.map(user => {
@@ -810,9 +799,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // FORCE filter admin users out - manual approach to bypass any caching issues
       const nonAdminUsers = allUsers.filter(user => user.isAdmin !== true);
-      
-      console.log('FORCED FILTERING - Admin users excluded from count:', nonAdminUsers.length, 'non-admin users found');
-      console.log('FORCED FILTERING - Admin users excluded from count - users:', nonAdminUsers.map(u => ({ id: u.id, username: u.username, isAdmin: u.isAdmin })));
       
       res.json({ count: nonAdminUsers.length });
     } catch (error) {
@@ -1049,8 +1035,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
           isAdmin: true // Make sure this is a boolean true, not a string
         });
 
-        console.log("Admin user created:", adminUser.username);
-
         // Create an empty profile for admin
         await storage.createProfile({
           userId: adminUser.id,
@@ -1060,13 +1044,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Always force update the isAdmin flag for this user to ensure it's set properly
-      const updatedUser = await storage.updateUser(adminUser.id, { isAdmin: true });
-      console.log("Admin user updated:", updatedUser?.username, "isAdmin:", updatedUser?.isAdmin, "type:", typeof updatedUser?.isAdmin);
-      
-      // Print all users for debugging
-      const allUsers = await getAllUsers(false);
-      console.log("All users:", allUsers.map(u => ({ id: u.id, username: u.username, isAdmin: u.isAdmin })));
-      
+      const updatedUser = await storage.updateUser(adminUser.id, { isAdmin: true });      
     } catch (error) {
       console.error("Error setting up users:", error);
     }
