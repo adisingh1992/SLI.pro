@@ -2040,8 +2040,8 @@ export default function QuestionnairePage() {
       formData.timeframe = `Industry: ${industry}, Function: ${jobFunction}`;
     } else if (userProfile?.questionnaire?.industry) {
       // Preserve the existing industry value from the user profile
-      formData.industry = userProfile.questionnaire.industry;
-      formData.timeframe = userProfile.questionnaire.timeframe;
+      formData.industry = userProfile.questionnaire.industry || "";
+      formData.timeframe = userProfile.questionnaire.timeframe || "";
     }
     
     // Step 2 fields - only include when on step 2 or when these fields have values
@@ -2050,8 +2050,8 @@ export default function QuestionnairePage() {
       formData.goals = socialMediaDetails; // Social media details
     } else if (userProfile?.questionnaire?.background) {
       // Preserve the existing values from the user profile
-      formData.background = userProfile.questionnaire.background;
-      formData.goals = userProfile.questionnaire.goals;
+      formData.background = userProfile.questionnaire.background || "";
+      formData.goals = userProfile.questionnaire.goals || "";
     }
     
     // Step 3 fields - only include when on step 3 or when these fields have values
@@ -2059,7 +2059,7 @@ export default function QuestionnairePage() {
       formData.aspirations = brandingDetails; // Branding challenges and all other data
     } else if (userProfile?.questionnaire?.aspirations) {
       // Preserve the existing aspirations value from the user profile
-      formData.aspirations = userProfile.questionnaire.aspirations;
+      formData.aspirations = userProfile.questionnaire.aspirations || "";
     }
     
     // Step 4 & 5 fields - only include when on these steps or when these fields have values
@@ -2286,13 +2286,18 @@ export default function QuestionnairePage() {
       setSaveStatus("saving");
       await saveAsDraftMutation.mutateAsync(formData);
       
+      // Invalidate the user profile query to refresh data
+      await queryClient.invalidateQueries({ queryKey: ["/api/user/profile"] });
+      
       setSaveStatus("saved");
-      setTimeout(() => setSaveStatus("idle"), 2000);
       
       toast({
         title: "Draft Saved",
         description: "Your questionnaire draft has been saved successfully.",
       });
+      
+      // Reset form state
+      setSaveStatus("idle");
       
       // Redirect to home page after saving draft
       navigate("/");
@@ -2866,13 +2871,22 @@ export default function QuestionnairePage() {
       // Submit the questionnaire
       await questionnaireMutation.mutateAsync(autoFormData);
       
+      // Invalidate the user profile query to refresh data
+      await queryClient.invalidateQueries({ queryKey: ["/api/user/profile"] });
+      
       // Update save status
       setSaveStatus("saved");
       
-      // Reset status to idle after 2 seconds
-      setTimeout(() => {
-        setSaveStatus("idle");
-      }, 2000);
+      toast({
+        title: "Questionnaire Submitted", 
+        description: "Your questionnaire has been successfully submitted.",
+      });
+      
+      // Reset form state
+      setSaveStatus("idle");
+      
+      // Redirect to home page
+      navigate("/");
     } else {
       toast({
         title: "Please complete all required fields",
