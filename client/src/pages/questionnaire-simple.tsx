@@ -2286,8 +2286,15 @@ export default function QuestionnairePage() {
       setSaveStatus("saving");
       await saveAsDraftMutation.mutateAsync(formData);
       
-      // Invalidate the user profile query to refresh data
+      // Invalidate and immediately refetch the user profile query to refresh data
       await queryClient.invalidateQueries({ queryKey: ["/api/user/profile"] });
+      
+      // Force an immediate refetch of the data before navigating
+      await queryClient.refetchQueries({
+        queryKey: ["/api/user/profile"],
+        type: 'active',
+        exact: true
+      });
       
       setSaveStatus("saved");
       
@@ -2299,8 +2306,8 @@ export default function QuestionnairePage() {
       // Reset form state
       setSaveStatus("idle");
       
-      // Redirect to home page after saving draft
-      navigate("/");
+      // Redirect to home page after saving draft with replace to clear navigation history
+      navigate("/", { replace: true });
     } catch (error) {
       console.error("Error saving draft:", error);
       setSaveStatus("idle");
@@ -2892,8 +2899,8 @@ export default function QuestionnairePage() {
       // Reset form state
       setSaveStatus("idle");
       
-      // Redirect to home page
-      navigate("/");
+      // Redirect to home page with replace to clear navigation history
+      navigate("/", { replace: true });
     } else {
       toast({
         title: "Please complete all required fields",
@@ -5495,8 +5502,8 @@ export default function QuestionnairePage() {
                   
                   // No longer auto-saving when leaving the page per user request
                   
-                  // Just navigate back to home
-                  navigate("/");
+                  // Just navigate back to home with replace to clear navigation history
+                  navigate("/", { replace: true });
                 }}
               >
                 Back to Home
