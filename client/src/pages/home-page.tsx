@@ -42,6 +42,8 @@ export default function HomePage() {
   } = useQuery<UserProfile>({
     queryKey: ["/api/user/profile"],
     enabled: !!user,
+    staleTime: 0, // Always consider data stale so it refreshes when coming back to the page
+    refetchOnWindowFocus: true, // Refetch when window regains focus
   });
   
   // Fetch the latest freshness report

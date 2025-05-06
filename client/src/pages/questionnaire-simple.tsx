@@ -2871,8 +2871,15 @@ export default function QuestionnairePage() {
       // Submit the questionnaire
       await questionnaireMutation.mutateAsync(autoFormData);
       
-      // Invalidate the user profile query to refresh data
+      // Invalidate and immediately refetch the user profile query to refresh data
       await queryClient.invalidateQueries({ queryKey: ["/api/user/profile"] });
+      
+      // Force an immediate refetch of the data before navigating
+      await queryClient.refetchQueries({ 
+        queryKey: ["/api/user/profile"],
+        type: 'active',
+        exact: true 
+      });
       
       // Update save status
       setSaveStatus("saved");
