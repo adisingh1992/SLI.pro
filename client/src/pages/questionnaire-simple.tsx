@@ -1131,18 +1131,9 @@ export default function QuestionnairePage() {
                   console.log("Setting posted 3-5 times checked");
                   setPosted35TimesChecked(true);
                 }
-                if (jsonData.linkedinActivity.posted612Times) {
-                  console.log("Setting posted 6-12 times checked");
-                  setPosted612TimesChecked(true);
-                }
-                if (jsonData.linkedinActivity.posted12PlusMonthly) {
-                  console.log("Setting posted 12+ monthly checked");
-                  setPosted12PlusMonthlyChecked(true);
-                }
-                if (jsonData.linkedinActivity.postedRegularly) {
-                  console.log("Setting posted regularly checked");
-                  setPostedRegularlyChecked(true);
-                }
+                // Skip fields not present in this version of the app
+                // Fields like posted612Times, posted12PlusMonthly, postedRegularly may exist
+                // in the saved data but we don't have state variables for them in this version
               }
               
               // Step 5: Other fields
@@ -1794,13 +1785,54 @@ export default function QuestionnairePage() {
       postingBarriers
     );
     
+    // Format interests data
+    const industryInterests = [];
+    if (consultingChecked) industryInterests.push("Consulting");
+    if (consumerRetailChecked) industryInterests.push("Consumer & Retail");
+    if (financialServicesChecked) industryInterests.push("Financial Services");
+    if (globalMarketsChecked) industryInterests.push("Global Markets");
+    if (governmentChecked) industryInterests.push("Government / Public Sector");
+    if (healthcareChecked) industryInterests.push("Healthcare");
+    if (innovationChecked) industryInterests.push("Innovation / R&D");
+    if (manufacturingChecked) industryInterests.push("Manufacturing");
+    if (socialImpactChecked) industryInterests.push("Social Impact / ESG");
+    if (technologyChecked) industryInterests.push("Technology");
+    
+    const societalInterests = [];
+    if (climateChecked) societalInterests.push("Climate Change & Sustainability");
+    if (consumerBehaviorChecked) societalInterests.push("Consumer Behavior & Culture");
+    if (crimeJusticeChecked) societalInterests.push("Crime & Justice");
+    if (digitalTransformationAIChecked) societalInterests.push("Digital Transformation/AI");
+    if (educationLearningChecked) societalInterests.push("Education & Learning");
+    if (emergingMarketsChecked) societalInterests.push("Emerging Markets");
+    if (entertainmentArtsChecked) societalInterests.push("Entertainment & Arts");
+    if (financialInnovationChecked) societalInterests.push("Financial Innovation");
+    if (futureOfWorkChecked) societalInterests.push("Future of Work");
+    if (globalEconomyChecked) societalInterests.push("Global Economy");
+    if (geopoliticsChecked) societalInterests.push("Geopolitics & International Relations");
+    if (healthWellnessChecked) societalInterests.push("Health & Wellness");
+    if (healthcareInnovationChecked) societalInterests.push("Healthcare Innovation");
+    if (socialImpactDEIChecked) societalInterests.push("Social Impact & DEI");
+    if (sportsRecreationChecked) societalInterests.push("Sports & Recreation");
+    if (travelTourismChecked) societalInterests.push("Travel & Tourism");
+    if (urbanDevelopmentChecked) societalInterests.push("Urban Development");
+    if (usPoliticsChecked) societalInterests.push("US Politics & Governance");
+    
+    // Format interests as JSON for better structure and easier parsing
+    const interestsData = {
+      industryInterests: industryInterests.length > 0 ? industryInterests : [],
+      societalInterests: societalInterests.length > 0 ? societalInterests : [],
+      contentFormatPreferences: contentFormatPreferences.length > 0 ? contentFormatPreferences : [],
+      postingBarriers: postingBarriers.length > 0 ? postingBarriers : []
+    };
+    
     // Create form data
     return {
       background, // LinkedIn URL
       goals: socialMediaDetails, // Social media details
       aspirations: brandingDetails, // Branding challenges and all other data
       challenges: "", // No longer using this field
-      interests: "",
+      interests: JSON.stringify(interestsData), // Store interests as structured JSON
       timeframe: `Industry: ${industry}, Function: ${jobFunction}`, // Store both industry and function
       industry, // Current/Prior industry
       isDraft: true, // Default to draft, can be overridden when calling this function
