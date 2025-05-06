@@ -1691,6 +1691,9 @@ export default function QuestionnairePage() {
       if (files.length > 0) {
         await uploadAssessmentFiles();
       }
+      
+      // Show saving indicator
+      setSaveStatus("saving");
 
       // Prepare social media data
       const socialMediaOptions = [];
