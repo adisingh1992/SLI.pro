@@ -16,6 +16,7 @@ import {
   coachingNotes, type CoachingNote, type InsertCoachingNote,
   slis, type Sli, type InsertSli, type UpdateSli,
   linkedinOptimizations, type LinkedinOptimization, type InsertLinkedinOptimization,
+  linkedinContentDrafts, type LinkedinContentDraft, type InsertLinkedinContentDraft,
   type UpdateUser, type UpdateProfile, type UserProfile
 } from "@shared/schema";
 import session from "express-session";
