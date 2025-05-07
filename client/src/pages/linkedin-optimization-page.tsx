@@ -96,7 +96,7 @@ export default function LinkedinOptimizationPage() {
               </Badge>
             </div>
             <p className="text-blue-700">
-              AI-generated recommendations to enhance your professional presence on LinkedIn
+              Recommendations to enhance your professional presence on LinkedIn
             </p>
           </div>
 

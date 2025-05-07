@@ -1,0 +1,92 @@
+Feature Request: "Pre-Drafted LinkedIn Content" Page
+
+Objective:
+Create a new feature titled "Pre-Drafted LinkedIn Content" that allows users to generate two high-quality LinkedIn posts based on their personal branding context.
+
+Integration
+Add a button on the existing /linkedin-optimization-page that redirects users to a new page dedicated to this feature (e.g., /linkedin-content-drafts).
+
+Functionality on the New Page
+Post Generation Interface:
+
+Provide a button or form control to generate 2 LinkedIn posts at a time.
+
+Clearly label the purpose (e.g., “Generate Custom LinkedIn Drafts”).
+
+Data Collection for Context:
+
+Before calling the Claude API, analyze and extract context from the following inputs in this sequence (to manage Claude’s context size limitations):
+
+Uploaded resume-type document
+
+Uploaded LinkedIn profile-type document
+
+Any other uploaded documents
+
+Interest areas from the submitted questionnaire
+
+Coaching notes
+
+Refined SLI, or if unavailable, use Selected SLI
+
+Claude API Call:
+
+Pass the extracted context and the below prompt to Claude for each generation cycle.
+
+Claude Prompt for Generating Posts
+(Pass this as a string to the Claude API once all context is gathered)
+
+"
+You are a professional content strategist for SLI.pro, creating custom LinkedIn posts that align with a client's Single Lasting Impression (SLI). Generate two distinct, ready-to-use LinkedIn posts that the client can immediately copy, paste, and publish.
+
+## Content Requirements
+
+Generate two LinkedIn posts with different approaches from the following rotation:
+1. Experiential insight (lesson learned from professional experience)
+2. Breaking news commentary (current development in their field)
+3. Industry trend analysis with personal perspective
+4. Curated resource share (article, image, event with commentary)
+
+For each post, include:
+
+### Post 1: [APPROACH TYPE]
+**Hook:** [Attention-grabbing first line that establishes the key takeaway]  
+**Body:** [3-4 paragraphs incorporating:  
+- A specific example or data point  
+- Their unique perspective (aligned with SLI)  
+- Connection to their target audience  
+- Optional: bullet points with actionable insights]  
+**Closing:** [Call to action, reflection question, or forward-looking statement]  
+**Hashtags:** [5-7 relevant hashtags, including #SLIpro]
+
+### Post 2: [DIFFERENT APPROACH TYPE]
+[Same structure as above, but using a different content angle]
+
+## Stylistic Guidelines
+
+Ensure each post:
+- Reflects the client’s authentic voice (based on resume, LinkedIn profile, and SLI)
+- Matches sophistication to career level (executive/mid/early)
+- Demonstrates credibility through insights and context
+- Avoids AI-detection triggers (e.g., overly formulaic writing, clichés)
+- Projects confidence appropriate to their personality profile
+
+## Topic Selection Strategy
+
+Choose topics based on:
+1. Interest areas from their questionnaire
+2. News or trends (from the last 2 weeks) in their industry
+3. SLI-aligned aspirational themes
+4. Relevant experience from their background
+
+Stay optimistic, insightful, and grounded—avoiding political or divisive topics. Each post must pass the “SLI reinforcement test”: Would this strengthen the reader’s understanding of the client’s professional identity?
+"
+
+Deliverables
+New page at /linkedin-content-drafts
+
+Redirection button from /linkedin-optimization-page
+
+Functionality to analyze input context and generate 2 high-quality LinkedIn posts via Claude
+
+Display of generated posts with copy functionality
