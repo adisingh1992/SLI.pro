@@ -816,6 +816,33 @@ export class MemStorage implements IStorage {
     this.linkedinOptimizations.set(id, newOptimization);
     return newOptimization;
   }
+  
+  // LinkedIn Content Drafts methods
+  async getLinkedinContentDrafts(userId: number): Promise<LinkedinContentDraft[]> {
+    return Array.from(this.linkedinContentDrafts.values())
+      .filter(draft => draft.userId === userId)
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  }
+  
+  async getLinkedinContentDraft(id: number): Promise<LinkedinContentDraft | undefined> {
+    return this.linkedinContentDrafts.get(id);
+  }
+  
+  async getLatestLinkedinContentDraft(userId: number): Promise<LinkedinContentDraft | undefined> {
+    const drafts = await this.getLinkedinContentDrafts(userId);
+    return drafts.length > 0 ? drafts[0] : undefined;
+  }
+  
+  async createLinkedinContentDraft(contentDraft: InsertLinkedinContentDraft): Promise<LinkedinContentDraft> {
+    const id = this.linkedinContentDraftId++;
+    const newContentDraft: LinkedinContentDraft = {
+      ...contentDraft,
+      id,
+      createdAt: new Date()
+    };
+    this.linkedinContentDrafts.set(id, newContentDraft);
+    return newContentDraft;
+  }
 }
 
 export const storage = new DatabaseStorage();

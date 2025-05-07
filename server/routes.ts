@@ -30,6 +30,7 @@ async function hashPassword(password: string) {
 import { registerConversationRoutes } from "./conversation-routes";
 import { registerFreshnessRoutes } from "./freshness-routes";
 import { registerLinkedinOptimizationRoutes } from "./linkedin-optimization-routes";
+import { registerLinkedinContentRoutes } from "./linkedin-content-routes";
 
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -40,6 +41,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   registerConversationRoutes(app);
   registerFreshnessRoutes(app);
   registerLinkedinOptimizationRoutes(app);
+  registerLinkedinContentRoutes(app);
   registerSliRoutes(app, storage);
 
   // Middleware to check if user is authenticated

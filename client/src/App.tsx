@@ -17,6 +17,7 @@ import SliSelectionPage from "@/pages/sli-selection-page";
 import SliRefinementPage from "@/pages/sli-refinement-page";
 import LinkedinOptimizationPage from "@/pages/linkedin-optimization-page";
 import LinkedinOptimizationGeneratePage from "@/pages/linkedin-optimization-generate-page";
+import LinkedinContentDraftsPage from "@/pages/linkedin-content-drafts-page";
 import { AuthProvider } from "@/hooks/use-auth";
 import { ProtectedRoute } from "@/lib/protected-route";
 
@@ -67,6 +68,10 @@ function Router() {
       <ProtectedRoute
         path="/linkedin-optimization"
         component={LinkedinOptimizationPage}
+      />
+      <ProtectedRoute
+        path="/linkedin-content-drafts"
+        component={LinkedinContentDraftsPage}
       />
       
       {/* Admin routes */}
