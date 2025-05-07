@@ -648,4 +648,74 @@ export class DatabaseStorage implements IStorage {
   async deleteSli(id: number): Promise<void> {
     await db.delete(slis).where(eq(slis.id, id));
   }
+
+  // LinkedIn Optimization methods
+  async getLinkedinOptimizations(userId: number): Promise<LinkedinOptimization[]> {
+    return db
+      .select()
+      .from(linkedinOptimizations)
+      .where(eq(linkedinOptimizations.userId, userId))
+      .orderBy(desc(linkedinOptimizations.createdAt));
+  }
+  
+  async getLinkedinOptimization(id: number): Promise<LinkedinOptimization | undefined> {
+    const [optimization] = await db
+      .select()
+      .from(linkedinOptimizations)
+      .where(eq(linkedinOptimizations.id, id));
+    return optimization || undefined;
+  }
+  
+  async getLatestLinkedinOptimization(userId: number): Promise<LinkedinOptimization | undefined> {
+    const [optimization] = await db
+      .select()
+      .from(linkedinOptimizations)
+      .where(eq(linkedinOptimizations.userId, userId))
+      .orderBy(desc(linkedinOptimizations.createdAt))
+      .limit(1);
+    return optimization || undefined;
+  }
+  
+  async createLinkedinOptimization(optimization: InsertLinkedinOptimization): Promise<LinkedinOptimization> {
+    const [newOptimization] = await db
+      .insert(linkedinOptimizations)
+      .values(optimization)
+      .returning();
+    return newOptimization;
+  }
+
+  // LinkedIn Content Drafts methods
+  async getLinkedinContentDrafts(userId: number): Promise<LinkedinContentDraft[]> {
+    return db
+      .select()
+      .from(linkedinContentDrafts)
+      .where(eq(linkedinContentDrafts.userId, userId))
+      .orderBy(desc(linkedinContentDrafts.createdAt));
+  }
+  
+  async getLinkedinContentDraft(id: number): Promise<LinkedinContentDraft | undefined> {
+    const [contentDraft] = await db
+      .select()
+      .from(linkedinContentDrafts)
+      .where(eq(linkedinContentDrafts.id, id));
+    return contentDraft || undefined;
+  }
+  
+  async getLatestLinkedinContentDraft(userId: number): Promise<LinkedinContentDraft | undefined> {
+    const [contentDraft] = await db
+      .select()
+      .from(linkedinContentDrafts)
+      .where(eq(linkedinContentDrafts.userId, userId))
+      .orderBy(desc(linkedinContentDrafts.createdAt))
+      .limit(1);
+    return contentDraft || undefined;
+  }
+  
+  async createLinkedinContentDraft(contentDraft: InsertLinkedinContentDraft): Promise<LinkedinContentDraft> {
+    const [newContentDraft] = await db
+      .insert(linkedinContentDrafts)
+      .values(contentDraft)
+      .returning();
+    return newContentDraft;
+  }
 }

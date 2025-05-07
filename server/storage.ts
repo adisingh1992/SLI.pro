@@ -16,6 +16,7 @@ import {
   coachingNotes, type CoachingNote, type InsertCoachingNote,
   slis, type Sli, type InsertSli, type UpdateSli,
   linkedinOptimizations, type LinkedinOptimization, type InsertLinkedinOptimization,
+  linkedinContentDrafts, type LinkedinContentDraft, type InsertLinkedinContentDraft,
   type UpdateUser, type UpdateProfile, type UserProfile
 } from "@shared/schema";
 import session from "express-session";
@@ -133,6 +134,12 @@ export interface IStorage {
   getLinkedinOptimization(id: number): Promise<LinkedinOptimization | undefined>;
   getLatestLinkedinOptimization(userId: number): Promise<LinkedinOptimization | undefined>;
   createLinkedinOptimization(optimization: InsertLinkedinOptimization): Promise<LinkedinOptimization>;
+  
+  // LinkedIn Content Drafts operations
+  getLinkedinContentDrafts(userId: number): Promise<LinkedinContentDraft[]>;
+  getLinkedinContentDraft(id: number): Promise<LinkedinContentDraft | undefined>;
+  getLatestLinkedinContentDraft(userId: number): Promise<LinkedinContentDraft | undefined>;
+  createLinkedinContentDraft(contentDraft: InsertLinkedinContentDraft): Promise<LinkedinContentDraft>;
 
   // Session store
   sessionStore: session.Store;
@@ -156,6 +163,7 @@ export class MemStorage implements IStorage {
   private coachingNotes: Map<number, CoachingNote>;
   private slis: Map<number, Sli>;
   private linkedinOptimizations: Map<number, LinkedinOptimization>;
+  private linkedinContentDrafts: Map<number, LinkedinContentDraft>;
   
   private userId: number;
   private experienceId: number;
@@ -174,6 +182,7 @@ export class MemStorage implements IStorage {
   private coachingNoteId: number;
   private sliId: number;
   private linkedinOptimizationId: number;
+  private linkedinContentDraftId: number;
   
   sessionStore: session.Store;
 
@@ -195,6 +204,7 @@ export class MemStorage implements IStorage {
     this.coachingNotes = new Map();
     this.slis = new Map();
     this.linkedinOptimizations = new Map();
+    this.linkedinContentDrafts = new Map();
     
     this.userId = 1;
     this.experienceId = 1;
@@ -213,6 +223,7 @@ export class MemStorage implements IStorage {
     this.coachingNoteId = 1;
     this.sliId = 1;
     this.linkedinOptimizationId = 1;
+    this.linkedinContentDraftId = 1;
     
     this.sessionStore = new MemoryStore({
       checkPeriod: 86400000,
