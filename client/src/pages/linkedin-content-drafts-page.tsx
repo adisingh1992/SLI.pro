@@ -160,7 +160,7 @@ const LinkedinContentDraftsPage: React.FC = () => {
   return (
     <div className="container mx-auto p-4">
       <NavBar />
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex items-center justify-between mt-6 mb-6">
         <div className="flex items-center">
           <Button variant="ghost" onClick={() => navigate("/linkedin-optimization")} className="mr-2">
             <ArrowLeft className="h-4 w-4 mr-2" />
