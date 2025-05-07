@@ -329,6 +329,35 @@ export const insertFreshnessReportSchema = createInsertSchema(freshnessReports).
 export type InsertFreshnessReport = z.infer<typeof insertFreshnessReportSchema>;
 export type FreshnessReport = typeof freshnessReports.$inferSelect;
 
+// LinkedIn Content Drafts schema
+export const linkedinContentDrafts = pgTable("linkedin_content_drafts", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
+  post1Type: text("post1_type").notNull(), // Type of first post (experiential, news, trend, resource)
+  post1Content: jsonb("post1_content").$type<{
+    hook: string;
+    body: string;
+    closing: string;
+    hashtags: string;
+  }>().notNull(),
+  post2Type: text("post2_type").notNull(), // Type of second post
+  post2Content: jsonb("post2_content").$type<{
+    hook: string;
+    body: string;
+    closing: string;
+    hashtags: string;
+  }>().notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const insertLinkedinContentDraftSchema = createInsertSchema(linkedinContentDrafts).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type InsertLinkedinContentDraft = z.infer<typeof insertLinkedinContentDraftSchema>;
+export type LinkedinContentDraft = typeof linkedinContentDrafts.$inferSelect;
+
 // Coaching Notes schema
 export const coachingNotes = pgTable("coaching_notes", {
   id: serial("id").primaryKey(),
