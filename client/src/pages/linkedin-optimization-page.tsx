@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { useLocation, useParams } from "wouter";
-import { ChevronLeft, Loader2, Linkedin, Stars, Award, ArrowRight, Lightbulb, BarChart4 } from "lucide-react";
+import { ChevronLeft, Loader2, Linkedin, Stars, Award, ArrowRight, Lightbulb, BarChart4, FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
@@ -297,13 +297,23 @@ export default function LinkedinOptimizationPage() {
             <ChevronLeft className="mr-2 h-4 w-4" />
             Back to Home
           </Button>
-          <Button
-            onClick={handleGenerateNew}
-            className="flex items-center"
-          >
-            <Lightbulb className="mr-2 h-4 w-4" />
-            Generate New
-          </Button>
+          <div className="flex gap-3">
+            <Button
+              variant="outline"
+              onClick={() => navigate("/linkedin-content-drafts")}
+              className="flex items-center"
+            >
+              <FileText className="mr-2 h-4 w-4" />
+              Pre-Drafted Content
+            </Button>
+            <Button
+              onClick={handleGenerateNew}
+              className="flex items-center"
+            >
+              <Lightbulb className="mr-2 h-4 w-4" />
+              Generate New
+            </Button>
+          </div>
         </div>
       </main>
     </div>
