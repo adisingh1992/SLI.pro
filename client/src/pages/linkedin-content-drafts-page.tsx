@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { Link, useParams } from "wouter";
+import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -34,7 +34,7 @@ interface LinkedinContentDraft {
 const LinkedinContentDraftsPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState("post1");
   const { toast } = useToast();
-  const [, setLocation] = useParams();
+  const [, navigate] = useLocation();
 
   // Fetch LinkedIn content drafts
   const { data: contentDrafts, isLoading: isDraftsLoading, error: draftsError } = useQuery<LinkedinContentDraft[]>({
@@ -95,7 +95,7 @@ const LinkedinContentDraftsPage: React.FC = () => {
       <div className="container mx-auto p-4">
         <NavBar />
         <div className="flex items-center mb-6">
-          <Button variant="ghost" onClick={() => setLocation("/linkedin-optimization")} className="mr-2">
+          <Button variant="ghost" onClick={() => navigate("/linkedin-optimization")} className="mr-2">
             <ArrowLeft className="h-4 w-4 mr-2" />
             Back
           </Button>
@@ -128,7 +128,7 @@ const LinkedinContentDraftsPage: React.FC = () => {
       <div className="container mx-auto p-4">
         <NavBar />
         <div className="flex items-center mb-6">
-          <Button variant="ghost" onClick={() => setLocation("/linkedin-optimization")} className="mr-2">
+          <Button variant="ghost" onClick={() => navigate("/linkedin-optimization")} className="mr-2">
             <ArrowLeft className="h-4 w-4 mr-2" />
             Back
           </Button>
@@ -162,7 +162,7 @@ const LinkedinContentDraftsPage: React.FC = () => {
       <NavBar />
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center">
-          <Button variant="ghost" onClick={() => setLocation("/linkedin-optimization")} className="mr-2">
+          <Button variant="ghost" onClick={() => navigate("/linkedin-optimization")} className="mr-2">
             <ArrowLeft className="h-4 w-4 mr-2" />
             Back
           </Button>
