@@ -177,6 +177,7 @@ const LinkedinContentDraftsPage: React.FC = () => {
 
   return (
     <div className="container mx-auto px-4">
+      <NavBar />
       <div className="flex items-center justify-between mt-6 mb-6">
         <div className="flex items-center">
           <Button variant="ghost" onClick={() => navigate("/linkedin-optimization")} className="mr-2">
@@ -206,6 +207,7 @@ const LinkedinContentDraftsPage: React.FC = () => {
       </div>
 
       {latestDraft ? (
+        // Two-column layout when content drafts exist
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
           {/* Left Column (75% width) */}
           <div className="md:col-span-3">
@@ -383,6 +385,7 @@ const LinkedinContentDraftsPage: React.FC = () => {
           </div>
         </div>
       ) : (
+        // Single column layout when no content drafts exist
         <Card className="mb-8">
           <CardHeader>
             <CardTitle>No Content Drafts Found</CardTitle>
@@ -418,6 +421,7 @@ const LinkedinContentDraftsPage: React.FC = () => {
         </Card>
       )}
 
+      {/* Previous Drafts Section */}
       {contentDrafts && contentDrafts.length > 1 && (
         <div className="mt-8">
           <div className="flex items-center mb-4">
