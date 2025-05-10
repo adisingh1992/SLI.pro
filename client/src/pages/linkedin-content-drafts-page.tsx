@@ -8,7 +8,7 @@ import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import NavBar from "@/components/nav-bar";
-import { ArrowLeft, Copy, Loader2, FileText, PenLine, RefreshCw } from "lucide-react";
+import { ArrowLeft, Copy, Loader2, FileText, PenLine, RefreshCw, Calendar, MessageSquare } from "lucide-react";
 import { queryClient } from "@/lib/query-client";
 
 interface LinkedinContentDraft {
@@ -31,10 +31,28 @@ interface LinkedinContentDraft {
   createdAt: string;
 }
 
+// Helper function to get the last day of the current month
+const getLastDayOfMonth = (): Date => {
+  const now = new Date();
+  return new Date(now.getFullYear(), now.getMonth() + 1, 0);
+};
+
+// Helper function to format date as Month DD, YYYY
+const formatDate = (date: Date): string => {
+  return date.toLocaleDateString('en-US', { 
+    month: 'long', 
+    day: 'numeric', 
+    year: 'numeric' 
+  });
+};
+
 const LinkedinContentDraftsPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState("post1");
   const { toast } = useToast();
   const [, navigate] = useLocation();
+  
+  // Get the last day of the current month for the due date
+  const dueDate = getLastDayOfMonth();
 
   // Fetch LinkedIn content drafts
   const { data: contentDrafts, isLoading: isDraftsLoading, error: draftsError } = useQuery<LinkedinContentDraft[]>({
@@ -158,8 +176,7 @@ const LinkedinContentDraftsPage: React.FC = () => {
   const latestDraft = contentDrafts && contentDrafts.length > 0 ? contentDrafts[0] : null;
 
   return (
-    <div className="container mx-auto p-4">
-      <NavBar />
+    <div className="container mx-auto px-4">
       <div className="flex items-center justify-between mt-6 mb-6">
         <div className="flex items-center">
           <Button variant="ghost" onClick={() => navigate("/linkedin-optimization")} className="mr-2">
@@ -189,142 +206,182 @@ const LinkedinContentDraftsPage: React.FC = () => {
       </div>
 
       {latestDraft ? (
-        <Card className="mb-8">
-          <CardHeader>
-            <CardTitle>Ready-to-Use LinkedIn Content</CardTitle>
-            <CardDescription>
-              These posts are designed to enhance your professional brand and reinforce your SLI.
-              Simply copy and paste directly to LinkedIn.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-              <TabsList className="grid w-full grid-cols-2">
-                <TabsTrigger value="post1">
-                  Post 1: {latestDraft.post1Type}
-                </TabsTrigger>
-                <TabsTrigger value="post2">
-                  Post 2: {latestDraft.post2Type}
-                </TabsTrigger>
-              </TabsList>
-              
-              <TabsContent value="post1" className="mt-4">
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="text-lg">
-                      <div className="flex items-center">
-                        <span>Post Type: {latestDraft.post1Type}</span>
-                        <Button 
-                          variant="ghost" 
-                          size="sm" 
-                          onClick={() => copyToClipboard(formatFullPost(latestDraft.post1Content))}
-                          className="ml-auto"
-                        >
-                          <Copy className="h-4 w-4 mr-2" />
-                          Copy Full Post
-                        </Button>
-                      </div>
-                    </CardTitle>
-                    <CardDescription>
-                      Created on {new Date(latestDraft.createdAt).toLocaleDateString()}
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-4">
-                      <div>
-                        <h3 className="font-medium text-sm mb-1">Hook</h3>
-                        <div className="p-3 rounded-md bg-muted/50">
-                          {latestDraft.post1Content.hook}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+          {/* Left Column (75% width) */}
+          <div className="md:col-span-3">
+            <Card>
+              <CardHeader>
+                <CardTitle>Ready-to-Use LinkedIn Content</CardTitle>
+                <CardDescription>
+                  These posts are designed to enhance your professional brand and reinforce your SLI.
+                  Simply copy and paste directly to LinkedIn.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+                  <TabsList className="grid w-full grid-cols-2">
+                    <TabsTrigger value="post1">
+                      Post 1: {latestDraft.post1Type}
+                    </TabsTrigger>
+                    <TabsTrigger value="post2">
+                      Post 2: {latestDraft.post2Type}
+                    </TabsTrigger>
+                  </TabsList>
+                  
+                  <TabsContent value="post1" className="mt-4">
+                    <Card>
+                      <CardHeader>
+                        <CardTitle className="text-lg">
+                          <div className="flex items-center">
+                            <span>Post Type: {latestDraft.post1Type}</span>
+                            <Button 
+                              variant="ghost" 
+                              size="sm" 
+                              onClick={() => copyToClipboard(formatFullPost(latestDraft.post1Content))}
+                              className="ml-auto"
+                            >
+                              <Copy className="h-4 w-4 mr-2" />
+                              Copy Full Post
+                            </Button>
+                          </div>
+                        </CardTitle>
+                        <CardDescription>
+                          Created on {new Date(latestDraft.createdAt).toLocaleDateString()}
+                        </CardDescription>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="space-y-4">
+                          <div>
+                            <h3 className="font-medium text-sm mb-1">Hook</h3>
+                            <div className="p-3 rounded-md bg-muted/50">
+                              {latestDraft.post1Content.hook}
+                            </div>
+                          </div>
+                          
+                          <div>
+                            <h3 className="font-medium text-sm mb-1">Body</h3>
+                            <div className="p-3 rounded-md bg-muted/50 whitespace-pre-line">
+                              {latestDraft.post1Content.body}
+                            </div>
+                          </div>
+                          
+                          <div>
+                            <h3 className="font-medium text-sm mb-1">Closing</h3>
+                            <div className="p-3 rounded-md bg-muted/50">
+                              {latestDraft.post1Content.closing}
+                            </div>
+                          </div>
+                          
+                          <div>
+                            <h3 className="font-medium text-sm mb-1">Hashtags</h3>
+                            <div className="p-3 rounded-md bg-muted/50">
+                              {latestDraft.post1Content.hashtags}
+                            </div>
+                          </div>
                         </div>
-                      </div>
-                      
-                      <div>
-                        <h3 className="font-medium text-sm mb-1">Body</h3>
-                        <div className="p-3 rounded-md bg-muted/50 whitespace-pre-line">
-                          {latestDraft.post1Content.body}
+                      </CardContent>
+                    </Card>
+                  </TabsContent>
+                  
+                  <TabsContent value="post2" className="mt-4">
+                    <Card>
+                      <CardHeader>
+                        <CardTitle className="text-lg">
+                          <div className="flex items-center">
+                            <span>Post Type: {latestDraft.post2Type}</span>
+                            <Button 
+                              variant="ghost" 
+                              size="sm" 
+                              onClick={() => copyToClipboard(formatFullPost(latestDraft.post2Content))}
+                              className="ml-auto"
+                            >
+                              <Copy className="h-4 w-4 mr-2" />
+                              Copy Full Post
+                            </Button>
+                          </div>
+                        </CardTitle>
+                        <CardDescription>
+                          Created on {new Date(latestDraft.createdAt).toLocaleDateString()}
+                        </CardDescription>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="space-y-4">
+                          <div>
+                            <h3 className="font-medium text-sm mb-1">Hook</h3>
+                            <div className="p-3 rounded-md bg-muted/50">
+                              {latestDraft.post2Content.hook}
+                            </div>
+                          </div>
+                          
+                          <div>
+                            <h3 className="font-medium text-sm mb-1">Body</h3>
+                            <div className="p-3 rounded-md bg-muted/50 whitespace-pre-line">
+                              {latestDraft.post2Content.body}
+                            </div>
+                          </div>
+                          
+                          <div>
+                            <h3 className="font-medium text-sm mb-1">Closing</h3>
+                            <div className="p-3 rounded-md bg-muted/50">
+                              {latestDraft.post2Content.closing}
+                            </div>
+                          </div>
+                          
+                          <div>
+                            <h3 className="font-medium text-sm mb-1">Hashtags</h3>
+                            <div className="p-3 rounded-md bg-muted/50">
+                              {latestDraft.post2Content.hashtags}
+                            </div>
+                          </div>
                         </div>
-                      </div>
-                      
-                      <div>
-                        <h3 className="font-medium text-sm mb-1">Closing</h3>
-                        <div className="p-3 rounded-md bg-muted/50">
-                          {latestDraft.post1Content.closing}
-                        </div>
-                      </div>
-                      
-                      <div>
-                        <h3 className="font-medium text-sm mb-1">Hashtags</h3>
-                        <div className="p-3 rounded-md bg-muted/50">
-                          {latestDraft.post1Content.hashtags}
-                        </div>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              </TabsContent>
-              
-              <TabsContent value="post2" className="mt-4">
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="text-lg">
-                      <div className="flex items-center">
-                        <span>Post Type: {latestDraft.post2Type}</span>
-                        <Button 
-                          variant="ghost" 
-                          size="sm" 
-                          onClick={() => copyToClipboard(formatFullPost(latestDraft.post2Content))}
-                          className="ml-auto"
-                        >
-                          <Copy className="h-4 w-4 mr-2" />
-                          Copy Full Post
-                        </Button>
-                      </div>
-                    </CardTitle>
-                    <CardDescription>
-                      Created on {new Date(latestDraft.createdAt).toLocaleDateString()}
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-4">
-                      <div>
-                        <h3 className="font-medium text-sm mb-1">Hook</h3>
-                        <div className="p-3 rounded-md bg-muted/50">
-                          {latestDraft.post2Content.hook}
-                        </div>
-                      </div>
-                      
-                      <div>
-                        <h3 className="font-medium text-sm mb-1">Body</h3>
-                        <div className="p-3 rounded-md bg-muted/50 whitespace-pre-line">
-                          {latestDraft.post2Content.body}
-                        </div>
-                      </div>
-                      
-                      <div>
-                        <h3 className="font-medium text-sm mb-1">Closing</h3>
-                        <div className="p-3 rounded-md bg-muted/50">
-                          {latestDraft.post2Content.closing}
-                        </div>
-                      </div>
-                      
-                      <div>
-                        <h3 className="font-medium text-sm mb-1">Hashtags</h3>
-                        <div className="p-3 rounded-md bg-muted/50">
-                          {latestDraft.post2Content.hashtags}
-                        </div>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              </TabsContent>
-            </Tabs>
-          </CardContent>
-          <CardFooter className="flex justify-between">
-            <div className="text-sm text-muted-foreground">
-              These posts are aligned with your SLI and professional goals.
-            </div>
-          </CardFooter>
-        </Card>
+                      </CardContent>
+                    </Card>
+                  </TabsContent>
+                </Tabs>
+              </CardContent>
+              <CardFooter className="flex justify-between">
+                <div className="text-sm text-muted-foreground">
+                  These posts are aligned with your SLI and professional goals.
+                </div>
+              </CardFooter>
+            </Card>
+          </div>
+          
+          {/* Right Column (25% width) - Feedback Widget */}
+          <div className="md:col-span-1">
+            <Card className="h-full bg-blue-50 border-blue-200">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-lg text-blue-700">Provide Feedback</CardTitle>
+                <CardDescription>
+                  Tell us how these posts work for you
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  <div className="flex items-center text-blue-600">
+                    <Calendar className="h-4 w-4 mr-2" />
+                    <span className="text-sm font-medium">Due Date:</span>
+                  </div>
+                  <div className="px-2 py-1.5 bg-white rounded-md border border-blue-200 text-sm">
+                    {formatDate(dueDate)}
+                  </div>
+                  <p className="text-sm text-blue-700 mt-2">
+                    Your feedback helps us improve content recommendations and ensures alignment with your SLI.
+                  </p>
+                </div>
+              </CardContent>
+              <CardFooter>
+                <Button 
+                  className="w-full bg-blue-600 hover:bg-blue-700" 
+                  onClick={() => navigate("/monthly-check-in")}
+                >
+                  <MessageSquare className="h-4 w-4 mr-2" />
+                  Provide Feedback
+                </Button>
+              </CardFooter>
+            </Card>
+          </div>
+        </div>
       ) : (
         <Card className="mb-8">
           <CardHeader>
