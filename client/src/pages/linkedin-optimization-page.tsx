@@ -77,14 +77,25 @@ export default function LinkedinOptimizationPage() {
     <div className="min-h-screen bg-background flex flex-col">
       <NavBar />
       <main className="flex-1 container max-w-5xl mx-auto px-4 py-8">
-        <Button
-          variant="ghost"
-          className="mb-6 flex items-center text-muted-foreground"
-          onClick={() => navigate("/")}
-        >
-          <ChevronLeft className="mr-2 h-4 w-4" />
-          Back to Home
-        </Button>
+        <div className="flex justify-between items-center mb-6">
+          <Button
+            variant="ghost"
+            className="flex items-center text-muted-foreground"
+            onClick={() => navigate("/")}
+          >
+            <ChevronLeft className="mr-2 h-4 w-4" />
+            Back to Home
+          </Button>
+          
+          <Button
+            onClick={() => navigate("/linkedin-content-drafts")}
+            className="flex items-center bg-blue-600 hover:bg-blue-700"
+          >
+            <FileText className="mr-2 h-4 w-4" />
+            Pre-Drafted Content
+            <ArrowRight className="ml-2 h-4 w-4" />
+          </Button>
+        </div>
 
         <div className="bg-white shadow-card rounded-lg overflow-hidden mb-8">
           <div className="bg-blue-50 p-6 border-b border-blue-100">
@@ -297,23 +308,13 @@ export default function LinkedinOptimizationPage() {
             <ChevronLeft className="mr-2 h-4 w-4" />
             Back to Home
           </Button>
-          <div className="flex gap-3">
-            <Button
-              variant="outline"
-              onClick={() => navigate("/linkedin-content-drafts")}
-              className="flex items-center"
-            >
-              <FileText className="mr-2 h-4 w-4" />
-              Pre-Drafted Content
-            </Button>
-            <Button
-              onClick={handleGenerateNew}
-              className="flex items-center"
-            >
-              <Lightbulb className="mr-2 h-4 w-4" />
-              Generate New
-            </Button>
-          </div>
+          <Button
+            onClick={handleGenerateNew}
+            className="flex items-center"
+          >
+            <Lightbulb className="mr-2 h-4 w-4" />
+            Generate New
+          </Button>
         </div>
       </main>
     </div>
