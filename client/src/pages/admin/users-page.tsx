@@ -150,7 +150,11 @@ export default function UsersPage() {
                       <TableCell>{user.phoneNumber}</TableCell>
                       <TableCell>
                         {user.lastLoginAt 
-                          ? new Date(user.lastLoginAt).toLocaleString() 
+                          ? new Date(user.lastLoginAt).toLocaleDateString('en-US', {
+                              month: '2-digit',
+                              day: '2-digit',
+                              year: 'numeric'
+                            })
                           : "Never"}
                       </TableCell>
                       <TableCell className="text-right">
