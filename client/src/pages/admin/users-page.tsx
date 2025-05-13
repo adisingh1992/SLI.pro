@@ -26,6 +26,8 @@ import AdminLayout from "./layout";
 import { User } from "@shared/schema";
 
 type UserWithoutPassword = Omit<User, "password">;
+// Extended user type with status field
+type UserWithStatus = UserWithoutPassword & { status?: string };
 
 export default function UsersPage() {
   const { user, isLoading: authLoading } = useAuth();
@@ -135,6 +137,7 @@ export default function UsersPage() {
                     <TableHead>Email</TableHead>
                     <TableHead>Name</TableHead>
                     <TableHead>Phone</TableHead>
+                    <TableHead>Status</TableHead>
                     <TableHead>Last Login At</TableHead>
                     <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
@@ -148,6 +151,9 @@ export default function UsersPage() {
                         {user.firstName} {user.lastName}
                       </TableCell>
                       <TableCell>{user.phoneNumber}</TableCell>
+                      <TableCell>
+                        {user.status || "Registered"}
+                      </TableCell>
                       <TableCell>
                         {user.lastLoginAt 
                           ? new Date(user.lastLoginAt).toLocaleDateString('en-US', {

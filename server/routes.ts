@@ -781,6 +781,50 @@ export async function registerRoutes(app: Express): Promise<Server> {
     return users;
   }
 
+  // Helper function to determine user status
+  async function getUserStatus(userId: number): Promise<string> {
+    // Check LinkedIn Optimization
+    const linkedinOptimizations = await storage.getLinkedinOptimizations(userId);
+    if (linkedinOptimizations.length > 0) {
+      return "LinkedIn Optimization Done";
+    }
+    
+    // Check SLI
+    const slis = await storage.getSlisByUserId(userId);
+    if (slis.length > 0) {
+      return "SLI Generated";
+    }
+    
+    // Check Freshness Report
+    const freshnessReports = await storage.getFreshnessReports(userId);
+    if (freshnessReports.length > 0) {
+      return "Freshness Report Generated";
+    }
+    
+    // Check Conversation Summaries
+    const conversationSummaries = await storage.getConversationSummaries(userId);
+    if (conversationSummaries.length > 0) {
+      return "Chat Session Done";
+    }
+    
+    // Check Documents
+    const documents = await storage.getDocuments(userId);
+    const hasResume = documents.some(doc => doc.type === 'resume');
+    const hasLinkedin = documents.some(doc => doc.type === 'linkedin');
+    if (hasResume && hasLinkedin) {
+      return "Documents Uploaded";
+    }
+    
+    // Check Questionnaire
+    const questionnaire = await storage.getQuestionnaire(userId);
+    if (questionnaire && !questionnaire.isDraft) {
+      return "Questionnaire Completed";
+    }
+    
+    // Default status
+    return "Registered";
+  }
+
   // Admin API routes
   app.get("/api/admin/users", isAdmin, async (req: Request, res: Response, next: NextFunction) => {
     try {
@@ -790,13 +834,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // FORCE filter admin users out - manual approach to bypass any caching issues
       const nonAdminUsers = allUsers.filter(user => user.isAdmin !== true);
       
-      // Remove passwords from the response
-      const usersWithoutPasswords = nonAdminUsers.map(user => {
+      // Enhance each user with their status
+      const enhancedUsers = await Promise.all(nonAdminUsers.map(async (user) => {
         const { password, ...userWithoutPassword } = user;
-        return userWithoutPassword;
-      });
+        const status = await getUserStatus(user.id);
+        return {
+          ...userWithoutPassword,
+          status
+        };
+      }));
       
-      res.json(usersWithoutPasswords);
+      res.json(enhancedUsers);
     } catch (error) {
       next(error);
     }
