@@ -41,7 +41,7 @@ export default function UsersPage() {
     data: usersData,
     isLoading: isUsersLoading,
     error: usersError,
-  } = useQuery<UserWithoutPassword[]>({
+  } = useQuery<UserWithStatus[]>({
     queryKey: ["/api/admin/users"],
     queryFn: getQueryFn({ on401: "throw" }),
     enabled: !!user?.isAdmin,
@@ -143,7 +143,7 @@ export default function UsersPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {paginatedUsers.map((user) => (
+                  {paginatedUsers.map((user: UserWithStatus) => (
                     <TableRow key={user.id}>
                       <TableCell className="font-medium">{user.id}</TableCell>
                       <TableCell>{user.username}</TableCell>
@@ -152,7 +152,23 @@ export default function UsersPage() {
                       </TableCell>
                       <TableCell>{user.phoneNumber}</TableCell>
                       <TableCell>
-                        {user.status || "Registered"}
+                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                          user.status === "LinkedIn Optimization Done" 
+                            ? "bg-green-100 text-green-800" 
+                            : user.status === "SLI Generated" 
+                            ? "bg-blue-100 text-blue-800"
+                            : user.status === "Freshness Report Generated"
+                            ? "bg-purple-100 text-purple-800"
+                            : user.status === "Chat Session Done"
+                            ? "bg-indigo-100 text-indigo-800"
+                            : user.status === "Documents Uploaded"
+                            ? "bg-yellow-100 text-yellow-800"
+                            : user.status === "Questionnaire Completed"
+                            ? "bg-orange-100 text-orange-800"
+                            : "bg-gray-100 text-gray-800"
+                        }`}>
+                          {user.status || "Registered"}
+                        </span>
                       </TableCell>
                       <TableCell>
                         {user.lastLoginAt 
