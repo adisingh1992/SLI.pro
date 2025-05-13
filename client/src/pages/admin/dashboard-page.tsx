@@ -123,17 +123,10 @@ export default function AdminDashboardPage() {
           {/* More stats cards can be added here */}
         </div>
 
-        <Tabs defaultValue="recent">
+        <Tabs defaultValue="system">
           <TabsList>
-            <TabsTrigger value="recent">Recent Activity</TabsTrigger>
             <TabsTrigger value="system">System Status</TabsTrigger>
           </TabsList>
-          <TabsContent value="recent" className="bg-white p-4 rounded-md border mt-2">
-            <div className="text-center text-gray-500 py-8">
-              <UserCircle className="h-12 w-12 mx-auto mb-2 text-gray-400" />
-              <p>No recent activities to display</p>
-            </div>
-          </TabsContent>
           <TabsContent value="system" className="bg-white p-4 rounded-md border mt-2">
             <div className="space-y-4">
               <div className="flex justify-between items-center">

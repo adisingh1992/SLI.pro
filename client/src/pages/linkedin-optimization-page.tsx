@@ -1,8 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { useLocation, useParams } from "wouter";
-import { ChevronLeft, Loader2, Linkedin, Stars, Award, ArrowRight, Lightbulb, BarChart4, FileText } from "lucide-react";
+import { ChevronLeft, Loader2, Linkedin, Stars, Award, ArrowRight, Lightbulb, FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { formatDistanceToNow } from "date-fns";
@@ -89,7 +88,7 @@ export default function LinkedinOptimizationPage() {
           
           <Button
             onClick={() => navigate("/linkedin-content-drafts")}
-            className="flex items-center bg-blue-600 hover:bg-blue-700"
+            className="flex items-center"
           >
             <FileText className="mr-2 h-4 w-4" />
             Pre-Drafted Content
