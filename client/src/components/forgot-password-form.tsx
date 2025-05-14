@@ -36,7 +36,7 @@ interface ForgotPasswordFormProps {
 
 export default function ForgotPasswordForm({ onBack }: ForgotPasswordFormProps) {
   const { toast } = useToast();
-  const [step, setStep] = useState<"request" | "reset">("request");
+  const [step, setStep] = useState<"request" | "check-email" | "reset">("request");
   const [resetToken, setResetToken] = useState<string | null>(null);
 
   // Request password reset form
@@ -63,22 +63,14 @@ export default function ForgotPasswordForm({ onBack }: ForgotPasswordFormProps) 
       const res = await apiRequest("POST", "/api/forgot-password", data);
       return res.json();
     },
-    onSuccess: (data) => {
+    onSuccess: () => {
       toast({
         title: "Reset link sent",
-        description: "If an account with that email exists, a password reset link has been sent.",
+        description: "If an account with that email exists, a password reset link has been sent to your email.",
       });
       
-      // In a real application with email sending, we'd just display a message
-      // For our demo, we'll just show the success message, but not automatically 
-      // move to the reset form - the user needs to click on a link in their email
-      if (data.resetToken) {
-        setResetToken(data.resetToken);
-        // We'll keep this for easy testing, but not automatically set the step
-        resetForm.setValue("token", data.resetToken);
-        // Don't automatically advance to the reset step
-        // setStep("reset");
-      }
+      // Display message directing the user to check their email
+      setStep("check-email");
     },
     onError: (error: Error) => {
       toast({
@@ -135,17 +127,53 @@ export default function ForgotPasswordForm({ onBack }: ForgotPasswordFormProps) 
         </Button>
 
         <h2 className="text-2xl font-medium text-[#333333]">
-          {step === "request" ? "Reset Your Password" : "Create New Password"}
+          {step === "request" 
+            ? "Reset Your Password" 
+            : step === "check-email" 
+              ? "Check Your Email"
+              : "Create New Password"}
         </h2>
         
         <p className="text-[#666666] mt-2">
           {step === "request" 
             ? "Enter your email address below, and we'll send you a link to reset your password."
-            : "Please enter your new password below."}
+            : step === "check-email"
+              ? "We've sent a password reset link to your email address. Please check your inbox and click on the link to reset your password."
+              : "Please enter your new password below."}
         </p>
       </div>
 
-      {step === "request" ? (
+      {step === "check-email" ? (
+        <div className="flex flex-col items-center justify-center mt-8 space-y-6">
+          <div className="bg-[#f5f8f7] p-6 rounded-lg text-center w-full">
+            <Mail className="h-12 w-12 text-[#bed6d1] mx-auto mb-4" />
+            <h3 className="text-lg font-medium text-[#333333] mb-2">Email Sent</h3>
+            <p className="text-[#666666] mb-4">
+              If an account exists with the email you provided, we've sent a password reset link.
+            </p>
+            <p className="text-[#666666] text-sm">
+              Can't find the email? Check your spam folder or 
+              <button
+                type="button"
+                onClick={() => setStep("request")}
+                className="text-[#bed6d1] hover:underline ml-1"
+              >
+                try again
+              </button>
+            </p>
+          </div>
+          
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => setStep("reset")}
+            className="w-full py-3 px-4 border-[#bed6d1] text-[#6c8083] hover:bg-[#f5f8f7]"
+          >
+            <KeyRound className="mr-2 h-4 w-4" />
+            I already have a reset token
+          </Button>
+        </div>
+      ) : step === "request" ? (
         <Form {...requestForm}>
           <form onSubmit={requestForm.handleSubmit(onRequestSubmit)} className="space-y-6">
             <FormField
