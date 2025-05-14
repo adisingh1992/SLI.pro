@@ -52,10 +52,10 @@ export async function sendEmail(options: EmailOptions): Promise<{success: boolea
     const info = await emailTransporter.sendMail(mailOptions);
     
     // For development, return the Ethereal URL so we can preview the email
-    const previewUrl = nodemailer.getTestMessageUrl(info);
+    const testUrl = nodemailer.getTestMessageUrl(info);
     return {
       success: true,
-      previewUrl: previewUrl ? String(previewUrl) : undefined
+      previewUrl: typeof testUrl === 'string' ? testUrl : undefined
     };
   } catch (error) {
     console.error('Failed to send email:', error);
