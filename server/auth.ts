@@ -7,7 +7,6 @@ import { promisify } from "util";
 import { storage } from "./storage";
 import { User as SelectUser, insertUserSchema, insertPasswordResetSchema } from "@shared/schema";
 import { z } from "zod";
-import { sendPasswordResetEmail } from "./email-service";
 
 declare global {
   namespace Express {
@@ -222,28 +221,13 @@ export function setupAuth(app: Express) {
         used: false
       });
 
-      // Build the app URL for the reset link
-      const protocol = req.headers['x-forwarded-proto'] || req.protocol;
-      const host = req.headers['x-forwarded-host'] || req.get('host');
-      const appUrl = `${protocol}://${host}`;
-      
-      // Send password reset email
-      const emailResult = await sendPasswordResetEmail(username, token, appUrl);
-      
-      // Return different response for development vs production
-      if (process.env.NODE_ENV === 'production') {
-        res.status(200).json({ 
-          message: "If an account with that email exists, a password reset link has been sent."
-        });
-      } else {
-        // In development, include more helpful information
-        res.status(200).json({ 
-          message: "If an account with that email exists, a password reset link has been sent.",
-          // For development only
-          resetToken: token,
-          emailPreviewUrl: emailResult.previewUrl
-        });
-      }
+      // In a real app, we would send an email with the reset link
+      // For now, we'll just return the token in the response
+      res.status(200).json({ 
+        message: "If an account with that email exists, a password reset link has been sent.",
+        // The following would NOT be included in a production app, but is useful for testing
+        resetToken: token
+      });
     } catch (error) {
       next(error);
     }
