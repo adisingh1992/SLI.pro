@@ -1,12 +1,13 @@
 import passport from "passport";
 import { Strategy as LocalStrategy } from "passport-local";
-import { Express } from "express";
+import { Express, Request } from "express";
 import session from "express-session";
 import { scrypt, randomBytes, timingSafeEqual } from "crypto";
 import { promisify } from "util";
 import { storage } from "./storage";
 import { User as SelectUser, insertUserSchema, insertPasswordResetSchema } from "@shared/schema";
 import { z } from "zod";
+import { sendPasswordResetEmail } from "./email-service";
 
 declare global {
   namespace Express {
@@ -221,14 +222,29 @@ export function setupAuth(app: Express) {
         used: false
       });
 
-      // In a real app, we would send an email with the reset link
-      // For now, we'll just return the token in the response
+      // Determine the base URL from the request
+      const protocol = req.headers['x-forwarded-proto'] || req.protocol;
+      const host = req.headers.host;
+      const baseUrl = `${protocol}://${host}`;
+      
+      // Send the password reset email
+      const emailSent = await sendPasswordResetEmail(
+        username, // username is the email address
+        token,
+        baseUrl
+      );
+      
+      // For security, don't reveal whether an email was actually sent
       res.status(200).json({ 
-        message: "If an account with that email exists, a password reset link has been sent.",
-        // The following would NOT be included in a production app, but is useful for testing
-        resetToken: token
+        message: "If an account with that email exists, a password reset link has been sent."
       });
+      
+      // Log email status for monitoring
+      if (!emailSent) {
+        console.error(`Failed to send password reset email to ${username}`);
+      }
     } catch (error) {
+      console.error('Error in forgot-password endpoint:', error);
       next(error);
     }
   });
