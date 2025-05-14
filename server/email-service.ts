@@ -1,5 +1,4 @@
 import nodemailer from 'nodemailer';
-import Mail from 'nodemailer/lib/mailer';
 
 // Create a test account for development (using Ethereal Email)
 let transporter: nodemailer.Transporter;
