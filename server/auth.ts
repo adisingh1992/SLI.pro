@@ -7,6 +7,7 @@ import { promisify } from "util";
 import { storage } from "./storage";
 import { User as SelectUser, insertUserSchema, insertPasswordResetSchema } from "@shared/schema";
 import { z } from "zod";
+import { sendPasswordResetEmail } from "./email-service";
 
 declare global {
   namespace Express {
