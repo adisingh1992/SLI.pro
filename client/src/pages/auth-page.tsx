@@ -81,8 +81,8 @@ export default function AuthPage() {
   const loginForm = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
     defaultValues: {
-      username: "aditya@cooeyhealth.com",
-      password: "@lec177fig600",
+      username: "",
+      password: "",
       rememberMe: false,
       isSubmitting: false,
     },
@@ -92,13 +92,13 @@ export default function AuthPage() {
   const registerForm = useForm<RegisterFormValues>({
     resolver: zodResolver(registerSchema),
     defaultValues: {
-      firstName: "Aditya",
-      lastName: "Singh",
-      username: "aditya@cooeyhealth.com",
-      phoneNumber: "9044872133",
-      password: "@lec177fig600",
-      confirmPassword: "@lec177fig600",
-      termsAgreement: true,
+      firstName: "",
+      lastName: "",
+      username: "",
+      phoneNumber: "",
+      password: "",
+      confirmPassword: "",
+      termsAgreement: false,
     },
   });
 
