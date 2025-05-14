@@ -15,20 +15,7 @@ const resetRequestSchema = z.object({
   username: z.string().email("Please enter a valid email"),
 });
 
-// Reset password schema
-const resetPasswordSchema = z.object({
-  token: z.string().min(1, "Token is required"),
-  password: z.string().min(8, "Password must be at least 8 characters")
-    .refine(pwd => /\d/.test(pwd), "Password must contain at least one number")
-    .refine(pwd => /[!@#$%^&*(),.?":{}|<>]/.test(pwd), "Password must contain at least one special character"),
-  confirmPassword: z.string().min(1, "Please confirm your password"),
-}).refine(data => data.password === data.confirmPassword, {
-  message: "Passwords do not match",
-  path: ["confirmPassword"],
-});
-
 type ResetRequestValues = z.infer<typeof resetRequestSchema>;
-type ResetPasswordValues = z.infer<typeof resetPasswordSchema>;
 
 interface ForgotPasswordFormProps {
   onBack: () => void;
@@ -51,7 +38,7 @@ export default function ForgotPasswordForm({ onBack }: ForgotPasswordFormProps) 
       const res = await apiRequest("POST", "/api/forgot-password", data);
       return res.json();
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       toast({
         title: "Reset link sent",
         description: "If an account with that email exists, a password reset link has been sent to your email.",
@@ -59,6 +46,19 @@ export default function ForgotPasswordForm({ onBack }: ForgotPasswordFormProps) 
       
       // Display message directing the user to check their email
       setStep("check-email");
+      
+      // For development: If a token is returned due to email sending failure, show it
+      if (data.resetToken) {
+        console.log('Development mode: Reset token received:', data.resetToken);
+        console.log('Reset URL:', data.resetUrl);
+        
+        // Show a development toast with the token
+        toast({
+          title: "Development Mode",
+          description: "Email sending failed. Reset token available in console.",
+          variant: "destructive",
+        });
+      }
     },
     onError: (error: Error) => {
       toast({
@@ -134,7 +134,7 @@ export default function ForgotPasswordForm({ onBack }: ForgotPasswordFormProps) 
             I already have a reset token
           </Button>
         </div>
-      ) : step === "request" ? (
+      ) : (
         <Form {...requestForm}>
           <form onSubmit={requestForm.handleSubmit(onRequestSubmit)} className="space-y-6">
             <FormField
@@ -169,87 +169,6 @@ export default function ForgotPasswordForm({ onBack }: ForgotPasswordFormProps) 
                 <Mail className="mr-2 h-4 w-4" />
               )}
               Send Reset Link
-            </Button>
-          </form>
-        </Form>
-      ) : (
-        <Form {...resetForm}>
-          <form onSubmit={resetForm.handleSubmit(onResetSubmit)} className="space-y-6">
-            {!resetToken && (
-              <FormField
-                control={resetForm.control}
-                name="token"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-[#333333]">Reset Token</FormLabel>
-                    <FormControl>
-                      <Input
-                        {...field}
-                        placeholder="Enter your reset token"
-                        className="border-gray-300 focus:ring-2 focus:ring-[#bed6d1]"
-                      />
-                    </FormControl>
-                    <FormMessage className="text-[#E34240]" />
-                  </FormItem>
-                )}
-              />
-            )}
-
-            <FormField
-              control={resetForm.control}
-              name="password"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="text-[#333333]">New Password</FormLabel>
-                  <FormControl>
-                    <div className="relative">
-                      <KeyRound className="absolute left-3 top-2.5 h-5 w-5 text-[#6c8083]" />
-                      <Input
-                        {...field}
-                        type="password"
-                        placeholder="Create a new password"
-                        className="pl-10 border-gray-300 focus:ring-2 focus:ring-[#bed6d1]"
-                      />
-                    </div>
-                  </FormControl>
-                  <FormMessage className="text-[#E34240]" />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={resetForm.control}
-              name="confirmPassword"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="text-[#333333]">Confirm Password</FormLabel>
-                  <FormControl>
-                    <div className="relative">
-                      <KeyRound className="absolute left-3 top-2.5 h-5 w-5 text-[#6c8083]" />
-                      <Input
-                        {...field}
-                        type="password"
-                        placeholder="Confirm your password"
-                        className="pl-10 border-gray-300 focus:ring-2 focus:ring-[#bed6d1]"
-                      />
-                    </div>
-                  </FormControl>
-                  <FormMessage className="text-[#E34240]" />
-                </FormItem>
-              )}
-            />
-
-            <Button
-              type="submit"
-              className="w-full py-3 px-4 bg-[#bed6d1] hover:bg-opacity-90 focus:ring-2 focus:ring-offset-2 focus:ring-[#bed6d1]"
-              disabled={resetPasswordMutation.isPending}
-            >
-              {resetPasswordMutation.isPending ? (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              ) : (
-                <KeyRound className="mr-2 h-4 w-4" />
-              )}
-              Reset Password
             </Button>
           </form>
         </Form>

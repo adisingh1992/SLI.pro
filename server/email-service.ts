@@ -31,10 +31,21 @@ export async function sendEmail(params: EmailParams): Promise<boolean> {
       html: params.html || ''
     };
     
+    console.log(`Attempting to send email to: ${params.to} from: ${params.from}`);
     await mail.send(msg);
+    console.log(`Email sent successfully to ${params.to}`);
     return true;
-  } catch (error) {
+  } catch (error: any) {
     console.error('SendGrid email error:', error);
+    
+    // Log detailed error information
+    if (error.response) {
+      console.error('Error details:', {
+        status: error.code,
+        body: error.response.body,
+      });
+    }
+    
     return false;
   }
 }
@@ -51,7 +62,9 @@ export async function sendPasswordResetEmail(
   resetToken: string,
   baseUrl: string
 ): Promise<boolean> {
-  const from = 'noreply@yourdomain.com'; // Update with your verified sender
+  // For SendGrid, the sender must be a verified domain or email
+  // In production, replace this with your actual verified sender email
+  const from = 'test@example.com';
   const subject = 'Password Reset Request';
   
   // Get base URL from request or environment

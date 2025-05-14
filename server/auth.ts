@@ -234,15 +234,27 @@ export function setupAuth(app: Express) {
         baseUrl
       );
       
-      // For security, don't reveal whether an email was actually sent
-      res.status(200).json({ 
-        message: "If an account with that email exists, a password reset link has been sent."
-      });
-      
       // Log email status for monitoring
       if (!emailSent) {
         console.error(`Failed to send password reset email to ${username}`);
+        
+        // For development/testing, include the token in the response when email fails
+        // In production, this should be removed for security
+        if (process.env.NODE_ENV !== 'production') {
+          res.status(200).json({ 
+            message: "If an account with that email exists, a password reset link has been sent.",
+            note: "Email sending failed. For development purposes only, use this token:",
+            resetToken: token,
+            resetUrl: `${baseUrl}/reset-password?token=${token}`
+          });
+          return;
+        }
       }
+      
+      // For security, don't reveal whether an email was actually sent in the standard response
+      res.status(200).json({ 
+        message: "If an account with that email exists, a password reset link has been sent."
+      });
     } catch (error) {
       console.error('Error in forgot-password endpoint:', error);
       next(error);
