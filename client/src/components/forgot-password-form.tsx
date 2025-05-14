@@ -36,24 +36,12 @@ interface ForgotPasswordFormProps {
 
 export default function ForgotPasswordForm({ onBack }: ForgotPasswordFormProps) {
   const { toast } = useToast();
-  const [step, setStep] = useState<"request" | "check-email" | "reset">("request");
-  const [resetToken, setResetToken] = useState<string | null>(null);
-
+  const [step, setStep] = useState<"request" | "check-email">("request");
   // Request password reset form
   const requestForm = useForm<ResetRequestValues>({
     resolver: zodResolver(resetRequestSchema),
     defaultValues: {
       username: ""
-    }
-  });
-
-  // Reset password form
-  const resetForm = useForm<ResetPasswordValues>({
-    resolver: zodResolver(resetPasswordSchema),
-    defaultValues: {
-      token: "",
-      password: "",
-      confirmPassword: ""
     }
   });
 
@@ -81,36 +69,9 @@ export default function ForgotPasswordForm({ onBack }: ForgotPasswordFormProps) 
     }
   });
 
-  // Reset password mutation
-  const resetPasswordMutation = useMutation({
-    mutationFn: async (data: ResetPasswordValues) => {
-      const res = await apiRequest("POST", "/api/reset-password", data);
-      return res.json();
-    },
-    onSuccess: () => {
-      toast({
-        title: "Password reset",
-        description: "Your password has been reset successfully. You can now log in with your new password.",
-      });
-      onBack();
-    },
-    onError: (error: Error) => {
-      toast({
-        title: "Reset failed",
-        description: error.message || "Failed to reset password. The link may have expired.",
-        variant: "destructive",
-      });
-    }
-  });
-
   // Handle reset request submission
   const onRequestSubmit = (data: ResetRequestValues) => {
     requestResetMutation.mutate(data);
-  };
-
-  // Handle reset password submission
-  const onResetSubmit = (data: ResetPasswordValues) => {
-    resetPasswordMutation.mutate(data);
   };
 
   return (
@@ -166,7 +127,7 @@ export default function ForgotPasswordForm({ onBack }: ForgotPasswordFormProps) 
           <Button
             type="button"
             variant="outline"
-            onClick={() => setStep("reset")}
+            onClick={() => window.location.href = "/reset-password"}
             className="w-full py-3 px-4 border-[#bed6d1] text-[#6c8083] hover:bg-[#f5f8f7]"
           >
             <KeyRound className="mr-2 h-4 w-4" />

@@ -6,6 +6,7 @@ import { Toaster } from "@/components/ui/toaster";
 import NotFound from "@/pages/not-found";
 import HomePage from "@/pages/home-page";
 import AuthPage from "@/pages/auth-page";
+import ResetPasswordPage from "@/pages/reset-password-page";
 import ProfilePage from "@/pages/profile-page";
 import ProfileCreationPage from "@/pages/profile-creation-page";
 import QuestionnairePage from "@/pages/questionnaire-simple";
@@ -86,6 +87,7 @@ function Router() {
       
       {/* Auth and fallback routes */}
       <Route path="/auth" component={AuthPage} />
+      <Route path="/reset-password" component={ResetPasswordPage} />
       <Route component={NotFound} />
     </Switch>
   );
