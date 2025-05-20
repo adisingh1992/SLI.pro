@@ -180,6 +180,30 @@ function ChatPageContent() {
 export default function ChatPage() {
   const { user, isLoading } = useAuth();
   const [, setLocation] = useLocation();
+  // Create a key for the conversation provider to force re-mounting when navigating
+  const [providerKey, setProviderKey] = useState(Date.now());
+  
+  // Reset the provider key when the component is mounted
+  // This will force the conversation provider to reinitialize
+  useEffect(() => {
+    // Update the key to force the provider to remount
+    setProviderKey(Date.now());
+    
+    // Function to handle visibility change (tab switch)
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        // When tab becomes visible again, force a refresh
+        setProviderKey(Date.now());
+      }
+    };
+    
+    // Add visibility change listener for tab switching
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, []);
 
   // If authentication is still loading, show a loading indicator
   if (isLoading) {
@@ -199,7 +223,7 @@ export default function ChatPage() {
   return (
     <div className="container mx-auto h-[calc(100vh-1rem)]">
       <NavBar />
-      <ConversationProvider>
+      <ConversationProvider key={providerKey}>
         <ChatPageContent />
       </ConversationProvider>
     </div>
