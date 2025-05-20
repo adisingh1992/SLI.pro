@@ -356,74 +356,7 @@ export default function HomePage() {
             </CardFooter>
           </Card>
           
-          {/* Profile Section */}
-          <Card className={`overflow-hidden shadow-sm flex flex-col h-full ${
-            !userProfile?.questionnaire
-              ? "border-gray-200 opacity-75"
-              : "border-primary/20"
-          }`}>
-            <CardHeader className={`pb-4 ${
-              !userProfile?.questionnaire
-                ? "bg-gray-50"
-                : "bg-green-50"
-            }`}>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center">
-                  <div className={`p-2 rounded-full mr-3 ${
-                    !userProfile?.questionnaire
-                      ? "bg-gray-100 text-gray-500"
-                      : "bg-green-100 text-green-600"
-                  }`}>
-                    <User className="h-5 w-5" />
-                  </div>
-                  <CardTitle className="text-lg">
-                    Your Professional Profile
-                  </CardTitle>
-                </div>
-                <Badge variant="outline" className={`${
-                  !userProfile?.questionnaire
-                    ? "bg-muted text-muted-foreground"
-                    : "bg-primary/10 text-primary"
-                }`}>
-                  {userProfile?.questionnaire ? "Available" : "Unavailable"}
-                </Badge>
-              </div>
-              <CardDescription className="mt-2">
-                {!userProfile?.questionnaire
-                  ? "Complete the questionnaire to see your profile"
-                  : "View and manage your professional profile details"}
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="p-5 flex-grow">
-              <p className={`text-sm ${!userProfile?.questionnaire ? "text-muted-foreground/70" : "text-muted-foreground"}`}>
-                {!userProfile?.questionnaire
-                  ? "Your profile will be created after completing the questionnaire"
-                  : userProfile.questionnaire.isDraft === true
-                    ? "Your profile is based on your draft questionnaire"
-                    : "Your profile reflects information from your completed questionnaire"}
-              </p>
-            </CardContent>
-            <CardFooter className="bg-gray-50 py-3 px-5 mt-auto">
-              <Button
-                variant="outline"
-                className={`w-full ${
-                  !userProfile?.questionnaire
-                    ? "border-blue-500 text-blue-600 hover:bg-blue-50 cursor-not-allowed"
-                    : "border-green-500 text-green-700 hover:bg-green-50"
-                }`}
-                onClick={() => {
-                  if (userProfile?.questionnaire) {
-                    scrollToTop();
-                    navigate("/profile");
-                  }
-                }}
-                disabled={!userProfile?.questionnaire}
-              >
-                View Profile
-                <ArrowRight className="ml-2 h-4 w-4" />
-              </Button>
-            </CardFooter>
-          </Card>
+
           
           {/* Strategy Session (Coaching) Section */}
           <Card className={`overflow-hidden shadow-sm flex flex-col h-full ${
