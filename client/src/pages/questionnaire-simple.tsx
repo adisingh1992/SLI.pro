@@ -1619,13 +1619,17 @@ export default function QuestionnairePage() {
 
       // Json data was fully processed above
       
-      // Try to parse personality assessments as before
+      // Try to parse personality assessments from multiple locations
+      // First try from aspirations field (for backward compatibility)
       if (q.aspirations && q.aspirations.includes("Personality assessments:")) {
         const assessmentsText = q.aspirations
           .split("Personality assessments:")[1]
           ?.trim()
           .split("\n")[0];
+        
         if (assessmentsText) {
+          console.log("Loading personality assessments from aspirations:", assessmentsText);
+          
           setMbtiChecked(assessmentsText.includes("MBTI"));
           setStrengthsFinderChecked(
             assessmentsText.includes("Strengths Finder"),
@@ -1642,6 +1646,32 @@ export default function QuestionnairePage() {
             }
           }
         }
+      }
+      
+      // Special handling for Step 5 assessments - extract directly from questionnaire text
+      // This ensures the assessments are always loaded correctly regardless of how they're stored
+      if (q.aspirations) {
+        const lines = q.aspirations.split('\n');
+        lines.forEach(line => {
+          if (line.startsWith('Personality assessments:')) {
+            const assessmentInfo = line.substring('Personality assessments:'.length).trim();
+            console.log("Found personality assessment line:", assessmentInfo);
+            
+            if (assessmentInfo.includes("MBTI")) setMbtiChecked(true);
+            if (assessmentInfo.includes("Strengths Finder")) setStrengthsFinderChecked(true);
+            if (assessmentInfo.includes("VIA")) setViaChecked(true);
+            if (assessmentInfo.includes("Enneagram")) setEnneagramChecked(true);
+            if (assessmentInfo.includes("360*")) setThreeSixtyChecked(true);
+            
+            if (assessmentInfo.includes("Other:")) {
+              setOtherAssessmentChecked(true);
+              const otherMatch = assessmentInfo.match(/Other: (.*?)(?:,|$)/);
+              if (otherMatch && otherMatch[1]) {
+                setOtherAssessment(otherMatch[1].trim());
+              }
+            }
+          }
+        });
       }
 
       // Parse content format preferences
@@ -2846,6 +2876,9 @@ export default function QuestionnairePage() {
         assessments.push(`Other: ${otherAssessment.trim()}`);
       }
       brandingDetails += `\n\nPersonality assessments: ${assessments.length > 0 ? assessments.join(", ") : "None"}`;
+      
+      // Log to debug what we're saving
+      console.log("Saving personality assessments in aspirations:", assessments);
 
       // Add career goals
       brandingDetails += `\n\nCareer goals: ${careerGoals.trim() !== "" ? careerGoals : "Not specified"}`;
