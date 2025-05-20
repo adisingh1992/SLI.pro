@@ -79,9 +79,9 @@ export default function HomePage() {
                                userProfile?.documents?.some(doc => doc.type === 'linkedin');
   
   // Check if SLI exists and is selected/refined
-  const hasSli = userSlis && userSlis.length > 0;
-  const hasSliSelected = hasSli && userSlis[0]?.selectedSliIndex !== null;
-  const hasSliRefined = hasSli && userSlis[0]?.refinedSliText !== null && userSlis[0]?.refinedSliText !== "";
+  const hasSli = userSlis && Array.isArray(userSlis) && userSlis.length > 0;
+  const hasSliSelected = hasSli && Array.isArray(userSlis) && userSlis[0] && userSlis[0].selectedSliIndex !== null;
+  const hasSliRefined = hasSli && Array.isArray(userSlis) && userSlis[0] && userSlis[0].refinedSliText !== null && userSlis[0].refinedSliText !== "";
   
   // Check if user can generate LinkedIn Optimization
   const canGenerateLinkedInOptimization = 
@@ -355,8 +355,6 @@ export default function HomePage() {
               </Button>
             </CardFooter>
           </Card>
-          
-
           
           {/* Strategy Session (Coaching) Section */}
           <Card className={`overflow-hidden shadow-sm flex flex-col h-full ${
@@ -632,8 +630,8 @@ export default function HomePage() {
               </div>
               <CardDescription className="mt-2">
                 {!canGenerateLinkedInOptimization
-                  ? getLinkedInRequirementsMessage(hasRequiredDocuments, hasSliSelected || hasSliRefined, !!latestFreshnessReport)
-                  : latestLinkedinOptimization
+                  ? getLinkedInRequirementsMessage(hasRequiredDocuments, Boolean(hasSliSelected || hasSliRefined), latestFreshnessReport !== undefined)
+                  : latestLinkedinOptimization !== undefined
                     ? `Generated ${formatTimeAgo(latestLinkedinOptimization.createdAt)}`
                     : "Enhance your LinkedIn profile with AI-powered recommendations"}
               </CardDescription>
