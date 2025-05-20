@@ -49,6 +49,10 @@ export const ConversationProvider = ({ children }: { children: ReactNode }) => {
     queryKey: ['/api/conversations'],
     // Using the default queryFn from the queryClient which knows how to handle the URL
     enabled: true,
+    // Important: Set staleTime to 0 to ensure fresh data on every screen visit
+    staleTime: 0,
+    // Refresh the data when the window regains focus
+    refetchOnWindowFocus: true,
   });
 
   // Fetch current conversation with messages
@@ -56,6 +60,10 @@ export const ConversationProvider = ({ children }: { children: ReactNode }) => {
     queryKey: ['/api/conversations', currentConversationId],
     // Using the default queryFn which will hit `/api/conversations/${currentConversationId}`
     enabled: !!currentConversationId,
+    // Important: Set staleTime to 0 to ensure fresh data on every screen visit
+    staleTime: 0,
+    // Refresh the data when the window regains focus
+    refetchOnWindowFocus: true,
     select: (data: any) => {
       // Make sure we have a consistent data structure
       if (!data) return null;
