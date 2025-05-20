@@ -56,15 +56,12 @@ export function ChatInterface() {
     if (currentConversation && currentConversation.messages) {
       const conversationId = currentConversation.conversation?.id;
 
-      // Always update messages when the conversation object changes
-      // Removed the lastConversationIdRef check that was preventing updates
-      console.log(
-        "Loading conversation messages",
-        conversationId,
-        "with", currentConversation.messages.length, "messages"
-      );
-      
-      // Update the reference for tracking
+      // Skip initial load or if it's the same conversation
+      if (lastConversationIdRef.current === conversationId) {
+        return;
+      }
+
+      // Different conversation was loaded, update ref
       lastConversationIdRef.current = conversationId;
 
       // Reset summary generation status for the new conversation
@@ -73,7 +70,7 @@ export function ChatInterface() {
       // Reset Calendly link visibility for the new conversation
       setShowCalendlyLink(false);
 
-      // Replace all messages unless we're in the middle of streaming
+      // If we're not actively streaming, replace all messages
       if (!isProcessing) {
         console.log(
           "Replacing all messages with conversation data",
@@ -89,8 +86,6 @@ export function ChatInterface() {
       } else {
         console.log("Not replacing messages while processing", isProcessing);
       }
-    } else {
-      console.log("No conversation data available or messages empty");
     }
   }, [currentConversation, isProcessing]);
 
