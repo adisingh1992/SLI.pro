@@ -302,10 +302,10 @@ export default function AuthPage() {
                                     <Checkbox
                                       checked={field.value}
                                       onCheckedChange={field.onChange}
-                                      className="h-4 w-4 text-[#bed6d1] focus:ring-[#bed6d1]"
+                                      className="h-4 w-4 text-[#bed6d1] focus:ring-[#bed6d1] mt-0.5"
                                     />
                                   </FormControl>
-                                  <FormLabel className="text-sm text-[#333333] cursor-pointer leading-none">
+                                  <FormLabel className="text-sm text-[#333333] cursor-pointer flex items-center">
                                     Remember Me
                                   </FormLabel>
                                 </FormItem>
