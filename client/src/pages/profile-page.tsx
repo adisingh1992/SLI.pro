@@ -117,149 +117,151 @@ export default function ProfilePage() {
 
           {/* Profile Content */}
           <div className="p-6 border-t border-gray-200">
-            <div className="max-w-4xl mx-auto">
+            <div className="max-w-4xl mx-auto w-full">
               <Tabs
                 value={activeTab}
                 onValueChange={setActiveTab}
-                className="mb-8"
+                className="mb-8 w-full"
               >
                 <TabsList className="grid w-full grid-cols-2">
                   <TabsTrigger value="profile">Profile</TabsTrigger>
                   <TabsTrigger value="documents">Documents</TabsTrigger>
                 </TabsList>
 
-                <TabsContent value="profile" className="w-full">
-                  <div className="pt-4 w-full">
-                    {/* Profile Info - Only showing Name, Email, Phone Number and Career Development Summary */}
-                    <div className="w-full">
-                      <div className="mb-8 bg-white rounded-lg p-6 shadow-sm w-full">
-                        <h2 className="text-xl font-medium text-[#333333] mb-4">
-                          Basic Information
-                        </h2>
-
-                        <div className="space-y-4">
-                          {/* Name */}
-                          <div className="flex flex-col md:flex-row md:items-center border-b border-gray-100 pb-3">
-                            <div className="md:w-1/3 font-medium text-gray-700">
-                              Name:
-                            </div>
-                            <div className="md:w-2/3 text-gray-900">
-                              {userProfile.firstName} {userProfile.lastName}
-                            </div>
-                          </div>
-
-                          {/* Email */}
-                          <div className="flex flex-col md:flex-row md:items-center border-b border-gray-100 pb-3">
-                            <div className="md:w-1/3 font-medium text-gray-700">
-                              Email:
-                            </div>
-                            <div className="md:w-2/3 text-gray-900">
-                              {userProfile.username}
-                            </div>
-                          </div>
-
-                          {/* Phone Number */}
-                          <div className="flex flex-col md:flex-row md:items-center border-b border-gray-100 pb-3">
-                            <div className="md:w-1/3 font-medium text-gray-700">
-                              Phone Number:
-                            </div>
-                            <div className="md:w-2/3 text-gray-900">
-                              {userProfile.phoneNumber || "Not provided"}
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Career Questionnaire Results */}
-                      {userProfile.questionnaire && (
-                        <div className="mb-8 bg-[#f8fafc] p-6 rounded-lg border border-gray-100 shadow-sm w-full">
-                          <div className="flex justify-between items-center mb-4">
-                            <h2 className="text-xl font-medium text-[#333333]">
-                              Career Development Summary
-                            </h2>
-                            <Button
-                              onClick={() => {
-                                scrollToTop();
-                                navigate("/questionnaire");
-                              }}
-                              variant="outline"
-                              className="px-3 py-1 h-auto text-sm border-[#bed6d1] text-[#bed6d1] hover:bg-[#bed6d1] hover:text-white"
-                            >
-                              <Edit className="h-3 w-3 mr-1" />
-                              Edit
-                            </Button>
-                          </div>
-
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            {userProfile.questionnaire.background && (
-                              <div className="border-l-2 border-[#bed6d1] pl-4 py-1">
-                                <h3 className="font-medium text-[#333333] flex items-center">
-                                  <Clipboard className="h-4 w-4 mr-2 text-[#bed6d1]" />
-                                  Professional Background
-                                </h3>
-                                <p className="mt-1 text-gray-700 text-sm">
-                                  {userProfile.questionnaire.background}
-                                </p>
-                              </div>
-                            )}
-
-                            {userProfile.questionnaire.timeframe && (
-                              <div className="border-l-2 border-[#bed6d1] pl-4 py-1">
-                                <h3 className="font-medium text-[#333333] flex items-center">
-                                  <Clock className="h-4 w-4 mr-2 text-[#bed6d1]" />
-                                  Current Industry & Function
-                                </h3>
-                                <p className="mt-1 text-gray-700 text-sm">
-                                  {userProfile.questionnaire.timeframe}
-                                </p>
-                              </div>
-                            )}
-
-                            {userProfile.questionnaire.goals && (
-                              <div className="border-l-2 border-[#bed6d1] pl-4 py-1">
-                                <h3 className="font-medium text-[#333333] flex items-center">
-                                  <Target className="h-4 w-4 mr-2 text-[#bed6d1]" />
-                                  Career Goals
-                                </h3>
-                                <p className="mt-1 text-gray-700 text-sm">
-                                  {userProfile.questionnaire.goals}
-                                </p>
-                              </div>
-                            )}
-
-                            {userProfile.questionnaire.aspirations && (
-                              <div className="border-l-2 border-[#bed6d1] pl-4 py-1">
-                                <h3 className="font-medium text-[#333333] flex items-center">
-                                  <BookText className="h-4 w-4 mr-2 text-[#bed6d1]" />
-                                  Professional Aspirations
-                                </h3>
-                                <p className="mt-1 text-gray-700 text-sm">
-                                  {userProfile.questionnaire.aspirations}
-                                </p>
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </TabsContent>
-
-                <TabsContent value="documents" className="w-full">
-                  <div className="pt-4 w-full">
-                    <div className="w-full">
-                      <div className="mb-8 bg-white rounded-lg p-6 shadow-sm w-full">
-                        <div className="flex items-center mb-4">
-                          <FileText className="h-6 w-6 mr-2 text-[#bed6d1]" />
-                          <h2 className="text-xl font-medium text-[#333333]">
-                            My Documents
+                <div className="w-full" style={{ minWidth: '100%' }}>
+                  <TabsContent value="profile">
+                    <div className="pt-4">
+                      {/* Profile Info - Only showing Name, Email, Phone Number and Career Development Summary */}
+                      <div>
+                        <div className="mb-8 bg-white rounded-lg p-6 shadow-sm">
+                          <h2 className="text-xl font-medium text-[#333333] mb-4">
+                            Basic Information
                           </h2>
+
+                          <div className="space-y-4">
+                            {/* Name */}
+                            <div className="flex flex-col md:flex-row md:items-center border-b border-gray-100 pb-3">
+                              <div className="md:w-1/3 font-medium text-gray-700">
+                                Name:
+                              </div>
+                              <div className="md:w-2/3 text-gray-900">
+                                {userProfile.firstName} {userProfile.lastName}
+                              </div>
+                            </div>
+
+                            {/* Email */}
+                            <div className="flex flex-col md:flex-row md:items-center border-b border-gray-100 pb-3">
+                              <div className="md:w-1/3 font-medium text-gray-700">
+                                Email:
+                              </div>
+                              <div className="md:w-2/3 text-gray-900">
+                                {userProfile.username}
+                              </div>
+                            </div>
+
+                            {/* Phone Number */}
+                            <div className="flex flex-col md:flex-row md:items-center border-b border-gray-100 pb-3">
+                              <div className="md:w-1/3 font-medium text-gray-700">
+                                Phone Number:
+                              </div>
+                              <div className="md:w-2/3 text-gray-900">
+                                {userProfile.phoneNumber || "Not provided"}
+                              </div>
+                            </div>
+                          </div>
                         </div>
-                        <DocumentUpload />
+
+                        {/* Career Questionnaire Results */}
+                        {userProfile.questionnaire && (
+                          <div className="mb-8 bg-[#f8fafc] p-6 rounded-lg border border-gray-100 shadow-sm">
+                            <div className="flex justify-between items-center mb-4">
+                              <h2 className="text-xl font-medium text-[#333333]">
+                                Career Development Summary
+                              </h2>
+                              <Button
+                                onClick={() => {
+                                  scrollToTop();
+                                  navigate("/questionnaire");
+                                }}
+                                variant="outline"
+                                className="px-3 py-1 h-auto text-sm border-[#bed6d1] text-[#bed6d1] hover:bg-[#bed6d1] hover:text-white"
+                              >
+                                <Edit className="h-3 w-3 mr-1" />
+                                Edit
+                              </Button>
+                            </div>
+
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                              {userProfile.questionnaire.background && (
+                                <div className="border-l-2 border-[#bed6d1] pl-4 py-1">
+                                  <h3 className="font-medium text-[#333333] flex items-center">
+                                    <Clipboard className="h-4 w-4 mr-2 text-[#bed6d1]" />
+                                    Professional Background
+                                  </h3>
+                                  <p className="mt-1 text-gray-700 text-sm">
+                                    {userProfile.questionnaire.background}
+                                  </p>
+                                </div>
+                              )}
+
+                              {userProfile.questionnaire.timeframe && (
+                                <div className="border-l-2 border-[#bed6d1] pl-4 py-1">
+                                  <h3 className="font-medium text-[#333333] flex items-center">
+                                    <Clock className="h-4 w-4 mr-2 text-[#bed6d1]" />
+                                    Current Industry & Function
+                                  </h3>
+                                  <p className="mt-1 text-gray-700 text-sm">
+                                    {userProfile.questionnaire.timeframe}
+                                  </p>
+                                </div>
+                              )}
+
+                              {userProfile.questionnaire.goals && (
+                                <div className="border-l-2 border-[#bed6d1] pl-4 py-1">
+                                  <h3 className="font-medium text-[#333333] flex items-center">
+                                    <Target className="h-4 w-4 mr-2 text-[#bed6d1]" />
+                                    Career Goals
+                                  </h3>
+                                  <p className="mt-1 text-gray-700 text-sm">
+                                    {userProfile.questionnaire.goals}
+                                  </p>
+                                </div>
+                              )}
+
+                              {userProfile.questionnaire.aspirations && (
+                                <div className="border-l-2 border-[#bed6d1] pl-4 py-1">
+                                  <h3 className="font-medium text-[#333333] flex items-center">
+                                    <BookText className="h-4 w-4 mr-2 text-[#bed6d1]" />
+                                    Professional Aspirations
+                                  </h3>
+                                  <p className="mt-1 text-gray-700 text-sm">
+                                    {userProfile.questionnaire.aspirations}
+                                  </p>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        )}
                       </div>
                     </div>
-                  </div>
-                </TabsContent>
+                  </TabsContent>
+
+                  <TabsContent value="documents">
+                    <div className="pt-4">
+                      <div>
+                        <div className="mb-8 bg-white rounded-lg p-6 shadow-sm">
+                          <div className="flex items-center mb-4">
+                            <FileText className="h-6 w-6 mr-2 text-[#bed6d1]" />
+                            <h2 className="text-xl font-medium text-[#333333]">
+                              My Documents
+                            </h2>
+                          </div>
+                          <DocumentUpload />
+                        </div>
+                      </div>
+                    </div>
+                  </TabsContent>
+                </div>
               </Tabs>
             </div>
           </div>
