@@ -7,12 +7,9 @@ import { scrollToTop } from "@/lib/utils";
 import {
   Loader2,
   Edit,
-  MapPin,
   Clipboard,
   BookText,
   Target,
-  AlertTriangle,
-  Heart,
   Clock,
   FileText,
   Home,
@@ -83,7 +80,7 @@ export default function ProfilePage() {
     <div className="min-h-screen bg-[#F5F5F5] flex flex-col">
       <NavBar />
       <main className="flex-1 max-w-7xl mx-auto px-4 sm:px-6 py-8">
-        <div className="bg-white shadow-card rounded-lg overflow-hidden">
+        <div className="bg-white shadow-card rounded-lg overflow-hidden" style={{width: "900px"}}>
           {/* Profile Header */}
           <div className="relative">
             <div className="bg-gradient-to-r from-[#bed6d1] to-[#dcede9] p-6">
