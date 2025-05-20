@@ -630,7 +630,7 @@ export default function HomePage() {
               </div>
               <CardDescription className="mt-2">
                 {!canGenerateLinkedInOptimization
-                  ? getLinkedInRequirementsMessage(hasRequiredDocuments, Boolean(hasSliSelected || hasSliRefined), latestFreshnessReport !== undefined)
+                  ? getLinkedInRequirementsMessage(hasRequiredDocuments || false, Boolean(hasSliSelected || hasSliRefined), latestFreshnessReport !== undefined)
                   : latestLinkedinOptimization !== undefined
                     ? `Generated ${formatTimeAgo(latestLinkedinOptimization.createdAt)}`
                     : "Enhance your LinkedIn profile with AI-powered recommendations"}
@@ -791,10 +791,14 @@ function formatTimeAgo(dateString?: string | Date): string {
 
 // Helper function for LinkedIn requirement messages
 function getLinkedInRequirementsMessage(
-  hasDocuments: boolean, 
-  hasSli: boolean, 
-  hasFreshnessReport: boolean
+  hasDocuments: boolean | undefined, 
+  hasSli: boolean | undefined, 
+  hasFreshnessReport: boolean | undefined
 ): string {
+  // Convert any undefined values to false
+  hasDocuments = hasDocuments === true;
+  hasSli = hasSli === true;
+  hasFreshnessReport = hasFreshnessReport === true;
   if (!hasDocuments && !hasSli && !hasFreshnessReport) {
     return "Complete prerequisites to unlock LinkedIn optimization";
   }
