@@ -128,11 +128,11 @@ export default function ProfilePage() {
                   <TabsTrigger value="documents">Documents</TabsTrigger>
                 </TabsList>
 
-                <TabsContent value="profile">
-                  <div className="pt-4">
+                <TabsContent value="profile" className="w-full">
+                  <div className="pt-4 w-full">
                     {/* Profile Info - Only showing Name, Email, Phone Number and Career Development Summary */}
-                    <div>
-                      <div className="mb-8 bg-white rounded-lg p-6 shadow-sm">
+                    <div className="w-full">
+                      <div className="mb-8 bg-white rounded-lg p-6 shadow-sm w-full">
                         <h2 className="text-xl font-medium text-[#333333] mb-4">
                           Basic Information
                         </h2>
@@ -172,7 +172,7 @@ export default function ProfilePage() {
 
                       {/* Career Questionnaire Results */}
                       {userProfile.questionnaire && (
-                        <div className="mb-8 bg-[#f8fafc] p-6 rounded-lg border border-gray-100 shadow-sm">
+                        <div className="mb-8 bg-[#f8fafc] p-6 rounded-lg border border-gray-100 shadow-sm w-full">
                           <div className="flex justify-between items-center mb-4">
                             <h2 className="text-xl font-medium text-[#333333]">
                               Career Development Summary
@@ -245,10 +245,10 @@ export default function ProfilePage() {
                   </div>
                 </TabsContent>
 
-                <TabsContent value="documents" className="pt-4">
-                  <div className="pt-4">
-                    <div>
-                      <div className="mb-8 bg-white rounded-lg p-6 shadow-sm">
+                <TabsContent value="documents" className="w-full">
+                  <div className="pt-4 w-full">
+                    <div className="w-full">
+                      <div className="mb-8 bg-white rounded-lg p-6 shadow-sm w-full">
                         <div className="flex items-center mb-4">
                           <FileText className="h-6 w-6 mr-2 text-[#bed6d1]" />
                           <h2 className="text-xl font-medium text-[#333333]">
