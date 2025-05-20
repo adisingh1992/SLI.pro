@@ -2018,6 +2018,15 @@ export default function QuestionnairePage() {
         socialImpact: socialImpactChecked,
         technology: technologyChecked
       },
+      personalityAssessments: {
+        mbti: mbtiChecked,
+        strengthsFinder: strengthsFinderChecked,
+        via: viaChecked,
+        enneagram: enneagramChecked,
+        threeSixty: threeSixtyChecked,
+        other: otherAssessmentChecked ? otherAssessment : null,
+        otherText: otherAssessmentChecked ? otherAssessment : null
+      },
       societalInterests: {
         climate: climateChecked,
         consumerBehavior: consumerBehaviorChecked,
