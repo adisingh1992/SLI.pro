@@ -286,7 +286,7 @@ export default function HomePage() {
                     <FileText className="h-5 w-5" />
                   </div>
                   <CardTitle className="text-lg">
-                    Documents Upload
+                    Upload your documents
                   </CardTitle>
                 </div>
                 {documentsBadge}
@@ -295,7 +295,7 @@ export default function HomePage() {
                 {!userProfile?.questionnaire || userProfile.questionnaire.isDraft === true
                   ? "Complete the questionnaire to unlock this section"
                   : !hasRequiredDocuments
-                    ? "Upload your resume and LinkedIn profile"
+                    ? "Upload your latest resume and LinkedIn profile as PDFs to proceed."
                     : "All required documents have been uploaded"}
               </CardDescription>
             </CardHeader>
@@ -309,7 +309,7 @@ export default function HomePage() {
                         : "bg-blue-100 text-blue-600"
                     }`}>1</div>
                     <span className={`${!userProfile?.questionnaire || userProfile.questionnaire.isDraft === true ? "text-gray-500" : ""}`}>
-                      Most Recent Resume
+                      Latest Resume
                     </span>
                     {userProfile?.documents?.some(doc => doc.type === 'resume') && (
                       <CheckCircle className="h-4 w-4 text-green-600 ml-auto" />
@@ -323,7 +323,7 @@ export default function HomePage() {
                         : "bg-blue-100 text-blue-600"
                     }`}>2</div>
                     <span className={`${!userProfile?.questionnaire || userProfile.questionnaire.isDraft === true ? "text-gray-500" : ""}`}>
-                      LinkedIn Profile PDF
+                      LinkedIn Profile (PDF)
                     </span>
                     {userProfile?.documents?.some(doc => doc.type === 'linkedin') && (
                       <CheckCircle className="h-4 w-4 text-green-600 ml-auto" />
@@ -350,8 +350,8 @@ export default function HomePage() {
                 }}
                 disabled={!userProfile?.questionnaire || userProfile.questionnaire.isDraft === true}
               >
-                {hasRequiredDocuments ? "View Documents" : "Upload Documents"}
-                <FileText className="ml-2 h-4 w-4" />
+                {hasRequiredDocuments ? "View Documents" : "Upload"}
+                <ArrowRight className="ml-2 h-4 w-4" />
               </Button>
             </CardFooter>
           </Card>
@@ -377,26 +377,26 @@ export default function HomePage() {
                     <Calendar className="h-5 w-5" />
                   </div>
                   <CardTitle className="text-lg">
-                    Schedule Strategy Session
+                    Schedule a Coaching Session
                   </CardTitle>
                 </div>
                 {coachingBadge}
               </div>
               <CardDescription className="mt-2">
                 {!userProfile?.questionnaire
-                  ? "Complete the questionnaire to unlock strategy sessions"
+                  ? "Complete the questionnaire to unlock coaching sessions"
                   : userProfile.questionnaire.isDraft === true
                     ? "Finish your questionnaire to schedule strategy sessions"
                     : !hasRequiredDocuments
                       ? "Upload your documents to schedule strategy sessions"
-                      : "Book a session to sharpen your professional positioning"}
+                      : "Book a session to refine your professional brand."}
               </CardDescription>
             </CardHeader>
             <CardContent className="p-5 flex-grow">
               <p className={`text-sm ${!userProfile?.questionnaire || userProfile.questionnaire.isDraft === true || !hasRequiredDocuments ? "text-muted-foreground/70" : "text-muted-foreground"}`}>
                 {!userProfile?.questionnaire || userProfile.questionnaire.isDraft === true || !hasRequiredDocuments
                   ? `You must ${!userProfile?.questionnaire ? "complete the questionnaire" : userProfile.questionnaire.isDraft === true ? "complete the questionnaire" : "upload your documents"} first`
-                  : "Stand out in your market with clarity and confidence. These sessions help you define your professional presence."}
+                  : "Gain clarity and confidence to stand out in your field. These sessions help you sharpen your professional presence."}
               </p>
             </CardContent>
             <CardFooter className="bg-gray-50 py-3 px-5 mt-auto">

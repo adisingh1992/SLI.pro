@@ -5,15 +5,12 @@ import {
   Dialog,
   DialogContent,
   DialogHeader,
-  DialogTitle,
-  DialogTrigger,
+  DialogTitle
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Separator } from "@/components/ui/separator";
 import { ChatMessage } from "./chat-message";
 import { ChatInput } from "./chat-input";
-import { ConversationList } from "./conversation-list";
 import { useIsMobile } from "@/hooks/use-mobile";
 
 export function ChatInterface() {

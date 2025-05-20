@@ -64,9 +64,6 @@ export default function SummaryList({ userId, isAdmin = false }: SummaryListProp
             <p className="text-muted-foreground mb-6">
               Start a conversation and complete it to generate a summary.
             </p>
-            <Button onClick={() => navigate('/chat')} variant="default">
-              Start a Conversation
-            </Button>
           </>
         )}
       </div>
@@ -77,11 +74,7 @@ export default function SummaryList({ userId, isAdmin = false }: SummaryListProp
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h2 className="text-2xl font-bold">Conversation Summaries</h2>
-        {!isAdmin && (
-          <Button onClick={() => navigate('/chat')} variant="default">
-            New Conversation
-          </Button>
-        )}
+        
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">

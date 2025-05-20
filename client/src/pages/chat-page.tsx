@@ -13,6 +13,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle
 } from '@/components/ui/alert-dialog';
+import NavBar from "@/components/nav-bar";
 
 function ChatPageContent() {
   const { currentConversation, isProcessing } = useConversation();
@@ -197,6 +198,7 @@ export default function ChatPage() {
 
   return (
     <div className="container mx-auto h-[calc(100vh-1rem)]">
+      <NavBar />
       <ConversationProvider>
         <ChatPageContent />
       </ConversationProvider>

@@ -16,11 +16,11 @@ export function ChatMessage({ content, role, isStreaming = false }: ChatMessageP
       <div className={`flex ${role === 'user' ? 'flex-row-reverse' : 'flex-row'} max-w-[80%]`}>
         <div className="flex-shrink-0 mr-3">
           {role === 'user' ? (
-            <Avatar className="h-8 w-8 bg-primary text-white">
+            <Avatar className="h-8 w-8 mx-2 bg-primary text-green">
               <AvatarFallback>C</AvatarFallback>
             </Avatar>
           ) : (
-            <Avatar className="h-8 w-8 bg-secondary text-secondary-foreground">
+            <Avatar className="h-8 w-8 bg-secondary text-green">
               <AvatarFallback>AI</AvatarFallback>
             </Avatar>
           )}
