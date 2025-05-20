@@ -2179,8 +2179,43 @@ export default function QuestionnairePage() {
     }
     
     // Step 4 & 5 fields - only include when on these steps or when these fields have values
-    if (currentStep >= 4 || Object.values(interestsData).some(value => typeof value === "boolean" && value === true)) {
-      formData.interests = JSON.stringify(interestsData); // Store interests as structured JSON
+    // Check if any personality assessment is selected (for Step 5)
+    const personalityAssessmentsSelected = mbtiChecked || strengthsFinderChecked || viaChecked || 
+                                          enneagramChecked || threeSixtyChecked || 
+                                          (otherAssessmentChecked && otherAssessment.trim() !== "");
+    
+    if (currentStep >= 4 || 
+        Object.values(interestsData.industryInterests).some(value => value === true) ||
+        Object.values(interestsData.societalInterests).some(value => value === true) || 
+        personalityAssessmentsSelected || 
+        (interestsData.technologyDigitalMedia && Object.values(interestsData.technologyDigitalMedia).some(value => value === true))) {
+      
+      // Make sure personalityAssessments is explicitly included in the interestsData when saving
+      const dataToSave = {
+        ...interestsData,
+        personalityAssessments: {
+          mbti: mbtiChecked,
+          strengthsFinder: strengthsFinderChecked,
+          via: viaChecked,
+          enneagram: enneagramChecked,
+          threeSixty: threeSixtyChecked,
+          other: otherAssessmentChecked ? otherAssessment : null,
+          otherText: otherAssessmentChecked ? otherAssessment : null
+        }
+      };
+      
+      // Store interests as structured JSON
+      formData.interests = JSON.stringify(dataToSave);
+      
+      // Add debug logging for personality assessments
+      console.log("Saving personality assessments:", 
+        `MBTI: ${mbtiChecked}`, 
+        `StrengthsFinder: ${strengthsFinderChecked}`, 
+        `VIA: ${viaChecked}`,
+        `Enneagram: ${enneagramChecked}`,
+        `360: ${threeSixtyChecked}`,
+        `Other: ${otherAssessmentChecked ? otherAssessment : "none"}`);
+      
     } else if (userProfile?.questionnaire?.interests) {
       // Preserve the existing interests value from the user profile
       formData.interests = userProfile.questionnaire.interests || "";
