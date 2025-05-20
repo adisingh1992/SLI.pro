@@ -10,6 +10,7 @@ import { FileText, CheckCircle2, Sparkles } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import ReportDisplay from "@/components/freshness-report/report-display";
 import ReportHistory from "@/components/freshness-report/report-history";
+import NavBar from "@/components/nav-bar";
 
 // Interface to define the structure of Freshness Report data
 interface FreshnessReportData {
@@ -524,7 +525,7 @@ const FreshnessReportPage: React.FC = () => {
   // RENDER NO REPORT STATE
   if (!currentReport) {
     return (
-      <div className="container px-4 py-8">
+      <div className="px-4 py-8">
         <h1 className="text-2xl font-bold mb-4">Freshness Report</h1>
         <p className="text-muted-foreground mb-8">
           Get a comprehensive analysis of your professional brand presence and
