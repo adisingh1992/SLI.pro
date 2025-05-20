@@ -902,6 +902,58 @@ export default function QuestionnairePage() {
             if (parsedInterests.societalInterests.usPolitics) setUsPoliticsChecked(true);
           }
           
+          // Load Technology & Digital Media subcategories
+          if (parsedInterests.technologyDigitalMedia) {
+            console.log("Loading technology & digital media subcategories from JSON:", Object.keys(parsedInterests.technologyDigitalMedia).join(", "));
+            
+            // AI/ML Subcategories
+            if (parsedInterests.technologyDigitalMedia.aiConsumer) setAiConsumerChecked(true);
+            if (parsedInterests.technologyDigitalMedia.aiComputerVision) setAiComputerVisionChecked(true);
+            if (parsedInterests.technologyDigitalMedia.aiEthics) setAiEthicsChecked(true);
+            if (parsedInterests.technologyDigitalMedia.aiInfrastructure) setAiInfrastructureChecked(true);
+            if (parsedInterests.technologyDigitalMedia.aiNlp) setAiNlpChecked(true);
+            if (parsedInterests.technologyDigitalMedia.aiPredictive) setAiPredictiveChecked(true);
+            if (parsedInterests.technologyDigitalMedia.aiRobotics) setAiRoboticsChecked(true);
+            if (parsedInterests.technologyDigitalMedia.aiScientific) setAiScientificChecked(true);
+            if (parsedInterests.technologyDigitalMedia.aiLearning) setAiLearningChecked(true);
+            
+            // Consumer Tech Subcategories
+            if (parsedInterests.technologyDigitalMedia.consumerDevices) setConsumerDevicesChecked(true);
+            if (parsedInterests.technologyDigitalMedia.consumerGaming) setConsumerGamingChecked(true);
+            if (parsedInterests.technologyDigitalMedia.consumerMobile) setConsumerMobileChecked(true);
+            if (parsedInterests.technologyDigitalMedia.consumerSmartHome) setConsumerSmartHomeChecked(true);
+            
+            // Cybersecurity Subcategories
+            if (parsedInterests.technologyDigitalMedia.cybersecuritySolutions) setCybersecuritySolutionsChecked(true);
+            if (parsedInterests.technologyDigitalMedia.dataPrivacy) setDataPrivacyChecked(true);
+            if (parsedInterests.technologyDigitalMedia.regulatoryCompliance) setRegulatoryComplianceChecked(true);
+            if (parsedInterests.technologyDigitalMedia.riskManagement) setRiskManagementChecked(true);
+            
+            // Infrastructure Subcategories
+            if (parsedInterests.technologyDigitalMedia.cloudComputing) setCloudComputingChecked(true);
+            if (parsedInterests.technologyDigitalMedia.dataCenters) setDataCentersChecked(true);
+            if (parsedInterests.technologyDigitalMedia.networks) setNetworksChecked(true);
+            if (parsedInterests.technologyDigitalMedia.web3Blockchain) setWeb3BlockchainChecked(true);
+            
+            // Media & Marketing Subcategories
+            if (parsedInterests.technologyDigitalMedia.contentDistribution) setContentDistributionChecked(true);
+            if (parsedInterests.technologyDigitalMedia.creatorEconomy) setCreatorEconomyChecked(true);
+            if (parsedInterests.technologyDigitalMedia.digitalMarketing) setDigitalMarketingChecked(true);
+            if (parsedInterests.technologyDigitalMedia.socialMediaPlatforms) setSocialMediaPlatformsChecked(true);
+            
+            // Emerging Tech Subcategories
+            if (parsedInterests.technologyDigitalMedia.arVrXr) setArVrXrChecked(true);
+            if (parsedInterests.technologyDigitalMedia.biotechHealth) setBiotechHealthChecked(true);
+            if (parsedInterests.technologyDigitalMedia.quantumComputing) setQuantumComputingChecked(true);
+            if (parsedInterests.technologyDigitalMedia.emergingRobotics) setEmergingRoboticsChecked(true);
+            
+            // Enterprise Subcategories
+            if (parsedInterests.technologyDigitalMedia.businessApps) setBusinessAppsChecked(true);
+            if (parsedInterests.technologyDigitalMedia.enterpriseDigitalTransformation) setEnterpriseDigitalTransformationChecked(true);
+            if (parsedInterests.technologyDigitalMedia.integrationApis) setIntegrationApisChecked(true);
+            if (parsedInterests.technologyDigitalMedia.saasEnterprise) setSaasEnterpriseChecked(true);
+          }
+          
           // Load content format preferences
           if (parsedInterests.contentFormatPreferences) {
             console.log("Loading content format preferences from JSON:", Object.keys(parsedInterests.contentFormatPreferences).join(", "));
@@ -1985,6 +2037,54 @@ export default function QuestionnairePage() {
         travelTourism: travelTourismChecked,
         urbanDevelopment: urbanDevelopmentChecked,
         usPolitics: usPoliticsChecked
+      },
+      technologyDigitalMedia: {
+        // AI/ML Subcategories
+        aiConsumer: aiConsumerChecked,
+        aiComputerVision: aiComputerVisionChecked,
+        aiEthics: aiEthicsChecked,
+        aiInfrastructure: aiInfrastructureChecked,
+        aiNlp: aiNlpChecked,
+        aiPredictive: aiPredictiveChecked,
+        aiRobotics: aiRoboticsChecked,
+        aiScientific: aiScientificChecked,
+        aiLearning: aiLearningChecked,
+        
+        // Consumer Tech Subcategories
+        consumerDevices: consumerDevicesChecked,
+        consumerGaming: consumerGamingChecked,
+        consumerMobile: consumerMobileChecked,
+        consumerSmartHome: consumerSmartHomeChecked,
+        
+        // Cybersecurity Subcategories
+        cybersecuritySolutions: cybersecuritySolutionsChecked,
+        dataPrivacy: dataPrivacyChecked,
+        regulatoryCompliance: regulatoryComplianceChecked,
+        riskManagement: riskManagementChecked,
+        
+        // Infrastructure Subcategories
+        cloudComputing: cloudComputingChecked,
+        dataCenters: dataCentersChecked,
+        networks: networksChecked,
+        web3Blockchain: web3BlockchainChecked,
+        
+        // Media & Marketing Subcategories
+        contentDistribution: contentDistributionChecked,
+        creatorEconomy: creatorEconomyChecked,
+        digitalMarketing: digitalMarketingChecked,
+        socialMediaPlatforms: socialMediaPlatformsChecked,
+        
+        // Emerging Tech Subcategories
+        arVrXr: arVrXrChecked,
+        biotechHealth: biotechHealthChecked,
+        quantumComputing: quantumComputingChecked,
+        emergingRobotics: emergingRoboticsChecked,
+        
+        // Enterprise Subcategories
+        businessApps: businessAppsChecked,
+        enterpriseDigitalTransformation: enterpriseDigitalTransformationChecked,
+        integrationApis: integrationApisChecked,
+        saasEnterprise: saasEnterpriseChecked
       },
       contentFormatPreferences: {
         sharingNews: sharingNewsChecked,
