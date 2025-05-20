@@ -1902,6 +1902,8 @@ export default function QuestionnairePage() {
 
   // Function to prepare form data for saving
   const prepareFormData = () => {
+    console.log("Preparing form data for step:", currentStep);
+    
     // Prepare social media data
     const socialMediaOptions = [];
     if (twitterChecked) socialMediaOptions.push("Twitter/X");
@@ -2178,48 +2180,42 @@ export default function QuestionnairePage() {
       formData.aspirations = userProfile.questionnaire.aspirations || "";
     }
     
-    // Step 4 & 5 fields - only include when on these steps or when these fields have values
-    // Check if any personality assessment is selected (for Step 5)
-    const personalityAssessmentsSelected = mbtiChecked || strengthsFinderChecked || viaChecked || 
-                                          enneagramChecked || threeSixtyChecked || 
-                                          (otherAssessmentChecked && otherAssessment.trim() !== "");
+    // Always include interests data for all steps to ensure it's preserved
+    // Create a complete interests data object that includes everything
+    const completeInterestsData = {
+      industryInterests: interestsData.industryInterests || {},
+      societalInterests: interestsData.societalInterests || {},
+      technologyDigitalMedia: interestsData.technologyDigitalMedia || {},
+      contentFormatPreferences: interestsData.contentFormatPreferences || {},
+      postingBarriers: interestsData.postingBarriers || {},
+      // Always include personality assessments data
+      personalityAssessments: {
+        mbti: mbtiChecked,
+        strengthsFinder: strengthsFinderChecked,
+        via: viaChecked,
+        enneagram: enneagramChecked,
+        threeSixty: threeSixtyChecked,
+        other: otherAssessmentChecked ? otherAssessment : null,
+        otherText: otherAssessmentChecked ? otherAssessment : null
+      },
+      // Keep arrays for backward compatibility
+      industryInterestsArray: interestsData.industryInterestsArray || [],
+      societalInterestsArray: interestsData.societalInterestsArray || [],
+      contentFormatPreferencesArray: interestsData.contentFormatPreferencesArray || [],
+      postingBarriersArray: interestsData.postingBarriersArray || []
+    };
     
-    if (currentStep >= 4 || 
-        Object.values(interestsData.industryInterests).some(value => value === true) ||
-        Object.values(interestsData.societalInterests).some(value => value === true) || 
-        personalityAssessmentsSelected || 
-        (interestsData.technologyDigitalMedia && Object.values(interestsData.technologyDigitalMedia).some(value => value === true))) {
-      
-      // Make sure personalityAssessments is explicitly included in the interestsData when saving
-      const dataToSave = {
-        ...interestsData,
-        personalityAssessments: {
-          mbti: mbtiChecked,
-          strengthsFinder: strengthsFinderChecked,
-          via: viaChecked,
-          enneagram: enneagramChecked,
-          threeSixty: threeSixtyChecked,
-          other: otherAssessmentChecked ? otherAssessment : null,
-          otherText: otherAssessmentChecked ? otherAssessment : null
-        }
-      };
-      
-      // Store interests as structured JSON
-      formData.interests = JSON.stringify(dataToSave);
-      
-      // Add debug logging for personality assessments
-      console.log("Saving personality assessments:", 
-        `MBTI: ${mbtiChecked}`, 
-        `StrengthsFinder: ${strengthsFinderChecked}`, 
-        `VIA: ${viaChecked}`,
-        `Enneagram: ${enneagramChecked}`,
-        `360: ${threeSixtyChecked}`,
-        `Other: ${otherAssessmentChecked ? otherAssessment : "none"}`);
-      
-    } else if (userProfile?.questionnaire?.interests) {
-      // Preserve the existing interests value from the user profile
-      formData.interests = userProfile.questionnaire.interests || "";
-    }
+    // Always include the interests data to ensure it's preserved across all steps
+    formData.interests = JSON.stringify(completeInterestsData);
+    
+    // Log personality assessment data to help with debugging
+    console.log("Saving questionnaire with personality assessments:", 
+      `MBTI: ${mbtiChecked}`, 
+      `StrengthsFinder: ${strengthsFinderChecked}`, 
+      `VIA: ${viaChecked}`,
+      `Enneagram: ${enneagramChecked}`,
+      `360: ${threeSixtyChecked}`,
+      `Other: ${otherAssessmentChecked ? otherAssessment : "none"}`);
     
     return formData;
   };
