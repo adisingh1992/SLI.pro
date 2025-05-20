@@ -25,7 +25,7 @@ import sliProLogo from "@/assets/sliPro-logos_aqua.png";
 // Login schema
 const loginSchema = z.object({
   username: z.string().email("Please enter a valid email"),
-  password: z.string().min(1, "Password is required"),
+  password: z.string().min(1, "Required"),
   rememberMe: z.boolean().optional(),
   isSubmitting: z.boolean().optional(),
 });
@@ -33,12 +33,12 @@ const loginSchema = z.object({
 // Registration schema with extended validation
 const registerSchema = z
   .object({
-    firstName: z.string().min(1, "First name is required"),
-    lastName: z.string().min(1, "Last name is required"),
+    firstName: z.string().min(1, "Required"),
+    lastName: z.string().min(1, "Required"),
     username: z.string().email("Please enter a valid email"),
     phoneNumber: z
       .string()
-      .min(1, "Phone number is required")
+      .min(1, "Required")
       .refine(
         (val) =>
           /^[+]?[(]?[0-9]{3}[)]?[-\s.]?[0-9]{3}[-\s.]?[0-9]{4,6}$/.test(val),
@@ -354,8 +354,7 @@ export default function AuthPage() {
                         ) && (
                           <div className="mb-6 p-3 bg-red-50 border border-red-200 rounded-md">
                             <p className="text-[#E34240] text-sm">
-                              {registerMutation.error.message ||
-                                "An error occurred during registration. Please try again."}
+                              {"Welcome back! It looks like you already have an account with us. Sign in to continue your journey—we can't wait to see you again!"}
                             </p>
                           </div>
                         )}
