@@ -2127,6 +2127,11 @@ export default function QuestionnairePage() {
     }
   };
 
+  // Helper function to scroll to top of the page
+  const scrollToTop = () => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
   const nextStep = async () => {
     if (validateCurrentStep() && currentStep < totalSteps) {
       // Auto-save the current step data
@@ -2135,6 +2140,8 @@ export default function QuestionnairePage() {
       if (saveSuccessful) {
         // Only proceed to next step if auto-save was successful
         setCurrentStep(currentStep + 1);
+        // Reset scroll position when moving to next step
+        scrollToTop();
       }
     } else if (!validateCurrentStep()) {
       toast({
@@ -2151,6 +2158,8 @@ export default function QuestionnairePage() {
       // Auto-save data when navigating to previous step
       await autoSaveQuestionnaire();
       setCurrentStep(currentStep - 1);
+      // Reset scroll position when moving to previous step
+      scrollToTop();
     }
   };
 
