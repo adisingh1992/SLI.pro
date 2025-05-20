@@ -2049,6 +2049,12 @@ export default function QuestionnairePage() {
     if (currentStep === 2 || background.trim() !== "") {
       formData.background = background; // LinkedIn URL
       formData.goals = socialMediaDetails; // Social media details
+      
+      // Always include the LinkedIn activity, profile updates, and brand positioning in step 2
+      // These are stored in the aspirations field but need to be included in step 2
+      // Format these LinkedIn details if they're not already formatted
+      const linkedInDetails = formatBrandingDetails([], [], []);
+      formData.aspirations = linkedInDetails;
     } else if (userProfile?.questionnaire?.background) {
       // Preserve the existing values from the user profile
       formData.background = userProfile.questionnaire.background || "";
