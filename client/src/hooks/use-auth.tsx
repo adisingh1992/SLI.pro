@@ -77,17 +77,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     },
     onSuccess: (userData: User) => {
       queryClient.setQueryData(["/api/user"], userData);
-      toast({
-        title: "Login successful",
-        description: `Welcome back, ${userData.firstName}!`,
-      });
     },
     onError: (error: Error) => {
-      toast({
-        title: "Login failed",
-        description: error.message,
-        variant: "destructive",
-      });
     },
   });
 

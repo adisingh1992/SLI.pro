@@ -3,13 +3,12 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
-import { useLocation, useRoute } from "wouter";
+import { useLocation } from "wouter";
 import ForgotPasswordForm from "@/components/forgot-password-form";
 import {
   Form,
@@ -59,9 +58,6 @@ const registerSchema = z
         "Password must contain at least one special character",
       ),
     confirmPassword: z.string(),
-    termsAgreement: z.boolean().refine((val) => val === true, {
-      message: "You must accept the terms",
-    }),
   })
   .refine((data) => data.password === data.confirmPassword, {
     message: "Passwords do not match",
@@ -98,7 +94,6 @@ export default function AuthPage() {
       phoneNumber: "",
       password: "",
       confirmPassword: "",
-      termsAgreement: false,
     },
   });
 
@@ -241,9 +236,8 @@ export default function AuthPage() {
                         <div className="mb-6 p-3 bg-red-50 border border-red-200 rounded-md">
                           <p className="text-[#E34240] text-sm">
                             {loginMutation.error.message === "401: "
-                              ? "Invalid email or password. Please try again."
-                              : loginMutation.error.message ||
-                                "An error occurred during login. Please try again."}
+                              ? "We do not recognise this email or password"
+                              : "We do not recognise this email or password"}
                           </p>
                         </div>
                       )}
@@ -505,40 +499,7 @@ export default function AuthPage() {
                             )}
                           />
 
-                          <FormField
-                            control={registerForm.control}
-                            name="termsAgreement"
-                            render={({ field }) => (
-                              <FormItem className="flex items-center space-x-3">
-                                <FormControl>
-                                  <Checkbox
-                                    checked={field.value}
-                                    onCheckedChange={field.onChange}
-                                    className="h-4 w-4 text-[#bed6d1] focus:ring-[#bed6d1]"
-                                  />
-                                </FormControl>
-                                <div>
-                                  <FormLabel className="text-sm text-[#333333] cursor-pointer leading-tight">
-                                    I agree to the{" "}
-                                    <a
-                                      href="#"
-                                      className="text-[#6c8083] hover:text-opacity-90"
-                                    >
-                                      Terms of Service
-                                    </a>{" "}
-                                    and{" "}
-                                    <a
-                                      href="#"
-                                      className="text-[#6c8083] hover:text-opacity-90"
-                                    >
-                                      Privacy Policy
-                                    </a>
-                                  </FormLabel>
-                                  <FormMessage className="text-[#E34240] block" />
-                                </div>
-                              </FormItem>
-                            )}
-                          />
+
 
                           <Button
                             type="submit"
