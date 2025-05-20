@@ -20,6 +20,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Combobox } from "@/components/ui/combobox";
 import { toast } from "@/hooks/use-toast";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { UserProfile } from "@shared/schema";
@@ -2937,18 +2938,13 @@ export default function QuestionnairePage() {
               <p className="text-sm text-gray-500 mb-3">
                 Please select your current or most recent industry
               </p>
-              <Select value={industry} onValueChange={setIndustry}>
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Select an industry" />
-                </SelectTrigger>
-                <SelectContent>
-                  {INDUSTRY_OPTIONS.map((option) => (
-                    <SelectItem key={option} value={option}>
-                      {option}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Combobox
+                options={INDUSTRY_OPTIONS}
+                value={industry}
+                onValueChange={setIndustry}
+                placeholder="Select an industry"
+                emptyMessage="No industry found."
+              />
             </div>
 
             <div className="mb-6">
@@ -2961,18 +2957,13 @@ export default function QuestionnairePage() {
               <p className="text-sm text-gray-500 mb-3">
                 Please select your current or most recent job function
               </p>
-              <Select value={jobFunction} onValueChange={setJobFunction}>
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Select a function" />
-                </SelectTrigger>
-                <SelectContent>
-                  {FUNCTION_OPTIONS.map((option) => (
-                    <SelectItem key={option} value={option}>
-                      {option}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Combobox
+                options={FUNCTION_OPTIONS}
+                value={jobFunction}
+                onValueChange={setJobFunction}
+                placeholder="Select a function"
+                emptyMessage="No function found."
+              />
             </div>
           </div>
         );
