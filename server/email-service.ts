@@ -64,7 +64,7 @@ export async function sendPasswordResetEmail(
 ): Promise<boolean> {
   // For SendGrid, the sender must be a verified domain or email
   // In production, replace this with your actual verified sender email
-  const from = 'test@example.com';
+  const from = 'notifications@slipro.com'; // Replace with your verified sender email';
   const subject = 'Password Reset Request';
   
   // Get base URL from request or environment
