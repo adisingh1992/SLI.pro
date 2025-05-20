@@ -2274,6 +2274,30 @@ export default function QuestionnairePage() {
     }
     brandingDetails += `\n\nLinkedIn profile update timing: ${profileUpdateTiming.length > 0 ? profileUpdateTiming.join(", ") : "Not specified"}`;
     
+    // Add LinkedIn activity data
+    const linkedInActivity: string[] = [];
+    if (readNewsfeedChecked) linkedInActivity.push("Read your Newsfeed");
+    if (acceptedConnectionsChecked) linkedInActivity.push("Accepted Connections");
+    if (notActiveChecked) linkedInActivity.push("Not Active in the Last Month");
+    if (postedNeverChecked) linkedInActivity.push("Posted Original Content - Never");
+    if (posted12TimesChecked) linkedInActivity.push("Posted Original Content - 1-2 times");
+    if (posted35TimesChecked) linkedInActivity.push("Posted Original Content - 3-5 times");
+    if (posted6PlusTimesChecked) linkedInActivity.push("Posted Original Content - 6+ times");
+    if (sharedNeverChecked) linkedInActivity.push("Shared Others' Posts - Never");
+    if (shared12TimesChecked) linkedInActivity.push("Shared Others' Posts - 1-2 times");
+    if (shared35TimesChecked) linkedInActivity.push("Shared Others' Posts - 3-5 times");
+    if (shared6PlusTimesChecked) linkedInActivity.push("Shared Others' Posts - 6+ times");
+    if (commentedNeverChecked) linkedInActivity.push("Commented on Posts - Never");
+    if (commented12TimesPerMonthChecked) linkedInActivity.push("Commented on Posts - 1-2 times per month");
+    if (commented12TimesPerWeekChecked) linkedInActivity.push("Commented on Posts - 1-2 times per week");
+    if (commented3PlusTimesPerWeekChecked) linkedInActivity.push("Commented on Posts - 3+ times per week");
+    if (reactedNeverChecked) linkedInActivity.push("Reacted to Posts (likes, etc.) - Never");
+    if (reactedFewTimesMonthChecked) linkedInActivity.push("Reacted to Posts (likes, etc.) - A few times a month");
+    if (reactedFewTimesWeekChecked) linkedInActivity.push("Reacted to Posts (likes, etc.) - A few times a week");
+    if (reactedDailyChecked) linkedInActivity.push("Reacted to Posts (likes, etc.) - Daily");
+    
+    brandingDetails += `\n\nLinkedIn activity: ${linkedInActivity.length > 0 ? linkedInActivity.join(", ") : "Not specified"}`;
+    
     // Add Career goals
     brandingDetails += `\n\nCareer goals: ${careerGoals.trim() !== "" ? careerGoals : "Not specified"}`;
     
