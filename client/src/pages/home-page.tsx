@@ -1,6 +1,6 @@
 import { useAuth } from "@/hooks/use-auth";
 import { useQuery } from "@tanstack/react-query";
-import { FreshnessReport, LinkedinOptimization, Sli, UserProfile } from "@shared/schema";
+import { FreshnessReport, LinkedinOptimization, Sli, UserProfile, ConversationSummary } from "@shared/schema";
 import { useToast } from "@/hooks/use-toast";
 import { useLocation } from "wouter";
 import {
@@ -13,6 +13,7 @@ import {
   FileText,
   Award,
   Sparkles,
+  Phone,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useEffect } from "react";
@@ -70,6 +71,13 @@ export default function HomePage() {
   // Fetch the latest LinkedIn optimization
   const { data: latestLinkedinOptimization } = useQuery<LinkedinOptimization>({
     queryKey: ["/api/linkedin-optimizations/latest"],
+    enabled: !!user,
+    retry: false,
+  });
+  
+  // Fetch conversation summaries to check if user has completed any coaching conversations
+  const { data: conversationSummaries } = useQuery<ConversationSummary[]>({
+    queryKey: ["/api/conversation-summaries"],
     enabled: !!user,
     retry: false,
   });
@@ -164,6 +172,14 @@ export default function HomePage() {
   const coachingBadge = getStatusBadge(
     !!userProfile?.questionnaire && userProfile.questionnaire.isDraft !== true && !!hasRequiredDocuments,
     false // Always available once prerequisites are met
+  );
+  
+  // Check if user has any conversation summaries for Step 4 enablement
+  const hasConversationSummaries = conversationSummaries && conversationSummaries.length > 0;
+  
+  const liveCoachingBadge = getStatusBadge(
+    !!hasConversationSummaries,
+    false // Always available once user has conversation summaries
   );
 
   return (
@@ -416,6 +432,66 @@ export default function HomePage() {
                 disabled={!userProfile?.questionnaire || userProfile.questionnaire.isDraft === true || !hasRequiredDocuments}
               >
                 Start Conversation
+                <ArrowRight className="ml-2 h-4 w-4" />
+              </Button>
+            </CardFooter>
+          </Card>
+
+          {/* Step 4: Schedule Live Coaching Call */}
+          <Card className={`overflow-hidden shadow-sm flex flex-col h-full ${
+            !hasConversationSummaries
+              ? "border-gray-200 opacity-75"
+              : "border-purple-200"
+          }`}>
+            <CardHeader className={`pb-4 ${
+              !hasConversationSummaries
+                ? "bg-gray-50"
+                : "bg-purple-50"
+            }`}>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center">
+                  <div className={`p-2 rounded-full mr-3 ${
+                    !hasConversationSummaries
+                      ? "bg-gray-100 text-gray-500"
+                      : "bg-purple-100 text-purple-600"
+                  }`}>
+                    <Phone className="h-5 w-5" />
+                  </div>
+                  <CardTitle className="text-lg">
+                    Step 4: Schedule Live Coaching Call
+                  </CardTitle>
+                </div>
+                {liveCoachingBadge}
+              </div>
+              <CardDescription className="mt-2">
+                {!hasConversationSummaries
+                  ? "Complete your AI-guided discovery conversations to unlock live coaching"
+                  : "Book your 30-minute session with an SLI.pro expert to refine your professional positioning"}
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="p-5 flex-grow">
+              <p className={`text-sm ${!hasConversationSummaries ? "text-muted-foreground/70" : "text-muted-foreground"}`}>
+                {!hasConversationSummaries
+                  ? "You must complete at least one AI coaching conversation first"
+                  : "Work directly with our experts to polish your Single Lasting Impression and create a powerful professional presence."}
+              </p>
+            </CardContent>
+            <CardFooter className="bg-gray-50 py-3 px-5 mt-auto">
+              <Button
+                variant="outline"
+                className={`w-full ${
+                  !hasConversationSummaries
+                    ? "border-gray-300 text-gray-500 cursor-not-allowed"
+                    : "border-purple-500 text-purple-600 hover:bg-purple-50"
+                }`}
+                onClick={() => {
+                  if (hasConversationSummaries) {
+                    window.open("https://calendly.com/dcara-sli/haas", "_blank");
+                  }
+                }}
+                disabled={!hasConversationSummaries}
+              >
+                Schedule Now
                 <ArrowRight className="ml-2 h-4 w-4" />
               </Button>
             </CardFooter>
