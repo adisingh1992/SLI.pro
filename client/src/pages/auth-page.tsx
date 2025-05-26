@@ -54,8 +54,12 @@ const registerSchema = z
         "Password must contain at least one number",
       )
       .refine(
-        (pwd) => /[!@#$%^&*(),.?":{}|<>]/.test(pwd),
-        "Password must contain at least one special character",
+        (pwd) => /[a-z]/.test(pwd),
+        "Password must contain at least one lowercase letter",
+      )
+      .refine(
+        (pwd) => /[A-Z]/.test(pwd),
+        "Password must contain at least one uppercase letter",
       ),
     confirmPassword: z.string(),
   })
@@ -470,8 +474,7 @@ export default function AuthPage() {
                                   />
                                 </FormControl>
                                 <div className="mt-1 text-sm text-gray-500">
-                                  Must be at least 8 characters with a number
-                                  and a special character
+                                  Must be at least 8 characters with uppercase, lowercase, and a number
                                 </div>
                                 <FormMessage className="text-[#E34240]" />
                               </FormItem>

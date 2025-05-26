@@ -34,7 +34,8 @@ async function comparePasswords(supplied: string, stored: string) {
 const registerSchema = insertUserSchema.extend({
   password: z.string().min(8, "Password must be at least 8 characters")
     .refine(pwd => /\d/.test(pwd), "Password must contain at least one number")
-    .refine(pwd => /[!@#$%^&*(),.?":{}|<>]/.test(pwd), "Password must contain at least one special character"),
+    .refine(pwd => /[a-z]/.test(pwd), "Password must contain at least one lowercase letter")
+    .refine(pwd => /[A-Z]/.test(pwd), "Password must contain at least one uppercase letter"),
   confirmPassword: z.string(),
   phoneNumber: z.string().min(1, "Phone number is required")
     .refine(val => /^[+]?[(]?[0-9]{3}[)]?[-\s.]?[0-9]{3}[-\s.]?[0-9]{4,6}$/.test(val), {
@@ -266,7 +267,8 @@ export function setupAuth(app: Express) {
     token: z.string(),
     password: z.string().min(8, "Password must be at least 8 characters")
       .refine(pwd => /\d/.test(pwd), "Password must contain at least one number")
-      .refine(pwd => /[!@#$%^&*(),.?":{}|<>]/.test(pwd), "Password must contain at least one special character"),
+      .refine(pwd => /[a-z]/.test(pwd), "Password must contain at least one lowercase letter")
+      .refine(pwd => /[A-Z]/.test(pwd), "Password must contain at least one uppercase letter"),
     confirmPassword: z.string()
   }).refine(data => data.password === data.confirmPassword, {
     message: "Passwords do not match",

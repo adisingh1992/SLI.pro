@@ -25,7 +25,8 @@ const resetPasswordSchema = z.object({
   token: z.string().min(1, "Token is required"),
   password: z.string().min(8, "Password must be at least 8 characters")
     .refine(pwd => /\d/.test(pwd), "Password must contain at least one number")
-    .refine(pwd => /[!@#$%^&*(),.?":{}|<>]/.test(pwd), "Password must contain at least one special character"),
+    .refine(pwd => /[a-z]/.test(pwd), "Password must contain at least one lowercase letter")
+    .refine(pwd => /[A-Z]/.test(pwd), "Password must contain at least one uppercase letter"),
   confirmPassword: z.string().min(1, "Please confirm your password"),
 }).refine(data => data.password === data.confirmPassword, {
   message: "Passwords do not match",
