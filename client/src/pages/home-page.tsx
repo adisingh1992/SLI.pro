@@ -777,7 +777,7 @@ export default function HomePage() {
           </Card>
 
           {/* Step 8: Generate Strategic Content */}
-          <Card className={`overflow-hidden shadow-sm ${
+          <Card className={`overflow-hidden shadow-sm flex flex-col h-full ${
             !canGenerateLinkedInOptimization
               ? "border-gray-200 opacity-75"
               : "border-emerald-200"
@@ -814,7 +814,7 @@ export default function HomePage() {
                   : "Create thought leadership content aligned with your SLI"}
               </CardDescription>
             </CardHeader>
-            <CardContent className="p-5">
+            <CardContent className="p-5 flex-grow">
               {!canGenerateLinkedInOptimization ? (
                 <div className="space-y-3 text-sm text-gray-400">
                   <div className="flex items-center gap-2">
@@ -836,7 +836,7 @@ export default function HomePage() {
                 </p>
               )}
             </CardContent>
-            <CardFooter className="bg-gray-50 py-3 px-5">
+            <CardFooter className="bg-gray-50 py-3 px-5 mt-auto">
               <Button
                 className={`w-full ${
                   !canGenerateLinkedInOptimization
