@@ -5684,7 +5684,7 @@ export default function QuestionnairePage() {
             <div className="flex justify-between items-center">
               <div>
                 <CardTitle className="text-2xl font-bold">
-                  Initial Questionnaire
+                  Branding Assessment: Build Your Professional Foundation
                   {userProfile?.questionnaire?.isDraft && (
                     <span className="ml-2 inline-flex items-center rounded-md bg-yellow-100 px-2 py-1 text-xs font-medium text-yellow-800 ring-1 ring-inset ring-yellow-600/20">
                       Draft
@@ -5694,7 +5694,7 @@ export default function QuestionnairePage() {
                 <CardDescription className="text-white opacity-90">
                   {userProfile?.questionnaire
                     ? "Review or update your career insights to receive personalized guidance."
-                    : "Last step! Help us understand your career journey and aspirations so we can provide personalized guidance."}
+                    : "This questionnaire helps us understand your unique experience, aspirations, and digital presence. Your responses will guide the development of your Single Lasting Impression (SLI) and personalized content strategy. Complete each section thoughtfully—this is the first step toward taking control of how you're perceived professionally."}
                 </CardDescription>
               </div>
               <Button 
@@ -5797,7 +5797,7 @@ export default function QuestionnairePage() {
                       {saveAsDraftMutation.isPending ? (
                         <Loader2 className="h-4 w-4 animate-spin mr-2" />
                       ) : null}
-                      Save as Draft
+                      Save Progress
                     </Button>
                   )}
                 

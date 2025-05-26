@@ -21,7 +21,7 @@ import { toast } from "@/hooks/use-toast";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { Document } from "@shared/schema";
-import { Upload, File, FileText, Trash2, Eye, Image, FileType } from "lucide-react";
+import { Upload, File, FileText, Trash2, Eye, Image, FileType, ExternalLink } from "lucide-react";
 
 // Document types
 const DOCUMENT_TYPES = [
@@ -39,7 +39,11 @@ const DocumentUpload = () => {
   const [name, setName] = useState("");
   const [type, setType] = useState("");
   const [isUploading, setIsUploading] = useState(false);
+  const [isUploadingResume, setIsUploadingResume] = useState(false);
+  const [isUploadingLinkedIn, setIsUploadingLinkedIn] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const resumeInputRef = useRef<HTMLInputElement>(null);
+  const linkedInInputRef = useRef<HTMLInputElement>(null);
   const queryClient = useQueryClient();
 
   // Query to fetch documents
@@ -201,6 +205,114 @@ const DocumentUpload = () => {
       }
     }
   };
+
+  // Handle specific resume upload
+  const handleResumeUpload = async () => {
+    const fileInput = resumeInputRef.current;
+    if (!fileInput || !fileInput.files || fileInput.files.length === 0) {
+      toast({
+        title: "Error",
+        description: "Please select a PDF file to upload",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    const file = fileInput.files[0];
+    
+    if (file.type !== "application/pdf") {
+      toast({
+        title: "Error",
+        description: "Only PDF files are supported",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    if (file.size > 2 * 1024 * 1024) {
+      toast({
+        title: "Error",
+        description: "File size should be less than 2MB",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    setIsUploadingResume(true);
+    
+    try {
+      const base64 = await fileToBase64(file);
+      
+      await uploadDocumentMutation.mutateAsync({
+        name: "resume",
+        type: "resume",
+        fileName: file.name,
+        fileData: base64,
+      });
+      
+      if (resumeInputRef.current) {
+        resumeInputRef.current.value = "";
+      }
+    } catch (error) {
+      console.error("Resume upload error:", error);
+    } finally {
+      setIsUploadingResume(false);
+    }
+  };
+
+  // Handle specific LinkedIn upload
+  const handleLinkedInUpload = async () => {
+    const fileInput = linkedInInputRef.current;
+    if (!fileInput || !fileInput.files || fileInput.files.length === 0) {
+      toast({
+        title: "Error",
+        description: "Please select a PDF file to upload",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    const file = fileInput.files[0];
+    
+    if (file.type !== "application/pdf") {
+      toast({
+        title: "Error",
+        description: "Only PDF files are supported",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    if (file.size > 2 * 1024 * 1024) {
+      toast({
+        title: "Error",
+        description: "File size should be less than 2MB",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    setIsUploadingLinkedIn(true);
+    
+    try {
+      const base64 = await fileToBase64(file);
+      
+      await uploadDocumentMutation.mutateAsync({
+        name: "linkedIn",
+        type: "linkedin",
+        fileName: file.name,
+        fileData: base64,
+      });
+      
+      if (linkedInInputRef.current) {
+        linkedInInputRef.current.value = "";
+      }
+    } catch (error) {
+      console.error("LinkedIn upload error:", error);
+    } finally {
+      setIsUploadingLinkedIn(false);
+    }
+  };
   
   const handleDelete = async (id: number) => {
     if (window.confirm("Are you sure you want to delete this document?")) {
@@ -288,11 +400,111 @@ const DocumentUpload = () => {
     <div className="space-y-8">
       <Card>
         <CardHeader>
-          <CardTitle>Upload Document</CardTitle>
+          <CardTitle>Upload Your Professional Documents</CardTitle>
           <CardDescription>
-            Upload your resume, LinkedIn profile, or other professional documents (PDF format only)
+            Help us understand your current positioning and strengths by sharing key documents
           </CardDescription>
         </CardHeader>
+        
+        {/* Required Documents Section */}
+        <CardContent className="border-b">
+          <div className="mb-6">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">Required Documents</h3>
+            
+            {/* Resume Upload Block */}
+            <div className="mb-6 p-4 border rounded-lg bg-gray-50">
+              <h4 className="text-md font-medium text-gray-900 mb-2">Resume (Required)</h4>
+              <p className="text-sm text-gray-700 mb-3">
+                <strong>Upload your most recent resume</strong> Any version is fine—current or past. This helps us understand your professional experience and how you currently present your background.
+              </p>
+              <p className="text-sm text-gray-600 mb-3">
+                <strong>Accepted Format:</strong> PDF only
+              </p>
+              
+              {/* Check if resume already exists */}
+              {documents.some(doc => doc.type === 'resume') ? (
+                <div className="flex items-center text-green-600 mb-3">
+                  <FileText className="h-4 w-4 mr-2" />
+                  <span className="text-sm font-medium">Resume uploaded ✓</span>
+                </div>
+              ) : null}
+              
+              <div className="flex items-center space-x-3">
+                <Input
+                  type="file"
+                  accept="application/pdf"
+                  ref={resumeInputRef}
+                  className="cursor-pointer flex-1"
+                />
+                <Button 
+                  onClick={handleResumeUpload}
+                  disabled={isUploadingResume}
+                  className="shrink-0"
+                >
+                  {isUploadingResume ? "Uploading..." : "Upload resume"}
+                </Button>
+              </div>
+            </div>
+            
+            {/* LinkedIn Profile PDF Upload Block */}
+            <div className="p-4 border rounded-lg bg-gray-50">
+              <h4 className="text-md font-medium text-gray-900 mb-2">LinkedIn Profile PDF (Required)</h4>
+              <p className="text-sm text-gray-700 mb-3">
+                <strong>Download and upload your LinkedIn profile as a PDF</strong> This allows us to analyze how your online presence aligns with your career goals.
+              </p>
+              
+              <div className="mb-3">
+                <p className="text-sm font-medium text-gray-900 mb-2">How to download your LinkedIn profile:</p>
+                <ul className="text-sm text-gray-700 space-y-1 ml-4 list-disc">
+                  <li>Go to your LinkedIn profile page (linkedin.com/in/yourname)</li>
+                  <li>Click the "More" button below your profile photo</li>
+                  <li>Select "Save to PDF" from the dropdown</li>
+                  <li>Save the file to your computer</li>
+                  <li>Upload it below</li>
+                </ul>
+                <p className="text-sm mt-2">
+                  <a 
+                    href="https://www.linkedin.com/help/linkedin/answer/a541960" 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="text-blue-600 hover:text-blue-800 underline inline-flex items-center"
+                  >
+                    Need help? <ExternalLink className="h-3 w-3 ml-1" />
+                  </a>
+                </p>
+              </div>
+              
+              <p className="text-sm text-gray-600 mb-3">
+                <strong>Accepted Format:</strong> PDF only
+              </p>
+              
+              {/* Check if LinkedIn profile already exists */}
+              {documents.some(doc => doc.type === 'linkedin') ? (
+                <div className="flex items-center text-green-600 mb-3">
+                  <FileText className="h-4 w-4 mr-2" />
+                  <span className="text-sm font-medium">LinkedIn Profile PDF uploaded ✓</span>
+                </div>
+              ) : null}
+              
+              <div className="flex items-center space-x-3">
+                <Input
+                  type="file"
+                  accept="application/pdf"
+                  ref={linkedInInputRef}
+                  className="cursor-pointer flex-1"
+                />
+                <Button 
+                  onClick={handleLinkedInUpload}
+                  disabled={isUploadingLinkedIn}
+                  className="shrink-0"
+                >
+                  {isUploadingLinkedIn ? "Uploading..." : "Upload LinkedIn PDF"}
+                </Button>
+              </div>
+            </div>
+          </div>
+        </CardContent>
+        
         <CardContent>
           <form onSubmit={handleUpload} className="space-y-4">
             <div className="space-y-2">
