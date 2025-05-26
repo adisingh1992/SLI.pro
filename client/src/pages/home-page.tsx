@@ -156,7 +156,7 @@ export default function HomePage() {
   );
   
   const sliBadge = getStatusBadge(
-    true,
+    !!hasSliSelected || !!hasSliRefined,
     !!hasSliSelected || !!hasSliRefined
   );
   
@@ -165,10 +165,7 @@ export default function HomePage() {
     !!latestLinkedinOptimization
   );
   
-  const monthlyCheckInBadge = getStatusBadge(
-    !!userProfile?.questionnaire && userProfile.questionnaire.isDraft !== true,
-    false // Always available once questionnaire is completed
-  );
+
   
   const coachingBadge = getStatusBadge(
     !!userProfile?.questionnaire && userProfile.questionnaire.isDraft !== true && !!hasRequiredDocuments,
@@ -915,67 +912,4 @@ function getLinkedInRequirementsMessage(
   return "Almost ready for LinkedIn optimization";
 }
 
-// Monthly Check-In Widget Content Component
-function MonthlyCheckInWidgetContent({ userId }: { userId: number }) {
-  // Fetch user's monthly check-ins
-  const { data: checkIns, isLoading } = useQuery<any[]>({
-    queryKey: ["/api/monthly-check-ins"],
-    enabled: !!userId,
-  });
 
-  // Format month for display
-  const formatMonth = (monthStr: string) => {
-    const [year, month] = monthStr.split('-');
-    const date = new Date(parseInt(year), parseInt(month) - 1);
-    return date.toLocaleString('default', { month: 'long', year: 'numeric' });
-  };
-
-  // Check if a check-in exists for the current month
-  const getCurrentMonth = () => {
-    const now = new Date();
-    const year = now.getFullYear();
-    const month = String(now.getMonth() + 1).padStart(2, '0');
-    return `${year}-${month}`;
-  };
-
-  const currentMonth = getCurrentMonth();
-  
-  const hasCurrentMonthCheckIn = checkIns?.some(
-    checkIn => checkIn.month === currentMonth
-  );
-
-  // Get most recent check-in
-  const mostRecentCheckIn = checkIns?.sort((a, b) => 
-    new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-  )[0];
-
-  const hasCompletedAnyCheckIn = checkIns && checkIns.length > 0;
-
-  if (isLoading) {
-    return <p className="text-sm text-gray-500">Loading check-in data...</p>;
-  }
-
-  return (
-    <div className="space-y-3 text-sm">
-      {hasCurrentMonthCheckIn ? (
-        <>
-          <div className="flex items-center text-green-600 gap-2">
-            <CheckCircle className="h-4 w-4" />
-            <span className="font-medium">Completed for {formatMonth(currentMonth)}</span>
-          </div>
-          <p className="text-gray-600">
-            Great job maintaining your professional presence! Your next check-in will be available next month.
-          </p>
-        </>
-      ) : hasCompletedAnyCheckIn ? (
-        <p className="text-gray-600">
-          Time for your monthly check-in! Your last check-in was for <span className="font-medium">{formatMonth(mostRecentCheckIn?.month || '')}</span>.
-        </p>
-      ) : (
-        <p className="text-gray-600">
-          Track your LinkedIn activity each month to measure your professional brand growth. This 5-minute check-in helps you stay consistent.
-        </p>
-      )}
-    </div>
-  );
-}
