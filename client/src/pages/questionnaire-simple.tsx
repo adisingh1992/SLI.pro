@@ -4171,9 +4171,12 @@ export default function QuestionnairePage() {
                 our conversation.
               </p>
 
+              <hr />
+              <br />
+
               <div className="mb-6">
                 <Label className="text-gray-700 font-medium block mb-3">
-                  Industry Interests <span className="text-red-500">*</span>
+                  <strong>Industry Interests</strong> <span className="text-red-500">*</span>
                 </Label>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                   <div className="flex items-center space-x-2">
@@ -4240,7 +4243,7 @@ export default function QuestionnairePage() {
                       }
                     />
                     <Label htmlFor="government" className="text-gray-700">
-                      Government and Public Sector
+                      Government & Public Sector
                     </Label>
                   </div>
 
@@ -4316,8 +4319,7 @@ export default function QuestionnairePage() {
               {/* Cross-Cutting & Societal Interests Section */}
               <div className="mb-6">
                 <Label className="text-gray-700 font-medium block mb-3">
-                  Cross-Cutting & Societal Interests{" "}
-                  <span className="text-red-500">*</span>
+                  Cross-Cutting & Societal Interests
                 </Label>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                   <div className="flex items-center space-x-2">
