@@ -344,6 +344,8 @@ export default function QuestionnairePage() {
   const [twitterChecked, setTwitterChecked] = useState(false);
   const [mediumChecked, setMediumChecked] = useState(false);
   const [blogChecked, setBlogChecked] = useState(false);
+  const [instagramChecked, setInstagramChecked] = useState(false);
+  const [naChecked, setNaChecked] = useState(false);
   const [otherChecked, setOtherChecked] = useState(false);
   const [otherSocialMedia, setOtherSocialMedia] = useState("");
 
@@ -1939,6 +1941,8 @@ export default function QuestionnairePage() {
     if (twitterChecked) socialMediaOptions.push("Twitter/X");
     if (mediumChecked) socialMediaOptions.push("Medium");
     if (blogChecked) socialMediaOptions.push("Personal blog/Website");
+    if (instagramChecked) socialMediaOptions.push("Instagram");
+    if (naChecked) socialMediaOptions.push("N/A");
     if (otherChecked && otherSocialMedia.trim() !== "") {
       socialMediaOptions.push(`Other: ${otherSocialMedia.trim()}`);
     }
@@ -2544,6 +2548,8 @@ export default function QuestionnairePage() {
       if (twitterChecked) socialMediaOptions.push("Twitter/X");
       if (mediumChecked) socialMediaOptions.push("Medium");
       if (blogChecked) socialMediaOptions.push("Personal blog/Website");
+      if (instagramChecked) socialMediaOptions.push("Instagram");
+      if (naChecked) socialMediaOptions.push("N/A");
       if (otherChecked && otherSocialMedia.trim() !== "") {
         socialMediaOptions.push(`Other: ${otherSocialMedia.trim()}`);
       }
@@ -3154,7 +3160,7 @@ export default function QuestionnairePage() {
                 options={INDUSTRY_OPTIONS}
                 value={industry}
                 onValueChange={setIndustry}
-                placeholder="Select an industry"
+                placeholder="Select an Industry"
                 emptyMessage="No industry found."
               />
             </div>
@@ -3173,7 +3179,7 @@ export default function QuestionnairePage() {
                 options={FUNCTION_OPTIONS}
                 value={jobFunction}
                 onValueChange={setJobFunction}
-                placeholder="Select a function"
+                placeholder="Select a Function"
                 emptyMessage="No function found."
               />
             </div>
@@ -3206,7 +3212,7 @@ export default function QuestionnairePage() {
                 htmlFor="goals"
                 className="text-gray-700 font-medium block mb-2"
               >
-                Other Professional Social Media Presence
+                Additional Digital Presence
               </Label>
               <p className="text-sm text-gray-500 mb-3">
                 Select the platforms where you have a professional presence
@@ -3254,6 +3260,32 @@ export default function QuestionnairePage() {
 
                 <div className="flex items-center space-x-2">
                   <Checkbox
+                    id="instagram"
+                    checked={instagramChecked}
+                    onCheckedChange={(checked) =>
+                      setInstagramChecked(checked === true)
+                    }
+                  />
+                  <Label htmlFor="instagram" className="cursor-pointer">
+                    Instagram
+                  </Label>
+                </div>
+
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="na"
+                    checked={naChecked}
+                    onCheckedChange={(checked) =>
+                      setNaChecked(checked === true)
+                    }
+                  />
+                  <Label htmlFor="na" className="cursor-pointer">
+                    N/A
+                  </Label>
+                </div>
+
+                <div className="flex items-center space-x-2">
+                  <Checkbox
                     id="other"
                     checked={otherChecked}
                     onCheckedChange={(checked) =>
@@ -3282,7 +3314,7 @@ export default function QuestionnairePage() {
                 value={goals}
                 onChange={(e) => setGoals(e.target.value)}
                 className="w-full mt-4"
-                placeholder="Add any additional details about your social media presence..."
+                placeholder="Provide the username, website URL or handle(s)"
               />
             </div>
           </div>
