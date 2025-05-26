@@ -14,6 +14,7 @@ import {
   Award,
   Sparkles,
   Phone,
+  PenTool,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useEffect } from "react";
@@ -441,19 +442,19 @@ export default function HomePage() {
           <Card className={`overflow-hidden shadow-sm flex flex-col h-full ${
             !hasConversationSummaries
               ? "border-gray-200 opacity-75"
-              : "border-purple-200"
+              : "border-green-200"
           }`}>
             <CardHeader className={`pb-4 ${
               !hasConversationSummaries
                 ? "bg-gray-50"
-                : "bg-purple-50"
+                : "bg-green-50"
             }`}>
               <div className="flex items-center justify-between">
                 <div className="flex items-center">
                   <div className={`p-2 rounded-full mr-3 ${
                     !hasConversationSummaries
                       ? "bg-gray-100 text-gray-500"
-                      : "bg-purple-100 text-purple-600"
+                      : "bg-green-100 text-green-600"
                   }`}>
                     <Phone className="h-5 w-5" />
                   </div>
@@ -482,7 +483,7 @@ export default function HomePage() {
                 className={`w-full ${
                   !hasConversationSummaries
                     ? "border-gray-300 text-gray-500 cursor-not-allowed"
-                    : "border-purple-500 text-purple-600 hover:bg-purple-50"
+                    : "border-green-500 text-green-600 hover:bg-green-50"
                 }`}
                 onClick={() => {
                   if (hasConversationSummaries) {
@@ -518,7 +519,7 @@ export default function HomePage() {
                     <Sparkles className="h-5 w-5" />
                   </div>
                   <CardTitle className="text-lg">
-                    Freshness Report
+                    Step 5: Review Your Brand Intelligence Report
                   </CardTitle>
                 </div>
                 {freshnessReportBadge}
@@ -530,7 +531,7 @@ export default function HomePage() {
                     ? "Upload your documents to generate a freshness report"
                     : latestFreshnessReport
                       ? `Last report: ${new Date(latestFreshnessReport.createdAt).toLocaleDateString()}`
-                      : "Generate a comprehensive analysis of your brand presence"}
+                      : "Understand how your digital presence aligns with your career goals"}
               </CardDescription>
             </CardHeader>
             <CardContent className="p-5 flex-grow">
@@ -598,14 +599,14 @@ export default function HomePage() {
                     <Award className="h-5 w-5" />
                   </div>
                   <CardTitle className="text-lg">
-                    Single Lasting Impression
+                    Step 6: Discover Your Single Lasting Impression
                   </CardTitle>
                 </div>
                 {sliBadge}
               </div>
               <CardDescription className="mt-2">
                 {!hasSli
-                  ? "SLI options will be generated for you"
+                  ? "Review coach-generated SLI options that capture your professional essence"
                   : hasSliRefined
                     ? "Your SLI has been refined and is ready to use"
                     : hasSliSelected
@@ -699,7 +700,7 @@ export default function HomePage() {
                     </svg>
                   </div>
                   <CardTitle className="text-lg">
-                    LinkedIn Optimization
+                    Step 7: Optimize Your LinkedIn Profile
                   </CardTitle>
                 </div>
                 {linkedInBadge}
@@ -709,7 +710,7 @@ export default function HomePage() {
                   ? getLinkedInRequirementsMessage(hasRequiredDocuments || false, Boolean(hasSliSelected || hasSliRefined), latestFreshnessReport !== undefined)
                   : latestLinkedinOptimization !== undefined
                     ? `Generated ${formatTimeAgo(latestLinkedinOptimization.createdAt)}`
-                    : "Enhance your LinkedIn profile with AI-powered recommendations"}
+                    : "Apply your SLI to enhance your professional presence"}
               </CardDescription>
             </CardHeader>
             <CardContent className="p-5">
@@ -770,6 +771,88 @@ export default function HomePage() {
                 disabled={!canGenerateLinkedInOptimization}
               >
                 {latestLinkedinOptimization ? "View Optimization" : "Generate Optimization"}
+                <ArrowRight className="ml-2 h-4 w-4" />
+              </Button>
+            </CardFooter>
+          </Card>
+
+          {/* Step 8: Generate Strategic Content */}
+          <Card className={`overflow-hidden shadow-sm ${
+            !canGenerateLinkedInOptimization
+              ? "border-gray-200 opacity-75"
+              : "border-emerald-200"
+          }`}>
+            <CardHeader className={`pb-4 ${
+              !canGenerateLinkedInOptimization
+                ? "bg-gray-50"
+                : "bg-emerald-50"
+            }`}>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center">
+                  <div className={`p-2 rounded-full mr-3 ${
+                    !canGenerateLinkedInOptimization
+                      ? "bg-gray-100 text-gray-500"
+                      : "bg-emerald-100 text-emerald-600"
+                  }`}>
+                    <PenTool className="h-5 w-5" />
+                  </div>
+                  <CardTitle className="text-lg">
+                    Step 8: Generate Strategic Content
+                  </CardTitle>
+                </div>
+                <Badge variant="outline" className={`${
+                  !canGenerateLinkedInOptimization
+                    ? "bg-muted text-muted-foreground border-muted"
+                    : "bg-emerald-50 text-emerald-700 border-emerald-200"
+                }`}>
+                  {!canGenerateLinkedInOptimization ? "Locked" : "Available"}
+                </Badge>
+              </div>
+              <CardDescription className="mt-2">
+                {!canGenerateLinkedInOptimization
+                  ? getLinkedInRequirementsMessage(hasRequiredDocuments || false, Boolean(hasSliSelected || hasSliRefined), latestFreshnessReport !== undefined)
+                  : "Create thought leadership content aligned with your SLI"}
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="p-5">
+              {!canGenerateLinkedInOptimization ? (
+                <div className="space-y-3 text-sm text-gray-400">
+                  <div className="flex items-center gap-2">
+                    <CheckCircle className={`h-4 w-4 ${hasRequiredDocuments ? "text-green-500" : "text-gray-300"}`} />
+                    <span>Upload resume and LinkedIn profile</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <CheckCircle className={`h-4 w-4 ${(hasSliSelected || hasSliRefined) ? "text-green-500" : "text-gray-300"}`} />
+                    <span>Select or refine your SLI</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <CheckCircle className={`h-4 w-4 ${latestFreshnessReport ? "text-green-500" : "text-gray-300"}`} />
+                    <span>Generate a freshness report</span>
+                  </div>
+                </div>
+              ) : (
+                <p className="text-sm text-gray-600">
+                  Generate AI-powered content ideas and drafts that showcase your expertise and align with your professional brand.
+                </p>
+              )}
+            </CardContent>
+            <CardFooter className="bg-gray-50 py-3 px-5">
+              <Button
+                className={`w-full ${
+                  !canGenerateLinkedInOptimization
+                    ? "border-gray-300 text-gray-500 cursor-not-allowed"
+                    : "border-emerald-500 text-emerald-700 hover:bg-emerald-50"
+                }`}
+                variant="outline"
+                onClick={() => {
+                  if (canGenerateLinkedInOptimization) {
+                    scrollToTop();
+                    navigate("/linkedin-content-drafts");
+                  }
+                }}
+                disabled={!canGenerateLinkedInOptimization}
+              >
+                Generate Content
                 <ArrowRight className="ml-2 h-4 w-4" />
               </Button>
             </CardFooter>
