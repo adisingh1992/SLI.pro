@@ -759,7 +759,7 @@ export default function HomePage() {
                       ? "border-green-500 text-green-700 hover:bg-green-50"
                       : "border-green-500 text-green-700 hover:bg-green-50"
                 }`}
-                variant={latestLinkedinOptimization ? "outline" : "default"}
+                variant={latestLinkedinOptimization ? "outline" : "outline"}
                 onClick={() => {
                   if (canGenerateLinkedInOptimization) {
                     scrollToTop();
@@ -857,69 +857,7 @@ export default function HomePage() {
               </Button>
             </CardFooter>
           </Card>
-          
-          {/* Monthly Check-In Section */}
-          <Card className={`overflow-hidden shadow-sm ${
-            !userProfile?.questionnaire || userProfile.questionnaire.isDraft === true
-              ? "border-gray-200 opacity-75"
-              : "border-blue-200"
-          }`}>
-            <CardHeader className={`pb-4 ${
-              !userProfile?.questionnaire || userProfile.questionnaire.isDraft === true
-                ? "bg-gray-50"
-                : "bg-green-50"
-            }`}>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center">
-                  <div className={`p-2 rounded-full mr-3 ${
-                    !userProfile?.questionnaire || userProfile.questionnaire.isDraft === true
-                      ? "bg-gray-100 text-gray-500"
-                      : "bg-green-100 text-green-600"
-                  }`}>
-                    <Calendar className="h-5 w-5" />
-                  </div>
-                  <CardTitle className="text-lg">
-                    Monthly Brand Check-In
-                  </CardTitle>
-                </div>
-                {monthlyCheckInBadge}
-              </div>
-              <CardDescription className="mt-2">
-                {!userProfile?.questionnaire || userProfile.questionnaire.isDraft === true
-                  ? "Complete the questionnaire to unlock monthly check-ins"
-                  : "Track your LinkedIn activity and professional growth"}
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="p-5">
-              {userProfile?.questionnaire && userProfile.questionnaire.isDraft !== true ? (
-                <MonthlyCheckInWidgetContent userId={user?.id || 0} />
-              ) : (
-                <p className="text-sm text-gray-400">
-                  Monthly check-ins help you stay consistent and track your professional growth over time.
-                </p>
-              )}
-            </CardContent>
-            <CardFooter className="bg-gray-50 py-3 px-5">
-              <Button
-                variant="outline"
-                className={`w-full ${
-                  !userProfile?.questionnaire || userProfile.questionnaire.isDraft === true
-                    ? "border-blue-500 text-blue-600 hover:bg-blue-50 cursor-not-allowed"
-                    : "border-green-500 text-green-700 hover:bg-green-50"
-                }`}
-                onClick={() => {
-                  if (userProfile?.questionnaire && userProfile.questionnaire.isDraft !== true) {
-                    scrollToTop();
-                    navigate("/monthly-check-in");
-                  }
-                }}
-                disabled={!userProfile?.questionnaire || userProfile.questionnaire.isDraft === true}
-              >
-                Go to Monthly Check-In
-                <ArrowRight className="ml-2 h-4 w-4" />
-              </Button>
-            </CardFooter>
-          </Card>
+
         </div>
       </main>
     </div>
