@@ -510,6 +510,8 @@ const DocumentUpload = () => {
             </div>
           </div>
         </CardContent>
+
+        <br />
         
         {/* Optional Documents Section */}
         <CardContent>

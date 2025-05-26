@@ -540,17 +540,53 @@ const FreshnessReportPage: React.FC = () => {
     );
   }
   
+  // Helper function to calculate next refresh date (report date + 30 days)
+  const getNextRefreshDate = (reportCreatedAt: string) => {
+    const reportDate = new Date(reportCreatedAt);
+    const nextRefreshDate = new Date(reportDate);
+    nextRefreshDate.setDate(reportDate.getDate() + 30);
+    return nextRefreshDate.toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "long", 
+      day: "numeric",
+    });
+  };
+
   // RENDER MAIN CONTENT
   return (
-    <div className="container px-4 py-8" style={{minWidth: '100%'}}>
-      {/* Header with title and generate button */}
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-6">
-        <div>
-          <h1 className="text-2xl font-bold">Freshness Report</h1>
-          <p className="text-muted-foreground">
-            Generated on {formatDate(currentReport.createdAt)}
-          </p>
+    <div className="min-h-screen bg-background flex flex-col">
+      <NavBar />
+      <div className="container px-4 py-8" style={{minWidth: '100%'}}>
+        
+        {/* Page Header Section */}
+        <div className="mb-8 space-y-6">
+          <div className="text-center space-y-4">
+            <h1 className="text-3xl font-bold text-gray-900">
+              <strong>Your Brand Intelligence Report</strong>
+            </h1>
+            <p className="text-lg text-gray-600 max-w-3xl mx-auto">
+              A comprehensive analysis of your current professional positioning and digital presence
+            </p>
+          </div>
+          
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
+            <h2 className="text-xl font-semibold text-gray-900 mb-3">
+              <strong>What is Brand Intelligence?</strong>
+            </h2>
+            <p className="text-gray-700 leading-relaxed">
+              Your Brand Intelligence Report provides data-driven insights into how effectively your professional brand positions you for your career goals. This analysis examines the alignment between your current digital presence, career aspirations, and market positioning.
+            </p>
+          </div>
         </div>
+
+        {/* Header with title and generate button */}
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-6">
+          <div>
+            <h2 className="text-2xl font-bold">Report Analysis</h2>
+            <p className="text-muted-foreground">
+              Generated on {formatDate(currentReport.createdAt)}
+            </p>
+          </div>
         
         {isGenerating ? (
           <div className="mt-4 md:mt-0 space-y-2 min-w-[250px]">
@@ -574,7 +610,7 @@ const FreshnessReportPage: React.FC = () => {
             Generate New Report
           </Button>
         )}
-      </div>
+        </div>
 
       {/* Main content - either generating progress or report with history */}
       {isGenerating ? (
@@ -623,23 +659,51 @@ const FreshnessReportPage: React.FC = () => {
           </div>
         </Card>
       ) : (
-        /* Two-column layout with report and history */
-        <div className="flex flex-col lg:flex-row gap-6 w-full">
-          {/* Column 1: Report Content (80%) */}
-          <div className="w-full lg:w-4/5">
-            <ReportDisplay report={currentReport} userName={user?.firstName} />
+        <div>
+          {/* Two-column layout with report and history */}
+          <div className="flex flex-col lg:flex-row gap-6 w-full">
+            {/* Column 1: Report Content (80%) */}
+            <div className="w-full lg:w-4/5">
+              <ReportDisplay report={currentReport} userName={user?.firstName} />
+            </div>
+            
+            {/* Column 2: Report History (20%) */}
+            <div className="w-full lg:w-1/5">
+              <ReportHistory 
+                reports={reportSummaries} 
+                currentReportId={currentReport.id} 
+                onSelectReport={handleSelectReport}
+              />
+            </div>
           </div>
           
-          {/* Column 2: Report History (20%) */}
-          <div className="w-full lg:w-1/5">
-            <ReportHistory 
-              reports={reportSummaries} 
-              currentReportId={currentReport.id} 
-              onSelectReport={handleSelectReport}
-            />
+          {/* Dynamic Footer */}
+          <div className="mt-12 pt-8 border-t border-gray-200">
+            <div className="bg-gray-50 rounded-lg p-6 space-y-4">
+              <div className="flex flex-col md:flex-row md:items-center md:justify-between text-sm text-gray-600">
+                <div className="space-x-4">
+                  <span>
+                    <strong>Report Updated:</strong> {formatDate(currentReport.createdAt)}
+                  </span>
+                  <span>
+                    <strong>Next Refresh Available:</strong> {getNextRefreshDate(currentReport.createdAt)}
+                  </span>
+                </div>
+              </div>
+              
+              <div className="space-y-3 text-sm text-gray-700">
+                <p>
+                  Your Brand Intelligence Report can update as you complete coaching sessions and implement recommendations.
+                </p>
+                <p>
+                  <strong>Want to improve your score?</strong> Your coach will review this report with you and create a personalized action plan during your upcoming session.
+                </p>
+              </div>
+            </div>
           </div>
         </div>
       )}
+      </div>
     </div>
   );
 };
