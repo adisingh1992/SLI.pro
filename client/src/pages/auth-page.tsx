@@ -528,18 +528,14 @@ export default function AuthPage() {
                 Shape How the Professional World Knows You
               </h1>
               <p className="mb-6">
-                In a world where digital profiles and AI shape first
-                impressions, your presence isn't just a profile – it's your
-                professional identity. The question is: are you actively shaping
-                what you’re known for?
+                Your expertise deserves to be seen. Your impact deserves to be known.
               </p>
 
               <p className="mb-6">
-                LinkedIn's own research confirms that optimized professional
-                presence delivers:
+                SLI.pro helps you define and control your Single Lasting Impression—the key takeaway others have after interacting with you professionally. Log in to continue crafting your distinctive professional narrative and unlock opportunities aligned with your true potential.
               </p>
 
-              <ul className="space-y-4">
+              {/* <ul className="space-y-4">
                 <li className="flex items-center">
                   <svg
                     className="h-5 w-5 mr-2 flex-shrink-0"
@@ -635,7 +631,7 @@ export default function AuthPage() {
                     Established Value: Enhanced professional credibility
                   </span>
                 </li>
-              </ul>
+              </ul> */}
             </div>
           </div>
         </div>

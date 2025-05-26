@@ -212,7 +212,7 @@ export default function HomePage() {
                     }
                   </div>
                   <CardTitle className="text-lg">
-                    Professional Branding Assessment
+                    Step 1: Professional Branding Assessment
                   </CardTitle>
                 </div>
                 {questionnaireBadge}
@@ -222,7 +222,7 @@ export default function HomePage() {
                   ? userProfile.questionnaire.isDraft === true
                     ? "You have a draft questionnaire that needs to be completed"
                     : "Your professional branding assessment is complete"
-                  : "Start with this comprehensive assessment (~5 minutes)"}
+                  : "Take a quick assessment to establish your baseline digital presence"}
               </CardDescription>
             </CardHeader>
             <CardContent className="p-5 flex-grow">
@@ -286,7 +286,7 @@ export default function HomePage() {
                     <FileText className="h-5 w-5" />
                   </div>
                   <CardTitle className="text-lg">
-                    Upload your documents
+                    Step 2: Upload Documents
                   </CardTitle>
                 </div>
                 {documentsBadge}
@@ -295,7 +295,7 @@ export default function HomePage() {
                 {!userProfile?.questionnaire || userProfile.questionnaire.isDraft === true
                   ? "Complete the questionnaire to unlock this section"
                   : !hasRequiredDocuments
-                    ? "Upload your latest resume and LinkedIn profile as PDFs to proceed."
+                    ? "Share your resume and LinkedIn PDF to help analyze your current positioning"
                     : "All required documents have been uploaded"}
               </CardDescription>
             </CardHeader>
@@ -377,7 +377,7 @@ export default function HomePage() {
                     <Calendar className="h-5 w-5" />
                   </div>
                   <CardTitle className="text-lg">
-                    Schedule a Coaching Session
+                    Step 3: Complete AI-Guided Discovery
                   </CardTitle>
                 </div>
                 {coachingBadge}
@@ -389,7 +389,7 @@ export default function HomePage() {
                     ? "Finish your questionnaire to schedule strategy sessions"
                     : !hasRequiredDocuments
                       ? "Upload your documents to schedule strategy sessions"
-                      : "Book a session to refine your professional brand."}
+                      : "Begin your SLI journey with three focused AI conversations to prepare for your coaching session"}
               </CardDescription>
             </CardHeader>
             <CardContent className="p-5 flex-grow">
@@ -415,7 +415,7 @@ export default function HomePage() {
                 }}
                 disabled={!userProfile?.questionnaire || userProfile.questionnaire.isDraft === true || !hasRequiredDocuments}
               >
-                Schedule Coaching Session
+                Start Conversation
                 <ArrowRight className="ml-2 h-4 w-4" />
               </Button>
             </CardFooter>
