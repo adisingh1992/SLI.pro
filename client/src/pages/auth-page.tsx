@@ -230,7 +230,7 @@ export default function AuthPage() {
                   <CardContent className="p-6 md:p-8 h-full">
                     <div className="flex flex-col h-full">
                       <h2 className="text-2xl font-medium text-[#333333] mb-6">
-                        Log in to your SLI.pro account
+                        Log In or Sign Up
                       </h2>
                       {loginMutation.error && (
                         <div className="mb-6 p-3 bg-red-50 border border-red-200 rounded-md">
@@ -534,104 +534,6 @@ export default function AuthPage() {
               <p className="mb-6">
                 SLI.pro helps you define and control your Single Lasting Impression—the key takeaway others have after interacting with you professionally. Log in to continue crafting your distinctive professional narrative and unlock opportunities aligned with your true potential.
               </p>
-
-              {/* <ul className="space-y-4">
-                <li className="flex items-center">
-                  <svg
-                    className="h-5 w-5 mr-2 flex-shrink-0"
-                    viewBox="0 0 20 20"
-                    fill="currentColor"
-                  >
-                    <path
-                      fillRule="evenodd"
-                      d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
-                      clipRule="evenodd"
-                    />
-                  </svg>
-                  <span>
-                    Expanded Opportunities: 2.7x higher likelihood of recruiter
-                    discovery
-                  </span>
-                </li>
-                <li className="flex items-center">
-                  <svg
-                    className="h-5 w-5 mr-2 flex-shrink-0"
-                    viewBox="0 0 20 20"
-                    fill="currentColor"
-                  >
-                    <path
-                      fillRule="evenodd"
-                      d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
-                      clipRule="evenodd"
-                    />
-                  </svg>
-                  <span>
-                    Increased Visibility: 300% more profile visibility
-                  </span>
-                </li>
-                <li className="flex items-center">
-                  <svg
-                    className="h-5 w-5 mr-2 flex-shrink-0"
-                    viewBox="0 0 20 20"
-                    fill="currentColor"
-                  >
-                    <path
-                      fillRule="evenodd"
-                      d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
-                      clipRule="evenodd"
-                    />
-                  </svg>
-                  <span>
-                    More Possibilities: 3x more industry-relevant opportunities
-                  </span>
-                </li>
-                <li className="flex items-center">
-                  <svg
-                    className="h-5 w-5 mr-2 flex-shrink-0"
-                    viewBox="0 0 20 20"
-                    fill="currentColor"
-                  >
-                    <path
-                      fillRule="evenodd"
-                      d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
-                      clipRule="evenodd"
-                    />
-                  </svg>
-                  <span>Network Growth: 40% more meaningful connections</span>
-                </li>
-                <li className="flex items-center">
-                  <svg
-                    className="h-5 w-5 mr-2 flex-shrink-0"
-                    viewBox="0 0 20 20"
-                    fill="currentColor"
-                  >
-                    <path
-                      fillRule="evenodd"
-                      d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
-                      clipRule="evenodd"
-                    />
-                  </svg>
-                  <span>
-                    Thought Leadership: 4x increase in content recognition
-                  </span>
-                </li>
-                <li className="flex items-center">
-                  <svg
-                    className="h-5 w-5 mr-2 flex-shrink-0"
-                    viewBox="0 0 20 20"
-                    fill="currentColor"
-                  >
-                    <path
-                      fillRule="evenodd"
-                      d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
-                      clipRule="evenodd"
-                    />
-                  </svg>
-                  <span>
-                    Established Value: Enhanced professional credibility
-                  </span>
-                </li>
-              </ul> */}
             </div>
           </div>
         </div>
