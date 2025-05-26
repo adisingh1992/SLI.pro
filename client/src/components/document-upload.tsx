@@ -148,11 +148,17 @@ const DocumentUpload = () => {
     
     const file = fileInput.files[0];
     
-    // Check if file is a PDF
-    if (file.type !== "application/pdf") {
+    // Check if file type is supported (PDF, DOC, DOCX)
+    const supportedTypes = [
+      "application/pdf",
+      "application/msword",
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+    ];
+    
+    if (!supportedTypes.includes(file.type)) {
       toast({
         title: "Error",
-        description: "Only PDF files are supported",
+        description: "Only PDF, DOC, and DOCX files are supported",
         variant: "destructive",
       });
       return;
@@ -505,13 +511,44 @@ const DocumentUpload = () => {
           </div>
         </CardContent>
         
+        {/* Optional Documents Section */}
         <CardContent>
+          <div className="mb-6">
+            <h3 className="text-lg font-semibold text-gray-900 mb-3">Optional Documents</h3>
+            <div className="mb-4">
+              <p className="text-sm text-gray-700 mb-3">
+                <strong>Enhance Your Assessment (Optional)</strong><br />
+                If you have completed any personality, strengths, or leadership assessments, please share them. These provide valuable insights into your natural positioning and communication style.
+              </p>
+              
+              <div className="mb-4">
+                <p className="text-sm font-medium text-gray-900 mb-2">Common Assessment Types:</p>
+                <ul className="text-sm text-gray-700 space-y-1 ml-4 list-disc">
+                  <li>Myers-Briggs Type Indicator (MBTI)</li>
+                  <li>Enneagram</li>
+                  <li>StrengthsFinder / CliftonStrengths</li>
+                  <li>VIA Character Strengths Survey</li>
+                  <li>DiSC Profile</li>
+                  <li>360° Leadership or Team Assessments</li>
+                  <li>Any other professional assessment results</li>
+                </ul>
+              </div>
+              
+              <div className="p-3 bg-blue-50 rounded-lg border border-blue-200">
+                <p className="text-sm text-gray-700">
+                  <strong>Why share these?</strong><br />
+                  Personality and strengths assessments help us understand your natural communication style and authentic professional positioning, making your SLI more genuine and sustainable.
+                </p>
+              </div>
+            </div>
+          </div>
+          
           <form onSubmit={handleUpload} className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="name">Document Name</Label>
               <Input
                 id="name"
-                placeholder="e.g., My Professional Resume"
+                placeholder="e.g., MBTI Assessment Results"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
               />
@@ -534,15 +571,17 @@ const DocumentUpload = () => {
             </div>
             
             <div className="space-y-2">
-              <Label htmlFor="file">PDF File</Label>
+              <Label htmlFor="file">Assessment File</Label>
               <Input
                 id="file"
                 type="file"
-                accept="application/pdf"
+                accept="application/pdf,.doc,.docx"
                 ref={fileInputRef}
                 className="cursor-pointer"
               />
-              <p className="text-xs text-gray-500">Max file size: 2MB</p>
+              <p className="text-xs text-gray-500">
+                <strong>Accepted formats:</strong> PDF, DOC & DOCX • Max file size: 2MB
+              </p>
             </div>
             
             <Button 
@@ -555,7 +594,7 @@ const DocumentUpload = () => {
               ) : (
                 <>
                   <Upload className="mr-2 h-4 w-4" />
-                  Upload Document
+                  Upload Assessment
                 </>
               )}
             </Button>
@@ -710,6 +749,25 @@ const DocumentUpload = () => {
           )}
         </CardContent>
       </Card>
+      
+      {/* Page Footer */}
+      <div className="mt-8 p-6 bg-gray-50 rounded-lg border">
+        <div className="space-y-3 text-sm text-gray-600">
+          <p>
+            <strong>Having trouble with uploads?</strong> Contact support at{" "}
+            <a 
+              href="mailto:support@slipro.com" 
+              className="text-blue-600 hover:text-blue-800 underline"
+            >
+              support@slipro.com
+            </a>{" "}
+            or use the chat feature for assistance.
+          </p>
+          <p>
+            <strong>Privacy Note:</strong> All documents are securely stored and only used to develop your personalized SLI strategy. Documents are not shared with third parties.
+          </p>
+        </div>
+      </div>
     </div>
   );
 };
