@@ -880,6 +880,20 @@ export default function QuestionnairePage() {
             if (parsedInterests.industryInterests.technology) setTechnologyChecked(true);
           }
           
+          // Load Step 3 brand positioning and content creation comfort ratings
+          if (parsedInterests.brandPositioning !== undefined && parsedInterests.brandPositioning !== null) {
+            setBrandPositioningRating(parsedInterests.brandPositioning);
+          }
+          
+          if (parsedInterests.contentCreationComfort !== undefined && parsedInterests.contentCreationComfort !== null) {
+            setContentCreationComfort(parsedInterests.contentCreationComfort);
+          }
+          
+          // Load brand optimization goals
+          if (parsedInterests.brandOptimizationGoals) {
+            setBrandOptimizationGoals(parsedInterests.brandOptimizationGoals);
+          }
+          
           // Load societal interests
           if (parsedInterests.societalInterests) {
             console.log("Loading societal interests from JSON:", Object.keys(parsedInterests.societalInterests).join(", "));
@@ -1839,25 +1853,25 @@ export default function QuestionnairePage() {
         socialImpactChecked ||
         technologyChecked;
 
-      const hasSocietalInterestSelected =
-        climateChecked ||
-        consumerBehaviorChecked ||
-        crimeJusticeChecked ||
-        digitalTransformationAIChecked ||
-        educationLearningChecked ||
-        emergingMarketsChecked ||
-        entertainmentArtsChecked ||
-        financialInnovationChecked ||
-        futureOfWorkChecked ||
-        globalEconomyChecked ||
-        geopoliticsChecked ||
-        healthWellnessChecked ||
-        healthcareInnovationChecked ||
-        socialImpactDEIChecked ||
-        sportsRecreationChecked ||
-        travelTourismChecked ||
-        urbanDevelopmentChecked ||
-        usPoliticsChecked;
+      // const hasSocietalInterestSelected =
+      //   climateChecked ||
+      //   consumerBehaviorChecked ||
+      //   crimeJusticeChecked ||
+      //   digitalTransformationAIChecked ||
+      //   educationLearningChecked ||
+      //   emergingMarketsChecked ||
+      //   entertainmentArtsChecked ||
+      //   financialInnovationChecked ||
+      //   futureOfWorkChecked ||
+      //   globalEconomyChecked ||
+      //   geopoliticsChecked ||
+      //   healthWellnessChecked ||
+      //   healthcareInnovationChecked ||
+      //   socialImpactDEIChecked ||
+      //   sportsRecreationChecked ||
+      //   travelTourismChecked ||
+      //   urbanDevelopmentChecked ||
+      //   usPoliticsChecked;
 
       // Check if at least one content creation format is selected
       const hasContentFormatSelected =
@@ -1883,16 +1897,18 @@ export default function QuestionnairePage() {
       // Show toast for missing fields
       if (
         !hasIndustryInterestSelected ||
-        !hasSocietalInterestSelected ||
+        // !hasSocietalInterestSelected ||
         !hasContentFormatSelected ||
         !hasPostingBarrierSelected
       ) {
         let missingField = "";
         if (!hasIndustryInterestSelected) {
           missingField = "Please select at least one industry interest";
-        } else if (!hasSocietalInterestSelected) {
-          missingField = "Please select at least one societal interest";
-        } else if (!hasContentFormatSelected) {
+        }
+        // else if (!hasSocietalInterestSelected) {
+        //   missingField = "Please select at least one societal interest";
+        // }
+      else if (!hasContentFormatSelected) {
           missingField =
             "Please select at least one content format that feels natural to you";
         } else if (!hasPostingBarrierSelected) {
@@ -1908,7 +1924,7 @@ export default function QuestionnairePage() {
 
       return (
         hasIndustryInterestSelected &&
-        hasSocietalInterestSelected &&
+        // hasSocietalInterestSelected &&
         hasContentFormatSelected &&
         hasPostingBarrierSelected
       );
@@ -4319,7 +4335,7 @@ export default function QuestionnairePage() {
               {/* Cross-Cutting & Societal Interests Section */}
               <div className="mb-6">
                 <Label className="text-gray-700 font-medium block mb-3">
-                  Cross-Cutting & Societal Interests
+                  Cross-Cutting & Societal Interests{" "}
                 </Label>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                   <div className="flex items-center space-x-2">
