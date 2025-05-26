@@ -3327,7 +3327,7 @@ export default function QuestionnairePage() {
                 htmlFor="aspirations"
                 className="text-gray-700 font-medium block mb-2"
               >
-                Branding and Content Creation{" "}
+                Branding & Content Creation{" "}
                 <span className="text-red-500">*</span>
               </Label>
               <p className="text-sm text-gray-500 mb-3">
@@ -3463,7 +3463,7 @@ export default function QuestionnairePage() {
                       onChange={(e) =>
                         setOtherBrandingChallenge(e.target.value)
                       }
-                      placeholder="Please specify your other branding challenge"
+                      placeholder="Please specify any other branding challenge(s)"
                       className="w-full"
                     />
                   </div>
@@ -3496,7 +3496,7 @@ export default function QuestionnairePage() {
                     }
                   />
                   <Label htmlFor="linkedInPosts" className="cursor-pointer">
-                    LinkedIn posts
+                    LinkedIn Posts
                   </Label>
                 </div>
 
@@ -3509,7 +3509,7 @@ export default function QuestionnairePage() {
                     }
                   />
                   <Label htmlFor="blogArticles" className="cursor-pointer">
-                    Blog articles
+                    Blog Articles
                   </Label>
                 </div>
 
@@ -3525,7 +3525,7 @@ export default function QuestionnairePage() {
                     htmlFor="industryPresentations"
                     className="cursor-pointer"
                   >
-                    Industry presentations
+                    Industry Presentations
                   </Label>
                 </div>
 
@@ -3538,7 +3538,7 @@ export default function QuestionnairePage() {
                     }
                   />
                   <Label htmlFor="academicPapers" className="cursor-pointer">
-                    Academic papers
+                    Academic Papers
                   </Label>
                 </div>
 
@@ -3551,7 +3551,7 @@ export default function QuestionnairePage() {
                     }
                   />
                   <Label htmlFor="neverPublished" className="cursor-pointer">
-                    Never published professional content
+                    Never Published Professional Content
                   </Label>
                 </div>
 
@@ -3591,7 +3591,7 @@ export default function QuestionnairePage() {
                 htmlFor="profileUpdateTime"
                 className="text-gray-700 font-medium block mb-2"
               >
-                LinkedIn Profile Updates
+                LinkedIn Updates
               </Label>
               <p className="text-sm text-gray-500 mb-3">
                 When was the most recent time you updated your LinkedIn profile?
@@ -3607,7 +3607,7 @@ export default function QuestionnairePage() {
                     }
                   />
                   <Label htmlFor="lastWeek" className="cursor-pointer">
-                    Within the last week
+                    Within the Last Week
                   </Label>
                 </div>
 
@@ -3620,7 +3620,7 @@ export default function QuestionnairePage() {
                     }
                   />
                   <Label htmlFor="lastMonth" className="cursor-pointer">
-                    Within the last month
+                    Within the Last Month
                   </Label>
                 </div>
 
@@ -3646,7 +3646,7 @@ export default function QuestionnairePage() {
                     }
                   />
                   <Label htmlFor="careerCoach" className="cursor-pointer">
-                    After I spoke with a career coach
+                    After I Spoke with a Career Coach
                   </Label>
                 </div>
 
@@ -3659,7 +3659,7 @@ export default function QuestionnairePage() {
                     }
                   />
                   <Label htmlFor="jobChange" className="cursor-pointer">
-                    When I last changed jobs
+                    When I Last Changed Jobs
                   </Label>
                 </div>
 
@@ -3672,7 +3672,7 @@ export default function QuestionnairePage() {
                     }
                   />
                   <Label htmlFor="cantRemember" className="cursor-pointer">
-                    I can't remember
+                    I Can't Remember
                   </Label>
                 </div>
 
@@ -3730,6 +3730,10 @@ export default function QuestionnairePage() {
               </p>
 
               <div className="space-y-3 mt-4">
+                <p className="text-sm font-medium text-gray-600 mt-5 mb-2">
+                  General Activities
+                </p>
+                
                 <div className="flex items-center space-x-2">
                   <Checkbox
                     id="readNewsfeed"
@@ -3797,7 +3801,7 @@ export default function QuestionnairePage() {
                     }
                   />
                   <Label htmlFor="posted12Times" className="cursor-pointer">
-                    Posted Original Content - 1-2 times
+                    Posted Original Content - 1-2 Times
                   </Label>
                 </div>
 
@@ -3810,7 +3814,7 @@ export default function QuestionnairePage() {
                     }
                   />
                   <Label htmlFor="posted35Times" className="cursor-pointer">
-                    Posted Original Content - 3-5 times
+                    Posted Original Content - 3-5 Times
                   </Label>
                 </div>
 
@@ -3823,7 +3827,7 @@ export default function QuestionnairePage() {
                     }
                   />
                   <Label htmlFor="posted6PlusTimes" className="cursor-pointer">
-                    Posted Original Content - 6+ times
+                    Posted Original Content - 6+ Times
                   </Label>
                 </div>
 
@@ -3852,7 +3856,7 @@ export default function QuestionnairePage() {
                     }
                   />
                   <Label htmlFor="shared12Times" className="cursor-pointer">
-                    Shared Others' Posts - 1-2 times
+                    Shared Others' Posts - 1-2 Times
                   </Label>
                 </div>
 
@@ -3865,7 +3869,7 @@ export default function QuestionnairePage() {
                     }
                   />
                   <Label htmlFor="shared35Times" className="cursor-pointer">
-                    Shared Others' Posts - 3-5 times
+                    Shared Others' Posts - 3-5 Times
                   </Label>
                 </div>
 
@@ -3878,7 +3882,7 @@ export default function QuestionnairePage() {
                     }
                   />
                   <Label htmlFor="shared6PlusTimes" className="cursor-pointer">
-                    Shared Others' Posts - 6+ times
+                    Shared Others' Posts - 6+ Times
                   </Label>
                 </div>
 
@@ -3910,7 +3914,7 @@ export default function QuestionnairePage() {
                     htmlFor="commented12TimesPerMonth"
                     className="cursor-pointer"
                   >
-                    Commented on Posts - 1-2 times per month
+                    Commented on Posts - 1-2 Times Per Month
                   </Label>
                 </div>
 
@@ -3926,7 +3930,7 @@ export default function QuestionnairePage() {
                     htmlFor="commented12TimesPerWeek"
                     className="cursor-pointer"
                   >
-                    Commented on Posts - 1-2 times per week
+                    Commented on Posts - 1-2 Times Per Week
                   </Label>
                 </div>
 
@@ -3942,7 +3946,7 @@ export default function QuestionnairePage() {
                     htmlFor="commented3PlusTimesPerWeek"
                     className="cursor-pointer"
                   >
-                    Commented on Posts - 3+ times per week
+                    Commented on Posts - 3+ Times Per Week
                   </Label>
                 </div>
 
@@ -3964,6 +3968,19 @@ export default function QuestionnairePage() {
 
                 <div className="flex items-center space-x-2">
                   <Checkbox
+                    id="reactedDaily"
+                    checked={reactedDailyChecked}
+                    onCheckedChange={(checked) =>
+                      setReactedDailyChecked(checked === true)
+                    }
+                  />
+                  <Label htmlFor="reactedDaily" className="cursor-pointer">
+                    Reacted to Posts (likes, etc.) - Daily
+                  </Label>
+                </div>
+
+                <div className="flex items-center space-x-2">
+                  <Checkbox
                     id="reactedFewTimesMonth"
                     checked={reactedFewTimesMonthChecked}
                     onCheckedChange={(checked) =>
@@ -3974,7 +3991,7 @@ export default function QuestionnairePage() {
                     htmlFor="reactedFewTimesMonth"
                     className="cursor-pointer"
                   >
-                    Reacted to Posts (likes, etc.) - A few times a month
+                    Reacted to Posts (likes, etc.) - A Few Times a Month
                   </Label>
                 </div>
 
@@ -3990,20 +4007,7 @@ export default function QuestionnairePage() {
                     htmlFor="reactedFewTimesWeek"
                     className="cursor-pointer"
                   >
-                    Reacted to Posts (likes, etc.) - A few times a week
-                  </Label>
-                </div>
-
-                <div className="flex items-center space-x-2">
-                  <Checkbox
-                    id="reactedDaily"
-                    checked={reactedDailyChecked}
-                    onCheckedChange={(checked) =>
-                      setReactedDailyChecked(checked === true)
-                    }
-                  />
-                  <Label htmlFor="reactedDaily" className="cursor-pointer">
-                    Reacted to Posts (likes, etc.) - Daily
+                    Reacted to Posts (likes, etc.) - A Few Times a Week
                   </Label>
                 </div>
               </div>
@@ -4029,7 +4033,7 @@ export default function QuestionnairePage() {
                   onValueChange={(value) =>
                     setBrandPositioningRating(parseInt(value))
                   }
-                  className="flex flex-col space-y-3"
+                  className="flex flex-row flex-wrap gap-4"
                 >
                   <div className="flex items-center space-x-2">
                     <RadioGroupItem value="1" id="bp-1" />
@@ -4088,7 +4092,7 @@ export default function QuestionnairePage() {
                   onValueChange={(value) =>
                     setContentCreationComfort(parseInt(value))
                   }
-                  className="flex flex-col space-y-3"
+                  className="flex flex-row flex-wrap gap-4"
                 >
                   <div className="flex items-center space-x-2">
                     <RadioGroupItem value="1" id="cc-1" />
