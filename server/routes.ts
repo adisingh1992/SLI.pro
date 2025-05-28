@@ -31,6 +31,7 @@ import { registerConversationRoutes } from "./conversation-routes";
 import { registerFreshnessRoutes } from "./freshness-routes";
 import { registerLinkedinOptimizationRoutes } from "./linkedin-optimization-routes";
 import { registerLinkedinContentRoutes } from "./linkedin-content-routes";
+import { registerHomeworkRoutes } from "./homework-routes";
 
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -43,6 +44,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   registerLinkedinOptimizationRoutes(app);
   registerLinkedinContentRoutes(app);
   registerSliRoutes(app, storage);
+  registerHomeworkRoutes(app, storage);
 
   // Middleware to check if user is authenticated
   const isAuthenticated = (req: Request, res: Response, next: NextFunction) => {

@@ -17,6 +17,7 @@ import {
   FileIcon,
   MessageSquare,
   Star,
+  BookOpen,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -211,6 +212,14 @@ export default function UserDetailPage() {
               >
                 <FileText className="h-4 w-4" />
                 Coaching Notes
+              </Button>
+              <Button
+                variant="outline"
+                className="flex items-center gap-2"
+                onClick={() => navigate(`/admin/users/${userId}/homework`)}
+              >
+                <BookOpen className="h-4 w-4" />
+                Assigned Homework
               </Button>
               <TooltipProvider>
                 <Tooltip>

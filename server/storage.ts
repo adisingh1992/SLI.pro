@@ -17,6 +17,7 @@ import {
   slis, type Sli, type InsertSli, type UpdateSli,
   linkedinOptimizations, type LinkedinOptimization, type InsertLinkedinOptimization,
   linkedinContentDrafts, type LinkedinContentDraft, type InsertLinkedinContentDraft,
+  homeworkAssignments, type HomeworkAssignment, type InsertHomeworkAssignment, type UpdateHomeworkAssignment,
   type UpdateUser, type UpdateProfile, type UserProfile
 } from "@shared/schema";
 import session from "express-session";
@@ -140,6 +141,13 @@ export interface IStorage {
   getLinkedinContentDraft(id: number): Promise<LinkedinContentDraft | undefined>;
   getLatestLinkedinContentDraft(userId: number): Promise<LinkedinContentDraft | undefined>;
   createLinkedinContentDraft(contentDraft: InsertLinkedinContentDraft): Promise<LinkedinContentDraft>;
+
+  // Homework Assignment operations
+  getHomeworkAssignments(userId: number): Promise<HomeworkAssignment[]>;
+  getHomeworkAssignment(id: number): Promise<HomeworkAssignment | undefined>;
+  createHomeworkAssignment(homework: InsertHomeworkAssignment): Promise<HomeworkAssignment>;
+  updateHomeworkAssignment(id: number, data: UpdateHomeworkAssignment): Promise<HomeworkAssignment | undefined>;
+  deleteHomeworkAssignment(id: number): Promise<void>;
 
   // Session store
   sessionStore: session.Store;
