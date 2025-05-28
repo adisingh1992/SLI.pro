@@ -6,6 +6,7 @@ import { z } from "zod";
 import { scrypt, randomBytes } from "crypto";
 import { promisify } from "util";
 import { registerSliRoutes } from "./sli-routes";
+import { registerHomeworkRoutes } from "./homework-routes";
 import {
   insertExperienceSchema,
   insertEducationSchema,
