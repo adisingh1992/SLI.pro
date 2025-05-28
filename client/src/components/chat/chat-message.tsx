@@ -21,7 +21,7 @@ export function ChatMessage({ content, role, isStreaming = false }: ChatMessageP
             </Avatar>
           ) : (
             <Avatar className="h-8 w-8 bg-secondary text-green">
-              <AvatarFallback>AI</AvatarFallback>
+              <AvatarFallback>S.p</AvatarFallback>
             </Avatar>
           )}
         </div>

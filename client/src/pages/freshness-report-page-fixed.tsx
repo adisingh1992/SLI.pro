@@ -488,7 +488,7 @@ const FreshnessReportPage: React.FC = () => {
       ) : (
         <>
           <FileText className="h-16 w-16 text-muted-foreground mb-4" />
-          <h3 className="text-xl font-medium mb-2">No Brand Assessment Yet</h3>
+          <h3 className="text-xl font-medium mb-2">No Brand Intelligence Report Yet</h3>
           <p className="text-muted-foreground max-w-md mb-6">
             Generate your first professional brand assessment to get
             comprehensive insights into your brand positioning.
@@ -526,11 +526,26 @@ const FreshnessReportPage: React.FC = () => {
   if (!currentReport) {
     return (
       <div className="px-4 py-8">
-        <h1 className="text-2xl font-bold mb-4">Freshness Report</h1>
-        <p className="text-muted-foreground mb-8">
-          Get a comprehensive analysis of your professional brand presence and
-          positioning
-        </p>
+        {/* Page Header Section */}
+        <div className="mb-8 space-y-6">
+          <div className="text-center space-y-4">
+            <h1 className="text-2xl font-bold text-gray-900">
+              <strong>Your Brand Intelligence Report</strong>
+            </h1>
+            <p className="text-lg text-gray-600 max-w-3xl mx-auto">
+              A comprehensive analysis of your current professional positioning and digital presence
+            </p>
+          </div>
+
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
+            <h2 className="text-xl font-semibold text-gray-900 mb-3">
+              <strong>What is Brand Intelligence?</strong>
+            </h2>
+            <p className="text-gray-700 leading-relaxed">
+              Your Brand Intelligence Report provides data-driven insights into how effectively your professional brand positions you for your career goals. This analysis examines the alignment between your current digital presence, career aspirations, and market positioning.
+            </p>
+          </div>
+        </div>
         <Card>
           <CardContent className="pt-6">
             <NoReportContent />
@@ -557,27 +572,6 @@ const FreshnessReportPage: React.FC = () => {
     <div className="min-h-screen bg-background flex flex-col">
       <NavBar />
       <div className="container px-4 py-8" style={{minWidth: '100%'}}>
-        
-        {/* Page Header Section */}
-        <div className="mb-8 space-y-6">
-          <div className="text-center space-y-4">
-            <h1 className="text-3xl font-bold text-gray-900">
-              <strong>Your Brand Intelligence Report</strong>
-            </h1>
-            <p className="text-lg text-gray-600 max-w-3xl mx-auto">
-              A comprehensive analysis of your current professional positioning and digital presence
-            </p>
-          </div>
-          
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
-            <h2 className="text-xl font-semibold text-gray-900 mb-3">
-              <strong>What is Brand Intelligence?</strong>
-            </h2>
-            <p className="text-gray-700 leading-relaxed">
-              Your Brand Intelligence Report provides data-driven insights into how effectively your professional brand positions you for your career goals. This analysis examines the alignment between your current digital presence, career aspirations, and market positioning.
-            </p>
-          </div>
-        </div>
 
         {/* Header with title and generate button */}
         <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-6">

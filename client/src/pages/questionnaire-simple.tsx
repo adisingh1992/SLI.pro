@@ -880,20 +880,6 @@ export default function QuestionnairePage() {
             if (parsedInterests.industryInterests.technology) setTechnologyChecked(true);
           }
           
-          // Load Step 3 brand positioning and content creation comfort ratings
-          if (parsedInterests.brandPositioning !== undefined && parsedInterests.brandPositioning !== null) {
-            setBrandPositioningRating(parsedInterests.brandPositioning);
-          }
-          
-          if (parsedInterests.contentCreationComfort !== undefined && parsedInterests.contentCreationComfort !== null) {
-            setContentCreationComfort(parsedInterests.contentCreationComfort);
-          }
-          
-          // Load brand optimization goals
-          if (parsedInterests.brandOptimizationGoals) {
-            setBrandOptimizationGoals(parsedInterests.brandOptimizationGoals);
-          }
-          
           // Load societal interests
           if (parsedInterests.societalInterests) {
             console.log("Loading societal interests from JSON:", Object.keys(parsedInterests.societalInterests).join(", "));
@@ -4335,7 +4321,7 @@ export default function QuestionnairePage() {
               {/* Cross-Cutting & Societal Interests Section */}
               <div className="mb-6">
                 <Label className="text-gray-700 font-medium block mb-3">
-                  Cross-Cutting & Societal Interests{" "}
+                  Cross-Cutting & Societal Interests{" "} (optional)
                 </Label>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                   <div className="flex items-center space-x-2">

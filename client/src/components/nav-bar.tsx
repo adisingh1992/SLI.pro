@@ -8,7 +8,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { LogOut, User, ChevronDown, MessageSquare, FileText } from "lucide-react";
+import { LogOut, User, ChevronDown, FileText } from "lucide-react";
 import UserAvatar from "@/components/user-avatar";
 import sliProLogo from "@/assets/sliPro-logos_aqua.png";
 // This is a custom navigation function that will let the chat page's exit confirmation handle navigation
@@ -52,7 +52,7 @@ export default function NavBar() {
 
   return (
     <nav className="bg-white shadow-sm">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="max-w-9xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between h-16">
           <div className="flex">
             <div className="flex-shrink-0 flex items-center cursor-pointer" onClick={() => navigate("/")}>

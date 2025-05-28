@@ -855,6 +855,66 @@ export default function HomePage() {
             </CardFooter>
           </Card>
 
+          {/* Step 9: Schedule Follow-Up Coaching */}
+          <Card className={`overflow-hidden shadow-sm flex flex-col h-full ${
+            !hasConversationSummaries
+              ? "border-gray-200 opacity-75"
+              : "border-green-200"
+          }`}>
+            <CardHeader className={`pb-4 ${
+              !hasConversationSummaries
+                ? "bg-gray-50"
+                : "bg-green-50"
+            }`}>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center">
+                  <div className={`p-2 rounded-full mr-3 ${
+                    !hasConversationSummaries
+                      ? "bg-gray-100 text-gray-500"
+                      : "bg-green-100 text-green-600"
+                  }`}>
+                    <Phone className="h-5 w-5" />
+                  </div>
+                  <CardTitle className="text-lg">
+                    Step 9: Schedule Follow-Up Coaching
+                  </CardTitle>
+                </div>
+                {liveCoachingBadge}
+              </div>
+              <CardDescription className="mt-2">
+                {!hasConversationSummaries
+                  ? "Complete your AI-guided discovery conversations to unlock live coaching"
+                  : "Refine your approach and measure progress"}
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="p-5 flex-grow">
+              <p className={`text-sm ${!hasConversationSummaries ? "text-muted-foreground/70" : "text-muted-foreground"}`}>
+                {!hasConversationSummaries
+                  ? "You must complete at least one AI coaching conversation first"
+                  : "Refine your approach and measure progress"}
+              </p>
+            </CardContent>
+            <CardFooter className="bg-gray-50 py-3 px-5 mt-auto">
+              <Button
+                variant="outline"
+                className={`w-full ${
+                  !hasConversationSummaries
+                    ? "border-gray-300 text-gray-500 cursor-not-allowed"
+                    : "border-green-500 text-green-600 hover:bg-green-50"
+                }`}
+                onClick={() => {
+                  if (hasConversationSummaries) {
+                    window.open("https://calendly.com/dcara-sli/haas", "_blank");
+                  }
+                }}
+                disabled={!hasConversationSummaries}
+              >
+                Schedule Now
+                <ArrowRight className="ml-2 h-4 w-4" />
+              </Button>
+            </CardFooter>
+          </Card>
+
         </div>
       </main>
     </div>
