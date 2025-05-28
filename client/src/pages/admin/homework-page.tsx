@@ -144,6 +144,7 @@ export default function AdminHomeworkPage() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [`/api/admin/users/${userId}/homework`] });
+      queryClient.refetchQueries({ queryKey: [`/api/admin/users/${userId}/homework`] });
       setIsAddDialogOpen(false);
       addForm.reset();
       toast({
@@ -167,6 +168,7 @@ export default function AdminHomeworkPage() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [`/api/admin/users/${userId}/homework`] });
+      queryClient.refetchQueries({ queryKey: [`/api/admin/users/${userId}/homework`] });
       setEditingHomework(null);
       editForm.reset();
       toast({
@@ -190,6 +192,7 @@ export default function AdminHomeworkPage() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [`/api/admin/users/${userId}/homework`] });
+      queryClient.refetchQueries({ queryKey: [`/api/admin/users/${userId}/homework`] });
       toast({
         title: "Success",
         description: "Homework assignment deleted successfully",
