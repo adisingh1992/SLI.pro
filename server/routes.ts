@@ -7,6 +7,10 @@ import { scrypt, randomBytes } from "crypto";
 import { promisify } from "util";
 import { registerSliRoutes } from "./sli-routes";
 import { registerHomeworkRoutes } from "./homework-routes";
+import { registerConversationRoutes } from "./conversation-routes";
+import { registerFreshnessRoutes } from "./freshness-routes";
+import { registerLinkedinOptimizationRoutes } from "./linkedin-optimization-routes";
+import { registerLinkedinContentRoutes } from "./linkedin-content-routes";
 import {
   insertExperienceSchema,
   insertEducationSchema,
