@@ -115,6 +115,7 @@ export default function AdminHomeworkPage() {
     data: homeworkData,
     isLoading: isHomeworkLoading,
     error: homeworkError,
+    refetch: refetchHomework,
   } = useQuery<HomeworkAssignment[]>({
     queryKey: [`/api/admin/users/${userId}/homework`],
     queryFn: getQueryFn({ on401: "throw" }),
@@ -143,8 +144,7 @@ export default function AdminHomeworkPage() {
       return await apiRequest("POST", `/api/admin/users/${userId}/homework`, data);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [`/api/admin/users/${userId}/homework`] });
-      queryClient.refetchQueries({ queryKey: [`/api/admin/users/${userId}/homework`] });
+      refetchHomework();
       setIsAddDialogOpen(false);
       addForm.reset();
       toast({
@@ -167,8 +167,7 @@ export default function AdminHomeworkPage() {
       return await apiRequest("PATCH", `/api/admin/homework/${id}`, data);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [`/api/admin/users/${userId}/homework`] });
-      queryClient.refetchQueries({ queryKey: [`/api/admin/users/${userId}/homework`] });
+      refetchHomework();
       setEditingHomework(null);
       editForm.reset();
       toast({
@@ -191,8 +190,7 @@ export default function AdminHomeworkPage() {
       return await apiRequest("DELETE", `/api/admin/homework/${id}`);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [`/api/admin/users/${userId}/homework`] });
-      queryClient.refetchQueries({ queryKey: [`/api/admin/users/${userId}/homework`] });
+      refetchHomework();
       toast({
         title: "Success",
         description: "Homework assignment deleted successfully",
