@@ -17,6 +17,7 @@ import {
   slis, type Sli, type InsertSli, type UpdateSli,
   linkedinOptimizations, type LinkedinOptimization, type InsertLinkedinOptimization,
   linkedinContentDrafts, type LinkedinContentDraft, type InsertLinkedinContentDraft,
+  homeworkAssignments, type HomeworkAssignment, type InsertHomeworkAssignment, type UpdateHomeworkAssignment,
   type UpdateUser, type UpdateProfile, type UserProfile
 } from "@shared/schema";
 import session from "express-session";
@@ -718,5 +719,45 @@ export class DatabaseStorage implements IStorage {
       .values(contentDraft)
       .returning();
     return newContentDraft;
+  }
+
+  // Homework Assignment methods
+  async getHomeworkAssignments(userId: number): Promise<HomeworkAssignment[]> {
+    return await db
+      .select()
+      .from(homeworkAssignments)
+      .where(eq(homeworkAssignments.userId, userId))
+      .orderBy(desc(homeworkAssignments.createdAt));
+  }
+
+  async getHomeworkAssignment(id: number): Promise<HomeworkAssignment | undefined> {
+    const [homework] = await db
+      .select()
+      .from(homeworkAssignments)
+      .where(eq(homeworkAssignments.id, id));
+    return homework || undefined;
+  }
+
+  async createHomeworkAssignment(homework: InsertHomeworkAssignment): Promise<HomeworkAssignment> {
+    const [newHomework] = await db
+      .insert(homeworkAssignments)
+      .values(homework)
+      .returning();
+    return newHomework;
+  }
+
+  async updateHomeworkAssignment(id: number, data: UpdateHomeworkAssignment): Promise<HomeworkAssignment | undefined> {
+    const [updatedHomework] = await db
+      .update(homeworkAssignments)
+      .set({ ...data, updatedAt: new Date() })
+      .where(eq(homeworkAssignments.id, id))
+      .returning();
+    return updatedHomework || undefined;
+  }
+
+  async deleteHomeworkAssignment(id: number): Promise<void> {
+    await db
+      .delete(homeworkAssignments)
+      .where(eq(homeworkAssignments.id, id));
   }
 }

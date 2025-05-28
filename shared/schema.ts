@@ -463,6 +463,36 @@ export const insertLinkedinOptimizationSchema = createInsertSchema(linkedinOptim
 export type InsertLinkedinOptimization = z.infer<typeof insertLinkedinOptimizationSchema>;
 export type LinkedinOptimization = typeof linkedinOptimizations.$inferSelect;
 
+// Homework Assignments schema
+export const homeworkAssignments = pgTable("homework_assignments", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
+  adminId: integer("admin_id").notNull().references(() => users.id), // The admin who assigned the homework
+  questionText: text("question_text").notNull(),
+  answerText: text("answer_text"), // User's answer (initially null)
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const insertHomeworkAssignmentSchema = createInsertSchema(homeworkAssignments).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const updateHomeworkAssignmentSchema = createInsertSchema(homeworkAssignments).omit({
+  id: true,
+  userId: true,
+  adminId: true,
+  questionText: true,
+  createdAt: true,
+  updatedAt: true,
+}).partial();
+
+export type InsertHomeworkAssignment = z.infer<typeof insertHomeworkAssignmentSchema>;
+export type UpdateHomeworkAssignment = z.infer<typeof updateHomeworkAssignmentSchema>;
+export type HomeworkAssignment = typeof homeworkAssignments.$inferSelect;
+
 export type UserProfile = User & {
   experiences?: Experience[];
   education?: Education[];
@@ -478,4 +508,5 @@ export type UserProfile = User & {
   coachingNotes?: CoachingNote[];
   slis?: Sli[];
   linkedinOptimizations?: LinkedinOptimization[];
+  homeworkAssignments?: HomeworkAssignment[];
 };
