@@ -923,6 +923,71 @@ export default function HomePage() {
             </CardFooter>
           </Card>
 
+          {/* Assigned Homework Card - Only show for non-admin users */}
+          {user && !user.isAdmin && (
+            <Card className="overflow-hidden shadow-sm flex flex-col h-full border-purple-200">
+              <CardHeader className="pb-4 bg-purple-50">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center">
+                    <div className="p-2 rounded-full mr-3 bg-purple-100 text-purple-600">
+                      <BookOpen className="h-5 w-5" />
+                    </div>
+                    <CardTitle className="text-lg">
+                      Assigned Homework
+                    </CardTitle>
+                  </div>
+                  <Badge variant={homeworkData && homeworkData.length > 0 ? "default" : "secondary"}>
+                    {homeworkData && homeworkData.length > 0 
+                      ? `${homeworkData.filter(hw => hw.answerText).length}/${homeworkData.length} Complete`
+                      : "No Questions"
+                    }
+                  </Badge>
+                </div>
+                <CardDescription className="mt-2">
+                  {homeworkData && homeworkData.length > 0
+                    ? "View and respond to personalized questions from your SLI.pro coach."
+                    : "Your coach hasn't assigned any homework questions yet."
+                  }
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="p-5 flex-grow">
+                <p className="text-sm text-muted-foreground mb-2">
+                  {homeworkData && homeworkData.length > 0
+                    ? `You have ${homeworkData.filter(hw => !hw.answerText).length} unanswered questions waiting for your response.`
+                    : "Check back later for personalized development questions from your coach."
+                  }
+                </p>
+                {homeworkData && homeworkData.length > 0 && (
+                  <div className="mt-3">
+                    <p className="text-xs text-muted-foreground">
+                      Recent question: "{homeworkData[homeworkData.length - 1]?.questionText?.substring(0, 60)}..."
+                    </p>
+                  </div>
+                )}
+              </CardContent>
+              <CardFooter className="bg-gray-50 py-3 px-5 mt-auto">
+                <Button
+                  variant="outline"
+                  className={`w-full ${
+                    homeworkData && homeworkData.length > 0
+                      ? "border-purple-500 text-purple-600 hover:bg-purple-50"
+                      : "border-gray-300 text-gray-500 cursor-not-allowed"
+                  }`}
+                  onClick={() => {
+                    if (homeworkData && homeworkData.length > 0) {
+                      scrollToTop();
+                      navigate("/homework");
+                    }
+                  }}
+                  disabled={!homeworkData || homeworkData.length === 0}
+                >
+                  {homeworkData && homeworkData.length > 0 ? "Answer Now" : "No Questions Yet"}
+                  <ArrowRight className="ml-2 h-4 w-4" />
+                </Button>
+              </CardFooter>
+            </Card>
+          )}
+
         </div>
       </main>
     </div>
