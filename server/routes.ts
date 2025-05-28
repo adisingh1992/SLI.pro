@@ -28,11 +28,6 @@ async function hashPassword(password: string) {
   const buf = (await scryptAsync(password, salt, 64)) as Buffer;
   return `${buf.toString("hex")}.${salt}`;
 }
-import { registerConversationRoutes } from "./conversation-routes";
-import { registerFreshnessRoutes } from "./freshness-routes";
-import { registerLinkedinOptimizationRoutes } from "./linkedin-optimization-routes";
-import { registerLinkedinContentRoutes } from "./linkedin-content-routes";
-import { registerHomeworkRoutes } from "./homework-routes";
 
 
 export async function registerRoutes(app: Express): Promise<Server> {

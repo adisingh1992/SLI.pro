@@ -18,6 +18,8 @@ const isAdmin = (req: Request, res: Response, next: NextFunction) => {
 };
 
 export function registerHomeworkRoutes(app: Express, storage: IStorage) {
+  console.log('Registering homework routes...');
+  
   // Admin: Get homework assignments for a specific user
   app.get("/api/admin/users/:userId/homework", isAdmin, async (req: Request, res: Response, next: NextFunction) => {
     try {
