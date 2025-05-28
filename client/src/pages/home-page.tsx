@@ -1,6 +1,6 @@
 import { useAuth } from "@/hooks/use-auth";
 import { useQuery } from "@tanstack/react-query";
-import { FreshnessReport, LinkedinOptimization, Sli, UserProfile, ConversationSummary } from "@shared/schema";
+import { FreshnessReport, LinkedinOptimization, Sli, UserProfile, ConversationSummary, HomeworkAssignment } from "@shared/schema";
 import { useToast } from "@/hooks/use-toast";
 import { useLocation } from "wouter";
 import {
@@ -15,6 +15,7 @@ import {
   Sparkles,
   Phone,
   PenTool,
+  BookOpen,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useEffect } from "react";
@@ -80,6 +81,13 @@ export default function HomePage() {
   const { data: conversationSummaries } = useQuery<ConversationSummary[]>({
     queryKey: ["/api/conversation-summaries"],
     enabled: !!user,
+    retry: false,
+  });
+  
+  // Fetch user's homework assignments (only for non-admin users)
+  const { data: homeworkData } = useQuery<HomeworkAssignment[]>({
+    queryKey: ["/api/user/homework"],
+    enabled: !!user && !user.isAdmin,
     retry: false,
   });
   
