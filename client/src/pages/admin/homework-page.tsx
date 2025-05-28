@@ -140,7 +140,7 @@ export default function AdminHomeworkPage() {
   // Add homework mutation
   const addHomeworkMutation = useMutation({
     mutationFn: async (data: z.infer<typeof homeworkSchema>) => {
-      return await apiRequest(`/api/admin/users/${userId}/homework`, "POST", data);
+      return await apiRequest("POST", `/api/admin/users/${userId}/homework`, data);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [`/api/admin/users/${userId}/homework`] });
@@ -163,7 +163,7 @@ export default function AdminHomeworkPage() {
   // Edit homework mutation
   const editHomeworkMutation = useMutation({
     mutationFn: async ({ id, data }: { id: number; data: z.infer<typeof editHomeworkSchema> }) => {
-      return await apiRequest(`/api/admin/homework/${id}`, "PATCH", data);
+      return await apiRequest("PATCH", `/api/admin/homework/${id}`, data);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [`/api/admin/users/${userId}/homework`] });
@@ -186,7 +186,7 @@ export default function AdminHomeworkPage() {
   // Delete homework mutation
   const deleteHomeworkMutation = useMutation({
     mutationFn: async (id: number) => {
-      return await apiRequest(`/api/admin/homework/${id}`, "DELETE");
+      return await apiRequest("DELETE", `/api/admin/homework/${id}`);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [`/api/admin/users/${userId}/homework`] });
