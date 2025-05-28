@@ -120,6 +120,10 @@ export default function AdminHomeworkPage() {
     queryKey: [`/api/admin/users/${userId}/homework`],
     queryFn: getQueryFn({ on401: "throw" }),
     enabled: !!userId && !!user?.isAdmin,
+    staleTime: 0, // Always consider data stale
+    cacheTime: 0, // Don't cache the data
+    refetchOnMount: true, // Always refetch when component mounts
+    refetchOnWindowFocus: true, // Refetch when window gains focus
   });
 
   // Add homework form
