@@ -1044,6 +1044,58 @@ export default function QuestionnairePage() {
               setCantRememberChecked(true);
             if (parsedInterests.linkedinUpdates.neverUpdated)
               setNeverUpdatedChecked(true);
+
+            if (parsedInterests.linkedinUpdates.other) {
+              setOtherUpdateTimeChecked(true);
+              setOtherUpdateTime(parsedInterests.linkedinUpdates.other);
+            }
+          }
+
+          // Load LinkedIn activity
+          if (parsedInterests.linkedinActivity) {
+            console.log(
+              "Loading LinkedIn activity from parsedInterests:",
+              Object.keys(parsedInterests.linkedinActivity).join(", "),
+            );
+
+            if (parsedInterests.linkedinActivity.readNewsfeed)
+              setReadNewsfeedChecked(true);
+            if (parsedInterests.linkedinActivity.acceptedConnections)
+              setAcceptedConnectionsChecked(true);
+            if (parsedInterests.linkedinActivity.notActive)
+              setNotActiveChecked(true);
+            if (parsedInterests.linkedinActivity.postedNever)
+              setPostedNeverChecked(true);
+            if (parsedInterests.linkedinActivity.posted12Times)
+              setPosted12TimesChecked(true);
+            if (parsedInterests.linkedinActivity.posted35Times)
+              setPosted35TimesChecked(true);
+            if (parsedInterests.linkedinActivity.posted6PlusTimes)
+              setPosted6PlusTimesChecked(true);
+            if (parsedInterests.linkedinActivity.sharedNever)
+              setSharedNeverChecked(true);
+            if (parsedInterests.linkedinActivity.shared12Times)
+              setShared12TimesChecked(true);
+            if (parsedInterests.linkedinActivity.shared35Times)
+              setShared35TimesChecked(true);
+            if (parsedInterests.linkedinActivity.shared6PlusTimes)
+              setShared6PlusTimesChecked(true);
+            if (parsedInterests.linkedinActivity.commentedNever)
+              setCommentedNeverChecked(true);
+            if (parsedInterests.linkedinActivity.commented12TimesPerMonth)
+              setCommented12TimesPerMonthChecked(true);
+            if (parsedInterests.linkedinActivity.commented12TimesPerWeek)
+              setCommented12TimesPerWeekChecked(true);
+            if (parsedInterests.linkedinActivity.commented3PlusTimesPerWeek)
+              setCommented3PlusTimesPerWeekChecked(true);
+            if (parsedInterests.linkedinActivity.reactedNever)
+              setReactedNeverChecked(true);
+            if (parsedInterests.linkedinActivity.reactedFewTimesMonth)
+              setReactedFewTimesMonthChecked(true);
+            if (parsedInterests.linkedinActivity.reactedFewTimesWeek)
+              setReactedFewTimesWeekChecked(true);
+            if (parsedInterests.linkedinActivity.reactedDaily)
+              setReactedDailyChecked(true);
           }
         } catch (err) {
           console.error("Failed to parse interests JSON:", err);
@@ -2438,6 +2490,28 @@ export default function QuestionnairePage() {
         jobChange: jobChangeChecked,
         cantRemember: cantRememberChecked,
         neverUpdated: neverUpdatedChecked,
+        other: otherUpdateTimeChecked ? otherUpdateTime : null,
+      },
+      linkedinActivity: {
+        readNewsfeed: readNewsfeedChecked,
+        acceptedConnections: acceptedConnectionsChecked,
+        notActive: notActiveChecked,
+        postedNever: postedNeverChecked,
+        posted12Times: posted12TimesChecked,
+        posted35Times: posted35TimesChecked,
+        posted6PlusTimes: posted6PlusTimesChecked,
+        sharedNever: sharedNeverChecked,
+        shared12Times: shared12TimesChecked,
+        shared35Times: shared35TimesChecked,
+        shared6PlusTimes: shared6PlusTimesChecked,
+        commentedNever: commentedNeverChecked,
+        commented12TimesPerMonth: commented12TimesPerMonthChecked,
+        commented12TimesPerWeek: commented12TimesPerWeekChecked,
+        commented3PlusTimesPerWeek: commented3PlusTimesPerWeekChecked,
+        reactedNever: reactedNeverChecked,
+        reactedFewTimesMonth: reactedFewTimesMonthChecked,
+        reactedFewTimesWeek: reactedFewTimesWeekChecked,
+        reactedDaily: reactedDailyChecked,
       },
       // Keep arrays for backward compatibility
       industryInterestsArray: interestsData.industryInterestsArray || [],
