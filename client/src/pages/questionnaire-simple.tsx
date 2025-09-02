@@ -573,14 +573,6 @@ export default function QuestionnairePage() {
       console.log("Questionnaire data found:", userProfile.questionnaire);
       const q = userProfile.questionnaire;
 
-      // Initialize flags to track what data was loaded from JSON
-      let jsonDataLoaded = {
-        brandingChallenges: false,
-        socialMediaPlatforms: false,
-        publishedDigitalContent: false,
-        linkedinUpdates: false,
-      };
-
       // Step 1: Industry & Function
       // Set industry directly from the industry field
       if (q.industry) {
@@ -608,227 +600,8 @@ export default function QuestionnairePage() {
       // Set social media details (which is saved in 'goals' field)
       setGoals(q.goals || "");
 
-      // Try to parse social media selections from goals field if it contains our format
-      // Only if JSON data wasn't already loaded
-      if (q.goals && q.goals.includes("Selected platforms:") && !jsonDataLoaded.socialMediaPlatforms) {
-        const platformsText = q.goals.split("Selected platforms:")[1].trim();
-        setTwitterChecked(platformsText.includes("Twitter/X"));
-        setMediumChecked(platformsText.includes("Medium"));
-        setBlogChecked(platformsText.includes("Personal blog/Website"));
-
-        // Check for "Other:" entries
-        if (platformsText.includes("Other:")) {
-          setOtherChecked(true);
-          // Try to extract the other value
-          const otherMatch = platformsText.match(/Other: (.*?)(?:,|$)/);
-          if (otherMatch && otherMatch[1]) {
-            setOtherSocialMedia(otherMatch[1].trim());
-          }
-        }
-      }
-
       // Set branding challenges (stored in aspirations field)
       setAspirations(q.aspirations || "");
-
-      // Try to parse branding challenges from aspirations field if it contains our format
-      // Only if JSON data wasn't already loaded
-      if (q.aspirations && q.aspirations.includes("Branding challenges:") && !jsonDataLoaded.brandingChallenges) {
-        const challengesText = q.aspirations
-          .split("Branding challenges:")[1]
-          .trim();
-
-        // Check each branding challenge and set state accordingly
-        setConsistentNarrativeChecked(
-          challengesText.includes(
-            "Building a consistent professional narrative",
-          ),
-        );
-        setValuePropositionChecked(
-          challengesText.includes("Identifying my unique value proposition"),
-        );
-        setEngagingContentChecked(
-          challengesText.includes("Creating engaging content"),
-        );
-        setFindingTimeChecked(
-          challengesText.includes("Finding time to maintain online presence"),
-        );
-        setGrowingNetworkChecked(
-          challengesText.includes("Growing my professional network"),
-        );
-        setSharingInsightsChecked(
-          challengesText.includes(
-            "Sharing industry insights and work experiences",
-          ),
-        );
-        setEngagingNetworkChecked(
-          challengesText.includes("Engaging with my professional network"),
-        );
-        setIndustryEventsChecked(
-          challengesText.includes(
-            "Participating in industry discussions and events",
-          ),
-        );
-
-        // Check for "Other:" entries in branding challenges
-        if (challengesText.includes("Other:")) {
-          setOtherBrandingChecked(true);
-          // Try to extract the other value
-          const otherMatch = challengesText.match(/Other: (.*?)(?:,|$)/);
-          if (otherMatch && otherMatch[1]) {
-            setOtherBrandingChallenge(otherMatch[1].trim());
-          }
-        }
-      }
-
-      // Try to parse published content data from aspirations field
-      // Only if JSON data wasn't already loaded
-      if (q.aspirations && q.aspirations.includes("Published content:") && !jsonDataLoaded.publishedDigitalContent) {
-        const publishedContentText = q.aspirations
-          .split("Published content:")[1]
-          .trim()
-          .split("\n")[0];
-
-        // Check each published content type and set state accordingly
-        setLinkedInPostsChecked(
-          publishedContentText.includes("LinkedIn posts"),
-        );
-        setBlogArticlesChecked(publishedContentText.includes("Blog articles"));
-        setIndustryPresentationsChecked(
-          publishedContentText.includes("Industry presentations"),
-        );
-        setAcademicPapersChecked(
-          publishedContentText.includes("Academic papers"),
-        );
-        setNeverPublishedChecked(
-          publishedContentText.includes("Never published professional content"),
-        );
-
-        // Check for "Other:" entries in published content
-        if (publishedContentText.includes("Other:")) {
-          setOtherPublishedContentChecked(true);
-          // Try to extract the other value
-          const otherMatch = publishedContentText.match(/Other: (.*?)(?:,|$)/);
-          if (otherMatch && otherMatch[1]) {
-            setOtherPublishedContent(otherMatch[1].trim());
-          }
-        }
-      }
-
-      // Try to parse LinkedIn profile update timing data from aspirations field
-      // Only if JSON data wasn't already loaded
-      if (
-        q.aspirations &&
-        q.aspirations.includes("LinkedIn profile update timing:") &&
-        !jsonDataLoaded.linkedinUpdates
-      ) {
-        const updateTimingText = q.aspirations
-          .split("LinkedIn profile update timing:")[1]
-          .trim()
-          .split("\n")[0];
-
-        // Check each update timing option and set state accordingly
-        setLastWeekChecked(updateTimingText.includes("Within the last week"));
-        setLastMonthChecked(updateTimingText.includes("Within the last month"));
-        setBusinessSchoolChecked(
-          updateTimingText.includes("For / during business school"),
-        );
-        setCareerCoachChecked(
-          updateTimingText.includes("After I spoke with a career coach"),
-        );
-        setJobChangeChecked(
-          updateTimingText.includes("When I last changed jobs"),
-        );
-        setCantRememberChecked(updateTimingText.includes("I can't remember"));
-        setNeverUpdatedChecked(
-          updateTimingText.includes(
-            "I've never really updated it beyond creating the profile",
-          ),
-        );
-
-        // Check for "Other:" entries in update timing
-        if (updateTimingText.includes("Other:")) {
-          setOtherUpdateTimeChecked(true);
-          // Try to extract the other value
-          const otherMatch = updateTimingText.match(/Other: (.*?)(?:,|$)/);
-          if (otherMatch && otherMatch[1]) {
-            setOtherUpdateTime(otherMatch[1].trim());
-          }
-        }
-      }
-
-      // Try to parse LinkedIn activity data from aspirations field
-      if (q.aspirations && q.aspirations.includes("LinkedIn activity:")) {
-        const activityText = q.aspirations
-          .split("LinkedIn activity:")[1]
-          .trim();
-        // Get the full activity section by looking for the next major section
-        const nextSectionIndex = activityText.search(/\n\n[A-Z]/);
-        const fullActivityText =
-          nextSectionIndex !== -1
-            ? activityText.substring(0, nextSectionIndex)
-            : activityText;
-
-        // Check each activity option and set state accordingly
-        setReadNewsfeedChecked(fullActivityText.includes("Read your Newsfeed"));
-        setAcceptedConnectionsChecked(
-          fullActivityText.includes("Accepted Connections"),
-        );
-        setNotActiveChecked(
-          fullActivityText.includes("Not Active in the Last Month"),
-        );
-        setPostedNeverChecked(
-          fullActivityText.includes("Posted Original Content - Never"),
-        );
-        setPosted12TimesChecked(
-          fullActivityText.includes("Posted Original Content - 1-2 times"),
-        );
-        setPosted35TimesChecked(
-          fullActivityText.includes("Posted Original Content - 3-5 times"),
-        );
-        setPosted6PlusTimesChecked(
-          fullActivityText.includes("Posted Original Content - 6+ times"),
-        );
-        setSharedNeverChecked(
-          fullActivityText.includes("Shared Others' Posts - Never"),
-        );
-        setShared12TimesChecked(
-          fullActivityText.includes("Shared Others' Posts - 1-2 times"),
-        );
-        setShared35TimesChecked(
-          fullActivityText.includes("Shared Others' Posts - 3-5 times"),
-        );
-        setShared6PlusTimesChecked(
-          fullActivityText.includes("Shared Others' Posts - 6+ times"),
-        );
-        setCommentedNeverChecked(
-          fullActivityText.includes("Commented on Posts - Never"),
-        );
-        setCommented12TimesPerMonthChecked(
-          fullActivityText.includes("Commented on Posts - 1-2 times per month"),
-        );
-        setCommented12TimesPerWeekChecked(
-          fullActivityText.includes("Commented on Posts - 1-2 times per week"),
-        );
-        setCommented3PlusTimesPerWeekChecked(
-          fullActivityText.includes("Commented on Posts - 3+ times per week"),
-        );
-        setReactedNeverChecked(
-          fullActivityText.includes("Reacted to Posts (likes, etc.) - Never"),
-        );
-        setReactedFewTimesMonthChecked(
-          fullActivityText.includes(
-            "Reacted to Posts (likes, etc.) - A few times a month",
-          ),
-        );
-        setReactedFewTimesWeekChecked(
-          fullActivityText.includes(
-            "Reacted to Posts (likes, etc.) - A few times a week",
-          ),
-        );
-        setReactedDailyChecked(
-          fullActivityText.includes("Reacted to Posts (likes, etc.) - Daily"),
-        );
-      }
 
       // Try to parse brand positioning rating from aspirations field
       if (
@@ -1180,7 +953,6 @@ export default function QuestionnairePage() {
               Object.keys(parsedInterests.brandingChallenges).join(", "),
             );
 
-            jsonDataLoaded.brandingChallenges = true;
             if (parsedInterests.brandingChallenges.consistentNarrative)
               setConsistentNarrativeChecked(true);
             if (parsedInterests.brandingChallenges.valueProposition)
@@ -1211,7 +983,6 @@ export default function QuestionnairePage() {
               Object.keys(parsedInterests.socialMediaPlatforms).join(", "),
             );
 
-            jsonDataLoaded.socialMediaPlatforms = true;
 
             if (parsedInterests.socialMediaPlatforms.twitter)
               setTwitterChecked(true);
@@ -1233,7 +1004,6 @@ export default function QuestionnairePage() {
               Object.keys(parsedInterests.publishedDigitalContent).join(", "),
             );
 
-            jsonDataLoaded.publishedDigitalContent = true;
 
             if (parsedInterests.publishedDigitalContent.linkedinPosts)
               setLinkedInPostsChecked(true);
@@ -1259,7 +1029,6 @@ export default function QuestionnairePage() {
               Object.keys(parsedInterests.linkedinUpdates).join(", "),
             );
 
-            jsonDataLoaded.linkedinUpdates = true;
 
             if (parsedInterests.linkedinUpdates.lastWeek)
               setLastWeekChecked(true);
