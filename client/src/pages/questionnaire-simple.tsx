@@ -636,26 +636,6 @@ export default function QuestionnairePage() {
         else if (comfortText.includes("5")) setContentCreationComfort(5);
       }
 
-      // Try to parse brand optimization goals from aspirations field
-      if (
-        q.aspirations &&
-        q.aspirations.includes("Brand optimization goals:")
-      ) {
-        const goalsText = q.aspirations
-          .split("Brand optimization goals:")[1]
-          .trim();
-        // If there's another section after this one, only get the text up to that section
-        if (goalsText.includes("\n\n")) {
-          const goalValue = goalsText.split("\n\n")[0].trim();
-          if (goalValue !== "") {
-            setBrandOptimizationGoals(goalValue);
-          }
-        } else {
-          if (goalsText !== "") {
-            setBrandOptimizationGoals(goalsText);
-          }
-        }
-      }
 
       // Set other questionnaire fields
       setChallenges(q.challenges || "");
@@ -1114,49 +1094,8 @@ export default function QuestionnairePage() {
       }
 
       // Step 5: Load professional goals
-      // Try to parse career goals from aspirations field
-      if (q.aspirations && q.aspirations.includes("Career goals:")) {
-        const careerGoalsText = q.aspirations
-          .split("Career goals:")[1]
-          .trim()
-          .split("\n\n")[0];
-        setCareerGoals(careerGoalsText || "");
-      }
 
-      // Try to parse professional areas for thought leadership
-      if (
-        q.aspirations &&
-        q.aspirations.includes("Professional areas for thought leadership:")
-      ) {
-        const areasText = q.aspirations
-          .split("Professional areas for thought leadership:")[1]
-          .trim()
-          .split("\n\n")[0];
-        if (areasText && areasText !== "") {
-          setProfessionalAreas(areasText);
-        }
-      }
 
-      // Try to parse additional info
-      if (
-        q.aspirations &&
-        q.aspirations.includes("Additional professional journey information:")
-      ) {
-        // Extract additional info, but make sure to limit to just this section by splitting on newlines
-        const fullText = q.aspirations.split(
-          "Additional professional journey information:",
-        )[1];
-        if (fullText) {
-          // If there's another section header after this one, only get text up to that point
-          const nextSectionIndex = fullText.indexOf("\n\n");
-          const additionalInfoText =
-            nextSectionIndex > 0
-              ? fullText.substring(0, nextSectionIndex).trim()
-              : fullText.trim();
-
-          setAdditionalInfo(additionalInfoText || "");
-        }
-      }
 
       // Try to parse industry connections percentage
       if (
@@ -1478,25 +1417,30 @@ export default function QuestionnairePage() {
                 // in the saved data but we don't have state variables for them in this version
               }
 
-              // Step 5: Other fields
-              if (jsonData.careerGoals) {
-                console.log("Setting career goals");
-                setCareerGoals(jsonData.careerGoals);
+              // Step 4: Professional Goals
+              if (jsonData.professionalGoals) {
+                console.log("Loading professional goals from JSON:", Object.keys(jsonData.professionalGoals).join(", "));
+                
+                if (jsonData.professionalGoals.careerGoals) {
+                  console.log("Setting career goals");
+                  setCareerGoals(jsonData.professionalGoals.careerGoals);
+                }
+                
+                if (jsonData.professionalGoals.additionalInfo) {
+                  console.log("Setting additional info");
+                  setAdditionalInfo(jsonData.professionalGoals.additionalInfo);
+                }
+              }
+
+              // Load professional areas (stored at top level)
+              if (jsonData.professionalAreasForThoughtLeadership) {
+                console.log("Setting professional areas");
+                setProfessionalAreas(jsonData.professionalAreasForThoughtLeadership);
               }
 
               if (jsonData.brandOptimizationGoals) {
                 console.log("Setting brand optimization goals");
                 setBrandOptimizationGoals(jsonData.brandOptimizationGoals);
-              }
-
-              if (jsonData.brandPositioning !== undefined && jsonData.brandPositioning !== null) {
-                console.log("Setting brand positioning rating:", jsonData.brandPositioning);
-                setBrandPositioningRating(jsonData.brandPositioning);
-              }
-
-              if (jsonData.contentCreationComfort !== undefined && jsonData.contentCreationComfort !== null) {
-                console.log("Setting content creation comfort:", jsonData.contentCreationComfort);
-                setContentCreationComfort(jsonData.contentCreationComfort);
               }
 
               // Step 5: Personality assessments
@@ -2816,13 +2760,13 @@ export default function QuestionnairePage() {
     brandingDetails += `\n\nLinkedIn activity: ${linkedInActivity.length > 0 ? linkedInActivity.join(", ") : ""}`;
 
     // Add Career goals
-    brandingDetails += `\n\nCareer goals: ${careerGoals.trim() !== "" ? careerGoals : ""}`;
+    brandingDetails += `\n\n${careerGoals.trim() !== "" ? careerGoals : ""}`;
 
     // Add Professional areas
-    brandingDetails += `\n\nProfessional areas for thought leadership: ${professionalAreas.trim() !== "" ? professionalAreas : ""}`;
+    brandingDetails += `\n\n${professionalAreas.trim() !== "" ? professionalAreas : ""}`;
 
     // Add Additional info
-    brandingDetails += `\n\nAdditional professional journey information: ${additionalInfo.trim() !== "" ? additionalInfo : ""}`;
+    brandingDetails += `\n\n${additionalInfo.trim() !== "" ? additionalInfo : ""}`;
 
     // Add industry connections percentage
     brandingDetails += `\n\nLinkedIn connections percentage: ${industryConnectionsPercentage || ""}`;
@@ -3239,7 +3183,7 @@ export default function QuestionnairePage() {
       if (additionalInfo.trim() !== "") {
         // Replace any newlines with spaces to avoid multi-line issues in parsing
         const cleanAdditionalInfo = additionalInfo.trim().replace(/\n/g, " ");
-        brandingDetails += `\n\nAdditional professional journey information: ${cleanAdditionalInfo}`;
+        brandingDetails += `\n\n${cleanAdditionalInfo}`;
       }
 
       const formData = {
