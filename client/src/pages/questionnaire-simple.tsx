@@ -739,68 +739,72 @@ export default function QuestionnairePage() {
       if (q.aspirations && q.aspirations.includes("LinkedIn activity:")) {
         const activityText = q.aspirations
           .split("LinkedIn activity:")[1]
-          .trim()
-          .split("\n")[0];
+          .trim();
+        // Get the full activity section by looking for the next major section
+        const nextSectionIndex = activityText.search(/\n\n[A-Z]/);
+        const fullActivityText = nextSectionIndex !== -1 
+          ? activityText.substring(0, nextSectionIndex)
+          : activityText;
 
         // Check each activity option and set state accordingly
-        setReadNewsfeedChecked(activityText.includes("Read your Newsfeed"));
+        setReadNewsfeedChecked(fullActivityText.includes("Read your Newsfeed"));
         setAcceptedConnectionsChecked(
-          activityText.includes("Accepted Connections"),
+          fullActivityText.includes("Accepted Connections"),
         );
         setNotActiveChecked(
-          activityText.includes("Not Active in the Last Month"),
+          fullActivityText.includes("Not Active in the Last Month"),
         );
         setPostedNeverChecked(
-          activityText.includes("Posted Original Content - Never"),
+          fullActivityText.includes("Posted Original Content - Never"),
         );
         setPosted12TimesChecked(
-          activityText.includes("Posted Original Content - 1-2 times"),
+          fullActivityText.includes("Posted Original Content - 1-2 times"),
         );
         setPosted35TimesChecked(
-          activityText.includes("Posted Original Content - 3-5 times"),
+          fullActivityText.includes("Posted Original Content - 3-5 times"),
         );
         setPosted6PlusTimesChecked(
-          activityText.includes("Posted Original Content - 6+ times"),
+          fullActivityText.includes("Posted Original Content - 6+ times"),
         );
         setSharedNeverChecked(
-          activityText.includes("Shared Others' Posts - Never"),
+          fullActivityText.includes("Shared Others' Posts - Never"),
         );
         setShared12TimesChecked(
-          activityText.includes("Shared Others' Posts - 1-2 times"),
+          fullActivityText.includes("Shared Others' Posts - 1-2 times"),
         );
         setShared35TimesChecked(
-          activityText.includes("Shared Others' Posts - 3-5 times"),
+          fullActivityText.includes("Shared Others' Posts - 3-5 times"),
         );
         setShared6PlusTimesChecked(
-          activityText.includes("Shared Others' Posts - 6+ times"),
+          fullActivityText.includes("Shared Others' Posts - 6+ times"),
         );
         setCommentedNeverChecked(
-          activityText.includes("Commented on Posts - Never"),
+          fullActivityText.includes("Commented on Posts - Never"),
         );
         setCommented12TimesPerMonthChecked(
-          activityText.includes("Commented on Posts - 1-2 times per month"),
+          fullActivityText.includes("Commented on Posts - 1-2 times per month"),
         );
         setCommented12TimesPerWeekChecked(
-          activityText.includes("Commented on Posts - 1-2 times per week"),
+          fullActivityText.includes("Commented on Posts - 1-2 times per week"),
         );
         setCommented3PlusTimesPerWeekChecked(
-          activityText.includes("Commented on Posts - 3+ times per week"),
+          fullActivityText.includes("Commented on Posts - 3+ times per week"),
         );
         setReactedNeverChecked(
-          activityText.includes("Reacted to Posts (likes, etc.) - Never"),
+          fullActivityText.includes("Reacted to Posts (likes, etc.) - Never"),
         );
         setReactedFewTimesMonthChecked(
-          activityText.includes(
+          fullActivityText.includes(
             "Reacted to Posts (likes, etc.) - A few times a month",
           ),
         );
         setReactedFewTimesWeekChecked(
-          activityText.includes(
+          fullActivityText.includes(
             "Reacted to Posts (likes, etc.) - A few times a week",
           ),
         );
         setReactedDailyChecked(
-          activityText.includes("Reacted to Posts (likes, etc.) - Daily"),
+          fullActivityText.includes("Reacted to Posts (likes, etc.) - Daily"),
         );
       }
 
@@ -846,9 +850,14 @@ export default function QuestionnairePage() {
           .trim();
         // If there's another section after this one, only get the text up to that section
         if (goalsText.includes("\n\n")) {
-          setBrandOptimizationGoals(goalsText.split("\n\n")[0].trim());
+          const goalValue = goalsText.split("\n\n")[0].trim();
+          if (goalValue !== "Not specified") {
+            setBrandOptimizationGoals(goalValue);
+          }
         } else {
-          setBrandOptimizationGoals(goalsText);
+          if (goalsText !== "Not specified") {
+            setBrandOptimizationGoals(goalsText);
+          }
         }
       }
 
