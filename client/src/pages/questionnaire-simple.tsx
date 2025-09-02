@@ -1015,7 +1015,7 @@ export default function QuestionnairePage() {
 
             if (parsedInterests.publishedDigitalContent.linkedinPosts)
               setLinkedInPostsChecked(true);
-            if (parsedInterests.publishedDigitalContent.workArticlesChecked)
+            if (parsedInterests.publishedDigitalContent.workArticles)
               setWorkArticlesChecked(true);
             if (parsedInterests.publishedDigitalContent.blogArticles)
               setBlogArticlesChecked(true);
@@ -1487,6 +1487,16 @@ export default function QuestionnairePage() {
               if (jsonData.brandOptimizationGoals) {
                 console.log("Setting brand optimization goals");
                 setBrandOptimizationGoals(jsonData.brandOptimizationGoals);
+              }
+
+              if (jsonData.brandPositioning !== undefined && jsonData.brandPositioning !== null) {
+                console.log("Setting brand positioning rating:", jsonData.brandPositioning);
+                setBrandPositioningRating(jsonData.brandPositioning);
+              }
+
+              if (jsonData.contentCreationComfort !== undefined && jsonData.contentCreationComfort !== null) {
+                console.log("Setting content creation comfort:", jsonData.contentCreationComfort);
+                setContentCreationComfort(jsonData.contentCreationComfort);
               }
 
               // Step 5: Personality assessments
