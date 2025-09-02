@@ -375,13 +375,13 @@ export default function QuestionnairePage() {
   const [otherPublishedContent, setOtherPublishedContent] = useState("");
 
   // LinkedIn profile update timing state
-  const [lastWeekChecked, setLastWeekChecked] = useState(false);
+  const [lastQuarterChecked, setLastQuarterChecked] = useState(false);
+  const [lastYearChecked, setLastYearChecked] = useState(false);
   const [lastMonthChecked, setLastMonthChecked] = useState(false);
   const [businessSchoolChecked, setBusinessSchoolChecked] = useState(false);
   const [careerCoachChecked, setCareerCoachChecked] = useState(false);
   const [jobChangeChecked, setJobChangeChecked] = useState(false);
   const [cantRememberChecked, setCantRememberChecked] = useState(false);
-  const [neverUpdatedChecked, setNeverUpdatedChecked] = useState(false);
   const [otherUpdateTimeChecked, setOtherUpdateTimeChecked] = useState(false);
   const [otherUpdateTime, setOtherUpdateTime] = useState("");
 
@@ -647,11 +647,11 @@ export default function QuestionnairePage() {
         // If there's another section after this one, only get the text up to that section
         if (goalsText.includes("\n\n")) {
           const goalValue = goalsText.split("\n\n")[0].trim();
-          if (goalValue !== "Not specified") {
+          if (goalValue !== "") {
             setBrandOptimizationGoals(goalValue);
           }
         } else {
-          if (goalsText !== "Not specified") {
+          if (goalsText !== "") {
             setBrandOptimizationGoals(goalsText);
           }
         }
@@ -1015,7 +1015,7 @@ export default function QuestionnairePage() {
 
             if (parsedInterests.publishedDigitalContent.linkedinPosts)
               setLinkedInPostsChecked(true);
-            if (parsedInterests.publishedDigitalContent.workArticles)
+            if (parsedInterests.publishedDigitalContent.workArticlesChecked)
               setWorkArticlesChecked(true);
             if (parsedInterests.publishedDigitalContent.blogArticles)
               setBlogArticlesChecked(true);
@@ -1041,8 +1041,10 @@ export default function QuestionnairePage() {
               Object.keys(parsedInterests.linkedinUpdates).join(", "),
             );
 
-            if (parsedInterests.linkedinUpdates.lastWeek)
-              setLastWeekChecked(true);
+            if (parsedInterests.linkedinUpdates.lastQuarter)
+              setLastQuarterChecked(true);
+            if (parsedInterests.linkedinUpdates.lastYear)
+              setLastYearChecked(true);
             if (parsedInterests.linkedinUpdates.lastMonth)
               setLastMonthChecked(true);
             if (parsedInterests.linkedinUpdates.businessSchool)
@@ -1053,8 +1055,6 @@ export default function QuestionnairePage() {
               setJobChangeChecked(true);
             if (parsedInterests.linkedinUpdates.cantRemember)
               setCantRememberChecked(true);
-            if (parsedInterests.linkedinUpdates.neverUpdated)
-              setNeverUpdatedChecked(true);
 
             if (parsedInterests.linkedinUpdates.other) {
               setOtherUpdateTimeChecked(true);
@@ -1132,7 +1132,7 @@ export default function QuestionnairePage() {
           .split("Professional areas for thought leadership:")[1]
           .trim()
           .split("\n\n")[0];
-        if (areasText && areasText !== "Not specified") {
+        if (areasText && areasText !== "") {
           setProfessionalAreas(areasText);
         }
       }
@@ -1539,12 +1539,13 @@ export default function QuestionnairePage() {
                   Object.keys(jsonData.updateTime).join(", "),
                 );
 
-                if (jsonData.updateTime.lastWeek) {
-                  console.log("Setting last week checked");
-                  setLastWeekChecked(true);
+                if (jsonData.updateTime.lastQuarter) {
+                  setLastQuarterChecked(true);
+                }
+                if (jsonData.updateTime.lastYear) {
+                  setLastYearChecked(true);
                 }
                 if (jsonData.updateTime.lastMonth) {
-                  console.log("Setting last month checked");
                   setLastMonthChecked(true);
                 }
                 if (jsonData.updateTime.businessSchool) {
@@ -1552,20 +1553,13 @@ export default function QuestionnairePage() {
                   setBusinessSchoolChecked(true);
                 }
                 if (jsonData.updateTime.careerCoach) {
-                  console.log("Setting career coach checked");
                   setCareerCoachChecked(true);
                 }
                 if (jsonData.updateTime.jobChange) {
-                  console.log("Setting job change checked");
                   setJobChangeChecked(true);
                 }
                 if (jsonData.updateTime.cantRemember) {
-                  console.log("Setting can't remember checked");
                   setCantRememberChecked(true);
-                }
-                if (jsonData.updateTime.neverUpdated) {
-                  console.log("Setting never updated checked");
-                  setNeverUpdatedChecked(true);
                 }
 
                 if (jsonData.updateTime.other) {
@@ -2289,13 +2283,13 @@ export default function QuestionnairePage() {
         other: otherPublishedContentChecked ? otherPublishedContent : null,
       },
       linkedinUpdates: {
-        lastWeek: lastWeekChecked,
+        lastQuarter: lastQuarterChecked,
+        lastYear: lastYearChecked,
         lastMonth: lastMonthChecked,
         businessSchool: businessSchoolChecked,
         careerCoach: careerCoachChecked,
         jobChange: jobChangeChecked,
         cantRemember: cantRememberChecked,
-        neverUpdated: neverUpdatedChecked,
       },
       societalInterests: {
         climate: climateChecked,
@@ -2497,13 +2491,13 @@ export default function QuestionnairePage() {
         other: otherPublishedContentChecked ? otherPublishedContent : null,
       },
       linkedinUpdates: {
-        lastWeek: lastWeekChecked,
+        lastQuarter: lastQuarterChecked,
+        lastYear: lastYearChecked,
         lastMonth: lastMonthChecked,
         businessSchool: businessSchoolChecked,
         careerCoach: careerCoachChecked,
         jobChange: jobChangeChecked,
         cantRemember: cantRememberChecked,
-        neverUpdated: neverUpdatedChecked,
         other: otherUpdateTimeChecked ? otherUpdateTime : null,
       },
       linkedinActivity: {
@@ -2752,7 +2746,8 @@ export default function QuestionnairePage() {
 
     // Add LinkedIn profile update timing
     const profileUpdateTiming: string[] = [];
-    if (lastWeekChecked) profileUpdateTiming.push("Within the last week");
+    if (lastQuarterChecked) profileUpdateTiming.push("Within the last quarter");
+    if (lastYearChecked) profileUpdateTiming.push("Within the last year");
     if (lastMonthChecked) profileUpdateTiming.push("Within the last month");
     if (businessSchoolChecked)
       profileUpdateTiming.push("For / during business school");
@@ -2760,14 +2755,10 @@ export default function QuestionnairePage() {
       profileUpdateTiming.push("After I spoke with a career coach");
     if (jobChangeChecked) profileUpdateTiming.push("When I last changed jobs");
     if (cantRememberChecked) profileUpdateTiming.push("I can't remember");
-    if (neverUpdatedChecked)
-      profileUpdateTiming.push(
-        "I've never really updated it beyond creating the profile",
-      );
     if (otherUpdateTimeChecked && otherUpdateTime.trim() !== "") {
       profileUpdateTiming.push(`Other: ${otherUpdateTime.trim()}`);
     }
-    brandingDetails += `\n\nLinkedIn profile update timing: ${profileUpdateTiming.length > 0 ? profileUpdateTiming.join(", ") : "Not specified"}`;
+    brandingDetails += `\n\nLinkedIn profile update timing: ${profileUpdateTiming.length > 0 ? profileUpdateTiming.join(", ") : ""}`;
 
     // Add LinkedIn activity data
     const linkedInActivity: string[] = [];
@@ -2812,24 +2803,24 @@ export default function QuestionnairePage() {
     if (reactedDailyChecked)
       linkedInActivity.push("Reacted to Posts (likes, etc.) - Daily");
 
-    brandingDetails += `\n\nLinkedIn activity: ${linkedInActivity.length > 0 ? linkedInActivity.join(", ") : "Not specified"}`;
+    brandingDetails += `\n\nLinkedIn activity: ${linkedInActivity.length > 0 ? linkedInActivity.join(", ") : ""}`;
 
     // Add Career goals
-    brandingDetails += `\n\nCareer goals: ${careerGoals.trim() !== "" ? careerGoals : "Not specified"}`;
+    brandingDetails += `\n\nCareer goals: ${careerGoals.trim() !== "" ? careerGoals : ""}`;
 
     // Add Professional areas
-    brandingDetails += `\n\nProfessional areas for thought leadership: ${professionalAreas.trim() !== "" ? professionalAreas : "Not specified"}`;
+    brandingDetails += `\n\nProfessional areas for thought leadership: ${professionalAreas.trim() !== "" ? professionalAreas : ""}`;
 
     // Add Additional info
-    brandingDetails += `\n\nAdditional professional journey information: ${additionalInfo.trim() !== "" ? additionalInfo : "Not specified"}`;
+    brandingDetails += `\n\nAdditional professional journey information: ${additionalInfo.trim() !== "" ? additionalInfo : ""}`;
 
     // Add industry connections percentage
-    brandingDetails += `\n\nLinkedIn connections percentage: ${industryConnectionsPercentage || "Not specified"}`;
+    brandingDetails += `\n\nLinkedIn connections percentage: ${industryConnectionsPercentage || ""}`;
 
     // Add other ratings and fields
-    brandingDetails += `\n\nBrand positioning rating: ${brandPositioningRating !== null ? brandPositioningRating : "Not specified"}`;
-    brandingDetails += `\n\nContent creation comfort: ${contentCreationComfort !== null ? contentCreationComfort : "Not specified"}`;
-    brandingDetails += `\n\nBrand optimization goals: ${brandOptimizationGoals.trim() !== "" ? brandOptimizationGoals : "Not specified"}`;
+    brandingDetails += `\n\nBrand positioning rating: ${brandPositioningRating !== null ? brandPositioningRating : ""}`;
+    brandingDetails += `\n\nContent creation comfort: ${contentCreationComfort !== null ? contentCreationComfort : ""}`;
+    brandingDetails += `\n\nBrand optimization goals: ${brandOptimizationGoals.trim() !== "" ? brandOptimizationGoals : ""}`;
 
     return brandingDetails;
   };
@@ -2944,7 +2935,9 @@ export default function QuestionnairePage() {
 
       // Prepare LinkedIn profile update timing data
       const profileUpdateTiming = [];
-      if (lastWeekChecked) profileUpdateTiming.push("Within the last week");
+      if (lastQuarterChecked)
+        profileUpdateTiming.push("Within the last quarter");
+      if (lastYearChecked) profileUpdateTiming.push("Within the last year");
       if (lastMonthChecked) profileUpdateTiming.push("Within the last month");
       if (businessSchoolChecked)
         profileUpdateTiming.push(
@@ -2955,10 +2948,6 @@ export default function QuestionnairePage() {
       if (jobChangeChecked)
         profileUpdateTiming.push("When I last changed jobs");
       if (cantRememberChecked) profileUpdateTiming.push("I can't remember");
-      if (neverUpdatedChecked)
-        profileUpdateTiming.push(
-          "I've never really updated it beyond creating the profile",
-        );
       if (otherUpdateTimeChecked && otherUpdateTime.trim() !== "") {
         profileUpdateTiming.push(`Other: ${otherUpdateTime.trim()}`);
       }
@@ -3106,19 +3095,19 @@ export default function QuestionnairePage() {
       brandingDetails += `\n\nPublished content: ${publishedContent.length > 0 ? publishedContent.join(", ") : "None"}`;
 
       // Add LinkedIn profile update timing to aspirations field
-      brandingDetails += `\n\nLinkedIn profile update timing: ${profileUpdateTiming.length > 0 ? profileUpdateTiming.join(", ") : "Not specified"}`;
+      brandingDetails += `\n\nLinkedIn profile update timing: ${profileUpdateTiming.length > 0 ? profileUpdateTiming.join(", ") : ""}`;
 
       // Add LinkedIn activity to aspirations field
-      brandingDetails += `\n\nLinkedIn activity: ${linkedInActivity.length > 0 ? linkedInActivity.join(", ") : "Not specified"}`;
+      brandingDetails += `\n\nLinkedIn activity: ${linkedInActivity.length > 0 ? linkedInActivity.join(", ") : ""}`;
 
       // Add brand positioning rating to aspirations field
-      brandingDetails += `\n\nBrand positioning rating: ${brandPositioningRating !== null ? brandPositioningRating : "Not specified"}`;
+      brandingDetails += `\n\nBrand positioning rating: ${brandPositioningRating !== null ? brandPositioningRating : ""}`;
 
       // Add content creation comfort to aspirations field
-      brandingDetails += `\n\nContent creation comfort: ${contentCreationComfort !== null ? contentCreationComfort : "Not specified"}`;
+      brandingDetails += `\n\nContent creation comfort: ${contentCreationComfort !== null ? contentCreationComfort : ""}`;
 
       // Add brand optimization goals to aspirations field
-      brandingDetails += `\n\nBrand optimization goals: ${brandOptimizationGoals.trim() !== "" ? brandOptimizationGoals : "Not specified"}`;
+      brandingDetails += `\n\nBrand optimization goals: ${brandOptimizationGoals.trim() !== "" ? brandOptimizationGoals : ""}`;
 
       // Add industry interests to aspirations field
       brandingDetails += `\n\nIndustry interests: ${industryInterests.length > 0 ? industryInterests.join(", ") : "None"}`;
@@ -3203,7 +3192,7 @@ export default function QuestionnairePage() {
       brandingDetails += `\n\nCross-cutting & societal interests: ${crossCuttingInterests.length > 0 ? crossCuttingInterests.join(", ") : "None"}`;
 
       // Add professional areas for thought leadership to aspirations field
-      brandingDetails += `\n\nProfessional areas for thought leadership: ${professionalAreas.trim() !== "" ? professionalAreas : "Not specified"}`;
+      brandingDetails += `\n\nProfessional areas for thought leadership: ${professionalAreas.trim() !== "" ? professionalAreas : ""}`;
 
       // Add content format preferences to aspirations field
       brandingDetails += `\n\nContent creation format preferences: ${contentFormatPreferences.length > 0 ? contentFormatPreferences.join(", ") : "None"}`;
@@ -3212,7 +3201,7 @@ export default function QuestionnairePage() {
       brandingDetails += `\n\nPosting barriers: ${postingBarriers.length > 0 ? postingBarriers.join(", ") : "None"}`;
 
       // Add LinkedIn connections percentage to aspirations field
-      brandingDetails += `\n\nLinkedIn connections percentage: ${industryConnectionsPercentage || "Not specified"}`;
+      brandingDetails += `\n\nLinkedIn connections percentage: ${industryConnectionsPercentage || ""}`;
 
       // Add personality assessments to aspirations field
       const assessments = [];
@@ -3233,7 +3222,7 @@ export default function QuestionnairePage() {
       );
 
       // Add career goals
-      brandingDetails += `\n\nCareer goals: ${careerGoals.trim() !== "" ? careerGoals : "Not specified"}`;
+      brandingDetails += `\n\nCareer goals: ${careerGoals.trim() !== "" ? careerGoals : ""}`;
 
       // Add additional info to aspirations field if provided, but clean it first
       // to avoid any special characters that might cause parsing issues
@@ -3298,13 +3287,13 @@ export default function QuestionnairePage() {
           other: otherPublishedContentChecked ? otherPublishedContent : null,
         },
         linkedInProfileUpdate: {
-          lastWeek: lastWeekChecked,
+          lastQuarter: lastQuarterChecked,
+          lastYear: lastYearChecked,
           lastMonth: lastMonthChecked,
           businessSchool: businessSchoolChecked,
           careerCoach: careerCoachChecked,
           jobChange: jobChangeChecked,
           cantRemember: cantRememberChecked,
-          neverUpdated: neverUpdatedChecked,
           other: otherUpdateTimeChecked ? otherUpdateTime : null,
         },
         linkedInActivity: {
@@ -3601,7 +3590,7 @@ export default function QuestionnairePage() {
                     }
                   />
                   <Label htmlFor="blog" className="cursor-pointer">
-                    Personal blog/Website
+                    Personal Blog/Website
                   </Label>
                 </div>
 
@@ -3960,14 +3949,27 @@ export default function QuestionnairePage() {
               <div className="space-y-3 mt-4">
                 <div className="flex items-center space-x-2">
                   <Checkbox
-                    id="lastWeek"
-                    checked={lastWeekChecked}
+                    id="lastQuarter"
+                    checked={lastQuarterChecked}
                     onCheckedChange={(checked) =>
-                      setLastWeekChecked(checked === true)
+                      setLastQuarterChecked(checked === true)
                     }
                   />
-                  <Label htmlFor="lastWeek" className="cursor-pointer">
-                    Within the Last Week
+                  <Label htmlFor="lastQuarter" className="cursor-pointer">
+                    Within the Last Quarter
+                  </Label>
+                </div>
+
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="lastYear"
+                    checked={lastYearChecked}
+                    onCheckedChange={(checked) =>
+                      setLastYearChecked(checked === true)
+                    }
+                  />
+                  <Label htmlFor="lastYear" className="cursor-pointer">
+                    Within the Last Year
                   </Label>
                 </div>
 
@@ -4032,20 +4034,7 @@ export default function QuestionnairePage() {
                     }
                   />
                   <Label htmlFor="cantRemember" className="cursor-pointer">
-                    I Can't Remember
-                  </Label>
-                </div>
-
-                <div className="flex items-center space-x-2">
-                  <Checkbox
-                    id="neverUpdated"
-                    checked={neverUpdatedChecked}
-                    onCheckedChange={(checked) =>
-                      setNeverUpdatedChecked(checked === true)
-                    }
-                  />
-                  <Label htmlFor="neverUpdated" className="cursor-pointer">
-                    I've never really updated it beyond creating the profile
+                    I Can't Remember / Never update it Regularly
                   </Label>
                 </div>
 
@@ -4085,8 +4074,8 @@ export default function QuestionnairePage() {
                 LinkedIn Activity
               </Label>
               <p className="text-sm text-gray-500 mb-3">
-                In the last month, how active have you been on LinkedIn? (check
-                all that apply)
+                In the <strong>last month</strong>, how active have you been on
+                LinkedIn? (check all that apply)
               </p>
 
               <div className="space-y-3 mt-4">
@@ -4247,7 +4236,7 @@ export default function QuestionnairePage() {
                 </div>
 
                 <p className="text-sm font-medium text-gray-600 mt-5 mb-2">
-                  Commenting
+                  Comments
                 </p>
                 <div className="flex items-center space-x-2">
                   <Checkbox
