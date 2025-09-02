@@ -433,6 +433,14 @@ export default function QuestionnairePage() {
   const [industryConnectionsPercentage, setIndustryConnectionsPercentage] =
     useState<string | undefined>(undefined);
 
+  // Personality assessments
+  const [mbtiChecked, setMbtiChecked] = useState(false);
+  const [strengthsFinderChecked, setStrengthsFinderChecked] = useState(false);
+  const [viaChecked, setViaChecked] = useState(false);
+  const [enneagramChecked, setEnneagramChecked] = useState(false);
+  const [threeSixtyChecked, setThreeSixtyChecked] = useState(false);
+  const [otherAssessmentChecked, setOtherAssessmentChecked] = useState(false);
+  const [otherAssessment, setOtherAssessment] = useState("");
 
   // Files and additional information for Step 4
   const [files, setFiles] = useState<File[]>([]);
@@ -1336,6 +1344,42 @@ export default function QuestionnairePage() {
                 setBrandOptimizationGoals(jsonData.brandOptimizationGoals);
               }
               
+              // Step 5: Personality assessments
+              if (jsonData.personalityAssessments) {
+                console.log("Loading personality assessments from JSON:", 
+                  Object.keys(jsonData.personalityAssessments).join(", "));
+                
+                if (jsonData.personalityAssessments.mbti) {
+                  console.log("Setting MBTI checked");
+                  setMbtiChecked(true);
+                }
+                if (jsonData.personalityAssessments.strengthsFinder) {
+                  console.log("Setting Strengths Finder checked");
+                  setStrengthsFinderChecked(true);
+                }
+                if (jsonData.personalityAssessments.via) {
+                  console.log("Setting VIA checked");
+                  setViaChecked(true);
+                }
+                if (jsonData.personalityAssessments.enneagram) {
+                  console.log("Setting Enneagram checked");
+                  setEnneagramChecked(true);
+                }
+                if (jsonData.personalityAssessments.threeSixty) {
+                  console.log("Setting 360* checked");
+                  setThreeSixtyChecked(true);
+                }
+                
+                if (jsonData.personalityAssessments.other) {
+                  setOtherAssessmentChecked(true);
+                  // Handle both formats of other assessment
+                  if (typeof jsonData.personalityAssessments.other === 'string') {
+                    setOtherAssessment(jsonData.personalityAssessments.other);
+                  } else if (jsonData.personalityAssessments.otherText) {
+                    setOtherAssessment(jsonData.personalityAssessments.otherText);
+                  }
+                }
+              }
               
               // Step 5: Update time
               if (jsonData.updateTime) {
@@ -1586,6 +1630,60 @@ export default function QuestionnairePage() {
 
       // Json data was fully processed above
       
+      // Try to parse personality assessments from multiple locations
+      // First try from aspirations field (for backward compatibility)
+      if (q.aspirations && q.aspirations.includes("Personality assessments:")) {
+        const assessmentsText = q.aspirations
+          .split("Personality assessments:")[1]
+          ?.trim()
+          .split("\n")[0];
+        
+        if (assessmentsText) {
+          console.log("Loading personality assessments from aspirations:", assessmentsText);
+          
+          setMbtiChecked(assessmentsText.includes("MBTI"));
+          setStrengthsFinderChecked(
+            assessmentsText.includes("Strengths Finder"),
+          );
+          setViaChecked(assessmentsText.includes("VIA"));
+          setEnneagramChecked(assessmentsText.includes("Enneagram"));
+          setThreeSixtyChecked(assessmentsText.includes("360*"));
+
+          if (assessmentsText.includes("Other:")) {
+            setOtherAssessmentChecked(true);
+            const otherMatch = assessmentsText.match(/Other: (.*?)(?:,|$)/);
+            if (otherMatch && otherMatch[1]) {
+              setOtherAssessment(otherMatch[1].trim());
+            }
+          }
+        }
+      }
+      
+      // Special handling for Step 5 assessments - extract directly from questionnaire text
+      // This ensures the assessments are always loaded correctly regardless of how they're stored
+      if (q.aspirations) {
+        const lines = q.aspirations.split('\n');
+        lines.forEach(line => {
+          if (line.startsWith('Personality assessments:')) {
+            const assessmentInfo = line.substring('Personality assessments:'.length).trim();
+            console.log("Found personality assessment line:", assessmentInfo);
+            
+            if (assessmentInfo.includes("MBTI")) setMbtiChecked(true);
+            if (assessmentInfo.includes("Strengths Finder")) setStrengthsFinderChecked(true);
+            if (assessmentInfo.includes("VIA")) setViaChecked(true);
+            if (assessmentInfo.includes("Enneagram")) setEnneagramChecked(true);
+            if (assessmentInfo.includes("360*")) setThreeSixtyChecked(true);
+            
+            if (assessmentInfo.includes("Other:")) {
+              setOtherAssessmentChecked(true);
+              const otherMatch = assessmentInfo.match(/Other: (.*?)(?:,|$)/);
+              if (otherMatch && otherMatch[1]) {
+                setOtherAssessment(otherMatch[1].trim());
+              }
+            }
+          }
+        });
+      }
 
       // Parse content format preferences
       if (
@@ -1967,6 +2065,15 @@ export default function QuestionnairePage() {
         socialImpact: socialImpactChecked,
         technology: technologyChecked
       },
+      personalityAssessments: {
+        mbti: mbtiChecked,
+        strengthsFinder: strengthsFinderChecked,
+        via: viaChecked,
+        enneagram: enneagramChecked,
+        threeSixty: threeSixtyChecked,
+        other: otherAssessmentChecked ? otherAssessment : null,
+        otherText: otherAssessmentChecked ? otherAssessment : null
+      },
       societalInterests: {
         climate: climateChecked,
         consumerBehavior: consumerBehaviorChecked,
@@ -2126,6 +2233,16 @@ export default function QuestionnairePage() {
       technologyDigitalMedia: interestsData.technologyDigitalMedia || {},
       contentFormatPreferences: interestsData.contentFormatPreferences || {},
       postingBarriers: interestsData.postingBarriers || {},
+      // Always include personality assessments data
+      personalityAssessments: {
+        mbti: mbtiChecked,
+        strengthsFinder: strengthsFinderChecked,
+        via: viaChecked,
+        enneagram: enneagramChecked,
+        threeSixty: threeSixtyChecked,
+        other: otherAssessmentChecked ? otherAssessment : null,
+        otherText: otherAssessmentChecked ? otherAssessment : null
+      },
       // Keep arrays for backward compatibility
       industryInterestsArray: interestsData.industryInterestsArray || [],
       societalInterestsArray: interestsData.societalInterestsArray || [],
@@ -2757,6 +2874,20 @@ export default function QuestionnairePage() {
       // Add LinkedIn connections percentage to aspirations field
       brandingDetails += `\n\nLinkedIn connections percentage: ${industryConnectionsPercentage || "Not specified"}`;
 
+      // Add personality assessments to aspirations field
+      const assessments = [];
+      if (mbtiChecked) assessments.push("MBTI");
+      if (strengthsFinderChecked) assessments.push("Strengths Finder");
+      if (viaChecked) assessments.push("VIA");
+      if (enneagramChecked) assessments.push("Enneagram");
+      if (threeSixtyChecked) assessments.push("360*");
+      if (otherAssessmentChecked && otherAssessment.trim() !== "") {
+        assessments.push(`Other: ${otherAssessment.trim()}`);
+      }
+      brandingDetails += `\n\nPersonality assessments: ${assessments.length > 0 ? assessments.join(", ") : "None"}`;
+      
+      // Log to debug what we're saving
+      console.log("Saving personality assessments in aspirations:", assessments);
 
       // Add career goals
       brandingDetails += `\n\nCareer goals: ${careerGoals.trim() !== "" ? careerGoals : "Not specified"}`;
@@ -2945,6 +3076,14 @@ export default function QuestionnairePage() {
         professionalGoals: {
           careerGoals: careerGoals,
           industryConnectionsPercentage: industryConnectionsPercentage,
+          personalityAssessments: {
+            mbti: mbtiChecked,
+            strengthsFinder: strengthsFinderChecked,
+            via: viaChecked,
+            enneagram: enneagramChecked,
+            threeSixty: threeSixtyChecked,
+            other: otherAssessmentChecked ? otherAssessment : null,
+          },
           additionalInfo: additionalInfo,
         },
       };
@@ -5374,6 +5513,113 @@ export default function QuestionnairePage() {
                 </div>
               </div>
 
+              <hr className="my-6" />
+
+              <div className="mb-6">
+                <Label className="text-gray-700 font-medium block mb-3">
+                  What personality / strength assessments have you taken?
+                  (Select all that apply)
+                </Label>
+
+                <div className="space-y-3 mt-4">
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="mbti"
+                      checked={mbtiChecked}
+                      onCheckedChange={(checked) =>
+                        setMbtiChecked(checked === true)
+                      }
+                    />
+                    <Label htmlFor="mbti" className="cursor-pointer">
+                      Myer's Briggs (MBTI)
+                    </Label>
+                  </div>
+
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="strengths-finder"
+                      checked={strengthsFinderChecked}
+                      onCheckedChange={(checked) =>
+                        setStrengthsFinderChecked(checked === true)
+                      }
+                    />
+                    <Label
+                      htmlFor="strengths-finder"
+                      className="cursor-pointer"
+                    >
+                      Strengths Finder
+                    </Label>
+                  </div>
+
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="via"
+                      checked={viaChecked}
+                      onCheckedChange={(checked) =>
+                        setViaChecked(checked === true)
+                      }
+                    />
+                    <Label htmlFor="via" className="cursor-pointer">
+                      VIA - Values in Action
+                    </Label>
+                  </div>
+
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="enneagram"
+                      checked={enneagramChecked}
+                      onCheckedChange={(checked) =>
+                        setEnneagramChecked(checked === true)
+                      }
+                    />
+                    <Label htmlFor="enneagram" className="cursor-pointer">
+                      Enneagram
+                    </Label>
+                  </div>
+
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="threeSixty"
+                      checked={threeSixtyChecked}
+                      onCheckedChange={(checked) =>
+                        setThreeSixtyChecked(checked === true)
+                      }
+                    />
+                    <Label htmlFor="threeSixty" className="cursor-pointer">
+                      360* Leadership, Managerial, or Team Assessment
+                    </Label>
+                  </div>
+
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="other-assessment"
+                      checked={otherAssessmentChecked}
+                      onCheckedChange={(checked) =>
+                        setOtherAssessmentChecked(checked === true)
+                      }
+                    />
+                    <Label
+                      htmlFor="other-assessment"
+                      className="cursor-pointer"
+                    >
+                      Other
+                    </Label>
+                  </div>
+
+                  {otherAssessmentChecked && (
+                    <div className="ml-6 mt-2">
+                      <Input
+                        value={otherAssessment}
+                        onChange={(e) => setOtherAssessment(e.target.value)}
+                        placeholder="Please specify other assessments"
+                        className="w-full"
+                      />
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <hr className="my-6" />
 
               <div className="mb-6">
                 <Label
