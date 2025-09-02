@@ -573,6 +573,14 @@ export default function QuestionnairePage() {
       console.log("Questionnaire data found:", userProfile.questionnaire);
       const q = userProfile.questionnaire;
 
+      // Initialize flags to track what data was loaded from JSON
+      let jsonDataLoaded = {
+        brandingChallenges: false,
+        socialMediaPlatforms: false,
+        publishedDigitalContent: false,
+        linkedinUpdates: false,
+      };
+
       // Step 1: Industry & Function
       // Set industry directly from the industry field
       if (q.industry) {
@@ -601,7 +609,8 @@ export default function QuestionnairePage() {
       setGoals(q.goals || "");
 
       // Try to parse social media selections from goals field if it contains our format
-      if (q.goals && q.goals.includes("Selected platforms:")) {
+      // Only if JSON data wasn't already loaded
+      if (q.goals && q.goals.includes("Selected platforms:") && !jsonDataLoaded.socialMediaPlatforms) {
         const platformsText = q.goals.split("Selected platforms:")[1].trim();
         setTwitterChecked(platformsText.includes("Twitter/X"));
         setMediumChecked(platformsText.includes("Medium"));
@@ -622,7 +631,8 @@ export default function QuestionnairePage() {
       setAspirations(q.aspirations || "");
 
       // Try to parse branding challenges from aspirations field if it contains our format
-      if (q.aspirations && q.aspirations.includes("Branding challenges:")) {
+      // Only if JSON data wasn't already loaded
+      if (q.aspirations && q.aspirations.includes("Branding challenges:") && !jsonDataLoaded.brandingChallenges) {
         const challengesText = q.aspirations
           .split("Branding challenges:")[1]
           .trim();
@@ -671,7 +681,8 @@ export default function QuestionnairePage() {
       }
 
       // Try to parse published content data from aspirations field
-      if (q.aspirations && q.aspirations.includes("Published content:")) {
+      // Only if JSON data wasn't already loaded
+      if (q.aspirations && q.aspirations.includes("Published content:") && !jsonDataLoaded.publishedDigitalContent) {
         const publishedContentText = q.aspirations
           .split("Published content:")[1]
           .trim()
@@ -704,9 +715,11 @@ export default function QuestionnairePage() {
       }
 
       // Try to parse LinkedIn profile update timing data from aspirations field
+      // Only if JSON data wasn't already loaded
       if (
         q.aspirations &&
-        q.aspirations.includes("LinkedIn profile update timing:")
+        q.aspirations.includes("LinkedIn profile update timing:") &&
+        !jsonDataLoaded.linkedinUpdates
       ) {
         const updateTimingText = q.aspirations
           .split("LinkedIn profile update timing:")[1]
@@ -1167,6 +1180,7 @@ export default function QuestionnairePage() {
               Object.keys(parsedInterests.brandingChallenges).join(", "),
             );
 
+            jsonDataLoaded.brandingChallenges = true;
             if (parsedInterests.brandingChallenges.consistentNarrative)
               setConsistentNarrativeChecked(true);
             if (parsedInterests.brandingChallenges.valueProposition)
@@ -1197,6 +1211,8 @@ export default function QuestionnairePage() {
               Object.keys(parsedInterests.socialMediaPlatforms).join(", "),
             );
 
+            jsonDataLoaded.socialMediaPlatforms = true;
+
             if (parsedInterests.socialMediaPlatforms.twitter)
               setTwitterChecked(true);
             if (parsedInterests.socialMediaPlatforms.medium)
@@ -1216,6 +1232,8 @@ export default function QuestionnairePage() {
               "Loading published digital content from parsedInterests:",
               Object.keys(parsedInterests.publishedDigitalContent).join(", "),
             );
+
+            jsonDataLoaded.publishedDigitalContent = true;
 
             if (parsedInterests.publishedDigitalContent.linkedinPosts)
               setLinkedInPostsChecked(true);
@@ -1240,6 +1258,8 @@ export default function QuestionnairePage() {
               "Loading LinkedIn updates from parsedInterests:",
               Object.keys(parsedInterests.linkedinUpdates).join(", "),
             );
+
+            jsonDataLoaded.linkedinUpdates = true;
 
             if (parsedInterests.linkedinUpdates.lastWeek)
               setLastWeekChecked(true);
