@@ -445,9 +445,11 @@ export default function QuestionnairePage() {
   // Files and additional information for Step 4
   const [files, setFiles] = useState<File[]>([]);
   const [additionalInfo, setAdditionalInfo] = useState("");
-  
+
   // Add state for auto-save status
-  const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved">("idle");
+  const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved">(
+    "idle",
+  );
 
   // Fetch user profile data
   const { data: userProfile, isLoading: profileLoading } =
@@ -480,11 +482,15 @@ export default function QuestionnairePage() {
       });
     },
   });
-  
+
   // Save questionnaire as draft mutation
   const saveAsDraftMutation = useMutation({
     mutationFn: async (data: any) => {
-      const response = await apiRequest("POST", "/api/questionnaire/draft", data);
+      const response = await apiRequest(
+        "POST",
+        "/api/questionnaire/draft",
+        data,
+      );
       return response.json();
     },
     onSuccess: () => {
@@ -498,8 +504,7 @@ export default function QuestionnairePage() {
     onError: () => {
       toast({
         title: "Error",
-        description:
-          "There was a problem saving your draft. Please try again.",
+        description: "There was a problem saving your draft. Please try again.",
         variant: "destructive",
       });
     },
@@ -510,12 +515,15 @@ export default function QuestionnairePage() {
     try {
       // Show saving indicator
       setSaveStatus("saving");
-      
+
       // Get the form data without validation
       const formData = prepareFormData();
-      
+
       // Check if the questionnaire is already published (not a draft)
-      if (userProfile?.questionnaire && userProfile.questionnaire.isDraft === false) {
+      if (
+        userProfile?.questionnaire &&
+        userProfile.questionnaire.isDraft === false
+      ) {
         // For published questionnaires, just simulate a successful save
         setSaveStatus("saved");
         setTimeout(() => {
@@ -525,22 +533,22 @@ export default function QuestionnairePage() {
       } else {
         // For drafts or new questionnaires, save as draft
         formData.isDraft = true;
-        
+
         try {
           // Try to save, but don't block navigation if it fails
           await saveAsDraftMutation.mutateAsync(formData);
-          
+
           // Update save status to saved
           setSaveStatus("saved");
-          
+
           // Reset status after 2 seconds
           setTimeout(() => {
             setSaveStatus("idle");
           }, 2000);
-          
+
           // Invalidate the user profile query to refresh data
           queryClient.invalidateQueries({ queryKey: ["/api/user/profile"] });
-          
+
           return true;
         } catch (error) {
           console.error("Failed to save form data:", error);
@@ -560,7 +568,7 @@ export default function QuestionnairePage() {
   // Initialize form data from user profile if available
   React.useEffect(() => {
     console.log("UserProfile loaded:", userProfile);
-    
+
     if (userProfile?.questionnaire) {
       console.log("Questionnaire data found:", userProfile.questionnaire);
       const q = userProfile.questionnaire;
@@ -742,9 +750,10 @@ export default function QuestionnairePage() {
           .trim();
         // Get the full activity section by looking for the next major section
         const nextSectionIndex = activityText.search(/\n\n[A-Z]/);
-        const fullActivityText = nextSectionIndex !== -1 
-          ? activityText.substring(0, nextSectionIndex)
-          : activityText;
+        const fullActivityText =
+          nextSectionIndex !== -1
+            ? activityText.substring(0, nextSectionIndex)
+            : activityText;
 
         // Check each activity option and set state accordingly
         setReadNewsfeedChecked(fullActivityText.includes("Read your Newsfeed"));
@@ -865,147 +874,288 @@ export default function QuestionnairePage() {
       setChallenges(q.challenges || "");
       setInterests(q.interests || "");
       setTimeframe(q.timeframe || "");
-      
+
       // Try to parse JSON structure from the interests field
       if (q.interests) {
         try {
           console.log("Attempting to parse JSON from interests field");
           const parsedInterests = JSON.parse(q.interests);
-          console.log("Successfully parsed interests JSON data with keys:", Object.keys(parsedInterests));
-          
+          console.log(
+            "Successfully parsed interests JSON data with keys:",
+            Object.keys(parsedInterests),
+          );
+
           // Load industry interests
           if (parsedInterests.industryInterests) {
-            console.log("Loading industry interests from JSON:", Object.keys(parsedInterests.industryInterests).join(", "));
-            
-            if (parsedInterests.industryInterests.consulting) setConsultingChecked(true);
-            if (parsedInterests.industryInterests.consumerRetail) setConsumerRetailChecked(true);
-            if (parsedInterests.industryInterests.financialServices) setFinancialServicesChecked(true);
-            if (parsedInterests.industryInterests.globalMarkets) setGlobalMarketsChecked(true);
-            if (parsedInterests.industryInterests.government) setGovernmentChecked(true);
-            if (parsedInterests.industryInterests.healthcare) setHealthcareChecked(true);
-            if (parsedInterests.industryInterests.innovation) setInnovationChecked(true);
-            if (parsedInterests.industryInterests.manufacturing) setManufacturingChecked(true);
-            if (parsedInterests.industryInterests.socialImpact) setSocialImpactChecked(true);
-            if (parsedInterests.industryInterests.technology) setTechnologyChecked(true);
+            console.log(
+              "Loading industry interests from JSON:",
+              Object.keys(parsedInterests.industryInterests).join(", "),
+            );
+
+            if (parsedInterests.industryInterests.consulting)
+              setConsultingChecked(true);
+            if (parsedInterests.industryInterests.consumerRetail)
+              setConsumerRetailChecked(true);
+            if (parsedInterests.industryInterests.financialServices)
+              setFinancialServicesChecked(true);
+            if (parsedInterests.industryInterests.globalMarkets)
+              setGlobalMarketsChecked(true);
+            if (parsedInterests.industryInterests.government)
+              setGovernmentChecked(true);
+            if (parsedInterests.industryInterests.healthcare)
+              setHealthcareChecked(true);
+            if (parsedInterests.industryInterests.innovation)
+              setInnovationChecked(true);
+            if (parsedInterests.industryInterests.manufacturing)
+              setManufacturingChecked(true);
+            if (parsedInterests.industryInterests.socialImpact)
+              setSocialImpactChecked(true);
+            if (parsedInterests.industryInterests.technology)
+              setTechnologyChecked(true);
           }
-          
+
           // Load societal interests
           if (parsedInterests.societalInterests) {
-            console.log("Loading societal interests from JSON:", Object.keys(parsedInterests.societalInterests).join(", "));
-            
-            if (parsedInterests.societalInterests.climate) setClimateChecked(true);
-            if (parsedInterests.societalInterests.consumerBehavior) setConsumerBehaviorChecked(true);
-            if (parsedInterests.societalInterests.crimeJustice) setCrimeJusticeChecked(true);
-            if (parsedInterests.societalInterests.digitalTransformationAI) setDigitalTransformationAIChecked(true);
-            if (parsedInterests.societalInterests.educationLearning) setEducationLearningChecked(true);
-            if (parsedInterests.societalInterests.emergingMarkets) setEmergingMarketsChecked(true);
-            if (parsedInterests.societalInterests.entertainmentArts) setEntertainmentArtsChecked(true);
-            if (parsedInterests.societalInterests.financialInnovation) setFinancialInnovationChecked(true);
-            if (parsedInterests.societalInterests.futureOfWork) setFutureOfWorkChecked(true);
-            if (parsedInterests.societalInterests.globalEconomy) setGlobalEconomyChecked(true);
-            if (parsedInterests.societalInterests.geopolitics) setGeopoliticsChecked(true);
-            if (parsedInterests.societalInterests.healthWellness) setHealthWellnessChecked(true);
-            if (parsedInterests.societalInterests.healthcareInnovation) setHealthcareInnovationChecked(true);
-            if (parsedInterests.societalInterests.socialImpactDEI) setSocialImpactDEIChecked(true);
-            if (parsedInterests.societalInterests.sportsRecreation) setSportsRecreationChecked(true);
-            if (parsedInterests.societalInterests.travelTourism) setTravelTourismChecked(true);
-            if (parsedInterests.societalInterests.urbanDevelopment) setUrbanDevelopmentChecked(true);
-            if (parsedInterests.societalInterests.usPolitics) setUsPoliticsChecked(true);
+            console.log(
+              "Loading societal interests from JSON:",
+              Object.keys(parsedInterests.societalInterests).join(", "),
+            );
+
+            if (parsedInterests.societalInterests.climate)
+              setClimateChecked(true);
+            if (parsedInterests.societalInterests.consumerBehavior)
+              setConsumerBehaviorChecked(true);
+            if (parsedInterests.societalInterests.crimeJustice)
+              setCrimeJusticeChecked(true);
+            if (parsedInterests.societalInterests.digitalTransformationAI)
+              setDigitalTransformationAIChecked(true);
+            if (parsedInterests.societalInterests.educationLearning)
+              setEducationLearningChecked(true);
+            if (parsedInterests.societalInterests.emergingMarkets)
+              setEmergingMarketsChecked(true);
+            if (parsedInterests.societalInterests.entertainmentArts)
+              setEntertainmentArtsChecked(true);
+            if (parsedInterests.societalInterests.financialInnovation)
+              setFinancialInnovationChecked(true);
+            if (parsedInterests.societalInterests.futureOfWork)
+              setFutureOfWorkChecked(true);
+            if (parsedInterests.societalInterests.globalEconomy)
+              setGlobalEconomyChecked(true);
+            if (parsedInterests.societalInterests.geopolitics)
+              setGeopoliticsChecked(true);
+            if (parsedInterests.societalInterests.healthWellness)
+              setHealthWellnessChecked(true);
+            if (parsedInterests.societalInterests.healthcareInnovation)
+              setHealthcareInnovationChecked(true);
+            if (parsedInterests.societalInterests.socialImpactDEI)
+              setSocialImpactDEIChecked(true);
+            if (parsedInterests.societalInterests.sportsRecreation)
+              setSportsRecreationChecked(true);
+            if (parsedInterests.societalInterests.travelTourism)
+              setTravelTourismChecked(true);
+            if (parsedInterests.societalInterests.urbanDevelopment)
+              setUrbanDevelopmentChecked(true);
+            if (parsedInterests.societalInterests.usPolitics)
+              setUsPoliticsChecked(true);
           }
-          
+
           // Load Technology & Digital Media subcategories
           if (parsedInterests.technologyDigitalMedia) {
-            console.log("Loading technology & digital media subcategories from JSON:", Object.keys(parsedInterests.technologyDigitalMedia).join(", "));
-            
+            console.log(
+              "Loading technology & digital media subcategories from JSON:",
+              Object.keys(parsedInterests.technologyDigitalMedia).join(", "),
+            );
+
             // AI/ML Subcategories
-            if (parsedInterests.technologyDigitalMedia.aiConsumer) setAiConsumerChecked(true);
-            if (parsedInterests.technologyDigitalMedia.aiComputerVision) setAiComputerVisionChecked(true);
-            if (parsedInterests.technologyDigitalMedia.aiEthics) setAiEthicsChecked(true);
-            if (parsedInterests.technologyDigitalMedia.aiInfrastructure) setAiInfrastructureChecked(true);
-            if (parsedInterests.technologyDigitalMedia.aiNlp) setAiNlpChecked(true);
-            if (parsedInterests.technologyDigitalMedia.aiPredictive) setAiPredictiveChecked(true);
-            if (parsedInterests.technologyDigitalMedia.aiRobotics) setAiRoboticsChecked(true);
-            if (parsedInterests.technologyDigitalMedia.aiScientific) setAiScientificChecked(true);
-            if (parsedInterests.technologyDigitalMedia.aiLearning) setAiLearningChecked(true);
-            
+            if (parsedInterests.technologyDigitalMedia.aiConsumer)
+              setAiConsumerChecked(true);
+            if (parsedInterests.technologyDigitalMedia.aiComputerVision)
+              setAiComputerVisionChecked(true);
+            if (parsedInterests.technologyDigitalMedia.aiEthics)
+              setAiEthicsChecked(true);
+            if (parsedInterests.technologyDigitalMedia.aiInfrastructure)
+              setAiInfrastructureChecked(true);
+            if (parsedInterests.technologyDigitalMedia.aiNlp)
+              setAiNlpChecked(true);
+            if (parsedInterests.technologyDigitalMedia.aiPredictive)
+              setAiPredictiveChecked(true);
+            if (parsedInterests.technologyDigitalMedia.aiRobotics)
+              setAiRoboticsChecked(true);
+            if (parsedInterests.technologyDigitalMedia.aiScientific)
+              setAiScientificChecked(true);
+            if (parsedInterests.technologyDigitalMedia.aiLearning)
+              setAiLearningChecked(true);
+
             // Consumer Tech Subcategories
-            if (parsedInterests.technologyDigitalMedia.consumerDevices) setConsumerDevicesChecked(true);
-            if (parsedInterests.technologyDigitalMedia.consumerGaming) setConsumerGamingChecked(true);
-            if (parsedInterests.technologyDigitalMedia.consumerMobile) setConsumerMobileChecked(true);
-            if (parsedInterests.technologyDigitalMedia.consumerSmartHome) setConsumerSmartHomeChecked(true);
-            
+            if (parsedInterests.technologyDigitalMedia.consumerDevices)
+              setConsumerDevicesChecked(true);
+            if (parsedInterests.technologyDigitalMedia.consumerGaming)
+              setConsumerGamingChecked(true);
+            if (parsedInterests.technologyDigitalMedia.consumerMobile)
+              setConsumerMobileChecked(true);
+            if (parsedInterests.technologyDigitalMedia.consumerSmartHome)
+              setConsumerSmartHomeChecked(true);
+
             // Cybersecurity Subcategories
-            if (parsedInterests.technologyDigitalMedia.cybersecuritySolutions) setCybersecuritySolutionsChecked(true);
-            if (parsedInterests.technologyDigitalMedia.dataPrivacy) setDataPrivacyChecked(true);
-            if (parsedInterests.technologyDigitalMedia.regulatoryCompliance) setRegulatoryComplianceChecked(true);
-            if (parsedInterests.technologyDigitalMedia.riskManagement) setRiskManagementChecked(true);
-            
+            if (parsedInterests.technologyDigitalMedia.cybersecuritySolutions)
+              setCybersecuritySolutionsChecked(true);
+            if (parsedInterests.technologyDigitalMedia.dataPrivacy)
+              setDataPrivacyChecked(true);
+            if (parsedInterests.technologyDigitalMedia.regulatoryCompliance)
+              setRegulatoryComplianceChecked(true);
+            if (parsedInterests.technologyDigitalMedia.riskManagement)
+              setRiskManagementChecked(true);
+
             // Infrastructure Subcategories
-            if (parsedInterests.technologyDigitalMedia.cloudComputing) setCloudComputingChecked(true);
-            if (parsedInterests.technologyDigitalMedia.dataCenters) setDataCentersChecked(true);
-            if (parsedInterests.technologyDigitalMedia.networks) setNetworksChecked(true);
-            if (parsedInterests.technologyDigitalMedia.web3Blockchain) setWeb3BlockchainChecked(true);
-            
+            if (parsedInterests.technologyDigitalMedia.cloudComputing)
+              setCloudComputingChecked(true);
+            if (parsedInterests.technologyDigitalMedia.dataCenters)
+              setDataCentersChecked(true);
+            if (parsedInterests.technologyDigitalMedia.networks)
+              setNetworksChecked(true);
+            if (parsedInterests.technologyDigitalMedia.web3Blockchain)
+              setWeb3BlockchainChecked(true);
+
             // Media & Marketing Subcategories
-            if (parsedInterests.technologyDigitalMedia.contentDistribution) setContentDistributionChecked(true);
-            if (parsedInterests.technologyDigitalMedia.creatorEconomy) setCreatorEconomyChecked(true);
-            if (parsedInterests.technologyDigitalMedia.digitalMarketing) setDigitalMarketingChecked(true);
-            if (parsedInterests.technologyDigitalMedia.socialMediaPlatforms) setSocialMediaPlatformsChecked(true);
-            
+            if (parsedInterests.technologyDigitalMedia.contentDistribution)
+              setContentDistributionChecked(true);
+            if (parsedInterests.technologyDigitalMedia.creatorEconomy)
+              setCreatorEconomyChecked(true);
+            if (parsedInterests.technologyDigitalMedia.digitalMarketing)
+              setDigitalMarketingChecked(true);
+            if (parsedInterests.technologyDigitalMedia.socialMediaPlatforms)
+              setSocialMediaPlatformsChecked(true);
+
             // Emerging Tech Subcategories
-            if (parsedInterests.technologyDigitalMedia.arVrXr) setArVrXrChecked(true);
-            if (parsedInterests.technologyDigitalMedia.biotechHealth) setBiotechHealthChecked(true);
-            if (parsedInterests.technologyDigitalMedia.quantumComputing) setQuantumComputingChecked(true);
-            if (parsedInterests.technologyDigitalMedia.emergingRobotics) setEmergingRoboticsChecked(true);
-            
+            if (parsedInterests.technologyDigitalMedia.arVrXr)
+              setArVrXrChecked(true);
+            if (parsedInterests.technologyDigitalMedia.biotechHealth)
+              setBiotechHealthChecked(true);
+            if (parsedInterests.technologyDigitalMedia.quantumComputing)
+              setQuantumComputingChecked(true);
+            if (parsedInterests.technologyDigitalMedia.emergingRobotics)
+              setEmergingRoboticsChecked(true);
+
             // Enterprise Subcategories
-            if (parsedInterests.technologyDigitalMedia.businessApps) setBusinessAppsChecked(true);
-            if (parsedInterests.technologyDigitalMedia.enterpriseDigitalTransformation) setEnterpriseDigitalTransformationChecked(true);
-            if (parsedInterests.technologyDigitalMedia.integrationApis) setIntegrationApisChecked(true);
-            if (parsedInterests.technologyDigitalMedia.saasEnterprise) setSaasEnterpriseChecked(true);
+            if (parsedInterests.technologyDigitalMedia.businessApps)
+              setBusinessAppsChecked(true);
+            if (
+              parsedInterests.technologyDigitalMedia
+                .enterpriseDigitalTransformation
+            )
+              setEnterpriseDigitalTransformationChecked(true);
+            if (parsedInterests.technologyDigitalMedia.integrationApis)
+              setIntegrationApisChecked(true);
+            if (parsedInterests.technologyDigitalMedia.saasEnterprise)
+              setSaasEnterpriseChecked(true);
           }
-          
+
           // Load content format preferences
           if (parsedInterests.contentFormatPreferences) {
-            console.log("Loading content format preferences from JSON:", Object.keys(parsedInterests.contentFormatPreferences).join(", "));
-            
-            if (parsedInterests.contentFormatPreferences.sharingNews) setSharingNewsChecked(true);
-            if (parsedInterests.contentFormatPreferences.writingExperiences) setWritingExperiencesChecked(true);
-            if (parsedInterests.contentFormatPreferences.analyzingTrends) setAnalyzingTrendsChecked(true);
-            if (parsedInterests.contentFormatPreferences.commentingPosts) setCommentingPostsChecked(true);
-            if (parsedInterests.contentFormatPreferences.howToContent) setHowToContentChecked(true);
-            if (parsedInterests.contentFormatPreferences.eventTakeaways) setEventTakeawaysChecked(true);
-            if (parsedInterests.contentFormatPreferences.personalAnecdote) setPersonalAnecdoteChecked(true);
-            if (parsedInterests.contentFormatPreferences.digitalCommunities) setDigitalCommunitiesChecked(true);
-            
+            console.log(
+              "Loading content format preferences from JSON:",
+              Object.keys(parsedInterests.contentFormatPreferences).join(", "),
+            );
+
+            if (parsedInterests.contentFormatPreferences.sharingNews)
+              setSharingNewsChecked(true);
+            if (parsedInterests.contentFormatPreferences.writingExperiences)
+              setWritingExperiencesChecked(true);
+            if (parsedInterests.contentFormatPreferences.analyzingTrends)
+              setAnalyzingTrendsChecked(true);
+            if (parsedInterests.contentFormatPreferences.commentingPosts)
+              setCommentingPostsChecked(true);
+            if (parsedInterests.contentFormatPreferences.howToContent)
+              setHowToContentChecked(true);
+            if (parsedInterests.contentFormatPreferences.eventTakeaways)
+              setEventTakeawaysChecked(true);
+            if (parsedInterests.contentFormatPreferences.personalAnecdote)
+              setPersonalAnecdoteChecked(true);
+            if (parsedInterests.contentFormatPreferences.digitalCommunities)
+              setDigitalCommunitiesChecked(true);
+
             if (parsedInterests.contentFormatPreferences.other) {
               setOtherContentFormatChecked(true);
               // Handle both formats of other content
-              if (typeof parsedInterests.contentFormatPreferences.other === 'string') {
-                setOtherContentFormat(parsedInterests.contentFormatPreferences.other);
+              if (
+                typeof parsedInterests.contentFormatPreferences.other ===
+                "string"
+              ) {
+                setOtherContentFormat(
+                  parsedInterests.contentFormatPreferences.other,
+                );
               } else if (parsedInterests.contentFormatPreferences.otherText) {
-                setOtherContentFormat(parsedInterests.contentFormatPreferences.otherText);
+                setOtherContentFormat(
+                  parsedInterests.contentFormatPreferences.otherText,
+                );
               }
             }
           }
-          
+
           // Load posting barriers
           if (parsedInterests.postingBarriers) {
-            console.log("Loading posting barriers from JSON:", Object.keys(parsedInterests.postingBarriers).join(", "));
-            
-            if (parsedInterests.postingBarriers.unsureWhatToSay) setUnsureWhatToSayChecked(true);
-            if (parsedInterests.postingBarriers.fearOfJudgment) setFearOfJudgmentChecked(true);
-            if (parsedInterests.postingBarriers.timeManagement) setTimeManagementChecked(true);
-            if (parsedInterests.postingBarriers.dontKnowHowToStart) setDontKnowHowToStartChecked(true);
-            if (parsedInterests.postingBarriers.unclearProfessionalVoice) setUnclearProfessionalVoiceChecked(true);
-            
+            console.log(
+              "Loading posting barriers from JSON:",
+              Object.keys(parsedInterests.postingBarriers).join(", "),
+            );
+
+            if (parsedInterests.postingBarriers.unsureWhatToSay)
+              setUnsureWhatToSayChecked(true);
+            if (parsedInterests.postingBarriers.fearOfJudgment)
+              setFearOfJudgmentChecked(true);
+            if (parsedInterests.postingBarriers.timeManagement)
+              setTimeManagementChecked(true);
+            if (parsedInterests.postingBarriers.dontKnowHowToStart)
+              setDontKnowHowToStartChecked(true);
+            if (parsedInterests.postingBarriers.unclearProfessionalVoice)
+              setUnclearProfessionalVoiceChecked(true);
+
             if (parsedInterests.postingBarriers.other) {
               setOtherBarrierChecked(true);
               // Handle both formats of other barrier
-              if (typeof parsedInterests.postingBarriers.other === 'string') {
+              if (typeof parsedInterests.postingBarriers.other === "string") {
                 setOtherBarrier(parsedInterests.postingBarriers.other);
               } else if (parsedInterests.postingBarriers.otherText) {
                 setOtherBarrier(parsedInterests.postingBarriers.otherText);
+              }
+            }
+          }
+
+          // Load personality assessments
+          if (parsedInterests.personalityAssessments) {
+            console.log(
+              "Loading personality assessments from parsedInterests:",
+              Object.keys(parsedInterests.personalityAssessments).join(", "),
+            );
+
+            if (parsedInterests.personalityAssessments.mbti) {
+              console.log("Setting MBTI checked from parsedInterests");
+              setMbtiChecked(true);
+            }
+            if (parsedInterests.personalityAssessments.strengthsFinder) {
+              console.log("Setting Strengths Finder checked from parsedInterests");
+              setStrengthsFinderChecked(true);
+            }
+            if (parsedInterests.personalityAssessments.via) {
+              console.log("Setting VIA checked from parsedInterests");
+              setViaChecked(true);
+            }
+            if (parsedInterests.personalityAssessments.enneagram) {
+              console.log("Setting Enneagram checked from parsedInterests");
+              setEnneagramChecked(true);
+            }
+            if (parsedInterests.personalityAssessments.threeSixty) {
+              console.log("Setting 360* checked from parsedInterests");
+              setThreeSixtyChecked(true);
+            }
+
+            if (parsedInterests.personalityAssessments.other) {
+              setOtherAssessmentChecked(true);
+              // Handle both formats of other assessment
+              if (typeof parsedInterests.personalityAssessments.other === "string") {
+                setOtherAssessment(parsedInterests.personalityAssessments.other);
+              } else if (parsedInterests.personalityAssessments.otherText) {
+                setOtherAssessment(parsedInterests.personalityAssessments.otherText);
               }
             }
           }
@@ -1122,22 +1272,27 @@ export default function QuestionnairePage() {
         // Only attempt to parse if aspirations field exists
         if (q.aspirations) {
           console.log("Aspirations field exists, attempting to extract JSON");
-          
+
           // Look for a JSON structure in the aspirations field using a reliable regex
           const jsonMatch = q.aspirations.match(/\{[\s\S]*?\}/);
-          
+
           if (jsonMatch) {
             console.log("Found potential JSON match in aspirations");
-            
+
             try {
               jsonData = JSON.parse(jsonMatch[0]);
-              console.log("Successfully parsed JSON data with keys:", Object.keys(jsonData));
-              
+              console.log(
+                "Successfully parsed JSON data with keys:",
+                Object.keys(jsonData),
+              );
+
               // Step 4: Industry Interests - detailed logging for troubleshooting
               if (jsonData.industryInterests) {
-                console.log("Loading industry interests from JSON:", 
-                  Object.keys(jsonData.industryInterests).join(", "));
-                
+                console.log(
+                  "Loading industry interests from JSON:",
+                  Object.keys(jsonData.industryInterests).join(", "),
+                );
+
                 // Direct mappings
                 if (jsonData.industryInterests.consulting) {
                   console.log("Setting consulting interest");
@@ -1179,17 +1334,21 @@ export default function QuestionnairePage() {
                   console.log("Setting technology interest");
                   setTechnologyChecked(true);
                 }
-                
+
                 // Additional mappings for compatibility
-                if (jsonData.industryInterests.mediaEntertainment) setGlobalMarketsChecked(true);
-                if (jsonData.industryInterests.nonprofit) setInnovationChecked(true);
+                if (jsonData.industryInterests.mediaEntertainment)
+                  setGlobalMarketsChecked(true);
+                if (jsonData.industryInterests.nonprofit)
+                  setInnovationChecked(true);
               }
-              
+
               // Step 4: Cross-cutting interests - detailed logging
               if (jsonData.crossCuttingInterests) {
-                console.log("Loading cross-cutting interests from JSON:", 
-                  Object.keys(jsonData.crossCuttingInterests).join(", "));
-                
+                console.log(
+                  "Loading cross-cutting interests from JSON:",
+                  Object.keys(jsonData.crossCuttingInterests).join(", "),
+                );
+
                 // Set checkboxes based on JSON data with detailed logging
                 if (jsonData.crossCuttingInterests.climate) {
                   console.log("Setting climate interest");
@@ -1235,75 +1394,112 @@ export default function QuestionnairePage() {
                   console.log("Setting geopolitics interest");
                   setGeopoliticsChecked(true);
                 }
-                
+
                 // Alternative field names for compatibility
-                if (jsonData.crossCuttingInterests.dei) setSocialImpactDEIChecked(true);
-                if (jsonData.crossCuttingInterests.economics) setGlobalEconomyChecked(true);
-                if (jsonData.crossCuttingInterests.governance) setGeopoliticsChecked(true);
-                if (jsonData.crossCuttingInterests.innovation) setFinancialInnovationChecked(true);
-                if (jsonData.crossCuttingInterests.leadership) setFutureOfWorkChecked(true);
-                if (jsonData.crossCuttingInterests.policy) setUsPoliticsChecked(true);
-                if (jsonData.crossCuttingInterests.sustainability) setClimateChecked(true);
+                if (jsonData.crossCuttingInterests.dei)
+                  setSocialImpactDEIChecked(true);
+                if (jsonData.crossCuttingInterests.economics)
+                  setGlobalEconomyChecked(true);
+                if (jsonData.crossCuttingInterests.governance)
+                  setGeopoliticsChecked(true);
+                if (jsonData.crossCuttingInterests.innovation)
+                  setFinancialInnovationChecked(true);
+                if (jsonData.crossCuttingInterests.leadership)
+                  setFutureOfWorkChecked(true);
+                if (jsonData.crossCuttingInterests.policy)
+                  setUsPoliticsChecked(true);
+                if (jsonData.crossCuttingInterests.sustainability)
+                  setClimateChecked(true);
               }
-              
+
               // Step 4: Content format preferences
               if (jsonData.contentFormatPreferences) {
-                console.log("Loading content format preferences from JSON:", 
-                  Object.keys(jsonData.contentFormatPreferences).join(", "));
-                
-                if (jsonData.contentFormatPreferences.sharingNews) setSharingNewsChecked(true);
-                if (jsonData.contentFormatPreferences.writingExperiences) setWritingExperiencesChecked(true);
-                if (jsonData.contentFormatPreferences.analyzingTrends) setAnalyzingTrendsChecked(true);
-                if (jsonData.contentFormatPreferences.commentingPosts) setCommentingPostsChecked(true);
-                if (jsonData.contentFormatPreferences.howToContent) setHowToContentChecked(true);
-                if (jsonData.contentFormatPreferences.eventTakeaways) setEventTakeawaysChecked(true);
-                if (jsonData.contentFormatPreferences.personalAnecdote) setPersonalAnecdoteChecked(true);
-                if (jsonData.contentFormatPreferences.digitalCommunities) setDigitalCommunitiesChecked(true);
-                
+                console.log(
+                  "Loading content format preferences from JSON:",
+                  Object.keys(jsonData.contentFormatPreferences).join(", "),
+                );
+
+                if (jsonData.contentFormatPreferences.sharingNews)
+                  setSharingNewsChecked(true);
+                if (jsonData.contentFormatPreferences.writingExperiences)
+                  setWritingExperiencesChecked(true);
+                if (jsonData.contentFormatPreferences.analyzingTrends)
+                  setAnalyzingTrendsChecked(true);
+                if (jsonData.contentFormatPreferences.commentingPosts)
+                  setCommentingPostsChecked(true);
+                if (jsonData.contentFormatPreferences.howToContent)
+                  setHowToContentChecked(true);
+                if (jsonData.contentFormatPreferences.eventTakeaways)
+                  setEventTakeawaysChecked(true);
+                if (jsonData.contentFormatPreferences.personalAnecdote)
+                  setPersonalAnecdoteChecked(true);
+                if (jsonData.contentFormatPreferences.digitalCommunities)
+                  setDigitalCommunitiesChecked(true);
+
                 if (jsonData.contentFormatPreferences.other) {
                   setOtherContentFormatChecked(true);
                   // Handle both formats of other content
-                  if (typeof jsonData.contentFormatPreferences.other === 'string') {
-                    setOtherContentFormat(jsonData.contentFormatPreferences.other);
+                  if (
+                    typeof jsonData.contentFormatPreferences.other === "string"
+                  ) {
+                    setOtherContentFormat(
+                      jsonData.contentFormatPreferences.other,
+                    );
                   } else if (jsonData.contentFormatPreferences.otherText) {
-                    setOtherContentFormat(jsonData.contentFormatPreferences.otherText);
+                    setOtherContentFormat(
+                      jsonData.contentFormatPreferences.otherText,
+                    );
                   }
                 }
               }
-              
+
               // Step 4: Posting barriers
               if (jsonData.postingBarriers) {
-                console.log("Loading posting barriers from JSON:", 
-                  Object.keys(jsonData.postingBarriers).join(", "));
-                
-                if (jsonData.postingBarriers.unsureWhatToSay) setUnsureWhatToSayChecked(true);
-                if (jsonData.postingBarriers.fearOfJudgment) setFearOfJudgmentChecked(true);
-                if (jsonData.postingBarriers.timeManagement) setTimeManagementChecked(true);
-                if (jsonData.postingBarriers.dontKnowHowToStart) setDontKnowHowToStartChecked(true);
-                if (jsonData.postingBarriers.unclearProfessionalVoice) setUnclearProfessionalVoiceChecked(true);
-                
+                console.log(
+                  "Loading posting barriers from JSON:",
+                  Object.keys(jsonData.postingBarriers).join(", "),
+                );
+
+                if (jsonData.postingBarriers.unsureWhatToSay)
+                  setUnsureWhatToSayChecked(true);
+                if (jsonData.postingBarriers.fearOfJudgment)
+                  setFearOfJudgmentChecked(true);
+                if (jsonData.postingBarriers.timeManagement)
+                  setTimeManagementChecked(true);
+                if (jsonData.postingBarriers.dontKnowHowToStart)
+                  setDontKnowHowToStartChecked(true);
+                if (jsonData.postingBarriers.unclearProfessionalVoice)
+                  setUnclearProfessionalVoiceChecked(true);
+
                 if (jsonData.postingBarriers.other) {
                   setOtherBarrierChecked(true);
                   // Handle both formats of other barrier
-                  if (typeof jsonData.postingBarriers.other === 'string') {
+                  if (typeof jsonData.postingBarriers.other === "string") {
                     setOtherBarrier(jsonData.postingBarriers.other);
                   } else if (jsonData.postingBarriers.otherText) {
                     setOtherBarrier(jsonData.postingBarriers.otherText);
                   }
                 }
               }
-              
+
               // Step 5: LinkedIn connections percentage
               if (jsonData.linkedinConnectionsPercentage !== undefined) {
-                console.log("Setting LinkedIn connections percentage:", jsonData.linkedinConnectionsPercentage);
-                setIndustryConnectionsPercentage(jsonData.linkedinConnectionsPercentage);
+                console.log(
+                  "Setting LinkedIn connections percentage:",
+                  jsonData.linkedinConnectionsPercentage,
+                );
+                setIndustryConnectionsPercentage(
+                  jsonData.linkedinConnectionsPercentage,
+                );
               }
-              
+
               // Step 5: LinkedIn activity - detailed logging for troubleshooting
               if (jsonData.linkedinActivity) {
-                console.log("Loading LinkedIn activity from JSON:", 
-                  Object.keys(jsonData.linkedinActivity).join(", "));
-                
+                console.log(
+                  "Loading LinkedIn activity from JSON:",
+                  Object.keys(jsonData.linkedinActivity).join(", "),
+                );
+
                 if (jsonData.linkedinActivity.readNewsfeed) {
                   console.log("Setting read newsfeed checked");
                   setReadNewsfeedChecked(true);
@@ -1332,23 +1528,25 @@ export default function QuestionnairePage() {
                 // Fields like posted612Times, posted12PlusMonthly, postedRegularly may exist
                 // in the saved data but we don't have state variables for them in this version
               }
-              
+
               // Step 5: Other fields
               if (jsonData.careerGoals) {
                 console.log("Setting career goals");
                 setCareerGoals(jsonData.careerGoals);
               }
-              
+
               if (jsonData.brandOptimizationGoals) {
                 console.log("Setting brand optimization goals");
                 setBrandOptimizationGoals(jsonData.brandOptimizationGoals);
               }
-              
+
               // Step 5: Personality assessments
               if (jsonData.personalityAssessments) {
-                console.log("Loading personality assessments from JSON:", 
-                  Object.keys(jsonData.personalityAssessments).join(", "));
-                
+                console.log(
+                  "Loading personality assessments from JSON:",
+                  Object.keys(jsonData.personalityAssessments).join(", "),
+                );
+
                 if (jsonData.personalityAssessments.mbti) {
                   console.log("Setting MBTI checked");
                   setMbtiChecked(true);
@@ -1369,23 +1567,29 @@ export default function QuestionnairePage() {
                   console.log("Setting 360* checked");
                   setThreeSixtyChecked(true);
                 }
-                
+
                 if (jsonData.personalityAssessments.other) {
                   setOtherAssessmentChecked(true);
                   // Handle both formats of other assessment
-                  if (typeof jsonData.personalityAssessments.other === 'string') {
+                  if (
+                    typeof jsonData.personalityAssessments.other === "string"
+                  ) {
                     setOtherAssessment(jsonData.personalityAssessments.other);
                   } else if (jsonData.personalityAssessments.otherText) {
-                    setOtherAssessment(jsonData.personalityAssessments.otherText);
+                    setOtherAssessment(
+                      jsonData.personalityAssessments.otherText,
+                    );
                   }
                 }
               }
-              
+
               // Step 5: Update time
               if (jsonData.updateTime) {
-                console.log("Loading update time from JSON:", 
-                  Object.keys(jsonData.updateTime).join(", "));
-                
+                console.log(
+                  "Loading update time from JSON:",
+                  Object.keys(jsonData.updateTime).join(", "),
+                );
+
                 if (jsonData.updateTime.lastWeek) {
                   console.log("Setting last week checked");
                   setLastWeekChecked(true);
@@ -1414,11 +1618,11 @@ export default function QuestionnairePage() {
                   console.log("Setting never updated checked");
                   setNeverUpdatedChecked(true);
                 }
-                
+
                 if (jsonData.updateTime.other) {
                   setOtherUpdateTimeChecked(true);
                   // Handle both formats of other update time
-                  if (typeof jsonData.updateTime.other === 'string') {
+                  if (typeof jsonData.updateTime.other === "string") {
                     setOtherUpdateTime(jsonData.updateTime.other);
                   } else if (jsonData.updateTime.otherText) {
                     setOtherUpdateTime(jsonData.updateTime.otherText);
@@ -1437,7 +1641,7 @@ export default function QuestionnairePage() {
       } catch (err) {
         console.error("Error in JSON parsing process:", err);
       }
-        
+
       // Parse societal interests from text format if JSON data wasn't already loaded
       if (
         q.aspirations &&
@@ -1445,7 +1649,9 @@ export default function QuestionnairePage() {
         // Only try this if we don't have crossCuttingInterests data from JSON parse already
         !(jsonData && jsonData.crossCuttingInterests)
       ) {
-        console.log("Attempting to load cross-cutting interests from text format");
+        console.log(
+          "Attempting to load cross-cutting interests from text format",
+        );
         const societalInterestsText = q.aspirations
           .split("Cross-cutting & societal interests:")[1]
           ?.trim()
@@ -1629,7 +1835,7 @@ export default function QuestionnairePage() {
       }
 
       // Json data was fully processed above
-      
+
       // Try to parse personality assessments from multiple locations
       // First try from aspirations field (for backward compatibility)
       if (q.aspirations && q.aspirations.includes("Personality assessments:")) {
@@ -1637,10 +1843,13 @@ export default function QuestionnairePage() {
           .split("Personality assessments:")[1]
           ?.trim()
           .split("\n")[0];
-        
+
         if (assessmentsText) {
-          console.log("Loading personality assessments from aspirations:", assessmentsText);
-          
+          console.log(
+            "Loading personality assessments from aspirations:",
+            assessmentsText,
+          );
+
           setMbtiChecked(assessmentsText.includes("MBTI"));
           setStrengthsFinderChecked(
             assessmentsText.includes("Strengths Finder"),
@@ -1658,22 +1867,25 @@ export default function QuestionnairePage() {
           }
         }
       }
-      
+
       // Special handling for Step 5 assessments - extract directly from questionnaire text
       // This ensures the assessments are always loaded correctly regardless of how they're stored
       if (q.aspirations) {
-        const lines = q.aspirations.split('\n');
-        lines.forEach(line => {
-          if (line.startsWith('Personality assessments:')) {
-            const assessmentInfo = line.substring('Personality assessments:'.length).trim();
+        const lines = q.aspirations.split("\n");
+        lines.forEach((line) => {
+          if (line.startsWith("Personality assessments:")) {
+            const assessmentInfo = line
+              .substring("Personality assessments:".length)
+              .trim();
             console.log("Found personality assessment line:", assessmentInfo);
-            
+
             if (assessmentInfo.includes("MBTI")) setMbtiChecked(true);
-            if (assessmentInfo.includes("Strengths Finder")) setStrengthsFinderChecked(true);
+            if (assessmentInfo.includes("Strengths Finder"))
+              setStrengthsFinderChecked(true);
             if (assessmentInfo.includes("VIA")) setViaChecked(true);
             if (assessmentInfo.includes("Enneagram")) setEnneagramChecked(true);
             if (assessmentInfo.includes("360*")) setThreeSixtyChecked(true);
-            
+
             if (assessmentInfo.includes("Other:")) {
               setOtherAssessmentChecked(true);
               const otherMatch = assessmentInfo.match(/Other: (.*?)(?:,|$)/);
@@ -1753,7 +1965,11 @@ export default function QuestionnairePage() {
         }
       }
     }
-  }, [userProfile, saveAsDraftMutation.isPending, questionnaireMutation.isPending]);
+  }, [
+    userProfile,
+    saveAsDraftMutation.isPending,
+    questionnaireMutation.isPending,
+  ]);
 
   // Validate current step fields
   const validateCurrentStep = () => {
@@ -1903,7 +2119,7 @@ export default function QuestionnairePage() {
         // else if (!hasSocietalInterestSelected) {
         //   missingField = "Please select at least one societal interest";
         // }
-      else if (!hasContentFormatSelected) {
+        else if (!hasContentFormatSelected) {
           missingField =
             "Please select at least one content format that feels natural to you";
         } else if (!hasPostingBarrierSelected) {
@@ -1946,7 +2162,7 @@ export default function QuestionnairePage() {
   // Function to prepare form data for saving
   const prepareFormData = () => {
     console.log("Preparing form data for step:", currentStep);
-    
+
     // Prepare social media data
     const socialMediaOptions = [];
     if (twitterChecked) socialMediaOptions.push("Twitter/X");
@@ -1963,7 +2179,7 @@ export default function QuestionnairePage() {
       goals.trim() !== ""
         ? `${goals}\n\nSelected platforms: ${socialMediaOptions.join(", ")}`
         : `Selected platforms: ${socialMediaOptions.join(", ")}`;
-        
+
     // Prepare branding challenges data
     const brandingChallenges = [];
     if (consistentNarrativeChecked)
@@ -1981,43 +2197,57 @@ export default function QuestionnairePage() {
     if (engagingNetworkChecked)
       brandingChallenges.push("Engaging with my professional network");
     if (industryEventsChecked)
-      brandingChallenges.push("Participating in industry discussions and events");
+      brandingChallenges.push(
+        "Participating in industry discussions and events",
+      );
     if (otherBrandingChecked && otherBrandingChallenge.trim() !== "") {
       brandingChallenges.push(`Other: ${otherBrandingChallenge.trim()}`);
     }
-    
+
     // Prepare content format preferences
     const contentFormatPreferences = [];
-    if (sharingNewsChecked) contentFormatPreferences.push("Sharing industry news with your perspective");
-    if (writingExperiencesChecked) contentFormatPreferences.push("Writing about your learned experiences");
-    if (analyzingTrendsChecked) contentFormatPreferences.push("Analyzing trends");
-    if (commentingPostsChecked) contentFormatPreferences.push("Commenting on others' posts");
-    if (howToContentChecked) contentFormatPreferences.push("Creating how-to content");
-    if (eventTakeawaysChecked) contentFormatPreferences.push("Sharing event takeaways");
-    if (personalAnecdoteChecked) contentFormatPreferences.push("Personal anecdote");
-    if (digitalCommunitiesChecked) contentFormatPreferences.push("Digital communities");
+    if (sharingNewsChecked)
+      contentFormatPreferences.push(
+        "Sharing industry news with your perspective",
+      );
+    if (writingExperiencesChecked)
+      contentFormatPreferences.push("Writing about your learned experiences");
+    if (analyzingTrendsChecked)
+      contentFormatPreferences.push("Analyzing trends");
+    if (commentingPostsChecked)
+      contentFormatPreferences.push("Commenting on others' posts");
+    if (howToContentChecked)
+      contentFormatPreferences.push("Creating how-to content");
+    if (eventTakeawaysChecked)
+      contentFormatPreferences.push("Sharing event takeaways");
+    if (personalAnecdoteChecked)
+      contentFormatPreferences.push("Personal anecdote");
+    if (digitalCommunitiesChecked)
+      contentFormatPreferences.push("Digital communities");
     if (otherContentFormatChecked && otherContentFormat.trim() !== "") {
       contentFormatPreferences.push(`Other: ${otherContentFormat.trim()}`);
     }
-    
+
     // Prepare posting barriers
     const postingBarriers = [];
     if (unsureWhatToSayChecked) postingBarriers.push("Unsure what to say");
     if (fearOfJudgmentChecked) postingBarriers.push("Fear of judgment");
     if (timeManagementChecked) postingBarriers.push("Time management");
-    if (dontKnowHowToStartChecked) postingBarriers.push("Don't know how to start");
-    if (unclearProfessionalVoiceChecked) postingBarriers.push("Unclear on professional voice");
+    if (dontKnowHowToStartChecked)
+      postingBarriers.push("Don't know how to start");
+    if (unclearProfessionalVoiceChecked)
+      postingBarriers.push("Unclear on professional voice");
     if (otherBarrierChecked && otherBarrier.trim() !== "") {
       postingBarriers.push(`Other: ${otherBarrier.trim()}`);
     }
-    
+
     // Format branding details
     const brandingDetails = formatBrandingDetails(
       brandingChallenges,
       contentFormatPreferences,
-      postingBarriers
+      postingBarriers,
     );
-    
+
     // Format interests data
     const industryInterests = [];
     if (consultingChecked) industryInterests.push("Consulting");
@@ -2030,40 +2260,48 @@ export default function QuestionnairePage() {
     if (manufacturingChecked) industryInterests.push("Manufacturing");
     if (socialImpactChecked) industryInterests.push("Social Impact / ESG");
     if (technologyChecked) industryInterests.push("Technology");
-    
+
     const societalInterests = [];
-    if (climateChecked) societalInterests.push("Climate Change & Sustainability");
-    if (consumerBehaviorChecked) societalInterests.push("Consumer Behavior & Culture");
+    if (climateChecked)
+      societalInterests.push("Climate Change & Sustainability");
+    if (consumerBehaviorChecked)
+      societalInterests.push("Consumer Behavior & Culture");
     if (crimeJusticeChecked) societalInterests.push("Crime & Justice");
-    if (digitalTransformationAIChecked) societalInterests.push("Digital Transformation/AI");
-    if (educationLearningChecked) societalInterests.push("Education & Learning");
+    if (digitalTransformationAIChecked)
+      societalInterests.push("Digital Transformation/AI");
+    if (educationLearningChecked)
+      societalInterests.push("Education & Learning");
     if (emergingMarketsChecked) societalInterests.push("Emerging Markets");
-    if (entertainmentArtsChecked) societalInterests.push("Entertainment & Arts");
-    if (financialInnovationChecked) societalInterests.push("Financial Innovation");
+    if (entertainmentArtsChecked)
+      societalInterests.push("Entertainment & Arts");
+    if (financialInnovationChecked)
+      societalInterests.push("Financial Innovation");
     if (futureOfWorkChecked) societalInterests.push("Future of Work");
     if (globalEconomyChecked) societalInterests.push("Global Economy");
-    if (geopoliticsChecked) societalInterests.push("Geopolitics & International Relations");
+    if (geopoliticsChecked)
+      societalInterests.push("Geopolitics & International Relations");
     if (healthWellnessChecked) societalInterests.push("Health & Wellness");
-    if (healthcareInnovationChecked) societalInterests.push("Healthcare Innovation");
+    if (healthcareInnovationChecked)
+      societalInterests.push("Healthcare Innovation");
     if (socialImpactDEIChecked) societalInterests.push("Social Impact & DEI");
     if (sportsRecreationChecked) societalInterests.push("Sports & Recreation");
     if (travelTourismChecked) societalInterests.push("Travel & Tourism");
     if (urbanDevelopmentChecked) societalInterests.push("Urban Development");
     if (usPoliticsChecked) societalInterests.push("US Politics & Governance");
-    
+
     // Format interests as JSON in a structured object format that matches how we load the data
     const interestsData = {
       industryInterests: {
         consulting: consultingChecked,
         consumerRetail: consumerRetailChecked,
         financialServices: financialServicesChecked,
-        globalMarkets: globalMarketsChecked, 
+        globalMarkets: globalMarketsChecked,
         government: governmentChecked,
         healthcare: healthcareChecked,
         innovation: innovationChecked,
         manufacturing: manufacturingChecked,
         socialImpact: socialImpactChecked,
-        technology: technologyChecked
+        technology: technologyChecked,
       },
       personalityAssessments: {
         mbti: mbtiChecked,
@@ -2072,7 +2310,7 @@ export default function QuestionnairePage() {
         enneagram: enneagramChecked,
         threeSixty: threeSixtyChecked,
         other: otherAssessmentChecked ? otherAssessment : null,
-        otherText: otherAssessmentChecked ? otherAssessment : null
+        otherText: otherAssessmentChecked ? otherAssessment : null,
       },
       societalInterests: {
         climate: climateChecked,
@@ -2092,7 +2330,7 @@ export default function QuestionnairePage() {
         sportsRecreation: sportsRecreationChecked,
         travelTourism: travelTourismChecked,
         urbanDevelopment: urbanDevelopmentChecked,
-        usPolitics: usPoliticsChecked
+        usPolitics: usPoliticsChecked,
       },
       technologyDigitalMedia: {
         // AI/ML Subcategories
@@ -2105,42 +2343,42 @@ export default function QuestionnairePage() {
         aiRobotics: aiRoboticsChecked,
         aiScientific: aiScientificChecked,
         aiLearning: aiLearningChecked,
-        
+
         // Consumer Tech Subcategories
         consumerDevices: consumerDevicesChecked,
         consumerGaming: consumerGamingChecked,
         consumerMobile: consumerMobileChecked,
         consumerSmartHome: consumerSmartHomeChecked,
-        
+
         // Cybersecurity Subcategories
         cybersecuritySolutions: cybersecuritySolutionsChecked,
         dataPrivacy: dataPrivacyChecked,
         regulatoryCompliance: regulatoryComplianceChecked,
         riskManagement: riskManagementChecked,
-        
+
         // Infrastructure Subcategories
         cloudComputing: cloudComputingChecked,
         dataCenters: dataCentersChecked,
         networks: networksChecked,
         web3Blockchain: web3BlockchainChecked,
-        
+
         // Media & Marketing Subcategories
         contentDistribution: contentDistributionChecked,
         creatorEconomy: creatorEconomyChecked,
         digitalMarketing: digitalMarketingChecked,
         socialMediaPlatforms: socialMediaPlatformsChecked,
-        
+
         // Emerging Tech Subcategories
         arVrXr: arVrXrChecked,
         biotechHealth: biotechHealthChecked,
         quantumComputing: quantumComputingChecked,
         emergingRobotics: emergingRoboticsChecked,
-        
+
         // Enterprise Subcategories
         businessApps: businessAppsChecked,
         enterpriseDigitalTransformation: enterpriseDigitalTransformationChecked,
         integrationApis: integrationApisChecked,
-        saasEnterprise: saasEnterpriseChecked
+        saasEnterprise: saasEnterpriseChecked,
       },
       contentFormatPreferences: {
         sharingNews: sharingNewsChecked,
@@ -2152,7 +2390,7 @@ export default function QuestionnairePage() {
         personalAnecdote: personalAnecdoteChecked,
         digitalCommunities: digitalCommunitiesChecked,
         other: otherContentFormatChecked ? otherContentFormat : null,
-        otherText: otherContentFormatChecked ? otherContentFormat : null
+        otherText: otherContentFormatChecked ? otherContentFormat : null,
       },
       postingBarriers: {
         unsureWhatToSay: unsureWhatToSayChecked,
@@ -2161,18 +2399,21 @@ export default function QuestionnairePage() {
         dontKnowHowToStart: dontKnowHowToStartChecked,
         unclearProfessionalVoice: unclearProfessionalVoiceChecked,
         other: otherBarrierChecked ? otherBarrier : null,
-        otherText: otherBarrierChecked ? otherBarrier : null
+        otherText: otherBarrierChecked ? otherBarrier : null,
       },
       // Also store the arrays for backward compatibility
-      industryInterestsArray: industryInterests.length > 0 ? industryInterests : [],
-      societalInterestsArray: societalInterests.length > 0 ? societalInterests : [],
-      contentFormatPreferencesArray: contentFormatPreferences.length > 0 ? contentFormatPreferences : [],
-      postingBarriersArray: postingBarriers.length > 0 ? postingBarriers : []
+      industryInterestsArray:
+        industryInterests.length > 0 ? industryInterests : [],
+      societalInterestsArray:
+        societalInterests.length > 0 ? societalInterests : [],
+      contentFormatPreferencesArray:
+        contentFormatPreferences.length > 0 ? contentFormatPreferences : [],
+      postingBarriersArray: postingBarriers.length > 0 ? postingBarriers : [],
     };
-    
+
     // Create form data - conditionally include fields based on the current step
     // to prevent overwriting values from previous steps
-    
+
     // Define base form data with all possible fields
     const formData: Partial<{
       industry: string;
@@ -2190,7 +2431,7 @@ export default function QuestionnairePage() {
 
     // Only include fields relevant to the current step or if we're saving the entire form
     // This prevents overwriting fields from previous steps with empty values
-    
+
     // Step 1 fields - only include when on step 1 or when these fields have values
     if (currentStep === 1 || industry.trim() !== "") {
       formData.industry = industry; // Current/Prior industry
@@ -2200,12 +2441,12 @@ export default function QuestionnairePage() {
       formData.industry = userProfile.questionnaire.industry || "";
       formData.timeframe = userProfile.questionnaire.timeframe || "";
     }
-    
+
     // Step 2 fields - only include when on step 2 or when these fields have values
     if (currentStep === 2 || background.trim() !== "") {
       formData.background = background; // LinkedIn URL
       formData.goals = socialMediaDetails; // Social media details
-      
+
       // Always include the LinkedIn activity, profile updates, and brand positioning in step 2
       // These are stored in the aspirations field but need to be included in step 2
       // Format these LinkedIn details if they're not already formatted
@@ -2216,7 +2457,7 @@ export default function QuestionnairePage() {
       formData.background = userProfile.questionnaire.background || "";
       formData.goals = userProfile.questionnaire.goals || "";
     }
-    
+
     // Step 3 fields - only include when on step 3 or when these fields have values
     if (currentStep === 3 || brandingChallenges.length > 0) {
       formData.aspirations = brandingDetails; // Branding challenges and all other data
@@ -2224,7 +2465,7 @@ export default function QuestionnairePage() {
       // Preserve the existing aspirations value from the user profile
       formData.aspirations = userProfile.questionnaire.aspirations || "";
     }
-    
+
     // Always include interests data for all steps to ensure it's preserved
     // Create a complete interests data object that includes everything
     const completeInterestsData = {
@@ -2241,35 +2482,38 @@ export default function QuestionnairePage() {
         enneagram: enneagramChecked,
         threeSixty: threeSixtyChecked,
         other: otherAssessmentChecked ? otherAssessment : null,
-        otherText: otherAssessmentChecked ? otherAssessment : null
+        otherText: otherAssessmentChecked ? otherAssessment : null,
       },
       // Keep arrays for backward compatibility
       industryInterestsArray: interestsData.industryInterestsArray || [],
       societalInterestsArray: interestsData.societalInterestsArray || [],
-      contentFormatPreferencesArray: interestsData.contentFormatPreferencesArray || [],
-      postingBarriersArray: interestsData.postingBarriersArray || []
+      contentFormatPreferencesArray:
+        interestsData.contentFormatPreferencesArray || [],
+      postingBarriersArray: interestsData.postingBarriersArray || [],
     };
-    
+
     // Always include the interests data to ensure it's preserved across all steps
     formData.interests = JSON.stringify(completeInterestsData);
-    
-    
+
     return formData;
   };
-  
+
   // Auto-save the questionnaire as draft
   const autoSaveQuestionnaire = async (): Promise<boolean> => {
     if (!validateCurrentStep()) return false;
-    
+
     try {
       // Show saving indicator
       setSaveStatus("saving");
-      
+
       // Get the form data
       const formData = prepareFormData();
-      
+
       // Check if the questionnaire is already published (not a draft)
-      if (userProfile?.questionnaire && userProfile.questionnaire.isDraft === false) {
+      if (
+        userProfile?.questionnaire &&
+        userProfile.questionnaire.isDraft === false
+      ) {
         // For published questionnaires, we don't allow auto-saving
         // Just simulate a successful save
         setSaveStatus("saved");
@@ -2281,21 +2525,21 @@ export default function QuestionnairePage() {
         // For drafts or new questionnaires, save as draft
         // Always save as draft during auto-save
         formData.isDraft = true;
-        
+
         // Save the questionnaire
         await saveAsDraftMutation.mutateAsync(formData);
-        
+
         // Update save status to saved
         setSaveStatus("saved");
-        
+
         // Reset status after 2 seconds
         setTimeout(() => {
           setSaveStatus("idle");
         }, 2000);
-        
+
         // Invalidate the user profile query to refresh data
         queryClient.invalidateQueries({ queryKey: ["/api/user/profile"] });
-        
+
         return true;
       }
     } catch (error) {
@@ -2303,7 +2547,8 @@ export default function QuestionnairePage() {
       setSaveStatus("idle");
       toast({
         title: "Auto-save failed",
-        description: "Unable to save your progress automatically. Please try manually saving as draft.",
+        description:
+          "Unable to save your progress automatically. Please try manually saving as draft.",
         variant: "destructive",
       });
       return false;
@@ -2312,14 +2557,35 @@ export default function QuestionnairePage() {
 
   // Helper function to scroll to top of the page
   const scrollToTop = () => {
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  const navigateToStep = async (index: number) => {
+    if (validateCurrentStep()) {
+      // Auto-save the current step data
+      const saveSuccessful = await autoSaveQuestionnaire();
+
+      if (saveSuccessful) {
+        // Only proceed to next step if auto-save was successful
+        setCurrentStep(index + 1);
+        // Reset scroll position when moving to next step
+        scrollToTop();
+      }
+    } else if (!validateCurrentStep()) {
+      toast({
+        title: "Please complete all fields",
+        description:
+          "All fields are required before proceeding to the next step.",
+        variant: "destructive",
+      });
+    }
   };
 
   const nextStep = async () => {
     if (validateCurrentStep() && currentStep < totalSteps) {
       // Auto-save the current step data
       const saveSuccessful = await autoSaveQuestionnaire();
-      
+
       if (saveSuccessful) {
         // Only proceed to next step if auto-save was successful
         setCurrentStep(currentStep + 1);
@@ -2408,90 +2674,119 @@ export default function QuestionnairePage() {
   const formatBrandingDetails = (
     brandingChallenges: string[],
     contentFormatPreferences: string[] = [],
-    postingBarriers: string[] = []
+    postingBarriers: string[] = [],
   ) => {
     // Start with existing aspirations if any
-    let brandingDetails = aspirations.trim() !== ""
-      ? `${aspirations}\n\nBranding challenges: ${brandingChallenges.join(", ")}`
-      : `Branding challenges: ${brandingChallenges.join(", ")}`;
-    
+    let brandingDetails =
+      aspirations.trim() !== ""
+        ? `${aspirations}\n\nBranding challenges: ${brandingChallenges.join(", ")}`
+        : `Branding challenges: ${brandingChallenges.join(", ")}`;
+
     // Add content format preferences
     if (contentFormatPreferences.length > 0) {
       brandingDetails += `\n\nContent format preferences: ${contentFormatPreferences.join(", ")}`;
     }
-    
+
     // Add posting barriers
     if (postingBarriers.length > 0) {
       brandingDetails += `\n\nPosting barriers: ${postingBarriers.join(", ")}`;
     }
-    
+
     // Add published content
     const publishedContent: string[] = [];
     if (linkedInPostsChecked) publishedContent.push("LinkedIn posts");
     if (blogArticlesChecked) publishedContent.push("Blog articles");
-    if (industryPresentationsChecked) publishedContent.push("Industry presentations");
+    if (industryPresentationsChecked)
+      publishedContent.push("Industry presentations");
     if (academicPapersChecked) publishedContent.push("Academic papers");
-    if (neverPublishedChecked) publishedContent.push("Never published professional content");
+    if (neverPublishedChecked)
+      publishedContent.push("Never published professional content");
     if (otherPublishedContentChecked && otherPublishedContent.trim() !== "") {
       publishedContent.push(`Other: ${otherPublishedContent.trim()}`);
     }
     brandingDetails += `\n\nPublished content: ${publishedContent.length > 0 ? publishedContent.join(", ") : "None"}`;
-    
+
     // Add LinkedIn profile update timing
     const profileUpdateTiming: string[] = [];
     if (lastWeekChecked) profileUpdateTiming.push("Within the last week");
     if (lastMonthChecked) profileUpdateTiming.push("Within the last month");
-    if (businessSchoolChecked) profileUpdateTiming.push("For / during business school");
-    if (careerCoachChecked) profileUpdateTiming.push("After I spoke with a career coach");
+    if (businessSchoolChecked)
+      profileUpdateTiming.push("For / during business school");
+    if (careerCoachChecked)
+      profileUpdateTiming.push("After I spoke with a career coach");
     if (jobChangeChecked) profileUpdateTiming.push("When I last changed jobs");
     if (cantRememberChecked) profileUpdateTiming.push("I can't remember");
-    if (neverUpdatedChecked) profileUpdateTiming.push("I've never really updated it beyond creating the profile");
+    if (neverUpdatedChecked)
+      profileUpdateTiming.push(
+        "I've never really updated it beyond creating the profile",
+      );
     if (otherUpdateTimeChecked && otherUpdateTime.trim() !== "") {
       profileUpdateTiming.push(`Other: ${otherUpdateTime.trim()}`);
     }
     brandingDetails += `\n\nLinkedIn profile update timing: ${profileUpdateTiming.length > 0 ? profileUpdateTiming.join(", ") : "Not specified"}`;
-    
+
     // Add LinkedIn activity data
     const linkedInActivity: string[] = [];
     if (readNewsfeedChecked) linkedInActivity.push("Read your Newsfeed");
-    if (acceptedConnectionsChecked) linkedInActivity.push("Accepted Connections");
+    if (acceptedConnectionsChecked)
+      linkedInActivity.push("Accepted Connections");
     if (notActiveChecked) linkedInActivity.push("Not Active in the Last Month");
-    if (postedNeverChecked) linkedInActivity.push("Posted Original Content - Never");
-    if (posted12TimesChecked) linkedInActivity.push("Posted Original Content - 1-2 times");
-    if (posted35TimesChecked) linkedInActivity.push("Posted Original Content - 3-5 times");
-    if (posted6PlusTimesChecked) linkedInActivity.push("Posted Original Content - 6+ times");
-    if (sharedNeverChecked) linkedInActivity.push("Shared Others' Posts - Never");
-    if (shared12TimesChecked) linkedInActivity.push("Shared Others' Posts - 1-2 times");
-    if (shared35TimesChecked) linkedInActivity.push("Shared Others' Posts - 3-5 times");
-    if (shared6PlusTimesChecked) linkedInActivity.push("Shared Others' Posts - 6+ times");
-    if (commentedNeverChecked) linkedInActivity.push("Commented on Posts - Never");
-    if (commented12TimesPerMonthChecked) linkedInActivity.push("Commented on Posts - 1-2 times per month");
-    if (commented12TimesPerWeekChecked) linkedInActivity.push("Commented on Posts - 1-2 times per week");
-    if (commented3PlusTimesPerWeekChecked) linkedInActivity.push("Commented on Posts - 3+ times per week");
-    if (reactedNeverChecked) linkedInActivity.push("Reacted to Posts (likes, etc.) - Never");
-    if (reactedFewTimesMonthChecked) linkedInActivity.push("Reacted to Posts (likes, etc.) - A few times a month");
-    if (reactedFewTimesWeekChecked) linkedInActivity.push("Reacted to Posts (likes, etc.) - A few times a week");
-    if (reactedDailyChecked) linkedInActivity.push("Reacted to Posts (likes, etc.) - Daily");
-    
+    if (postedNeverChecked)
+      linkedInActivity.push("Posted Original Content - Never");
+    if (posted12TimesChecked)
+      linkedInActivity.push("Posted Original Content - 1-2 times");
+    if (posted35TimesChecked)
+      linkedInActivity.push("Posted Original Content - 3-5 times");
+    if (posted6PlusTimesChecked)
+      linkedInActivity.push("Posted Original Content - 6+ times");
+    if (sharedNeverChecked)
+      linkedInActivity.push("Shared Others' Posts - Never");
+    if (shared12TimesChecked)
+      linkedInActivity.push("Shared Others' Posts - 1-2 times");
+    if (shared35TimesChecked)
+      linkedInActivity.push("Shared Others' Posts - 3-5 times");
+    if (shared6PlusTimesChecked)
+      linkedInActivity.push("Shared Others' Posts - 6+ times");
+    if (commentedNeverChecked)
+      linkedInActivity.push("Commented on Posts - Never");
+    if (commented12TimesPerMonthChecked)
+      linkedInActivity.push("Commented on Posts - 1-2 times per month");
+    if (commented12TimesPerWeekChecked)
+      linkedInActivity.push("Commented on Posts - 1-2 times per week");
+    if (commented3PlusTimesPerWeekChecked)
+      linkedInActivity.push("Commented on Posts - 3+ times per week");
+    if (reactedNeverChecked)
+      linkedInActivity.push("Reacted to Posts (likes, etc.) - Never");
+    if (reactedFewTimesMonthChecked)
+      linkedInActivity.push(
+        "Reacted to Posts (likes, etc.) - A few times a month",
+      );
+    if (reactedFewTimesWeekChecked)
+      linkedInActivity.push(
+        "Reacted to Posts (likes, etc.) - A few times a week",
+      );
+    if (reactedDailyChecked)
+      linkedInActivity.push("Reacted to Posts (likes, etc.) - Daily");
+
     brandingDetails += `\n\nLinkedIn activity: ${linkedInActivity.length > 0 ? linkedInActivity.join(", ") : "Not specified"}`;
-    
+
     // Add Career goals
     brandingDetails += `\n\nCareer goals: ${careerGoals.trim() !== "" ? careerGoals : "Not specified"}`;
-    
+
     // Add Professional areas
     brandingDetails += `\n\nProfessional areas for thought leadership: ${professionalAreas.trim() !== "" ? professionalAreas : "Not specified"}`;
-    
+
     // Add Additional info
     brandingDetails += `\n\nAdditional professional journey information: ${additionalInfo.trim() !== "" ? additionalInfo : "Not specified"}`;
-    
+
     // Add industry connections percentage
     brandingDetails += `\n\nLinkedIn connections percentage: ${industryConnectionsPercentage || "Not specified"}`;
-    
+
     // Add other ratings and fields
     brandingDetails += `\n\nBrand positioning rating: ${brandPositioningRating !== null ? brandPositioningRating : "Not specified"}`;
     brandingDetails += `\n\nContent creation comfort: ${contentCreationComfort !== null ? contentCreationComfort : "Not specified"}`;
     brandingDetails += `\n\nBrand optimization goals: ${brandOptimizationGoals.trim() !== "" ? brandOptimizationGoals : "Not specified"}`;
-    
+
     return brandingDetails;
   };
 
@@ -2499,30 +2794,30 @@ export default function QuestionnairePage() {
     try {
       // Use the prepareFormData function to get the form data
       const formData = prepareFormData();
-      
+
       setSaveStatus("saving");
       await saveAsDraftMutation.mutateAsync(formData);
-      
+
       // Invalidate and immediately refetch the user profile query to refresh data
       await queryClient.invalidateQueries({ queryKey: ["/api/user/profile"] });
-      
+
       // Force an immediate refetch of the data before navigating
       await queryClient.refetchQueries({
         queryKey: ["/api/user/profile"],
-        type: 'active',
-        exact: true
+        type: "active",
+        exact: true,
       });
-      
+
       setSaveStatus("saved");
-      
+
       toast({
         title: "Draft Saved",
         description: "Your questionnaire draft has been saved successfully.",
       });
-      
+
       // Reset form state
       setSaveStatus("idle");
-      
+
       // Redirect to home page after saving draft with replace to clear navigation history
       navigate("/", { replace: true });
     } catch (error) {
@@ -2535,14 +2830,14 @@ export default function QuestionnairePage() {
       });
     }
   };
-  
+
   const handleSubmit = async () => {
     if (validateCurrentStep()) {
       // First upload any assessment files
       if (files.length > 0) {
         await uploadAssessmentFiles();
       }
-      
+
       // Show saving indicator
       setSaveStatus("saving");
 
@@ -2885,9 +3180,12 @@ export default function QuestionnairePage() {
         assessments.push(`Other: ${otherAssessment.trim()}`);
       }
       brandingDetails += `\n\nPersonality assessments: ${assessments.length > 0 ? assessments.join(", ") : "None"}`;
-      
+
       // Log to debug what we're saving
-      console.log("Saving personality assessments in aspirations:", assessments);
+      console.log(
+        "Saving personality assessments in aspirations:",
+        assessments,
+      );
 
       // Add career goals
       brandingDetails += `\n\nCareer goals: ${careerGoals.trim() !== "" ? careerGoals : "Not specified"}`;
@@ -3090,37 +3388,37 @@ export default function QuestionnairePage() {
 
       // Show saving indicator
       setSaveStatus("saving");
-      
+
       // Use the prepareFormData function to get the form data without duplicating all that logic
       const autoFormData = prepareFormData();
-      
+
       // Mark as not a draft when submitting the final version
       autoFormData.isDraft = false;
-      
+
       // Submit the questionnaire
       await questionnaireMutation.mutateAsync(autoFormData);
-      
+
       // Invalidate and immediately refetch the user profile query to refresh data
       await queryClient.invalidateQueries({ queryKey: ["/api/user/profile"] });
-      
+
       // Force an immediate refetch of the data before navigating
-      await queryClient.refetchQueries({ 
+      await queryClient.refetchQueries({
         queryKey: ["/api/user/profile"],
-        type: 'active',
-        exact: true 
+        type: "active",
+        exact: true,
       });
-      
+
       // Update save status
       setSaveStatus("saved");
-      
+
       toast({
-        title: "Questionnaire Submitted", 
+        title: "Questionnaire Submitted",
         description: "Your questionnaire has been successfully submitted.",
       });
-      
+
       // Reset form state
       setSaveStatus("idle");
-      
+
       // Redirect to home page with replace to clear navigation history
       navigate("/", { replace: true });
     } else {
@@ -3736,7 +4034,7 @@ export default function QuestionnairePage() {
                 <p className="text-sm font-medium text-gray-600 mt-5 mb-2">
                   General Activities
                 </p>
-                
+
                 <div className="flex items-center space-x-2">
                   <Checkbox
                     id="readNewsfeed"
@@ -4179,7 +4477,8 @@ export default function QuestionnairePage() {
 
               <div className="mb-6">
                 <Label className="text-gray-700 font-medium block mb-3">
-                  <strong>Industry Interests</strong> <span className="text-red-500">*</span>
+                  <strong>Industry Interests</strong>{" "}
+                  <span className="text-red-500">*</span>
                 </Label>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                   <div className="flex items-center space-x-2">
@@ -4319,10 +4618,537 @@ export default function QuestionnairePage() {
 
               <hr className="my-6" />
 
+              {/* Technology Subcategories - Only show when Technology is checked */}
+              {technologyChecked && (
+                <div className="mb-6">
+                  <Label className="text-gray-700 font-medium block mb-3">
+                    If you selected, Technology & Digital Media, please
+                    elaborate:
+                  </Label>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    {/* AI/ML Section */}
+                    <div className="space-y-2">
+                      <p className="font-medium text-gray-700">AI / ML</p>
+                      <div className="flex items-center space-x-2">
+                        <Checkbox
+                          id="ai-consumer"
+                          checked={aiConsumerChecked}
+                          onCheckedChange={(checked) =>
+                            setAiConsumerChecked(checked === true)
+                          }
+                        />
+                        <Label htmlFor="ai-consumer" className="text-gray-700">
+                          Consumer Applications
+                        </Label>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <Checkbox
+                          id="ai-vision"
+                          checked={aiComputerVisionChecked}
+                          onCheckedChange={(checked) =>
+                            setAiComputerVisionChecked(checked === true)
+                          }
+                        />
+                        <Label htmlFor="ai-vision" className="text-gray-700">
+                          Computer Vision & Generation
+                        </Label>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <Checkbox
+                          id="ai-ethics"
+                          checked={aiEthicsChecked}
+                          onCheckedChange={(checked) =>
+                            setAiEthicsChecked(checked === true)
+                          }
+                        />
+                        <Label htmlFor="ai-ethics" className="text-gray-700">
+                          Ethics & Governance
+                        </Label>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <Checkbox
+                          id="ai-infrastructure"
+                          checked={aiInfrastructureChecked}
+                          onCheckedChange={(checked) =>
+                            setAiInfrastructureChecked(checked === true)
+                          }
+                        />
+                        <Label
+                          htmlFor="ai-infrastructure"
+                          className="text-gray-700"
+                        >
+                          Infrastructure & Platforms
+                        </Label>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <Checkbox
+                          id="ai-nlp"
+                          checked={aiNlpChecked}
+                          onCheckedChange={(checked) =>
+                            setAiNlpChecked(checked === true)
+                          }
+                        />
+                        <Label htmlFor="ai-nlp" className="text-gray-700">
+                          Natural Language Processing
+                        </Label>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <Checkbox
+                          id="ai-predictive"
+                          checked={aiPredictiveChecked}
+                          onCheckedChange={(checked) =>
+                            setAiPredictiveChecked(checked === true)
+                          }
+                        />
+                        <Label
+                          htmlFor="ai-predictive"
+                          className="text-gray-700"
+                        >
+                          Predictive Analytics
+                        </Label>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <Checkbox
+                          id="ai-robotics"
+                          checked={aiRoboticsChecked}
+                          onCheckedChange={(checked) =>
+                            setAiRoboticsChecked(checked === true)
+                          }
+                        />
+                        <Label htmlFor="ai-robotics" className="text-gray-700">
+                          Robotics & Automation
+                        </Label>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <Checkbox
+                          id="ai-scientific"
+                          checked={aiScientificChecked}
+                          onCheckedChange={(checked) =>
+                            setAiScientificChecked(checked === true)
+                          }
+                        />
+                        <Label
+                          htmlFor="ai-scientific"
+                          className="text-gray-700"
+                        >
+                          Scientific Applications
+                        </Label>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <Checkbox
+                          id="ai-learning"
+                          checked={aiLearningChecked}
+                          onCheckedChange={(checked) =>
+                            setAiLearningChecked(checked === true)
+                          }
+                        />
+                        <Label htmlFor="ai-learning" className="text-gray-700">
+                          Supervised/Unsupervised Learning
+                        </Label>
+                      </div>
+                    </div>
+
+                    {/* Consumer Technology Section */}
+                    <div className="space-y-2">
+                      <p className="font-medium text-gray-700">
+                        Consumer Technology
+                      </p>
+                      <div className="flex items-center space-x-2">
+                        <Checkbox
+                          id="consumer-devices"
+                          checked={consumerDevicesChecked}
+                          onCheckedChange={(checked) =>
+                            setConsumerDevicesChecked(checked === true)
+                          }
+                        />
+                        <Label
+                          htmlFor="consumer-devices"
+                          className="text-gray-700"
+                        >
+                          Devices & Gadgets
+                        </Label>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <Checkbox
+                          id="consumer-gaming"
+                          checked={consumerGamingChecked}
+                          onCheckedChange={(checked) =>
+                            setConsumerGamingChecked(checked === true)
+                          }
+                        />
+                        <Label
+                          htmlFor="consumer-gaming"
+                          className="text-gray-700"
+                        >
+                          Gaming, Esports & Entertainment
+                        </Label>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <Checkbox
+                          id="consumer-mobile"
+                          checked={consumerMobileChecked}
+                          onCheckedChange={(checked) =>
+                            setConsumerMobileChecked(checked === true)
+                          }
+                        />
+                        <Label
+                          htmlFor="consumer-mobile"
+                          className="text-gray-700"
+                        >
+                          Mobile & Apps
+                        </Label>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <Checkbox
+                          id="consumer-smart-home"
+                          checked={consumerSmartHomeChecked}
+                          onCheckedChange={(checked) =>
+                            setConsumerSmartHomeChecked(checked === true)
+                          }
+                        />
+                        <Label
+                          htmlFor="consumer-smart-home"
+                          className="text-gray-700"
+                        >
+                          Smart Home & IoT
+                        </Label>
+                      </div>
+                    </div>
+
+                    {/* Cybersecurity & Privacy Section */}
+                    <div className="space-y-2">
+                      <p className="font-medium text-gray-700">
+                        Cybersecurity & Privacy
+                      </p>
+                      <div className="flex items-center space-x-2">
+                        <Checkbox
+                          id="cybersecurity-solutions"
+                          checked={cybersecuritySolutionsChecked}
+                          onCheckedChange={(checked) =>
+                            setCybersecuritySolutionsChecked(checked === true)
+                          }
+                        />
+                        <Label
+                          htmlFor="cybersecurity-solutions"
+                          className="text-gray-700"
+                        >
+                          Cybersecurity Solutions
+                        </Label>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <Checkbox
+                          id="data-privacy"
+                          checked={dataPrivacyChecked}
+                          onCheckedChange={(checked) =>
+                            setDataPrivacyChecked(checked === true)
+                          }
+                        />
+                        <Label htmlFor="data-privacy" className="text-gray-700">
+                          Data Privacy
+                        </Label>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <Checkbox
+                          id="regulatory-compliance"
+                          checked={regulatoryComplianceChecked}
+                          onCheckedChange={(checked) =>
+                            setRegulatoryComplianceChecked(checked === true)
+                          }
+                        />
+                        <Label
+                          htmlFor="regulatory-compliance"
+                          className="text-gray-700"
+                        >
+                          Regulatory Compliance
+                        </Label>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <Checkbox
+                          id="risk-management"
+                          checked={riskManagementChecked}
+                          onCheckedChange={(checked) =>
+                            setRiskManagementChecked(checked === true)
+                          }
+                        />
+                        <Label
+                          htmlFor="risk-management"
+                          className="text-gray-700"
+                        >
+                          Risk Management
+                        </Label>
+                      </div>
+                    </div>
+
+                    {/* Digital Infrastructure Section */}
+                    <div className="space-y-2">
+                      <p className="font-medium text-gray-700">
+                        Digital Infrastructure
+                      </p>
+                      <div className="flex items-center space-x-2">
+                        <Checkbox
+                          id="cloud-computing"
+                          checked={cloudComputingChecked}
+                          onCheckedChange={(checked) =>
+                            setCloudComputingChecked(checked === true)
+                          }
+                        />
+                        <Label
+                          htmlFor="cloud-computing"
+                          className="text-gray-700"
+                        >
+                          Cloud Computing
+                        </Label>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <Checkbox
+                          id="data-centers"
+                          checked={dataCentersChecked}
+                          onCheckedChange={(checked) =>
+                            setDataCentersChecked(checked === true)
+                          }
+                        />
+                        <Label htmlFor="data-centers" className="text-gray-700">
+                          Data Centers
+                        </Label>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <Checkbox
+                          id="networks"
+                          checked={networksChecked}
+                          onCheckedChange={(checked) =>
+                            setNetworksChecked(checked === true)
+                          }
+                        />
+                        <Label htmlFor="networks" className="text-gray-700">
+                          Networks & Connectivity
+                        </Label>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <Checkbox
+                          id="web3-blockchain"
+                          checked={web3BlockchainChecked}
+                          onCheckedChange={(checked) =>
+                            setWeb3BlockchainChecked(checked === true)
+                          }
+                        />
+                        <Label
+                          htmlFor="web3-blockchain"
+                          className="text-gray-700"
+                        >
+                          Web3 & Blockchain
+                        </Label>
+                      </div>
+                    </div>
+
+                    {/* Digital Media & Content Section */}
+                    <div className="space-y-2">
+                      <p className="font-medium text-gray-700">
+                        Digital Media & Content
+                      </p>
+                      <div className="flex items-center space-x-2">
+                        <Checkbox
+                          id="content-distribution"
+                          checked={contentDistributionChecked}
+                          onCheckedChange={(checked) =>
+                            setContentDistributionChecked(checked === true)
+                          }
+                        />
+                        <Label
+                          htmlFor="content-distribution"
+                          className="text-gray-700"
+                        >
+                          Content Distribution
+                        </Label>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <Checkbox
+                          id="creator-economy"
+                          checked={creatorEconomyChecked}
+                          onCheckedChange={(checked) =>
+                            setCreatorEconomyChecked(checked === true)
+                          }
+                        />
+                        <Label
+                          htmlFor="creator-economy"
+                          className="text-gray-700"
+                        >
+                          Creator Economy
+                        </Label>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <Checkbox
+                          id="digital-marketing"
+                          checked={digitalMarketingChecked}
+                          onCheckedChange={(checked) =>
+                            setDigitalMarketingChecked(checked === true)
+                          }
+                        />
+                        <Label
+                          htmlFor="digital-marketing"
+                          className="text-gray-700"
+                        >
+                          Digital Marketing
+                        </Label>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <Checkbox
+                          id="social-media-platforms"
+                          checked={socialMediaPlatformsChecked}
+                          onCheckedChange={(checked) =>
+                            setSocialMediaPlatformsChecked(checked === true)
+                          }
+                        />
+                        <Label
+                          htmlFor="social-media-platforms"
+                          className="text-gray-700"
+                        >
+                          Social Media & Platforms
+                        </Label>
+                      </div>
+                    </div>
+
+                    {/* Emerging Technology Section */}
+                    <div className="space-y-2">
+                      <p className="font-medium text-gray-700">
+                        Emerging Technology
+                      </p>
+                      <div className="flex items-center space-x-2">
+                        <Checkbox
+                          id="ar-vr-xr"
+                          checked={arVrXrChecked}
+                          onCheckedChange={(checked) =>
+                            setArVrXrChecked(checked === true)
+                          }
+                        />
+                        <Label htmlFor="ar-vr-xr" className="text-gray-700">
+                          AR / VR / XR
+                        </Label>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <Checkbox
+                          id="biotech-health"
+                          checked={biotechHealthChecked}
+                          onCheckedChange={(checked) =>
+                            setBiotechHealthChecked(checked === true)
+                          }
+                        />
+                        <Label
+                          htmlFor="biotech-health"
+                          className="text-gray-700"
+                        >
+                          Biotech & Digital Health
+                        </Label>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <Checkbox
+                          id="quantum-computing"
+                          checked={quantumComputingChecked}
+                          onCheckedChange={(checked) =>
+                            setQuantumComputingChecked(checked === true)
+                          }
+                        />
+                        <Label
+                          htmlFor="quantum-computing"
+                          className="text-gray-700"
+                        >
+                          Quantum Computing
+                        </Label>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <Checkbox
+                          id="emerging-robotics"
+                          checked={emergingRoboticsChecked}
+                          onCheckedChange={(checked) =>
+                            setEmergingRoboticsChecked(checked === true)
+                          }
+                        />
+                        <Label
+                          htmlFor="emerging-robotics"
+                          className="text-gray-700"
+                        >
+                          Robotics & Automation
+                        </Label>
+                      </div>
+                    </div>
+
+                    {/* Enterprise Technology Section */}
+                    <div className="space-y-2">
+                      <p className="font-medium text-gray-700">
+                        Enterprise Technology
+                      </p>
+                      <div className="flex items-center space-x-2">
+                        <Checkbox
+                          id="business-apps"
+                          checked={businessAppsChecked}
+                          onCheckedChange={(checked) =>
+                            setBusinessAppsChecked(checked === true)
+                          }
+                        />
+                        <Label
+                          htmlFor="business-apps"
+                          className="text-gray-700"
+                        >
+                          Business Applications
+                        </Label>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <Checkbox
+                          id="digital-transformation"
+                          checked={enterpriseDigitalTransformationChecked}
+                          onCheckedChange={(checked) =>
+                            setEnterpriseDigitalTransformationChecked(
+                              checked === true,
+                            )
+                          }
+                        />
+                        <Label
+                          htmlFor="digital-transformation"
+                          className="text-gray-700"
+                        >
+                          Digital Transformation
+                        </Label>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <Checkbox
+                          id="integration-apis"
+                          checked={integrationApisChecked}
+                          onCheckedChange={(checked) =>
+                            setIntegrationApisChecked(checked === true)
+                          }
+                        />
+                        <Label
+                          htmlFor="integration-apis"
+                          className="text-gray-700"
+                        >
+                          Integration & APIs
+                        </Label>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <Checkbox
+                          id="saas-enterprise"
+                          checked={saasEnterpriseChecked}
+                          onCheckedChange={(checked) =>
+                            setSaasEnterpriseChecked(checked === true)
+                          }
+                        />
+                        <Label
+                          htmlFor="saas-enterprise"
+                          className="text-gray-700"
+                        >
+                          SaaS & Enterprise Software
+                        </Label>
+                      </div>
+                    </div>
+                  </div>
+
+                  <hr className="my-6" />
+                </div>
+              )}
+
               {/* Cross-Cutting & Societal Interests Section */}
               <div className="mb-6">
                 <Label className="text-gray-700 font-medium block mb-3">
-                  Cross-Cutting & Societal Interests{" "} (optional)
+                  Cross-Cutting & Societal Interests (optional)
                 </Label>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                   <div className="flex items-center space-x-2">
@@ -4877,533 +5703,6 @@ export default function QuestionnairePage() {
               </div>
 
               <hr className="my-6" />
-
-              {/* Technology Subcategories - Only show when Technology is checked */}
-              {technologyChecked && (
-                <div className="mb-6">
-                  <Label className="text-gray-700 font-medium block mb-3">
-                    If you selected, Technology & Digital Media, please
-                    elaborate:
-                  </Label>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    {/* AI/ML Section */}
-                    <div className="space-y-2">
-                      <p className="font-medium text-gray-700">AI / ML</p>
-                      <div className="flex items-center space-x-2">
-                        <Checkbox
-                          id="ai-consumer"
-                          checked={aiConsumerChecked}
-                          onCheckedChange={(checked) =>
-                            setAiConsumerChecked(checked === true)
-                          }
-                        />
-                        <Label htmlFor="ai-consumer" className="text-gray-700">
-                          Consumer Applications
-                        </Label>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <Checkbox
-                          id="ai-vision"
-                          checked={aiComputerVisionChecked}
-                          onCheckedChange={(checked) =>
-                            setAiComputerVisionChecked(checked === true)
-                          }
-                        />
-                        <Label htmlFor="ai-vision" className="text-gray-700">
-                          Computer Vision & Generation
-                        </Label>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <Checkbox
-                          id="ai-ethics"
-                          checked={aiEthicsChecked}
-                          onCheckedChange={(checked) =>
-                            setAiEthicsChecked(checked === true)
-                          }
-                        />
-                        <Label htmlFor="ai-ethics" className="text-gray-700">
-                          Ethics & Governance
-                        </Label>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <Checkbox
-                          id="ai-infrastructure"
-                          checked={aiInfrastructureChecked}
-                          onCheckedChange={(checked) =>
-                            setAiInfrastructureChecked(checked === true)
-                          }
-                        />
-                        <Label
-                          htmlFor="ai-infrastructure"
-                          className="text-gray-700"
-                        >
-                          Infrastructure & Platforms
-                        </Label>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <Checkbox
-                          id="ai-nlp"
-                          checked={aiNlpChecked}
-                          onCheckedChange={(checked) =>
-                            setAiNlpChecked(checked === true)
-                          }
-                        />
-                        <Label htmlFor="ai-nlp" className="text-gray-700">
-                          Natural Language Processing
-                        </Label>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <Checkbox
-                          id="ai-predictive"
-                          checked={aiPredictiveChecked}
-                          onCheckedChange={(checked) =>
-                            setAiPredictiveChecked(checked === true)
-                          }
-                        />
-                        <Label
-                          htmlFor="ai-predictive"
-                          className="text-gray-700"
-                        >
-                          Predictive Analytics
-                        </Label>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <Checkbox
-                          id="ai-robotics"
-                          checked={aiRoboticsChecked}
-                          onCheckedChange={(checked) =>
-                            setAiRoboticsChecked(checked === true)
-                          }
-                        />
-                        <Label htmlFor="ai-robotics" className="text-gray-700">
-                          Robotics & Automation
-                        </Label>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <Checkbox
-                          id="ai-scientific"
-                          checked={aiScientificChecked}
-                          onCheckedChange={(checked) =>
-                            setAiScientificChecked(checked === true)
-                          }
-                        />
-                        <Label
-                          htmlFor="ai-scientific"
-                          className="text-gray-700"
-                        >
-                          Scientific Applications
-                        </Label>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <Checkbox
-                          id="ai-learning"
-                          checked={aiLearningChecked}
-                          onCheckedChange={(checked) =>
-                            setAiLearningChecked(checked === true)
-                          }
-                        />
-                        <Label htmlFor="ai-learning" className="text-gray-700">
-                          Supervised/Unsupervised Learning
-                        </Label>
-                      </div>
-                    </div>
-
-                    {/* Consumer Technology Section */}
-                    <div className="space-y-2">
-                      <p className="font-medium text-gray-700">
-                        Consumer Technology
-                      </p>
-                      <div className="flex items-center space-x-2">
-                        <Checkbox
-                          id="consumer-devices"
-                          checked={consumerDevicesChecked}
-                          onCheckedChange={(checked) =>
-                            setConsumerDevicesChecked(checked === true)
-                          }
-                        />
-                        <Label
-                          htmlFor="consumer-devices"
-                          className="text-gray-700"
-                        >
-                          Devices & Gadgets
-                        </Label>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <Checkbox
-                          id="consumer-gaming"
-                          checked={consumerGamingChecked}
-                          onCheckedChange={(checked) =>
-                            setConsumerGamingChecked(checked === true)
-                          }
-                        />
-                        <Label
-                          htmlFor="consumer-gaming"
-                          className="text-gray-700"
-                        >
-                          Gaming, Esports & Entertainment
-                        </Label>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <Checkbox
-                          id="consumer-mobile"
-                          checked={consumerMobileChecked}
-                          onCheckedChange={(checked) =>
-                            setConsumerMobileChecked(checked === true)
-                          }
-                        />
-                        <Label
-                          htmlFor="consumer-mobile"
-                          className="text-gray-700"
-                        >
-                          Mobile & Apps
-                        </Label>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <Checkbox
-                          id="consumer-smart-home"
-                          checked={consumerSmartHomeChecked}
-                          onCheckedChange={(checked) =>
-                            setConsumerSmartHomeChecked(checked === true)
-                          }
-                        />
-                        <Label
-                          htmlFor="consumer-smart-home"
-                          className="text-gray-700"
-                        >
-                          Smart Home & IoT
-                        </Label>
-                      </div>
-                    </div>
-
-                    {/* Cybersecurity & Privacy Section */}
-                    <div className="space-y-2">
-                      <p className="font-medium text-gray-700">
-                        Cybersecurity & Privacy
-                      </p>
-                      <div className="flex items-center space-x-2">
-                        <Checkbox
-                          id="cybersecurity-solutions"
-                          checked={cybersecuritySolutionsChecked}
-                          onCheckedChange={(checked) =>
-                            setCybersecuritySolutionsChecked(checked === true)
-                          }
-                        />
-                        <Label
-                          htmlFor="cybersecurity-solutions"
-                          className="text-gray-700"
-                        >
-                          Cybersecurity Solutions
-                        </Label>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <Checkbox
-                          id="data-privacy"
-                          checked={dataPrivacyChecked}
-                          onCheckedChange={(checked) =>
-                            setDataPrivacyChecked(checked === true)
-                          }
-                        />
-                        <Label htmlFor="data-privacy" className="text-gray-700">
-                          Data Privacy
-                        </Label>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <Checkbox
-                          id="regulatory-compliance"
-                          checked={regulatoryComplianceChecked}
-                          onCheckedChange={(checked) =>
-                            setRegulatoryComplianceChecked(checked === true)
-                          }
-                        />
-                        <Label
-                          htmlFor="regulatory-compliance"
-                          className="text-gray-700"
-                        >
-                          Regulatory Compliance
-                        </Label>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <Checkbox
-                          id="risk-management"
-                          checked={riskManagementChecked}
-                          onCheckedChange={(checked) =>
-                            setRiskManagementChecked(checked === true)
-                          }
-                        />
-                        <Label
-                          htmlFor="risk-management"
-                          className="text-gray-700"
-                        >
-                          Risk Management
-                        </Label>
-                      </div>
-                    </div>
-
-                    {/* Digital Infrastructure Section */}
-                    <div className="space-y-2">
-                      <p className="font-medium text-gray-700">
-                        Digital Infrastructure
-                      </p>
-                      <div className="flex items-center space-x-2">
-                        <Checkbox
-                          id="cloud-computing"
-                          checked={cloudComputingChecked}
-                          onCheckedChange={(checked) =>
-                            setCloudComputingChecked(checked === true)
-                          }
-                        />
-                        <Label
-                          htmlFor="cloud-computing"
-                          className="text-gray-700"
-                        >
-                          Cloud Computing
-                        </Label>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <Checkbox
-                          id="data-centers"
-                          checked={dataCentersChecked}
-                          onCheckedChange={(checked) =>
-                            setDataCentersChecked(checked === true)
-                          }
-                        />
-                        <Label htmlFor="data-centers" className="text-gray-700">
-                          Data Centers
-                        </Label>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <Checkbox
-                          id="networks"
-                          checked={networksChecked}
-                          onCheckedChange={(checked) =>
-                            setNetworksChecked(checked === true)
-                          }
-                        />
-                        <Label htmlFor="networks" className="text-gray-700">
-                          Networks & Connectivity
-                        </Label>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <Checkbox
-                          id="web3-blockchain"
-                          checked={web3BlockchainChecked}
-                          onCheckedChange={(checked) =>
-                            setWeb3BlockchainChecked(checked === true)
-                          }
-                        />
-                        <Label
-                          htmlFor="web3-blockchain"
-                          className="text-gray-700"
-                        >
-                          Web3 & Blockchain
-                        </Label>
-                      </div>
-                    </div>
-
-                    {/* Digital Media & Content Section */}
-                    <div className="space-y-2">
-                      <p className="font-medium text-gray-700">
-                        Digital Media & Content
-                      </p>
-                      <div className="flex items-center space-x-2">
-                        <Checkbox
-                          id="content-distribution"
-                          checked={contentDistributionChecked}
-                          onCheckedChange={(checked) =>
-                            setContentDistributionChecked(checked === true)
-                          }
-                        />
-                        <Label
-                          htmlFor="content-distribution"
-                          className="text-gray-700"
-                        >
-                          Content Distribution
-                        </Label>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <Checkbox
-                          id="creator-economy"
-                          checked={creatorEconomyChecked}
-                          onCheckedChange={(checked) =>
-                            setCreatorEconomyChecked(checked === true)
-                          }
-                        />
-                        <Label
-                          htmlFor="creator-economy"
-                          className="text-gray-700"
-                        >
-                          Creator Economy
-                        </Label>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <Checkbox
-                          id="digital-marketing"
-                          checked={digitalMarketingChecked}
-                          onCheckedChange={(checked) =>
-                            setDigitalMarketingChecked(checked === true)
-                          }
-                        />
-                        <Label
-                          htmlFor="digital-marketing"
-                          className="text-gray-700"
-                        >
-                          Digital Marketing
-                        </Label>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <Checkbox
-                          id="social-media-platforms"
-                          checked={socialMediaPlatformsChecked}
-                          onCheckedChange={(checked) =>
-                            setSocialMediaPlatformsChecked(checked === true)
-                          }
-                        />
-                        <Label
-                          htmlFor="social-media-platforms"
-                          className="text-gray-700"
-                        >
-                          Social Media & Platforms
-                        </Label>
-                      </div>
-                    </div>
-
-                    {/* Emerging Technology Section */}
-                    <div className="space-y-2">
-                      <p className="font-medium text-gray-700">
-                        Emerging Technology
-                      </p>
-                      <div className="flex items-center space-x-2">
-                        <Checkbox
-                          id="ar-vr-xr"
-                          checked={arVrXrChecked}
-                          onCheckedChange={(checked) =>
-                            setArVrXrChecked(checked === true)
-                          }
-                        />
-                        <Label htmlFor="ar-vr-xr" className="text-gray-700">
-                          AR / VR / XR
-                        </Label>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <Checkbox
-                          id="biotech-health"
-                          checked={biotechHealthChecked}
-                          onCheckedChange={(checked) =>
-                            setBiotechHealthChecked(checked === true)
-                          }
-                        />
-                        <Label
-                          htmlFor="biotech-health"
-                          className="text-gray-700"
-                        >
-                          Biotech & Digital Health
-                        </Label>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <Checkbox
-                          id="quantum-computing"
-                          checked={quantumComputingChecked}
-                          onCheckedChange={(checked) =>
-                            setQuantumComputingChecked(checked === true)
-                          }
-                        />
-                        <Label
-                          htmlFor="quantum-computing"
-                          className="text-gray-700"
-                        >
-                          Quantum Computing
-                        </Label>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <Checkbox
-                          id="emerging-robotics"
-                          checked={emergingRoboticsChecked}
-                          onCheckedChange={(checked) =>
-                            setEmergingRoboticsChecked(checked === true)
-                          }
-                        />
-                        <Label
-                          htmlFor="emerging-robotics"
-                          className="text-gray-700"
-                        >
-                          Robotics & Automation
-                        </Label>
-                      </div>
-                    </div>
-
-                    {/* Enterprise Technology Section */}
-                    <div className="space-y-2">
-                      <p className="font-medium text-gray-700">
-                        Enterprise Technology
-                      </p>
-                      <div className="flex items-center space-x-2">
-                        <Checkbox
-                          id="business-apps"
-                          checked={businessAppsChecked}
-                          onCheckedChange={(checked) =>
-                            setBusinessAppsChecked(checked === true)
-                          }
-                        />
-                        <Label
-                          htmlFor="business-apps"
-                          className="text-gray-700"
-                        >
-                          Business Applications
-                        </Label>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <Checkbox
-                          id="digital-transformation"
-                          checked={enterpriseDigitalTransformationChecked}
-                          onCheckedChange={(checked) =>
-                            setEnterpriseDigitalTransformationChecked(
-                              checked === true,
-                            )
-                          }
-                        />
-                        <Label
-                          htmlFor="digital-transformation"
-                          className="text-gray-700"
-                        >
-                          Digital Transformation
-                        </Label>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <Checkbox
-                          id="integration-apis"
-                          checked={integrationApisChecked}
-                          onCheckedChange={(checked) =>
-                            setIntegrationApisChecked(checked === true)
-                          }
-                        />
-                        <Label
-                          htmlFor="integration-apis"
-                          className="text-gray-700"
-                        >
-                          Integration & APIs
-                        </Label>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <Checkbox
-                          id="saas-enterprise"
-                          checked={saasEnterpriseChecked}
-                          onCheckedChange={(checked) =>
-                            setSaasEnterpriseChecked(checked === true)
-                          }
-                        />
-                        <Label
-                          htmlFor="saas-enterprise"
-                          className="text-gray-700"
-                        >
-                          SaaS & Enterprise Software
-                        </Label>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              <hr className="my-6" />
             </div>
           </div>
         );
@@ -5681,14 +5980,14 @@ export default function QuestionnairePage() {
                     : "This questionnaire helps us understand your unique experience, aspirations, and digital presence. Your responses will guide the development of your Single Lasting Impression (SLI) and personalized content strategy. Complete each section thoughtfully—this is the first step toward taking control of how you're perceived professionally."}
                 </CardDescription>
               </div>
-              <Button 
-                variant="outline" 
+              <Button
+                variant="outline"
                 className="bg-white text-[#6c8083] hover:bg-gray-100 hover:text-[#4c5c5e]"
                 onClick={(e) => {
                   e.preventDefault();
-                  
+
                   // No longer auto-saving when leaving the page per user request
-                  
+
                   // Just navigate back to home with replace to clear navigation history
                   navigate("/", { replace: true });
                 }}
@@ -5704,6 +6003,9 @@ export default function QuestionnairePage() {
                 {Array.from({ length: totalSteps }).map((_, index) => (
                   <div key={index} className="flex flex-col items-center">
                     <div
+                      onClick={(e) => {
+                        navigateToStep(index);
+                      }}
                       className={`w-10 h-10 rounded-full flex items-center justify-center mb-2 ${
                         index + 1 === currentStep
                           ? "bg-[#bed6d1] text-white"
@@ -5768,9 +6070,10 @@ export default function QuestionnairePage() {
                       Saved
                     </div>
                   )}
-                  
+
                   {/* Save as Draft button - only shown if questionnaire doesn't exist or is a draft */}
-                  {(!userProfile?.questionnaire || userProfile?.questionnaire?.isDraft) && (
+                  {(!userProfile?.questionnaire ||
+                    userProfile?.questionnaire?.isDraft) && (
                     <Button
                       type="button"
                       onClick={handleSaveAsDraft}
@@ -5784,7 +6087,7 @@ export default function QuestionnairePage() {
                       Save Progress
                     </Button>
                   )}
-                
+
                   {/* Submit or Next button */}
                   {isLastStep ? (
                     <Button
