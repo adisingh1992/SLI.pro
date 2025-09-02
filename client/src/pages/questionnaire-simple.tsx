@@ -364,6 +364,7 @@ export default function QuestionnairePage() {
 
   // Published content checkboxes state
   const [linkedInPostsChecked, setLinkedInPostsChecked] = useState(false);
+  const [workArticlesChecked, setWorkArticlesChecked] = useState(false);
   const [blogArticlesChecked, setBlogArticlesChecked] = useState(false);
   const [industryPresentationsChecked, setIndustryPresentationsChecked] =
     useState(false);
@@ -919,7 +920,9 @@ export default function QuestionnairePage() {
               setMbtiChecked(true);
             }
             if (parsedInterests.personalityAssessments.strengthsFinder) {
-              console.log("Setting Strengths Finder checked from parsedInterests");
+              console.log(
+                "Setting Strengths Finder checked from parsedInterests",
+              );
               setStrengthsFinderChecked(true);
             }
             if (parsedInterests.personalityAssessments.via) {
@@ -938,10 +941,16 @@ export default function QuestionnairePage() {
             if (parsedInterests.personalityAssessments.other) {
               setOtherAssessmentChecked(true);
               // Handle both formats of other assessment
-              if (typeof parsedInterests.personalityAssessments.other === "string") {
-                setOtherAssessment(parsedInterests.personalityAssessments.other);
+              if (
+                typeof parsedInterests.personalityAssessments.other === "string"
+              ) {
+                setOtherAssessment(
+                  parsedInterests.personalityAssessments.other,
+                );
               } else if (parsedInterests.personalityAssessments.otherText) {
-                setOtherAssessment(parsedInterests.personalityAssessments.otherText);
+                setOtherAssessment(
+                  parsedInterests.personalityAssessments.otherText,
+                );
               }
             }
           }
@@ -972,7 +981,9 @@ export default function QuestionnairePage() {
 
             if (parsedInterests.brandingChallenges.other) {
               setOtherBrandingChecked(true);
-              setOtherBrandingChallenge(parsedInterests.brandingChallenges.other);
+              setOtherBrandingChallenge(
+                parsedInterests.brandingChallenges.other,
+              );
             }
           }
 
@@ -983,13 +994,11 @@ export default function QuestionnairePage() {
               Object.keys(parsedInterests.socialMediaPlatforms).join(", "),
             );
 
-
             if (parsedInterests.socialMediaPlatforms.twitter)
               setTwitterChecked(true);
             if (parsedInterests.socialMediaPlatforms.medium)
               setMediumChecked(true);
-            if (parsedInterests.socialMediaPlatforms.blog)
-              setBlogChecked(true);
+            if (parsedInterests.socialMediaPlatforms.blog) setBlogChecked(true);
 
             if (parsedInterests.socialMediaPlatforms.other) {
               setOtherChecked(true);
@@ -1004,9 +1013,10 @@ export default function QuestionnairePage() {
               Object.keys(parsedInterests.publishedDigitalContent).join(", "),
             );
 
-
             if (parsedInterests.publishedDigitalContent.linkedinPosts)
               setLinkedInPostsChecked(true);
+            if (parsedInterests.publishedDigitalContent.workArticles)
+              setWorkArticlesChecked(true);
             if (parsedInterests.publishedDigitalContent.blogArticles)
               setBlogArticlesChecked(true);
             if (parsedInterests.publishedDigitalContent.industryPresentations)
@@ -1018,7 +1028,9 @@ export default function QuestionnairePage() {
 
             if (parsedInterests.publishedDigitalContent.other) {
               setOtherPublishedContentChecked(true);
-              setOtherPublishedContent(parsedInterests.publishedDigitalContent.other);
+              setOtherPublishedContent(
+                parsedInterests.publishedDigitalContent.other,
+              );
             }
           }
 
@@ -1028,7 +1040,6 @@ export default function QuestionnairePage() {
               "Loading LinkedIn updates from parsedInterests:",
               Object.keys(parsedInterests.linkedinUpdates).join(", "),
             );
-
 
             if (parsedInterests.linkedinUpdates.lastWeek)
               setLastWeekChecked(true);
@@ -1957,6 +1968,7 @@ export default function QuestionnairePage() {
 
       const hasPublishedContentSelected =
         linkedInPostsChecked ||
+        workArticlesChecked ||
         blogArticlesChecked ||
         industryPresentationsChecked ||
         academicPapersChecked ||
@@ -2269,6 +2281,7 @@ export default function QuestionnairePage() {
       },
       publishedDigitalContent: {
         linkedinPosts: linkedInPostsChecked,
+        workArticles: workArticlesChecked,
         blogArticles: blogArticlesChecked,
         industryPresentations: industryPresentationsChecked,
         academicPapers: academicPapersChecked,
@@ -2476,6 +2489,7 @@ export default function QuestionnairePage() {
       },
       publishedDigitalContent: {
         linkedinPosts: linkedInPostsChecked,
+        workArticles: workArticlesChecked,
         blogArticles: blogArticlesChecked,
         industryPresentations: industryPresentationsChecked,
         academicPapers: academicPapersChecked,
@@ -2724,6 +2738,7 @@ export default function QuestionnairePage() {
     // Add published content
     const publishedContent: string[] = [];
     if (linkedInPostsChecked) publishedContent.push("LinkedIn posts");
+    if (workArticlesChecked) publishedContent.push("Work articles");
     if (blogArticlesChecked) publishedContent.push("Blog articles");
     if (industryPresentationsChecked)
       publishedContent.push("Industry presentations");
@@ -2916,6 +2931,7 @@ export default function QuestionnairePage() {
       // Prepare published content data
       const publishedContent = [];
       if (linkedInPostsChecked) publishedContent.push("LinkedIn posts");
+      if (workArticlesChecked) publishedContent.push("Work articles");
       if (blogArticlesChecked) publishedContent.push("Blog articles");
       if (industryPresentationsChecked)
         publishedContent.push("Industry presentations");
@@ -3274,6 +3290,7 @@ export default function QuestionnairePage() {
         },
         publishedContent: {
           linkedInPosts: linkedInPostsChecked,
+          workArticles: workArticlesChecked,
           blogArticles: blogArticlesChecked,
           industryPresentations: industryPresentationsChecked,
           academicPapers: academicPapersChecked,
@@ -3827,6 +3844,19 @@ export default function QuestionnairePage() {
                   />
                   <Label htmlFor="linkedInPosts" className="cursor-pointer">
                     LinkedIn Posts
+                  </Label>
+                </div>
+
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="workArticles"
+                    checked={workArticlesChecked}
+                    onCheckedChange={(checked) =>
+                      setWorkArticlesChecked(checked === true)
+                    }
+                  />
+                  <Label htmlFor="workArticles" className="cursor-pointer">
+                    Work Articles / Content
                   </Label>
                 </div>
 
