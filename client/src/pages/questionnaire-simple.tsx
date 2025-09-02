@@ -1159,6 +1159,103 @@ export default function QuestionnairePage() {
               }
             }
           }
+
+          // Load branding challenges
+          if (parsedInterests.brandingChallenges) {
+            console.log(
+              "Loading branding challenges from parsedInterests:",
+              Object.keys(parsedInterests.brandingChallenges).join(", "),
+            );
+
+            if (parsedInterests.brandingChallenges.consistentNarrative)
+              setConsistentNarrativeChecked(true);
+            if (parsedInterests.brandingChallenges.valueProposition)
+              setValuePropositionChecked(true);
+            if (parsedInterests.brandingChallenges.engagingContent)
+              setEngagingContentChecked(true);
+            if (parsedInterests.brandingChallenges.findingTime)
+              setFindingTimeChecked(true);
+            if (parsedInterests.brandingChallenges.growingNetwork)
+              setGrowingNetworkChecked(true);
+            if (parsedInterests.brandingChallenges.sharingInsights)
+              setSharingInsightsChecked(true);
+            if (parsedInterests.brandingChallenges.engagingNetwork)
+              setEngagingNetworkChecked(true);
+            if (parsedInterests.brandingChallenges.industryEvents)
+              setIndustryEventsChecked(true);
+
+            if (parsedInterests.brandingChallenges.other) {
+              setOtherBrandingChecked(true);
+              setOtherBrandingChallenge(parsedInterests.brandingChallenges.other);
+            }
+          }
+
+          // Load social media platforms
+          if (parsedInterests.socialMediaPlatforms) {
+            console.log(
+              "Loading social media platforms from parsedInterests:",
+              Object.keys(parsedInterests.socialMediaPlatforms).join(", "),
+            );
+
+            if (parsedInterests.socialMediaPlatforms.twitter)
+              setTwitterChecked(true);
+            if (parsedInterests.socialMediaPlatforms.medium)
+              setMediumChecked(true);
+            if (parsedInterests.socialMediaPlatforms.blog)
+              setBlogChecked(true);
+
+            if (parsedInterests.socialMediaPlatforms.other) {
+              setOtherChecked(true);
+              setOtherSocialMedia(parsedInterests.socialMediaPlatforms.other);
+            }
+          }
+
+          // Load published digital content
+          if (parsedInterests.publishedDigitalContent) {
+            console.log(
+              "Loading published digital content from parsedInterests:",
+              Object.keys(parsedInterests.publishedDigitalContent).join(", "),
+            );
+
+            if (parsedInterests.publishedDigitalContent.linkedinPosts)
+              setLinkedInPostsChecked(true);
+            if (parsedInterests.publishedDigitalContent.blogArticles)
+              setBlogArticlesChecked(true);
+            if (parsedInterests.publishedDigitalContent.industryPresentations)
+              setIndustryPresentationsChecked(true);
+            if (parsedInterests.publishedDigitalContent.academicPapers)
+              setAcademicPapersChecked(true);
+            if (parsedInterests.publishedDigitalContent.neverPublished)
+              setNeverPublishedChecked(true);
+
+            if (parsedInterests.publishedDigitalContent.other) {
+              setOtherPublishedContentChecked(true);
+              setOtherPublishedContent(parsedInterests.publishedDigitalContent.other);
+            }
+          }
+
+          // Load LinkedIn updates
+          if (parsedInterests.linkedinUpdates) {
+            console.log(
+              "Loading LinkedIn updates from parsedInterests:",
+              Object.keys(parsedInterests.linkedinUpdates).join(", "),
+            );
+
+            if (parsedInterests.linkedinUpdates.lastWeek)
+              setLastWeekChecked(true);
+            if (parsedInterests.linkedinUpdates.lastMonth)
+              setLastMonthChecked(true);
+            if (parsedInterests.linkedinUpdates.businessSchool)
+              setBusinessSchoolChecked(true);
+            if (parsedInterests.linkedinUpdates.careerCoach)
+              setCareerCoachChecked(true);
+            if (parsedInterests.linkedinUpdates.jobChange)
+              setJobChangeChecked(true);
+            if (parsedInterests.linkedinUpdates.cantRemember)
+              setCantRememberChecked(true);
+            if (parsedInterests.linkedinUpdates.neverUpdated)
+              setNeverUpdatedChecked(true);
+          }
         } catch (err) {
           console.error("Failed to parse interests JSON:", err);
         }
@@ -2312,6 +2409,40 @@ export default function QuestionnairePage() {
         other: otherAssessmentChecked ? otherAssessment : null,
         otherText: otherAssessmentChecked ? otherAssessment : null,
       },
+      brandingChallenges: {
+        consistentNarrative: consistentNarrativeChecked,
+        valueProposition: valuePropositionChecked,
+        engagingContent: engagingContentChecked,
+        findingTime: findingTimeChecked,
+        growingNetwork: growingNetworkChecked,
+        sharingInsights: sharingInsightsChecked,
+        engagingNetwork: engagingNetworkChecked,
+        industryEvents: industryEventsChecked,
+        other: otherBrandingChecked ? otherBrandingChallenge : null,
+      },
+      socialMediaPlatforms: {
+        twitter: twitterChecked,
+        medium: mediumChecked,
+        blog: blogChecked,
+        other: otherChecked ? otherSocialMedia : null,
+      },
+      publishedDigitalContent: {
+        linkedinPosts: linkedInPostsChecked,
+        blogArticles: blogArticlesChecked,
+        industryPresentations: industryPresentationsChecked,
+        academicPapers: academicPapersChecked,
+        neverPublished: neverPublishedChecked,
+        other: otherPublishedContentChecked ? otherPublishedContent : null,
+      },
+      linkedinUpdates: {
+        lastWeek: lastWeekChecked,
+        lastMonth: lastMonthChecked,
+        businessSchool: businessSchoolChecked,
+        careerCoach: careerCoachChecked,
+        jobChange: jobChangeChecked,
+        cantRemember: cantRememberChecked,
+        neverUpdated: neverUpdatedChecked,
+      },
       societalInterests: {
         climate: climateChecked,
         consumerBehavior: consumerBehaviorChecked,
@@ -2483,6 +2614,41 @@ export default function QuestionnairePage() {
         threeSixty: threeSixtyChecked,
         other: otherAssessmentChecked ? otherAssessment : null,
         otherText: otherAssessmentChecked ? otherAssessment : null,
+      },
+      // Always include branding and social media data
+      brandingChallenges: {
+        consistentNarrative: consistentNarrativeChecked,
+        valueProposition: valuePropositionChecked,
+        engagingContent: engagingContentChecked,
+        findingTime: findingTimeChecked,
+        growingNetwork: growingNetworkChecked,
+        sharingInsights: sharingInsightsChecked,
+        engagingNetwork: engagingNetworkChecked,
+        industryEvents: industryEventsChecked,
+        other: otherBrandingChecked ? otherBrandingChallenge : null,
+      },
+      socialMediaPlatforms: {
+        twitter: twitterChecked,
+        medium: mediumChecked,
+        blog: blogChecked,
+        other: otherChecked ? otherSocialMedia : null,
+      },
+      publishedDigitalContent: {
+        linkedinPosts: linkedInPostsChecked,
+        blogArticles: blogArticlesChecked,
+        industryPresentations: industryPresentationsChecked,
+        academicPapers: academicPapersChecked,
+        neverPublished: neverPublishedChecked,
+        other: otherPublishedContentChecked ? otherPublishedContent : null,
+      },
+      linkedinUpdates: {
+        lastWeek: lastWeekChecked,
+        lastMonth: lastMonthChecked,
+        businessSchool: businessSchoolChecked,
+        careerCoach: careerCoachChecked,
+        jobChange: jobChangeChecked,
+        cantRemember: cantRememberChecked,
+        neverUpdated: neverUpdatedChecked,
       },
       // Keep arrays for backward compatibility
       industryInterestsArray: interestsData.industryInterestsArray || [],
