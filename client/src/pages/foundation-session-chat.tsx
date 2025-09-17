@@ -30,7 +30,7 @@ type FoundationSessionMessage = {
   sessionId: number;
   role: 'user' | 'assistant';
   content: string;
-  timestamp: string;
+  createdAt: string;
 };
 
 type SessionWithMessages = {
@@ -420,9 +420,9 @@ export default function FoundationSessionChatPage() {
                     <div className="w-8 h-8 bg-primary rounded-full flex items-center justify-center">
                       <MessageSquare className="h-4 w-4 text-primary-foreground" />
                     </div>
-                    <div className="flex-1">
-                      <div className="bg-muted rounded-lg p-4">
-                        <p className="text-sm">{sessionInfo.prompt}</p>
+                    <div className="flex-1 max-w-[calc(100%-6rem)]">
+                      <div className="bg-muted rounded-lg p-4 break-words">
+                        <p className="text-sm break-words">{sessionInfo.prompt}</p>
                       </div>
                       <p className="text-xs text-muted-foreground mt-1">Coach</p>
                     </div>
@@ -443,18 +443,18 @@ export default function FoundationSessionChatPage() {
                     }`}>
                       {message.role === 'user' ? 'U' : 'C'}
                     </div>
-                    <div className="flex-1 max-w-[80%]">
-                      <div className={`rounded-lg p-4 ${
+                    <div className={`flex-1 ${message.role === 'user' ? 'max-w-[calc(100%-6rem)]' : 'max-w-[calc(100%-6rem)]'}`}>
+                      <div className={`rounded-lg p-4 break-words ${
                         message.role === 'user' 
                           ? 'bg-primary text-primary-foreground ml-8' 
                           : 'bg-muted mr-8'
                       }`}>
-                        <p className="text-sm whitespace-pre-wrap">{message.content}</p>
+                        <p className="text-sm whitespace-pre-wrap break-words">{message.content}</p>
                       </div>
                       <p className={`text-xs text-muted-foreground mt-1 ${
                         message.role === 'user' ? 'text-right' : ''
                       }`}>
-                        {message.role === 'user' ? 'You' : 'Coach'} • {new Date(message.timestamp).toLocaleTimeString()}
+                        {message.role === 'user' ? 'You' : 'Coach'} • {new Date(message.createdAt).toLocaleTimeString()}
                       </p>
                     </div>
                   </div>
@@ -466,9 +466,9 @@ export default function FoundationSessionChatPage() {
                     <div className="w-8 h-8 bg-muted rounded-full flex items-center justify-center">
                       <Loader2 className="h-4 w-4 animate-spin" />
                     </div>
-                    <div className="flex-1">
-                      <div className="bg-muted rounded-lg p-4 mr-8">
-                        <p className="text-sm">{streamingResponse}</p>
+                    <div className="flex-1 max-w-[calc(100%-6rem)]">
+                      <div className="bg-muted rounded-lg p-4 mr-8 break-words">
+                        <p className="text-sm break-words">{streamingResponse}</p>
                       </div>
                       <p className="text-xs text-muted-foreground mt-1">Coach • typing...</p>
                     </div>
