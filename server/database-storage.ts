@@ -771,7 +771,10 @@ export class DatabaseStorage implements IStorage {
   async updateFoundationSession(id: number, data: UpdateFoundationSession): Promise<FoundationSession | undefined> {
     const [updatedSession] = await db
       .update(foundationSessions)
-      .set(data)
+      .set({
+        ...data,
+        updatedAt: new Date()
+      })
       .where(eq(foundationSessions.id, id))
       .returning();
     return updatedSession || undefined;

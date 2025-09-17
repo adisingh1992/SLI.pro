@@ -517,7 +517,7 @@ export const foundationSessions = pgTable("foundation_sessions", {
     // Future sessions will have their own completion criteria
   }>(),
   createdAt: timestamp("created_at", { mode: 'date' }).defaultNow().notNull(),
-  updatedAt: timestamp("updated_at", { mode: 'date' }).defaultNow().notNull().$onUpdate(() => sql`now()`),
+  updatedAt: timestamp("updated_at", { mode: 'date' }).defaultNow().notNull(),
 }, (table) => ({
   // Unique constraint to prevent duplicate sessions for same user/session
   userSessionUnique: unique().on(table.userId, table.sessionNumber),
