@@ -396,7 +396,7 @@ export default function FoundationSessionChatPage() {
         )}
 
         {/* Chat Interface */}
-        <Card className="h-[calc(100vh-300px)] flex flex-col">
+        <Card className="h-[calc(100vh-300px)] flex flex-col overflow-hidden">
           <CardHeader className="pb-4">
             <div className="flex items-center justify-between">
               <div>
@@ -410,9 +410,9 @@ export default function FoundationSessionChatPage() {
             </div>
           </CardHeader>
           
-          <CardContent className="flex-1 flex flex-col p-0">
+          <CardContent className="flex-1 min-h-0 flex flex-col p-0 overflow-hidden">
             {/* Messages Area */}
-            <ScrollArea className="flex-1 px-6">
+            <ScrollArea className="flex-1 min-h-0 px-6">
               <div className="space-y-4 pb-4">
                 {/* Initial guidance message for Session 1 */}
                 {sessionNumber === 1 && messages.length === 0 && (
