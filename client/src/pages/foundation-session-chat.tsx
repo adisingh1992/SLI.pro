@@ -251,7 +251,7 @@ export default function FoundationSessionChatPage() {
     );
   }
 
-  if (error || !sessionData) {
+  if (error || !sessionData || !sessionData.session) {
     return (
       <div className="min-h-screen bg-background">
         <NavBar />

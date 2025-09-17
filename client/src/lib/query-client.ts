@@ -52,8 +52,13 @@ export async function apiRequest<T>({
 }
 
 // Set up Query Client with default fetcher
-const defaultQueryFn = async ({ queryKey }: { queryKey: string[] }) => {
-  const [url] = queryKey;
+const defaultQueryFn = async ({ queryKey }: { queryKey: (string | number)[] }) => {
+  // Build the URL - if queryKey has multiple items, handle the path params
+  let url = queryKey[0] as string;
+  if (queryKey.length > 1 && queryKey[1] !== null && queryKey[1] !== undefined) {
+    // Assuming the second item is the ID parameter
+    url = `${url}/${queryKey[1]}`;
+  }
   return apiRequest({ url });
 };
 
