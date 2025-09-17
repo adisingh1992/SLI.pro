@@ -396,9 +396,9 @@ export default function FoundationSessionChatPage() {
         )}
 
         {/* Chat Interface */}
-        <Card className="h-[calc(100vh-300px)] flex flex-col overflow-hidden">
+        <Card className="h-[calc(100vh-200px)] flex flex-col overflow-hidden">
           <CardHeader className="pb-4">
-            <div className="flex items-center justify-between">
+            {/* <div className="flex items-center justify-between">
               <div>
                 <CardTitle className="text-lg">Session Chat</CardTitle>
                 <CardDescription>
@@ -407,27 +407,13 @@ export default function FoundationSessionChatPage() {
                   )}
                 </CardDescription>
               </div>
-            </div>
+            </div> */}
           </CardHeader>
           
           <CardContent className="flex-1 min-h-0 flex flex-col p-0 overflow-hidden">
             {/* Messages Area */}
             <ScrollArea className="flex-1 min-h-0 px-6">
               <div className="space-y-4 pb-4">
-                {/* Initial guidance message for Session 1 */}
-                {sessionNumber === 1 && messages.length === 0 && (
-                  <div className="flex gap-3">
-                    <div className="w-8 h-8 bg-primary rounded-full flex items-center justify-center">
-                      <MessageSquare className="h-4 w-4 text-primary-foreground" />
-                    </div>
-                    <div className="flex-1 max-w-[calc(100%-6rem)]">
-                      <div className="bg-muted rounded-lg p-4 break-words">
-                        <p className="text-sm break-words">{sessionInfo.prompt}</p>
-                      </div>
-                      <p className="text-xs text-muted-foreground mt-1">Coach</p>
-                    </div>
-                  </div>
-                )}
 
                 {/* Conversation messages */}
                 {messages.map((message, index) => (
@@ -441,7 +427,7 @@ export default function FoundationSessionChatPage() {
                         ? 'bg-primary text-primary-foreground' 
                         : 'bg-muted text-muted-foreground'
                     }`}>
-                      {message.role === 'user' ? 'U' : 'C'}
+                      {message.role === 'user' ? 'U' : 'S'}
                     </div>
                     <div className={`flex-1 ${message.role === 'user' ? 'max-w-[calc(100%-6rem)]' : 'max-w-[calc(100%-6rem)]'}`}>
                       <div className={`rounded-lg p-4 break-words ${
@@ -454,7 +440,7 @@ export default function FoundationSessionChatPage() {
                       <p className={`text-xs text-muted-foreground mt-1 ${
                         message.role === 'user' ? 'text-right' : ''
                       }`}>
-                        {message.role === 'user' ? 'You' : 'Coach'} • {new Date(message.createdAt).toLocaleTimeString()}
+                        {message.role === 'user' ? 'You' : 'SLI'} • {new Date(message.createdAt).toLocaleTimeString()}
                       </p>
                     </div>
                   </div>
@@ -470,7 +456,7 @@ export default function FoundationSessionChatPage() {
                       <div className="bg-muted rounded-lg p-4 mr-8 break-words">
                         <p className="text-sm break-words">{streamingResponse}</p>
                       </div>
-                      <p className="text-xs text-muted-foreground mt-1">Coach • typing...</p>
+                      <p className="text-xs text-muted-foreground mt-1">SLI • typing...</p>
                     </div>
                   </div>
                 )}

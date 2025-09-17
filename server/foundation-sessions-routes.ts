@@ -17,6 +17,20 @@ const isAuthenticated = (req: Request, res: Response, next: NextFunction) => {
   res.status(401).json({ error: "Not authenticated" });
 };
 
+// Get initial guidance message for each session
+function getInitialGuidanceMessage(sessionNumber: number): string | null {
+  switch (sessionNumber) {
+    case 1:
+      return "I'm here to help you identify your primary business function (Finance, Operations, Sales, Marketing, or Product). Let's start by discussing your current role and what energizes you most about work.";
+    case 2:
+      return "Welcome to Session 2. This session is coming soon.";
+    case 3:
+      return "Welcome to Session 3. This session is coming soon.";
+    default:
+      return null;
+  }
+}
+
 export function registerFoundationSessionsRoutes(app: Express) {
   // Get all foundation sessions for the current user
   app.get("/api/foundation-sessions", isAuthenticated, async (req: Request, res: Response, next: NextFunction) => {
@@ -96,6 +110,19 @@ export function registerFoundationSessionsRoutes(app: Express) {
         status: "in_progress" as const,
         startedAt: new Date()
       });
+
+      // Create initial guidance message for the session (only if no messages exist)
+      const existingMessages = await storage.getFoundationSessionMessages(session.id);
+      if (existingMessages.length === 0) {
+        const initialMessage = getInitialGuidanceMessage(sessionNumber);
+        if (initialMessage) {
+          await storage.createFoundationSessionMessage({
+            sessionId: session.id,
+            role: "assistant",
+            content: initialMessage
+          });
+        }
+      }
 
       res.json(updatedSession);
     } catch (error) {
