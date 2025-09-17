@@ -92,9 +92,12 @@ export function registerFoundationSessionsRoutes(app: Express) {
       }
 
       // Update session status to in_progress and set startedAt
+      const startedAtValue = new Date();
+      console.log("About to update session with startedAt:", startedAtValue, "Type:", typeof startedAtValue);
+      
       const updatedSession = await storage.updateFoundationSession(session.id, {
         status: "in_progress",
-        startedAt: new Date()
+        startedAt: startedAtValue
       });
 
       res.json(updatedSession);
