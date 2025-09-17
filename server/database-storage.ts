@@ -18,6 +18,8 @@ import {
   linkedinOptimizations, type LinkedinOptimization, type InsertLinkedinOptimization,
   linkedinContentDrafts, type LinkedinContentDraft, type InsertLinkedinContentDraft,
   homeworkAssignments, type HomeworkAssignment, type InsertHomeworkAssignment, type UpdateHomeworkAssignment,
+  foundationSessions, type FoundationSession, type InsertFoundationSession, type UpdateFoundationSession,
+  foundationSessionMessages, type FoundationSessionMessage, type InsertFoundationSessionMessage,
   type UpdateUser, type UpdateProfile, type UserProfile
 } from "@shared/schema";
 import session from "express-session";
@@ -759,5 +761,59 @@ export class DatabaseStorage implements IStorage {
     await db
       .delete(homeworkAssignments)
       .where(eq(homeworkAssignments.id, id));
+  }
+
+  // Foundation Sessions methods
+  async getFoundationSessions(userId: number): Promise<FoundationSession[]> {
+    return db
+      .select()
+      .from(foundationSessions)
+      .where(eq(foundationSessions.userId, userId))
+      .orderBy(asc(foundationSessions.sessionNumber));
+  }
+
+  async getFoundationSession(userId: number, sessionNumber: number): Promise<FoundationSession | undefined> {
+    const [session] = await db
+      .select()
+      .from(foundationSessions)
+      .where(and(
+        eq(foundationSessions.userId, userId),
+        eq(foundationSessions.sessionNumber, sessionNumber)
+      ));
+    return session || undefined;
+  }
+
+  async createFoundationSession(sessionData: InsertFoundationSession): Promise<FoundationSession> {
+    const [newSession] = await db
+      .insert(foundationSessions)
+      .values(sessionData)
+      .returning();
+    return newSession;
+  }
+
+  async updateFoundationSession(id: number, data: UpdateFoundationSession): Promise<FoundationSession | undefined> {
+    const [updatedSession] = await db
+      .update(foundationSessions)
+      .set(data)
+      .where(eq(foundationSessions.id, id))
+      .returning();
+    return updatedSession || undefined;
+  }
+
+  // Foundation Session Messages methods
+  async getFoundationSessionMessages(sessionId: number): Promise<FoundationSessionMessage[]> {
+    return db
+      .select()
+      .from(foundationSessionMessages)
+      .where(eq(foundationSessionMessages.sessionId, sessionId))
+      .orderBy(asc(foundationSessionMessages.createdAt));
+  }
+
+  async createFoundationSessionMessage(messageData: InsertFoundationSessionMessage): Promise<FoundationSessionMessage> {
+    const [newMessage] = await db
+      .insert(foundationSessionMessages)
+      .values(messageData)
+      .returning();
+    return newMessage;
   }
 }

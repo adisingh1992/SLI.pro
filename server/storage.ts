@@ -18,6 +18,8 @@ import {
   linkedinOptimizations, type LinkedinOptimization, type InsertLinkedinOptimization,
   linkedinContentDrafts, type LinkedinContentDraft, type InsertLinkedinContentDraft,
   homeworkAssignments, type HomeworkAssignment, type InsertHomeworkAssignment, type UpdateHomeworkAssignment,
+  foundationSessions, type FoundationSession, type InsertFoundationSession, type UpdateFoundationSession,
+  foundationSessionMessages, type FoundationSessionMessage, type InsertFoundationSessionMessage,
   type UpdateUser, type UpdateProfile, type UserProfile
 } from "@shared/schema";
 import session from "express-session";
@@ -149,6 +151,16 @@ export interface IStorage {
   updateHomeworkAssignment(id: number, data: UpdateHomeworkAssignment): Promise<HomeworkAssignment | undefined>;
   deleteHomeworkAssignment(id: number): Promise<void>;
 
+  // Foundation Sessions operations
+  getFoundationSessions(userId: number): Promise<FoundationSession[]>;
+  getFoundationSession(userId: number, sessionNumber: number): Promise<FoundationSession | undefined>;
+  createFoundationSession(session: InsertFoundationSession): Promise<FoundationSession>;
+  updateFoundationSession(id: number, data: UpdateFoundationSession): Promise<FoundationSession | undefined>;
+  
+  // Foundation Session Messages operations
+  getFoundationSessionMessages(sessionId: number): Promise<FoundationSessionMessage[]>;
+  createFoundationSessionMessage(message: InsertFoundationSessionMessage): Promise<FoundationSessionMessage>;
+
   // Session store
   sessionStore: session.Store;
 }
@@ -172,6 +184,8 @@ export class MemStorage implements IStorage {
   private slis: Map<number, Sli>;
   private linkedinOptimizations: Map<number, LinkedinOptimization>;
   private linkedinContentDrafts: Map<number, LinkedinContentDraft>;
+  private foundationSessions: Map<number, FoundationSession>;
+  private foundationSessionMessages: Map<number, FoundationSessionMessage>;
   
   private userId: number;
   private experienceId: number;
@@ -191,6 +205,8 @@ export class MemStorage implements IStorage {
   private sliId: number;
   private linkedinOptimizationId: number;
   private linkedinContentDraftId: number;
+  private foundationSessionId: number;
+  private foundationSessionMessageId: number;
   
   sessionStore: session.Store;
 
@@ -213,6 +229,8 @@ export class MemStorage implements IStorage {
     this.slis = new Map();
     this.linkedinOptimizations = new Map();
     this.linkedinContentDrafts = new Map();
+    this.foundationSessions = new Map();
+    this.foundationSessionMessages = new Map();
     
     this.userId = 1;
     this.experienceId = 1;
@@ -232,6 +250,8 @@ export class MemStorage implements IStorage {
     this.sliId = 1;
     this.linkedinOptimizationId = 1;
     this.linkedinContentDraftId = 1;
+    this.foundationSessionId = 1;
+    this.foundationSessionMessageId = 1;
     
     this.sessionStore = new MemoryStore({
       checkPeriod: 86400000,
@@ -850,6 +870,61 @@ export class MemStorage implements IStorage {
     };
     this.linkedinContentDrafts.set(id, newContentDraft);
     return newContentDraft;
+  }
+
+  // Foundation Sessions methods
+  async getFoundationSessions(userId: number): Promise<FoundationSession[]> {
+    return Array.from(this.foundationSessions.values())
+      .filter(session => session.userId === userId)
+      .sort((a, b) => a.sessionNumber - b.sessionNumber);
+  }
+
+  async getFoundationSession(userId: number, sessionNumber: number): Promise<FoundationSession | undefined> {
+    return Array.from(this.foundationSessions.values())
+      .find(session => session.userId === userId && session.sessionNumber === sessionNumber);
+  }
+
+  async createFoundationSession(sessionData: InsertFoundationSession): Promise<FoundationSession> {
+    const id = this.foundationSessionId++;
+    const newSession: FoundationSession = {
+      ...sessionData,
+      id,
+      createdAt: new Date(),
+      updatedAt: new Date()
+    };
+    this.foundationSessions.set(id, newSession);
+    return newSession;
+  }
+
+  async updateFoundationSession(id: number, data: UpdateFoundationSession): Promise<FoundationSession | undefined> {
+    const session = this.foundationSessions.get(id);
+    if (!session) return undefined;
+
+    const updatedSession: FoundationSession = {
+      ...session,
+      ...data,
+      updatedAt: new Date()
+    };
+    this.foundationSessions.set(id, updatedSession);
+    return updatedSession;
+  }
+
+  // Foundation Session Messages methods
+  async getFoundationSessionMessages(sessionId: number): Promise<FoundationSessionMessage[]> {
+    return Array.from(this.foundationSessionMessages.values())
+      .filter(message => message.sessionId === sessionId)
+      .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+  }
+
+  async createFoundationSessionMessage(messageData: InsertFoundationSessionMessage): Promise<FoundationSessionMessage> {
+    const id = this.foundationSessionMessageId++;
+    const newMessage: FoundationSessionMessage = {
+      ...messageData,
+      id,
+      createdAt: new Date()
+    };
+    this.foundationSessionMessages.set(id, newMessage);
+    return newMessage;
   }
 }
 
