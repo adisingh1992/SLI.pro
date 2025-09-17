@@ -2,6 +2,7 @@ import { Express, Request, Response, NextFunction } from "express";
 import { storage } from "./storage";
 import { insertFoundationSessionSchema, insertFoundationSessionMessageSchema, updateFoundationSessionSchema } from "../shared/schema";
 import { z } from "zod";
+import { generateStreamingClaudeResponse } from "./claude";
 
 const isAuthenticated = (req: Request, res: Response, next: NextFunction) => {
   if (req.isAuthenticated()) {
@@ -216,6 +217,127 @@ export function registerFoundationSessionsRoutes(app: Express) {
     } catch (error) {
       console.error("Error updating foundation session:", error);
       next(error);
+    }
+  });
+
+  // Streaming chat endpoint for Foundation Sessions with Claude integration
+  app.post("/api/foundation-sessions/:sessionNumber/messages/stream", isAuthenticated, async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const sessionNumber = parseInt(req.params.sessionNumber);
+      const userId = req.user!.id;
+
+      if (isNaN(sessionNumber) || sessionNumber < 1 || sessionNumber > 3) {
+        return res.status(400).json({ error: "Invalid session number. Must be 1, 2, or 3" });
+      }
+
+      const session = await storage.getFoundationSession(userId, sessionNumber);
+      if (!session) {
+        return res.status(404).json({ error: "Session not found" });
+      }
+
+      if (session.status !== 'in_progress') {
+        return res.status(400).json({ error: "Session must be in progress to send messages" });
+      }
+
+      const { content } = req.body;
+      if (!content || typeof content !== 'string') {
+        return res.status(400).json({ error: "Message content is required" });
+      }
+
+      // Save user message
+      const userMessage = await storage.createFoundationSessionMessage({
+        sessionId: session.id,
+        role: 'user',
+        content: content.trim()
+      });
+
+      // Get all messages from this session for context
+      const messages = await storage.getFoundationSessionMessages(session.id);
+      
+      // Format messages for Claude API
+      const formattedMessages = messages.map(msg => ({
+        role: msg.role as 'user' | 'assistant',
+        content: msg.content
+      }));
+
+      // Get user profile data for context
+      const userProfile = await storage.getUserProfile(userId);
+
+      // Set up SSE headers
+      res.setHeader('Content-Type', 'text/event-stream');
+      res.setHeader('Cache-Control', 'no-cache');
+      res.setHeader('Connection', 'keep-alive');
+
+      // Send user message ID first
+      res.write(`data: ${JSON.stringify({ type: 'user_message', id: userMessage.id })}\n\n`);
+
+      // Initialize empty assistant content for accumulation
+      let assistantContent = '';
+
+      // Generate Foundation Session-specific system prompt
+      const getFoundationSessionSystemPrompt = () => {
+        if (sessionNumber === 1) {
+          return `You are a professional business coach specializing in helping people identify their primary business function. You're conducting a "Functional Identity Lock-In" session to help the user discover whether they align most with Finance, Operations, Sales, Marketing, or Product functions.
+
+Your goal is to guide them through a structured conversation that reveals their natural strengths, interests, and energy patterns. Ask thoughtful questions about:
+
+1. What energizes them most in their current/past roles
+2. Which types of problems they're naturally drawn to solve
+3. What activities make them lose track of time
+4. Their natural communication and thinking styles
+5. How they prefer to measure success and impact
+
+The five business functions are:
+- **Finance**: Numbers, analysis, risk assessment, budgeting, financial planning
+- **Operations**: Process improvement, efficiency, systems, execution, logistics
+- **Sales**: Relationship building, persuasion, closing deals, customer acquisition
+- **Marketing**: Brand building, content creation, customer understanding, awareness
+- **Product**: User experience, feature development, innovation, problem-solving
+
+Keep your responses conversational, insightful, and focused on discovery. Ask one thoughtful question at a time. Avoid being overly formal or clinical. Help them see patterns in their responses that point toward their primary function.
+
+When you have enough information (typically after 4-6 exchanges), provide a clear recommendation with reasoning.`;
+        }
+        
+        return `You are a professional business coach. This Foundation Session ${sessionNumber} is not yet fully implemented. Please let the user know this session is coming soon.`;
+      };
+
+      // Generate streaming response using Claude
+      await generateStreamingClaudeResponse(
+        userId,
+        formattedMessages,
+        userProfile,
+        (chunk) => {
+          // Accumulate the response content
+          assistantContent += chunk;
+          
+          // Send the chunk to the client
+          res.write(`data: ${JSON.stringify({ type: 'chunk', content: chunk })}\n\n`);
+        }
+      );
+
+      // Save complete assistant message
+      const assistantMessage = await storage.createFoundationSessionMessage({
+        sessionId: session.id,
+        role: 'assistant',
+        content: assistantContent
+      });
+
+      // Send final message with assistant message ID
+      res.write(`data: ${JSON.stringify({ 
+        type: 'complete', 
+        id: assistantMessage.id,
+        content: assistantContent 
+      })}\n\n`);
+
+      // Progress can be calculated on the frontend based on message count
+      // No need to store progress in database
+
+      res.end();
+    } catch (error) {
+      console.error("Error in Foundation Session streaming chat:", error);
+      res.write(`data: ${JSON.stringify({ type: 'error', message: 'Failed to generate response' })}\n\n`);
+      res.end();
     }
   });
 }

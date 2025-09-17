@@ -21,6 +21,7 @@ import LinkedinOptimizationGeneratePage from "@/pages/linkedin-optimization-gene
 import LinkedinContentDraftsPage from "@/pages/linkedin-content-drafts-page";
 import HomeworkPage from "@/pages/homework-page";
 import FoundationPage from "@/pages/foundation-page";
+import FoundationSessionChatPage from "@/pages/foundation-session-chat";
 import { AuthProvider } from "@/hooks/use-auth";
 import { ProtectedRoute } from "@/lib/protected-route";
 
@@ -79,6 +80,7 @@ function Router() {
       />
       <ProtectedRoute path="/homework" component={HomeworkPage} />
       <ProtectedRoute path="/foundation" component={FoundationPage} />
+      <ProtectedRoute path="/foundation/session/:sessionNumber" component={FoundationSessionChatPage} />
       
       {/* Admin routes */}
       <Route path="/admin/login" component={AdminLoginPage} />
