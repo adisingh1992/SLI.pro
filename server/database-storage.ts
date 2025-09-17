@@ -271,29 +271,6 @@ export class DatabaseStorage implements IStorage {
     await db.delete(documents).where(eq(documents.id, id));
   }
 
-  // LinkedIn Optimization methods
-  async getLinkedinOptimizations(userId: number): Promise<LinkedinOptimization[]> {
-    return db.select().from(linkedinOptimizations).where(eq(linkedinOptimizations.userId, userId))
-      .orderBy(desc(linkedinOptimizations.createdAt));
-  }
-  
-  async getLinkedinOptimization(id: number): Promise<LinkedinOptimization | undefined> {
-    const [optimization] = await db.select().from(linkedinOptimizations).where(eq(linkedinOptimizations.id, id));
-    return optimization || undefined;
-  }
-  
-  async getLatestLinkedinOptimization(userId: number): Promise<LinkedinOptimization | undefined> {
-    const [optimization] = await db.select().from(linkedinOptimizations)
-      .where(eq(linkedinOptimizations.userId, userId))
-      .orderBy(desc(linkedinOptimizations.createdAt))
-      .limit(1);
-    return optimization || undefined;
-  }
-  
-  async createLinkedinOptimization(optimization: InsertLinkedinOptimization): Promise<LinkedinOptimization> {
-    const [newOptimization] = await db.insert(linkedinOptimizations).values(optimization).returning();
-    return newOptimization;
-  }
   
   // User profile operations
   async getUserProfile(userId: number): Promise<UserProfile | undefined> {
