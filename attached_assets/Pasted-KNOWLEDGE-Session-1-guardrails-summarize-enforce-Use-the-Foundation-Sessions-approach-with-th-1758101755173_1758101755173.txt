@@ -1,0 +1,66 @@
+KNOWLEDGE (Session 1 guardrails — summarize & enforce)
+
+Use the Foundation Sessions approach with three sequential sessions; implement Session 1 now, Sessions 2–3 placeholders only. Sessions must be completed in sequence (2 locked until 1 complete; 3 locked until 2 complete).
+
+Session 1 goal (“Functional Identity Lock-In”): Help the user pick one primary function from Finance, Operations, Sales, Marketing, Product, then commit to an 80/20 split (primary 80%, secondary 20%), reject generalist positioning, and start speaking in function-specific language.
+
+Challenge patterns (use to keep conversation on-rails and disallow vagueness):
+
+Clarify “strategy/impact/influence” into a concrete function; force the user to pick a lane.
+
+Enforce anti-generalist stance; use the 80/20 forcing framework.
+
+Validate with function-specific questions (Finance/Operations/Sales/Marketing/Product).
+
+Session 1 completion criteria (all must be captured in conversation state):
+
+primaryFunction ∈ {Finance, Operations, Sales, Marketing, Product}
+
+secondaryFunction (optional) + split: {primary: 80, secondary: 20} (or justified variant)
+
+antiGeneralistCommitment: boolean + a short commitment statement
+
+functionalLanguageExamples: string[] (3–5 concrete terms/phrases from user’s own wording)
+
+Conversation boundaries: Claude must stay within this Session 1 scope and use the challenge patterns; do not drift into Sessions 2–3 content. If users go off-topic, steer back using the guardrails above.
+
+----------------------------------------------------------------------------------------
+
+USER (The task - feature to be built)
+
+Implement a new top-level feature “Foundation Sessions” with 3 subsections (Session 1 now; Sessions 2 & 3 later) with sequential gating and a Claude-powered chat for Session 1.
+
+Acceptance Criteria (implement all)
+
+Home page card: New “Foundation Sessions” card showing Session 1, Session 2, Session 3 with statuses: available | in_progress | completed | locked. Session 1 is available for new users; 2 & 3 are locked.
+
+Routing:
+
+/foundation overview page with the three sessions.
+
+/foundation/sessions/1 chat page (implemented now).
+
+/foundation/sessions/2 and /foundation/sessions/3 stub pages showing Locked state until prerequisites complete.
+
+Sequential gating: Session N is locked unless Session N−1 status === completed.
+
+Chat UI (Session 1):
+
+Claude chat on the left; message composer at bottom; progress panel on the right showing which completion metrics are already captured.
+
+Claude enforces Session 1 guardrails (Five Functions + challenge patterns + completion criteria).
+
+Each turn (user & Claude) is persisted to DB as structured JSON (see schemas below).
+
+Completion detection: Backend evaluates conversation state; when all four metrics exist and validate, mark Session 1 completed, unlock Session 2, and call Claude once to produce a structured JSON summary; persist it.
+
+Frontend -
+
+Home shows a new Foundation Sessions card with three step chips and CTA: Start/Resume/Review depending on status.
+
+/foundation page lists sessions with lock states; Session 2/3 show “Locked — complete prior session.”
+
+/foundation/sessions/1 page: 2-column layout: message list + composer; side panel shows completion checklist (ticks live as metrics populate).
+
+PS Note: When the user enters the chat the conversation should start automatically by claude initiating the conversation.
+The user can navigate away during the conversation, the history should be preserved and should restart whenever the user returns.
