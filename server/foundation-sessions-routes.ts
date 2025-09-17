@@ -38,7 +38,7 @@ async function checkSessionCompletion(sessionNumber: number, messages: any[], us
   }
 
   // For Session 1, check if we have enough conversation to identify the primary function
-  if (messages.length < 6) { // Need at least 3 back-and-forth exchanges
+  if (messages.length < 10) { // Need at least 5 back-and-forth exchanges for a complete conversation
     return { shouldComplete: false };
   }
 
@@ -51,8 +51,10 @@ ${messages.map(msg => `${msg.role.toUpperCase()}: ${msg.content}`).join('\n\n')}
 
 Based on this conversation, please analyze:
 1. Has the user's primary business function been clearly identified as one of: Finance, Operations, Sales, Marketing, or Product?
-2. Is there sufficient evidence and reasoning provided?
-3. Has the user shown understanding and agreement with the identification?
+2. Is there sufficient evidence and reasoning provided through multiple exchanges?
+3. Has the user explicitly acknowledged, agreed with, or shown clear understanding of the identification?
+4. Does the conversation have a natural conclusion where both parties seem satisfied with the outcome?
+5. Has the coach provided a clear final recommendation that the user has responded to positively?
 
 Respond in this exact JSON format:
 {
@@ -65,10 +67,12 @@ Respond in this exact JSON format:
   "keyInsights": ["insight1", "insight2", "insight3"]
 }
 
-Only set isComplete to true if:
-- A primary function has been clearly identified with high confidence
-- The reasoning is well-established based on the conversation
-- The user seems to understand and accept the identification`;
+Only set isComplete to true if ALL of the following are met:
+- A primary function has been clearly identified with high confidence (80%+ confidence)
+- The reasoning is well-established based on multiple conversation exchanges
+- The user has explicitly acknowledged or agreed with the identification
+- The conversation has reached a natural conclusion with both parties satisfied
+- The coach has provided clear final recommendations and the user has responded positively`;
 
     const response = await anthropic.messages.create({
       model: CLAUDE_MODEL,
