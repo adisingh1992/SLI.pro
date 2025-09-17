@@ -504,8 +504,8 @@ export const foundationSessions = pgTable("foundation_sessions", {
   userId: integer("user_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
   sessionNumber: integer("session_number").notNull(),
   status: sessionStatusEnum("status").notNull().default("locked"),
-  startedAt: timestamp("started_at"),
-  completedAt: timestamp("completed_at"),
+  startedAt: timestamp("started_at", { mode: 'date' }),
+  completedAt: timestamp("completed_at", { mode: 'date' }),
   completionData: jsonb("completion_data").$type<{
     // Session 1 completion criteria
     primaryFunction?: "Finance" | "Operations" | "Sales" | "Marketing" | "Product";
