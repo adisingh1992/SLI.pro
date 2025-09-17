@@ -1,6 +1,11 @@
-import { pgTable, text, serial, integer, boolean, timestamp, jsonb } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, boolean, timestamp, jsonb, pgEnum, unique, check, index } from "drizzle-orm/pg-core";
+import { sql } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
+
+// Enums for Foundation Sessions
+export const sessionStatusEnum = pgEnum("session_status", ["locked", "available", "in_progress", "completed"]);
+export const messageRoleEnum = pgEnum("message_role", ["user", "assistant"]);
 
 export const users = pgTable("users", {
   id: serial("id").primaryKey(),
@@ -493,6 +498,78 @@ export type InsertHomeworkAssignment = z.infer<typeof insertHomeworkAssignmentSc
 export type UpdateHomeworkAssignment = z.infer<typeof updateHomeworkAssignmentSchema>;
 export type HomeworkAssignment = typeof homeworkAssignments.$inferSelect;
 
+// Foundation Sessions schema
+export const foundationSessions = pgTable("foundation_sessions", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
+  sessionNumber: integer("session_number").notNull(),
+  status: sessionStatusEnum("status").notNull().default("locked"),
+  startedAt: timestamp("started_at"),
+  completedAt: timestamp("completed_at"),
+  completionData: jsonb("completion_data").$type<{
+    // Session 1 completion criteria
+    primaryFunction?: "Finance" | "Operations" | "Sales" | "Marketing" | "Product";
+    secondaryFunction?: "Finance" | "Operations" | "Sales" | "Marketing" | "Product";
+    functionalSplit?: { primary: number; secondary: number };
+    antiGeneralistCommitment?: boolean;
+    commitmentStatement?: string;
+    functionalLanguageExamples?: string[];
+    // Future sessions will have their own completion criteria
+  }>(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull().$onUpdate(() => sql`now()`),
+}, (table) => ({
+  // Unique constraint to prevent duplicate sessions for same user/session
+  userSessionUnique: unique().on(table.userId, table.sessionNumber),
+  // Check constraint to ensure session number is 1, 2, or 3
+  sessionNumberCheck: check("session_number_check", sql`${table.sessionNumber} >= 1 AND ${table.sessionNumber} <= 3`),
+  // Index for efficient lookups
+  userSessionIndex: index("foundation_sessions_user_session_idx").on(table.userId, table.sessionNumber),
+}));
+
+export const foundationSessionMessages = pgTable("foundation_session_messages", {
+  id: serial("id").primaryKey(),
+  sessionId: integer("session_id").notNull().references(() => foundationSessions.id, { onDelete: 'cascade' }),
+  role: messageRoleEnum("role").notNull(),
+  content: text("content").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => ({
+  // Index for efficient chronological message retrieval
+  sessionTimeIndex: index("foundation_session_messages_session_time_idx").on(table.sessionId, table.createdAt),
+}));
+
+export const insertFoundationSessionSchema = createInsertSchema(foundationSessions).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+}).extend({
+  sessionNumber: z.number().int().min(1).max(3),
+  status: z.enum(["locked", "available", "in_progress", "completed"]).optional(),
+});
+
+export const insertFoundationSessionMessageSchema = createInsertSchema(foundationSessionMessages).omit({
+  id: true,
+  createdAt: true,
+}).extend({
+  role: z.enum(["user", "assistant"]),
+});
+
+export const updateFoundationSessionSchema = createInsertSchema(foundationSessions).omit({
+  id: true,
+  userId: true,
+  sessionNumber: true,
+  createdAt: true,
+  updatedAt: true,
+}).extend({
+  status: z.enum(["locked", "available", "in_progress", "completed"]).optional(),
+}).partial();
+
+export type InsertFoundationSession = z.infer<typeof insertFoundationSessionSchema>;
+export type InsertFoundationSessionMessage = z.infer<typeof insertFoundationSessionMessageSchema>;
+export type UpdateFoundationSession = z.infer<typeof updateFoundationSessionSchema>;
+export type FoundationSession = typeof foundationSessions.$inferSelect;
+export type FoundationSessionMessage = typeof foundationSessionMessages.$inferSelect;
+
 export type UserProfile = User & {
   experiences?: Experience[];
   education?: Education[];
@@ -509,4 +586,5 @@ export type UserProfile = User & {
   slis?: Sli[];
   linkedinOptimizations?: LinkedinOptimization[];
   homeworkAssignments?: HomeworkAssignment[];
+  foundationSessions?: FoundationSession[];
 };
