@@ -31,6 +31,78 @@ function getInitialGuidanceMessage(sessionNumber: number): string | null {
   }
 }
 
+// Check if a foundation session should be automatically completed
+async function checkSessionCompletion(sessionNumber: number, messages: any[], userProfile: any): Promise<{ shouldComplete: boolean; completionData?: any }> {
+  if (sessionNumber !== 1) {
+    return { shouldComplete: false };
+  }
+
+  // For Session 1, check if we have enough conversation to identify the primary function
+  if (messages.length < 6) { // Need at least 3 back-and-forth exchanges
+    return { shouldComplete: false };
+  }
+
+  try {
+    // Use Claude to analyze the conversation and determine if completion criteria are met
+    const analysisPrompt = `Analyze this Functional Identity Lock-In coaching conversation to determine if the user's primary business function has been clearly identified.
+
+Conversation Messages:
+${messages.map(msg => `${msg.role.toUpperCase()}: ${msg.content}`).join('\n\n')}
+
+Based on this conversation, please analyze:
+1. Has the user's primary business function been clearly identified as one of: Finance, Operations, Sales, Marketing, or Product?
+2. Is there sufficient evidence and reasoning provided?
+3. Has the user shown understanding and agreement with the identification?
+
+Respond in this exact JSON format:
+{
+  "isComplete": boolean,
+  "primaryFunction": "Finance" | "Operations" | "Sales" | "Marketing" | "Product" | null,
+  "confidence": number (0-100),
+  "reasoning": "Brief explanation of why this function was identified",
+  "secondaryFunction": "Finance" | "Operations" | "Sales" | "Marketing" | "Product" | null,
+  "functionalSplit": {"primary": number, "secondary": number} | null,
+  "keyInsights": ["insight1", "insight2", "insight3"]
+}
+
+Only set isComplete to true if:
+- A primary function has been clearly identified with high confidence
+- The reasoning is well-established based on the conversation
+- The user seems to understand and accept the identification`;
+
+    const response = await anthropic.messages.create({
+      model: CLAUDE_MODEL,
+      system: "You are an expert at analyzing coaching conversations. Always respond with valid JSON only.",
+      messages: [{ role: 'user', content: analysisPrompt }],
+      max_tokens: 1000,
+      temperature: 0.1,
+    });
+
+    const analysisContent = response.content[0].type === 'text' ? response.content[0].text : '';
+    const analysis = JSON.parse(analysisContent);
+
+    if (analysis.isComplete && analysis.primaryFunction) {
+      return {
+        shouldComplete: true,
+        completionData: {
+          primaryFunction: analysis.primaryFunction,
+          secondaryFunction: analysis.secondaryFunction,
+          functionalSplit: analysis.functionalSplit,
+          confidence: analysis.confidence,
+          reasoning: analysis.reasoning,
+          keyInsights: analysis.keyInsights,
+          completedAt: new Date().toISOString()
+        }
+      };
+    }
+
+    return { shouldComplete: false };
+  } catch (error) {
+    console.error('Error checking session completion:', error);
+    return { shouldComplete: false };
+  }
+}
+
 export function registerFoundationSessionsRoutes(app: Express) {
   // Get all foundation sessions for the current user
   app.get("/api/foundation-sessions", isAuthenticated, async (req: Request, res: Response, next: NextFunction) => {
@@ -364,15 +436,42 @@ When you have enough information (typically after 4-6 exchanges), provide a clea
         content: assistantContent
       });
 
+      // Check if session should be automatically completed
+      const allMessages = await storage.getFoundationSessionMessages(session.id);
+      const completionCheck = await checkSessionCompletion(sessionNumber, allMessages, userProfile);
+      
+      if (completionCheck.shouldComplete) {
+        // Automatically complete the session with the extracted data
+        await storage.updateFoundationSession(session.id, {
+          status: 'completed',
+          completedAt: new Date(),
+          completionData: completionCheck.completionData
+        });
+
+        // Unlock next session if it exists
+        if (sessionNumber < 3) {
+          const nextSession = await storage.getFoundationSession(userId, sessionNumber + 1);
+          if (nextSession && nextSession.status === "locked") {
+            await storage.updateFoundationSession(nextSession.id, {
+              status: "available"
+            });
+          }
+        }
+
+        // Send completion notification
+        res.write(`data: ${JSON.stringify({ 
+          type: 'session_completed',
+          sessionNumber,
+          completionData: completionCheck.completionData
+        })}\n\n`);
+      }
+
       // Send final message with assistant message ID
       res.write(`data: ${JSON.stringify({ 
         type: 'complete', 
         id: assistantMessage.id,
         content: assistantContent 
       })}\n\n`);
-
-      // Progress can be calculated on the frontend based on message count
-      // No need to store progress in database
 
       res.end();
     } catch (error) {

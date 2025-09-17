@@ -146,6 +146,16 @@ export default function FoundationSessionChatPage() {
                 // Refresh data after completion
                 queryClient.invalidateQueries({ queryKey: ['/api/foundation-sessions', sessionNumber] });
                 queryClient.invalidateQueries({ queryKey: ['/api/foundation-sessions'] });
+              } else if (eventData.type === 'session_completed') {
+                console.log('Session automatically completed:', eventData);
+                toast({
+                  title: "Session Completed!",
+                  description: `Foundation Session ${eventData.sessionNumber} has been completed automatically. Your primary function has been identified as ${eventData.completionData?.primaryFunction}.`,
+                  duration: 5000,
+                });
+                // Refresh data after auto-completion
+                queryClient.invalidateQueries({ queryKey: ['/api/foundation-sessions', sessionNumber] });
+                queryClient.invalidateQueries({ queryKey: ['/api/foundation-sessions'] });
               } else if (eventData.type === 'error') {
                 console.error('Error from server:', eventData.message);
                 throw new Error(eventData.message || 'Server error');
