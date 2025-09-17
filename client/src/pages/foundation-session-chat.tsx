@@ -59,9 +59,34 @@ export default function FoundationSessionChatPage() {
 
   // Fetch session with messages
   const { data: sessionData, isLoading, error } = useQuery<SessionWithMessages>({
-    queryKey: ['/api/foundation-sessions', sessionNumber, 'messages'],
+    queryKey: ['/api/foundation-sessions', sessionNumber],
     enabled: !!user,
   });
+
+  // Auto-start session if available
+  const startSessionMutation = useMutation({
+    mutationFn: async (sessionNumber: number) => {
+      return await apiRequest('POST', `/api/foundation-sessions/${sessionNumber}/start`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/foundation-sessions', sessionNumber] });
+      queryClient.invalidateQueries({ queryKey: ['/api/foundation-sessions'] });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to start session",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Auto-start session if it's available
+  useEffect(() => {
+    if (sessionData?.session && sessionData.session.status === 'available' && sessionNumber === 1) {
+      startSessionMutation.mutate(sessionNumber);
+    }
+  }, [sessionData?.session?.status, sessionNumber]);
 
   // Send message with streaming response (similar to conversation hook)
   const sendMessage = async (content: string) => {
@@ -102,7 +127,7 @@ export default function FoundationSessionChatPage() {
 
         if (done) break;
 
-        const text = decoder.decode(value);
+        const text = decoder.decode(value, { stream: true });
         accumulatedData += text;
 
         // Process SSE data
@@ -119,7 +144,7 @@ export default function FoundationSessionChatPage() {
               } else if (eventData.type === 'complete') {
                 console.log('Stream completed');
                 // Refresh data after completion
-                queryClient.invalidateQueries({ queryKey: ['/api/foundation-sessions', sessionNumber, 'messages'] });
+                queryClient.invalidateQueries({ queryKey: ['/api/foundation-sessions', sessionNumber] });
                 queryClient.invalidateQueries({ queryKey: ['/api/foundation-sessions'] });
               } else if (eventData.type === 'error') {
                 console.error('Error from server:', eventData.message);

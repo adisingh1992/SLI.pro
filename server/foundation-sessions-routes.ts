@@ -3,6 +3,12 @@ import { storage } from "./storage";
 import { insertFoundationSessionSchema, insertFoundationSessionMessageSchema, updateFoundationSessionSchema } from "../shared/schema";
 import { z } from "zod";
 import { generateStreamingClaudeResponse } from "./claude";
+import Anthropic from "@anthropic-ai/sdk";
+
+const CLAUDE_MODEL = process.env.CLAUDE_MODEL || 'claude-3-7-sonnet-20250219';
+const anthropic = new Anthropic({
+  apiKey: process.env.ANTHROPIC_API_KEY,
+});
 
 const isAuthenticated = (req: Request, res: Response, next: NextFunction) => {
   if (req.isAuthenticated()) {
@@ -302,19 +308,27 @@ When you have enough information (typically after 4-6 exchanges), provide a clea
         return `You are a professional business coach. This Foundation Session ${sessionNumber} is not yet fully implemented. Please let the user know this session is coming soon.`;
       };
 
-      // Generate streaming response using Claude
-      await generateStreamingClaudeResponse(
-        userId,
-        formattedMessages,
-        userProfile,
-        (chunk) => {
-          // Accumulate the response content
-          assistantContent += chunk;
+      // Generate streaming response using Foundation Session-specific Claude integration
+      const systemPrompt = getFoundationSessionSystemPrompt();
+      
+      const response = await anthropic.messages.create({
+        model: CLAUDE_MODEL,
+        system: systemPrompt,
+        messages: formattedMessages,
+        max_tokens: 4096,
+        temperature: 0.7,
+        stream: true,
+      });
+
+      for await (const chunk of response) {
+        if (chunk.type === 'content_block_delta' && chunk.delta.type === 'text_delta') {
+          const content = chunk.delta.text;
+          assistantContent += content;
           
           // Send the chunk to the client
-          res.write(`data: ${JSON.stringify({ type: 'chunk', content: chunk })}\n\n`);
+          res.write(`data: ${JSON.stringify({ type: 'chunk', content })}\n\n`);
         }
-      );
+      }
 
       // Save complete assistant message
       const assistantMessage = await storage.createFoundationSessionMessage({
