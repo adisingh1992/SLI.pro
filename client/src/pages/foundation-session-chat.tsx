@@ -229,7 +229,7 @@ export default function FoundationSessionChatPage() {
       return {
         title: "Functional Identity Lock-In",
         description: "Discover your primary business function through guided conversation.",
-        prompt: "I'm here to help you identify your primary business function (Finance, Operations, Sales, Marketing, or Product). Let's start by discussing your current role and what energizes you most about work.",
+        prompt: "Hello, I'm here to help you identify your primary business function (Finance, Operations, Sales, Marketing, or Product). Let's start by discussing your current role and what energizes you most about work.",
         functions: ["Finance", "Operations", "Sales", "Marketing", "Product"]
       };
     }

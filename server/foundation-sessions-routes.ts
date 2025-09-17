@@ -21,7 +21,7 @@ const isAuthenticated = (req: Request, res: Response, next: NextFunction) => {
 function getInitialGuidanceMessage(sessionNumber: number): string | null {
   switch (sessionNumber) {
     case 1:
-      return "I'm here to help you identify your primary business function (Finance, Operations, Sales, Marketing, or Product). Let's start by discussing your current role and what energizes you most about work.";
+      return "Hello, I'm here to help you identify your primary business function (Finance, Operations, Sales, Marketing, or Product). Let's start by discussing your current role and what energizes you most about work.";
     case 2:
       return "Welcome to Session 2. This session is coming soon.";
     case 3:
@@ -44,35 +44,71 @@ async function checkSessionCompletion(sessionNumber: number, messages: any[], us
 
   try {
     // Use Claude to analyze the conversation and determine if completion criteria are met
-    const analysisPrompt = `Analyze this Functional Identity Lock-In coaching conversation to determine if the user's primary business function has been clearly identified.
+    const analysisPrompt = `You are evaluating a Session 1 "Functional Identity Lock-In" coaching conversation that must stay within the Five Functions framework: Finance, Operations, Sales, Marketing, Product. Use the conversation transcript and the following guardrails from our methodology to make a determination.
 
-Conversation Messages:
-${messages.map(msg => `${msg.role.toUpperCase()}: ${msg.content}`).join('\n\n')}
+    Conversation Messages:
+    ${messages.map(msg => `${msg.role.toUpperCase()}: ${msg.content}`).join('\n\n')}
 
-Based on this conversation, please analyze:
-1. Has the user's primary business function been clearly identified as one of: Finance, Operations, Sales, Marketing, or Product?
-2. Is there sufficient evidence and reasoning provided through multiple exchanges?
-3. Has the user explicitly acknowledged, agreed with, or shown clear understanding of the identification?
-4. Does the conversation have a natural conclusion where both parties seem satisfied with the outcome?
-5. Has the coach provided a clear final recommendation that the user has responded to positively?
+    Use this methodology to analyze the transcript:
 
-Respond in this exact JSON format:
-{
-  "isComplete": boolean,
-  "primaryFunction": "Finance" | "Operations" | "Sales" | "Marketing" | "Product" | null,
-  "confidence": number (0-100),
-  "reasoning": "Brief explanation of why this function was identified",
-  "secondaryFunction": "Finance" | "Operations" | "Sales" | "Marketing" | "Product" | null,
-  "functionalSplit": {"primary": number, "secondary": number} | null,
-  "keyInsights": ["insight1", "insight2", "insight3"]
-}
+    1) Five Functions Reality Check (force functional specificity)
+       - Primary function MUST be one of: Finance, Operations, Sales, Marketing, Product.
+       - When the user says vague goals like "impact the business" or "lead strategy", translate them into a concrete function by pressing for the mechanism of value creation (revenue=Sales, efficiency=Operations, allocation=Finance, perception=Marketing, what gets built=Product).
 
-Only set isComplete to true if ALL of the following are met:
-- A primary function has been clearly identified with high confidence (80%+ confidence)
-- The reasoning is well-established based on multiple conversation exchanges
-- The user has explicitly acknowledged or agreed with the identification
-- The conversation has reached a natural conclusion with both parties satisfied
-- The coach has provided clear final recommendations and the user has responded positively`;
+    2) Function-Specific Validation Tests (credibility yardsticks)
+       - FINANCE: ROI/budgets/resource allocation; would a CFO stake budget on these outcomes?
+       - OPERATIONS: better/faster/cheaper; process/system redesign vs mere participation.
+       - MARKETING: demand/perception; brand/positioning outcomes a CMO would fund.
+       - SALES: direct revenue/closing or enablement a VP Sales would trust.
+       - PRODUCT: decisions on what gets built and why; roadmap judgment a CPO would back.
+
+    3) Anti-Generalist Enforcement Patterns
+       - Small vs Big company test: what would they OWN in a specialized org?
+       - Horizontal vs Vertical: collaboration ≠ positioning; require a vertical.
+       - 80/20 forcing: one primary (≈80%) and optionally one secondary (≈20%). "I do everything" is not acceptable positioning.
+
+    4) Translation Patterns for Common Vague Claims
+       - Map "strategy/impact/influence/transformation/cross-functional" to a concrete function and mechanism (e.g., Finance strategy vs Marketing strategy; growth via Sales vs Marketing; transformation of processes=Operations; influencing product: Product vs Marketing vs Sales roles).
+
+    5) Breakthrough/Success Indicators
+       - After breakthrough: user uses function-specific language (e.g., "I'm an Operations person who optimizes processes"; "I'm a Marketing expert shaping perception").
+       - Confirmation patterns: clear lock-in statements and acceptance of a coach recommendation.
+
+    IMPORTANT: Base all judgments ONLY on evidence found in the transcript. If the evidence is weak, keep confidence low and prefer null for undecided fields. Do not invent details.
+
+    Respond in STRICT JSON only (no prose, no code fences) with EXACTLY this schema and keys:
+
+    {
+      "isComplete": boolean,
+      "primaryFunction": "Finance" | "Operations" | "Sales" | "Marketing" | "Product" | null,
+      "confidence": number, // 0-100
+      "reasoning": string,  // brief explanation grounded in transcript evidence
+      "secondaryFunction": "Finance" | "Operations" | "Sales" | "Marketing" | "Product" | null,
+      "functionalSplit": {"primary": number, "secondary": number} | null,
+      "keyInsights": string[] // bullet-y phrases capturing: validation tests passed/failed, anti-generalist commitment, 80/20 clarity, translation patterns used, breakthrough phrases
+    }
+
+    Rules for setting fields:
+    - primaryFunction: set ONLY if the transcript clearly anchors to one of the five functions via mechanisms/outcomes aligned to that function.
+    - secondaryFunction: set ONLY if the transcript clearly states (or strongly implies) a minor second function; otherwise null.
+    - functionalSplit: set ONLY if an 80/20 (or similar) split is stated or clearly implied; otherwise null.
+    - keyInsights: include concrete snippets like "COO-level efficiency outcome", "80/20 declared: Product 80 / Marketing 20", "anti-generalist commitment made", "breakthrough phrase: 'I'm a Sales person who…'", "strategy translated to Marketing strategy", etc.
+
+    Keep the isComplete flow EXACTLY as follows (all must be satisfied to set isComplete=true):
+    - A primary function has been clearly identified with high confidence (80%+ confidence)
+    - The reasoning is well-established based on multiple conversation exchanges
+    - The user has explicitly acknowledged or agreed with the identification
+    - The conversation has reached a natural conclusion with both parties satisfied
+    - The coach has provided clear final recommendations and the user has responded positively
+
+    Edge handling:
+    - If conflicting signals exist (e.g., hopping between functions without lock-in), prefer null for primaryFunction and isComplete=false.
+    - If the user remains generalist (no 80/20 commitment or no vertical), keep isComplete=false even if a function was mentioned.
+    - If the transcript drifts into non-Session-1 topics, ignore them; focus strictly on functional identity lock-in.
+
+    Once the 'isComplete' has been set to true, DO NOT INCLUDE any further questions in the response for the user like (Would this assessment resonate with you?). Instead, provide a clear summary of the findings and recommendations and end the conversation.
+
+    Return ONLY the JSON object, nothing else.`;
 
     const response = await anthropic.messages.create({
       model: CLAUDE_MODEL,
