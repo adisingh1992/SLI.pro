@@ -42,7 +42,7 @@ export function useSessionTimer(
   const [isRunning, setIsRunning] = useState<boolean>(false);
   const [phase, setPhase] = useState<'initial' | 'warning' | 'overtime' | 'completed'>('initial');
   const [lastSavedTime, setLastSavedTime] = useState<number>(initialTimerElapsed);
-  const lastSaveTimestampRef = useRef<number>(Date.now());
+  const saveIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const timeElapsedRef = useRef<number>(initialTimerElapsed);
   const lastSavedTimeRef = useRef<number>(initialTimerElapsed);
 
@@ -87,19 +87,39 @@ export function useSessionTimer(
   // Start the timer
   const startTimer = useCallback(() => {
     if (!isRunning) {
-      const now = Date.now();
-      setStartTime(now - (timeElapsed * 1000)); // Adjust start time for existing elapsed time
+      setStartTime(Date.now() - (timeElapsed * 1000)); // Adjust start time for existing elapsed time
       setIsRunning(true);
       setPhase(calculatePhase(timeElapsed));
-      lastSaveTimestampRef.current = now; // Reset save timestamp when starting
+      
+      // Start save interval - save every 10 seconds
+      if (sessionNumber && !saveIntervalRef.current) {
+        saveIntervalRef.current = setInterval(() => {
+          const currentElapsed = timeElapsedRef.current;
+          const currentLastSaved = lastSavedTimeRef.current;
+          if (currentElapsed > currentLastSaved) {
+            saveTimerToDatabase(currentElapsed);
+          }
+        }, 10000);
+      }
     }
-  }, [isRunning, timeElapsed, calculatePhase]);
+  }, [isRunning, timeElapsed, calculatePhase, sessionNumber, lastSavedTime, saveTimerToDatabase]);
 
   // Stop the timer
   const stopTimer = useCallback(() => {
     setIsRunning(false);
     setPhase('completed');
-  }, []);
+    
+    // Clear save interval
+    if (saveIntervalRef.current) {
+      clearInterval(saveIntervalRef.current);
+      saveIntervalRef.current = null;
+    }
+    
+    // Save final time
+    if (timeElapsed > lastSavedTime) {
+      saveTimerToDatabase(timeElapsed);
+    }
+  }, [timeElapsed, lastSavedTime, saveTimerToDatabase]);
 
   // Reset the timer
   const resetTimer = useCallback(() => {
@@ -107,6 +127,12 @@ export function useSessionTimer(
     setTimeElapsed(0);
     setIsRunning(false);
     setPhase('initial');
+    
+    // Clear save interval
+    if (saveIntervalRef.current) {
+      clearInterval(saveIntervalRef.current);
+      saveIntervalRef.current = null;
+    }
   }, []);
 
   // Update refs whenever state changes
@@ -142,36 +168,14 @@ export function useSessionTimer(
     };
   }, [isRunning, startTime, phase, calculatePhase]);
 
-  // Separate interval for saving to database every 10 seconds
-  useEffect(() => {
-    let saveInterval: ReturnType<typeof setInterval> | null = null;
-
-    if (isRunning && sessionNumber) {
-      saveInterval = setInterval(() => {
-        // Use refs to get current values without causing effect to restart
-        const currentElapsed = timeElapsedRef.current;
-        const currentLastSaved = lastSavedTimeRef.current;
-        if (currentElapsed > currentLastSaved) {
-          saveTimerToDatabase(currentElapsed);
-        }
-      }, 10000); // Save every 10 seconds
-    }
-
-    return () => {
-      if (saveInterval) {
-        clearInterval(saveInterval);
-      }
-    };
-  }, [isRunning, sessionNumber]); // Only depend on isRunning and sessionNumber
-
-  // Save timer when component unmounts or timer stops
+  // Clean up save interval on unmount
   useEffect(() => {
     return () => {
-      if (timeElapsed > lastSavedTime) {
-        saveTimerToDatabase(timeElapsed);
+      if (saveIntervalRef.current) {
+        clearInterval(saveIntervalRef.current);
       }
     };
-  }, [timeElapsed, lastSavedTime, saveTimerToDatabase]);
+  }, []);
 
   // Initialize timer elapsed from session data
   useEffect(() => {
