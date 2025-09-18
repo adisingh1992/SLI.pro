@@ -43,6 +43,8 @@ export function useSessionTimer(
   const [phase, setPhase] = useState<'initial' | 'warning' | 'overtime' | 'completed'>('initial');
   const [lastSavedTime, setLastSavedTime] = useState<number>(initialTimerElapsed);
   const lastSaveTimestampRef = useRef<number>(Date.now());
+  const timeElapsedRef = useRef<number>(initialTimerElapsed);
+  const lastSavedTimeRef = useRef<number>(initialTimerElapsed);
 
   // Format time as MM:SS
   const formatTime = useCallback((seconds: number): string => {
@@ -107,7 +109,16 @@ export function useSessionTimer(
     setPhase('initial');
   }, []);
 
-  // Update timer every second and save to database periodically
+  // Update refs whenever state changes
+  useEffect(() => {
+    timeElapsedRef.current = timeElapsed;
+  }, [timeElapsed]);
+
+  useEffect(() => {
+    lastSavedTimeRef.current = lastSavedTime;
+  }, [lastSavedTime]);
+
+  // Update timer every second
   useEffect(() => {
     let interval: ReturnType<typeof setInterval> | null = null;
 
@@ -121,13 +132,6 @@ export function useSessionTimer(
         if (newPhase !== phase) {
           setPhase(newPhase);
         }
-
-        // Save to database every 10 seconds to avoid excessive API calls
-        const currentTime = Date.now();
-        if (currentTime - lastSaveTimestampRef.current >= 10000) { // 10 seconds in milliseconds
-          saveTimerToDatabase(elapsed);
-          lastSaveTimestampRef.current = currentTime;
-        }
       }, 1000);
     }
 
@@ -136,7 +140,29 @@ export function useSessionTimer(
         clearInterval(interval);
       }
     };
-  }, [isRunning, startTime, phase, calculatePhase, saveTimerToDatabase]);
+  }, [isRunning, startTime, phase, calculatePhase]);
+
+  // Separate interval for saving to database every 10 seconds
+  useEffect(() => {
+    let saveInterval: ReturnType<typeof setInterval> | null = null;
+
+    if (isRunning && sessionNumber) {
+      saveInterval = setInterval(() => {
+        // Use refs to get current values without causing effect to restart
+        const currentElapsed = timeElapsedRef.current;
+        const currentLastSaved = lastSavedTimeRef.current;
+        if (currentElapsed > currentLastSaved) {
+          saveTimerToDatabase(currentElapsed);
+        }
+      }, 10000); // Save every 10 seconds
+    }
+
+    return () => {
+      if (saveInterval) {
+        clearInterval(saveInterval);
+      }
+    };
+  }, [isRunning, sessionNumber]); // Only depend on isRunning and sessionNumber
 
   // Save timer when component unmounts or timer stops
   useEffect(() => {
