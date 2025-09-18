@@ -42,6 +42,7 @@ export function useSessionTimer(
   const [isRunning, setIsRunning] = useState<boolean>(false);
   const [phase, setPhase] = useState<'initial' | 'warning' | 'overtime' | 'completed'>('initial');
   const [lastSavedTime, setLastSavedTime] = useState<number>(initialTimerElapsed);
+  const [lastSaveTimestamp, setLastSaveTimestamp] = useState<number>(Date.now());
 
   // Format time as MM:SS
   const formatTime = useCallback((seconds: number): string => {
@@ -84,9 +85,11 @@ export function useSessionTimer(
   // Start the timer
   const startTimer = useCallback(() => {
     if (!isRunning) {
-      setStartTime(Date.now() - (timeElapsed * 1000)); // Adjust start time for existing elapsed time
+      const now = Date.now();
+      setStartTime(now - (timeElapsed * 1000)); // Adjust start time for existing elapsed time
       setIsRunning(true);
       setPhase(calculatePhase(timeElapsed));
+      setLastSaveTimestamp(now); // Reset save timestamp when starting
     }
   }, [isRunning, timeElapsed, calculatePhase]);
 
@@ -120,8 +123,10 @@ export function useSessionTimer(
         }
 
         // Save to database every 10 seconds to avoid excessive API calls
-        if (elapsed % 10 === 0) {
+        const currentTime = Date.now();
+        if (currentTime - lastSaveTimestamp >= 10000) { // 10 seconds in milliseconds
           saveTimerToDatabase(elapsed);
+          setLastSaveTimestamp(currentTime);
         }
       }, 1000);
     }
@@ -131,7 +136,7 @@ export function useSessionTimer(
         clearInterval(interval);
       }
     };
-  }, [isRunning, startTime, phase, calculatePhase, saveTimerToDatabase]);
+  }, [isRunning, startTime, phase, calculatePhase, saveTimerToDatabase, lastSaveTimestamp]);
 
   // Save timer when component unmounts or timer stops
   useEffect(() => {
