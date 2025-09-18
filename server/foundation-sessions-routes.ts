@@ -610,7 +610,7 @@ Once the user is locked-in, smoothly end the session with a brief summary. DO NO
         timerElapsed
       });
 
-      res.json({ timerElapsed: updatedSession.timerElapsed });
+      res.json({ timerElapsed: updatedSession?.timerElapsed || timerElapsed });
     } catch (error) {
       console.error("Error updating foundation session timer:", error);
       next(error);

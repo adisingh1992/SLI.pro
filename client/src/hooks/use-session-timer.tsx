@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { apiRequest } from '@/lib/queryClient';
 
 export interface SessionTimerConfig {
   targetMinutes: number;
@@ -31,11 +32,16 @@ export const DEFAULT_FOUNDATION_SESSION_CONFIG: SessionTimerConfig = {
   }
 };
 
-export function useSessionTimer(config: SessionTimerConfig = DEFAULT_FOUNDATION_SESSION_CONFIG) {
+export function useSessionTimer(
+  config: SessionTimerConfig = DEFAULT_FOUNDATION_SESSION_CONFIG,
+  sessionNumber?: number,
+  initialTimerElapsed: number = 0
+) {
   const [startTime, setStartTime] = useState<number | null>(null);
-  const [timeElapsed, setTimeElapsed] = useState<number>(0);
+  const [timeElapsed, setTimeElapsed] = useState<number>(initialTimerElapsed);
   const [isRunning, setIsRunning] = useState<boolean>(false);
   const [phase, setPhase] = useState<'initial' | 'warning' | 'overtime' | 'completed'>('initial');
+  const [lastSavedTime, setLastSavedTime] = useState<number>(initialTimerElapsed);
 
   // Format time as MM:SS
   const formatTime = useCallback((seconds: number): string => {
@@ -61,14 +67,28 @@ export function useSessionTimer(config: SessionTimerConfig = DEFAULT_FOUNDATION_
     return config.messages[currentPhase];
   }, [config.messages]);
 
+  // Save timer elapsed time to database
+  const saveTimerToDatabase = useCallback(async (elapsed: number) => {
+    if (sessionNumber && elapsed !== lastSavedTime) {
+      try {
+        await apiRequest('PATCH', `/api/foundation-sessions/${sessionNumber}/timer`, {
+          timerElapsed: elapsed
+        });
+        setLastSavedTime(elapsed);
+      } catch (error) {
+        console.error('Failed to save timer to database:', error);
+      }
+    }
+  }, [sessionNumber, lastSavedTime]);
+
   // Start the timer
   const startTimer = useCallback(() => {
     if (!isRunning) {
-      setStartTime(Date.now());
+      setStartTime(Date.now() - (timeElapsed * 1000)); // Adjust start time for existing elapsed time
       setIsRunning(true);
-      setPhase('initial');
+      setPhase(calculatePhase(timeElapsed));
     }
-  }, [isRunning]);
+  }, [isRunning, timeElapsed, calculatePhase]);
 
   // Stop the timer
   const stopTimer = useCallback(() => {
@@ -84,7 +104,7 @@ export function useSessionTimer(config: SessionTimerConfig = DEFAULT_FOUNDATION_
     setPhase('initial');
   }, []);
 
-  // Update timer every second
+  // Update timer every second and save to database periodically
   useEffect(() => {
     let interval: ReturnType<typeof setInterval> | null = null;
 
@@ -98,6 +118,11 @@ export function useSessionTimer(config: SessionTimerConfig = DEFAULT_FOUNDATION_
         if (newPhase !== phase) {
           setPhase(newPhase);
         }
+
+        // Save to database every 10 seconds to avoid excessive API calls
+        if (elapsed % 10 === 0) {
+          saveTimerToDatabase(elapsed);
+        }
       }, 1000);
     }
 
@@ -106,7 +131,25 @@ export function useSessionTimer(config: SessionTimerConfig = DEFAULT_FOUNDATION_
         clearInterval(interval);
       }
     };
-  }, [isRunning, startTime, phase, calculatePhase]);
+  }, [isRunning, startTime, phase, calculatePhase, saveTimerToDatabase]);
+
+  // Save timer when component unmounts or timer stops
+  useEffect(() => {
+    return () => {
+      if (timeElapsed > lastSavedTime) {
+        saveTimerToDatabase(timeElapsed);
+      }
+    };
+  }, [timeElapsed, lastSavedTime, saveTimerToDatabase]);
+
+  // Initialize timer elapsed from session data
+  useEffect(() => {
+    if (initialTimerElapsed > 0 && timeElapsed === 0) {
+      setTimeElapsed(initialTimerElapsed);
+      setLastSavedTime(initialTimerElapsed);
+      setPhase(calculatePhase(initialTimerElapsed));
+    }
+  }, [initialTimerElapsed, timeElapsed, calculatePhase]);
 
   const timerState: SessionTimerState = {
     timeElapsed,
