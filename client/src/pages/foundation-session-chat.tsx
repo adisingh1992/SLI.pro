@@ -12,6 +12,7 @@ import { Progress } from "@/components/ui/progress";
 import { Loader2, Send, ArrowLeft, Lock, CheckCircle, MessageSquare, AlertCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import SessionTimer from "@/components/ui/session-timer";
 
 type FoundationSession = {
   id: number;
@@ -402,6 +403,16 @@ export default function FoundationSessionChatPage() {
               <span className="text-sm text-muted-foreground">{session.progress}%</span>
             </div>
             <Progress value={session.progress} className="h-2" data-testid="progress-session" />
+          </div>
+        )}
+
+        {/* Session Timer */}
+        {(session.status === 'in_progress' || session.status === 'completed') && (
+          <div className="mb-6">
+            <SessionTimer 
+              isSessionActive={session.status === 'in_progress'}
+              isSessionCompleted={session.status === 'completed'}
+            />
           </div>
         )}
 
