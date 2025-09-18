@@ -308,7 +308,7 @@ export default function FoundationPage() {
 
                   {/* Session Card */}
                   <Card 
-                    className={`relative overflow-hidden transition-all duration-300 hover:shadow-lg group ${
+                    className={`relative overflow-hidden transition-all duration-300 hover:shadow-lg group flex flex-col min-h-[520px] ${
                       session.status === 'completed' ? 'ring-2 ring-green-200 dark:ring-green-800' : 
                       session.status === 'in_progress' ? 'ring-2 ring-blue-200 dark:ring-blue-800' : ''
                     }`}
