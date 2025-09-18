@@ -24,6 +24,7 @@ type FoundationSession = {
   startedAt?: string;
   completedAt?: string;
   progress?: number;
+  timerElapsed?: number;
   completionData?: {
     primaryFunction?: string;
     secondaryFunction?: string;
@@ -518,6 +519,8 @@ export default function FoundationSessionChatPage() {
                   isSessionActive={session.status === 'in_progress'}
                   isSessionCompleted={session.status === 'completed'}
                   className="border-0 bg-transparent p-0"
+                  sessionNumber={sessionNumber}
+                  initialTimerElapsed={session.timerElapsed || 0}
                 />
               </div>
             )}
