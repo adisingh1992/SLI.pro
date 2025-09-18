@@ -1,7 +1,6 @@
 import { useAuth } from '@/hooks/use-auth';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiRequest } from '@/lib/queryClient';
-import { useState } from 'react';
 import { useLocation } from 'wouter';
 import NavBar from "@/components/nav-bar";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -21,14 +20,6 @@ type FoundationSession = {
   startedAt?: string;
   completedAt?: string;
   progress?: number;
-};
-
-type FoundationSessionMessage = {
-  id: number;
-  sessionId: number;
-  role: 'user' | 'assistant';
-  content: string;
-  timestamp: string;
 };
 
 export default function FoundationPage() {
@@ -151,12 +142,6 @@ export default function FoundationPage() {
     }
   };
 
-  // const calculateOverallProgress = () => {
-  //   if (!sessions) return 0;
-  //   const completedSessions = sessions.filter(s => s.status === 'completed').length;
-  //   return (completedSessions / sessions.length) * 100;
-  // };
-
   if (isLoading) {
     return (
       <div className="min-h-screen bg-background">
@@ -263,23 +248,6 @@ export default function FoundationPage() {
                 Complete three sequential coaching conversations to identify your primary business function and develop your professional foundation.
               </p>
             </div>
-            
-            {/* Overall Progress */}
-            {/* <div className="max-w-2xl mx-auto">
-              <div className="bg-card/80 backdrop-blur-sm rounded-xl p-6 border shadow-sm">
-                <div className="flex items-center justify-between mb-3">
-                  <span className="text-base font-semibold">Overall Progress</span>
-                  <span className="text-sm text-muted-foreground px-3 py-1 rounded-full bg-background/50">
-                    {sessions.filter(s => s.status === 'completed').length} of {sessions.length} completed
-                  </span>
-                </div>
-                <Progress 
-                  value={calculateOverallProgress()} 
-                  className="h-3 rounded-full" 
-                  data-testid="progress-overall"
-                />
-              </div>
-            </div> */}
           </div>
         </div>
       </div>
@@ -328,7 +296,7 @@ export default function FoundationPage() {
                             {content.header}
                           </CardTitle>
                           {content.subtext && (
-                            <p className="text-sm font-medium text-primary mt-3">
+                            <p className="text-sm font-medium text-green-800 mt-3">
                               {content.subtext}
                             </p>
                           )}
