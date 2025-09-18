@@ -61,6 +61,7 @@ export default function FoundationSessionChatPage() {
   const [isStreaming, setIsStreaming] = useState(false);
   const [streamingResponse, setStreamingResponse] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const messageInputRef = useRef<HTMLTextAreaElement>(null);
 
   // Validate session number
   if (isNaN(sessionNumber) || sessionNumber < 1 || sessionNumber > 3) {
@@ -191,6 +192,10 @@ export default function FoundationSessionChatPage() {
       setIsStreaming(false);
       setStreamingResponse('');
       setCurrentMessage('');
+      // Refocus the input after clearing the message
+      setTimeout(() => {
+        messageInputRef.current?.focus();
+      }, 0);
     }
   };
 
@@ -465,6 +470,7 @@ export default function FoundationSessionChatPage() {
               <form onSubmit={handleSendMessage} className="border-t p-6">
                 <div className="flex gap-3">
                   <Textarea
+                    ref={messageInputRef}
                     value={currentMessage}
                     onChange={(e) => setCurrentMessage(e.target.value)}
                     placeholder="Type your message here..."
