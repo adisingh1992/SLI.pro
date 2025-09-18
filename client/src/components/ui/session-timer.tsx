@@ -85,54 +85,48 @@ export function SessionTimer({
     : timer.currentMessage;
 
   return (
-    <div className={cn("space-y-3", className)} data-testid="session-timer">
+    <div className={cn("flex items-center justify-between p-4 rounded-lg border bg-card", className)} data-testid="session-timer">
       {/* Timer Display */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <TimerIcon className={cn("h-4 w-4", getTimerColor())} />
-          <span className={cn("font-mono text-sm", getTimerColor())} data-testid="timer-display">
-            {timer.formattedTime}
+      <div className="flex items-center gap-3">
+        <TimerIcon className={cn("h-4 w-4", getTimerColor())} />
+        <span className={cn("font-mono text-sm font-medium", getTimerColor())} data-testid="timer-display">
+          {timer.formattedTime}
+        </span>
+      </div>
+      
+      {/* Message */}
+      {displayMessage && (
+        <div className="flex-1 mx-4" data-testid="timer-message">
+          <span className="text-sm text-muted-foreground">
+            {displayMessage}
           </span>
         </div>
-        
-        <Badge 
-          variant="outline" 
-          className={cn(
-            "text-xs",
-            isSessionCompleted || timer.phase === 'completed'
-              ? "border-green-200 bg-green-50 text-green-700 dark:border-green-800 dark:bg-green-950 dark:text-green-400"
-              : timer.phase === 'warning'
-              ? "border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-400"
-              : timer.phase === 'overtime'
-              ? "border-blue-200 bg-blue-50 text-blue-700 dark:border-blue-800 dark:bg-blue-950 dark:text-blue-400"
-              : ""
-          )}
-          data-testid="timer-phase-badge"
-        >
-          {isSessionCompleted || timer.phase === 'completed' 
-            ? 'Completed' 
-            : timer.phase === 'warning'
-            ? 'Focus Time'
-            : timer.phase === 'overtime' 
-            ? 'Take Your Time'
-            : 'In Progress'
-          }
-        </Badge>
-      </div>
-
-      {/* Message Alert */}
-      {displayMessage && (
-        <Alert 
-          variant={getAlertVariant()}
-          className="border-l-4"
-          data-testid="timer-message-alert"
-        >
-          <TimerIcon className="h-4 w-4" />
-          <AlertDescription className="text-sm">
-            {displayMessage}
-          </AlertDescription>
-        </Alert>
       )}
+      
+      {/* Phase Badge */}
+      <Badge 
+        variant="outline" 
+        className={cn(
+          "text-xs shrink-0",
+          isSessionCompleted || timer.phase === 'completed'
+            ? "border-green-200 bg-green-50 text-green-700 dark:border-green-800 dark:bg-green-950 dark:text-green-400"
+            : timer.phase === 'warning'
+            ? "border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-400"
+            : timer.phase === 'overtime'
+            ? "border-blue-200 bg-blue-50 text-blue-700 dark:border-blue-800 dark:bg-blue-950 dark:text-blue-400"
+            : ""
+        )}
+        data-testid="timer-phase-badge"
+      >
+        {isSessionCompleted || timer.phase === 'completed' 
+          ? 'Completed' 
+          : timer.phase === 'warning'
+          ? 'Focus Time'
+          : timer.phase === 'overtime' 
+          ? 'Take Your Time'
+          : 'In Progress'
+        }
+      </Badge>
     </div>
   );
 }
