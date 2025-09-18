@@ -579,6 +579,43 @@ Once the user is locked-in, smoothly end the session with a brief summary. DO NO
       res.end();
     }
   });
+
+  // Update timer elapsed time for a foundation session
+  app.patch("/api/foundation-sessions/:sessionNumber/timer", isAuthenticated, async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const sessionNumber = parseInt(req.params.sessionNumber);
+      const userId = req.user!.id;
+      const { timerElapsed } = req.body;
+
+      if (isNaN(sessionNumber) || sessionNumber < 1 || sessionNumber > 3) {
+        return res.status(400).json({ error: "Invalid session number. Must be 1, 2, or 3" });
+      }
+
+      if (typeof timerElapsed !== 'number' || timerElapsed < 0) {
+        return res.status(400).json({ error: "timerElapsed must be a non-negative number" });
+      }
+
+      const session = await storage.getFoundationSession(userId, sessionNumber);
+      if (!session) {
+        return res.status(404).json({ error: "Session not found" });
+      }
+
+      // Only update timer for in-progress sessions
+      if (session.status !== "in_progress") {
+        return res.status(400).json({ error: "Timer can only be updated for in-progress sessions" });
+      }
+
+      // Update the timer elapsed time
+      const updatedSession = await storage.updateFoundationSession(session.id, {
+        timerElapsed
+      });
+
+      res.json({ timerElapsed: updatedSession.timerElapsed });
+    } catch (error) {
+      console.error("Error updating foundation session timer:", error);
+      next(error);
+    }
+  });
 }
 
 // Helper function to initialize foundation sessions for a user
