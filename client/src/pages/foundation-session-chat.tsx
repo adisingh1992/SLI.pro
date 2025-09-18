@@ -237,8 +237,8 @@ export default function FoundationSessionChatPage() {
   const getSessionGuidance = () => {
     if (sessionNumber === 1) {
       return {
-        title: "Functional Identity Lock-In",
-        description: "Discover your primary business function through guided conversation.",
+        title: "Functional Identity Mapping",
+        description: "Define your primary business function and positioning (7-9 minutes)",
         prompt: "Hello, I'm here to help you identify your primary business function (Finance, Operations, Sales, Marketing, or Product). Let's start by discussing your current role and what energizes you most about work.",
         functions: ["Finance", "Operations", "Sales", "Marketing", "Product"]
       };
@@ -365,7 +365,7 @@ export default function FoundationSessionChatPage() {
       <NavBar />
       
       {/* Header */}
-      <div className="w-full px-4 py-4 border-b bg-background">
+      <div className="w-full px-4 py-2 border-b bg-background">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
             <Button 
@@ -383,25 +383,6 @@ export default function FoundationSessionChatPage() {
               </h1>
               <p className="text-sm text-muted-foreground">{sessionInfo.description}</p>
             </div>
-          </div>
-          <div className="flex items-center gap-3">
-            {getStatusBadge(session.status)}
-            {session.status === 'in_progress' && canComplete() && (
-              <Button 
-                onClick={() => completeSessionMutation.mutate()}
-                disabled={completeSessionMutation.isPending}
-                variant="default"
-                size="sm"
-                data-testid="button-complete-session"
-              >
-                {completeSessionMutation.isPending ? (
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                ) : (
-                  <CheckCircle className="h-4 w-4 mr-2" />
-                )}
-                Complete Session
-              </Button>
-            )}
           </div>
         </div>
       </div>
@@ -422,21 +403,8 @@ export default function FoundationSessionChatPage() {
           )}
 
           {/* Chat Interface */}
-          <Card className="flex-1 flex flex-col overflow-hidden m-4 mr-0">
-          <CardHeader className="pb-4">
-            {/* <div className="flex items-center justify-between">
-              <div>
-                <CardTitle className="text-lg">Session Chat</CardTitle>
-                <CardDescription>
-                  {sessionInfo.functions.length > 0 && (
-                    <>Target Functions: {sessionInfo.functions.join(', ')}</>
-                  )}
-                </CardDescription>
-              </div>
-            </div> */}
-          </CardHeader>
-          
-          <CardContent className="flex-1 min-h-0 flex flex-col p-0 overflow-hidden">
+          <Card className="flex-1 flex flex-col overflow-hidden m-0 rounded-none">       
+          <CardContent className="flex-1 min-h-0 flex flex-col p-0 overflow-hidden py-2">
             {/* Messages Area */}
             <ScrollArea className="flex-1 min-h-0 px-6">
               <div className="space-y-4 pb-4">
@@ -553,14 +521,6 @@ export default function FoundationSessionChatPage() {
                 />
               </div>
             )}
-
-            {/* Session Status */}
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <span className="text-sm font-medium">Status</span>
-                {getStatusBadge(session.status)}
-              </div>
-            </div>
 
             {/* Function Progress for Session 1 */}
             {sessionNumber === 1 && (
