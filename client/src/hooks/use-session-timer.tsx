@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { apiRequest } from '@/lib/queryClient';
 
 export interface SessionTimerConfig {
@@ -42,7 +42,7 @@ export function useSessionTimer(
   const [isRunning, setIsRunning] = useState<boolean>(false);
   const [phase, setPhase] = useState<'initial' | 'warning' | 'overtime' | 'completed'>('initial');
   const [lastSavedTime, setLastSavedTime] = useState<number>(initialTimerElapsed);
-  const [lastSaveTimestamp, setLastSaveTimestamp] = useState<number>(Date.now());
+  const lastSaveTimestampRef = useRef<number>(Date.now());
 
   // Format time as MM:SS
   const formatTime = useCallback((seconds: number): string => {
@@ -89,7 +89,7 @@ export function useSessionTimer(
       setStartTime(now - (timeElapsed * 1000)); // Adjust start time for existing elapsed time
       setIsRunning(true);
       setPhase(calculatePhase(timeElapsed));
-      setLastSaveTimestamp(now); // Reset save timestamp when starting
+      lastSaveTimestampRef.current = now; // Reset save timestamp when starting
     }
   }, [isRunning, timeElapsed, calculatePhase]);
 
@@ -124,9 +124,9 @@ export function useSessionTimer(
 
         // Save to database every 10 seconds to avoid excessive API calls
         const currentTime = Date.now();
-        if (currentTime - lastSaveTimestamp >= 10000) { // 10 seconds in milliseconds
+        if (currentTime - lastSaveTimestampRef.current >= 10000) { // 10 seconds in milliseconds
           saveTimerToDatabase(elapsed);
-          setLastSaveTimestamp(currentTime);
+          lastSaveTimestampRef.current = currentTime;
         }
       }, 1000);
     }
@@ -136,7 +136,7 @@ export function useSessionTimer(
         clearInterval(interval);
       }
     };
-  }, [isRunning, startTime, phase, calculatePhase, saveTimerToDatabase, lastSaveTimestamp]);
+  }, [isRunning, startTime, phase, calculatePhase, saveTimerToDatabase]);
 
   // Save timer when component unmounts or timer stops
   useEffect(() => {
