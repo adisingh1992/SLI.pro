@@ -205,7 +205,7 @@ export default function FoundationPage() {
     );
   }
 
-  const getSessionContent = (sessionNumber: number) => {
+  const getSessionContent = (sessionNumber: number, session: FoundationSession) => {
     switch (sessionNumber) {
       case 1:
         return {
@@ -288,14 +288,14 @@ export default function FoundationPage() {
       <div className="w-full px-6 py-16">
         <div className="max-w-7xl mx-auto">
           {/* Sessions Grid */}
-          <div className="grid gap-8 lg:grid-cols-3">
+          <div className="grid gap-8 lg:grid-cols-3 items-stretch">
             {sessions.map((session) => {
-              const content = getSessionContent(session.sessionNumber);
+              const content = getSessionContent(session.sessionNumber, session);
               const completedPrevious = sessions.find(s => s.sessionNumber === session.sessionNumber - 1);
               const showPostMessage = completedPrevious?.status === 'completed';
               
               return (
-                <div key={session.id} className="space-y-4">
+                <div key={session.id} className="flex flex-col space-y-4 h-full">
                   {/* Post-session transition message */}
                   {showPostMessage && (
                     <div className="bg-green-50/80 dark:bg-green-900/20 border border-green-200/50 dark:border-green-800/50 rounded-xl p-4 text-center">
@@ -340,44 +340,46 @@ export default function FoundationPage() {
                       </CardDescription>
                     </CardHeader>
                     
-                    <CardContent className="space-y-4">
-                      {/* Session Progress */}
-                      {session.status === 'in_progress' && session.progress !== undefined && (
-                        <div className="bg-background/50 rounded-lg p-3 border">
-                          <div className="flex items-center justify-between mb-2">
-                            <span className="text-sm font-medium">Session Progress</span>
-                            <span className="text-sm text-muted-foreground font-mono">{session.progress}%</span>
+                    <CardContent className="flex flex-col flex-1 space-y-4">
+                      <div className="flex-1 space-y-4">
+                        {/* Session Progress */}
+                        {session.status === 'in_progress' && session.progress !== undefined && (
+                          <div className="bg-background/50 rounded-lg p-3 border">
+                            <div className="flex items-center justify-between mb-2">
+                              <span className="text-sm font-medium">Session Progress</span>
+                              <span className="text-sm text-muted-foreground font-mono">{session.progress}%</span>
+                            </div>
+                            <Progress 
+                              value={session.progress} 
+                              className="h-2" 
+                              data-testid={`progress-session-${session.sessionNumber}`}
+                            />
                           </div>
-                          <Progress 
-                            value={session.progress} 
-                            className="h-2" 
-                            data-testid={`progress-session-${session.sessionNumber}`}
-                          />
-                        </div>
-                      )}
+                        )}
 
-                      {/* Timestamps */}
-                      <div className="space-y-1">
-                        {session.startedAt && (
-                          <div className="flex items-center justify-between text-xs">
-                            <span className="text-muted-foreground">Started:</span>
-                            <span className="font-mono text-foreground">
-                              {new Date(session.startedAt).toLocaleDateString()} {new Date(session.startedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                            </span>
-                          </div>
-                        )}
-                        {session.completedAt && (
-                          <div className="flex items-center justify-between text-xs">
-                            <span className="text-muted-foreground">Completed:</span>
-                            <span className="font-mono text-foreground">
-                              {new Date(session.completedAt).toLocaleDateString()} {new Date(session.completedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                            </span>
-                          </div>
-                        )}
+                        {/* Timestamps */}
+                        <div className="space-y-1">
+                          {session.startedAt && (
+                            <div className="flex items-center justify-between text-xs">
+                              <span className="text-muted-foreground">Started:</span>
+                              <span className="font-mono text-foreground">
+                                {new Date(session.startedAt).toLocaleDateString()} {new Date(session.startedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                              </span>
+                            </div>
+                          )}
+                          {session.completedAt && (
+                            <div className="flex items-center justify-between text-xs">
+                              <span className="text-muted-foreground">Completed:</span>
+                              <span className="font-mono text-foreground">
+                                {new Date(session.completedAt).toLocaleDateString()} {new Date(session.completedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                              </span>
+                            </div>
+                          )}
+                        </div>
                       </div>
 
                       {/* Action Button */}
-                      <div className="pt-2">
+                      <div className="pt-2 mt-auto">
                         {getActionButton(session)}
                       </div>
                     </CardContent>
