@@ -10,15 +10,19 @@ interface SessionTimerProps {
   isSessionActive?: boolean;
   isSessionCompleted?: boolean;
   className?: string;
+  sessionNumber?: number;
+  initialTimerElapsed?: number;
 }
 
 export function SessionTimer({ 
   config, 
   isSessionActive = false, 
   isSessionCompleted = false,
-  className 
+  className,
+  sessionNumber,
+  initialTimerElapsed = 0
 }: SessionTimerProps) {
-  const timer = useSessionTimer(config);
+  const timer = useSessionTimer(config, sessionNumber, initialTimerElapsed);
 
   // Auto-start timer when session becomes active
   useEffect(() => {
