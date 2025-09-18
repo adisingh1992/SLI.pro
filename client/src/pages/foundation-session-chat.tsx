@@ -24,6 +24,15 @@ type FoundationSession = {
   startedAt?: string;
   completedAt?: string;
   progress?: number;
+  completionData?: {
+    primaryFunction?: string;
+    secondaryFunction?: string;
+    functionalSplit?: { primary: number; secondary: number };
+    confidence?: number;
+    reasoning?: string;
+    keyInsights?: string[];
+    completedAt?: string;
+  };
 };
 
 type FoundationSessionMessage = {
@@ -354,9 +363,10 @@ export default function FoundationSessionChatPage() {
   return (
     <div className="min-h-screen bg-background">
       <NavBar />
-      <div className="container mx-auto px-4 py-4 max-w-4xl">
-        {/* Header */}
-        <div className="flex items-center justify-between mb-6">
+      
+      {/* Header */}
+      <div className="w-full px-4 py-4 border-b bg-background">
+        <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
             <Button 
               onClick={() => navigate('/foundation')} 
@@ -394,30 +404,25 @@ export default function FoundationSessionChatPage() {
             )}
           </div>
         </div>
+      </div>
 
-        {/* Session Progress */}
-        {session.status === 'in_progress' && session.progress !== undefined && (
-          <div className="mb-6">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-sm font-medium">Session Progress</span>
-              <span className="text-sm text-muted-foreground">{session.progress}%</span>
+      {/* 2-Column Layout */}
+      <div className="flex h-[calc(100vh-140px)]">
+        {/* Left Column - Chat Interface (75%) */}
+        <div className="w-3/4 flex flex-col">
+          {/* Session Progress */}
+          {session.status === 'in_progress' && session.progress !== undefined && (
+            <div className="px-4 py-3 border-b bg-background/50">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-sm font-medium">Session Progress</span>
+                <span className="text-sm text-muted-foreground">{session.progress}%</span>
+              </div>
+              <Progress value={session.progress} className="h-2" data-testid="progress-session" />
             </div>
-            <Progress value={session.progress} className="h-2" data-testid="progress-session" />
-          </div>
-        )}
+          )}
 
-        {/* Session Timer */}
-        {(session.status === 'in_progress' || session.status === 'completed') && (
-          <div className="mb-6">
-            <SessionTimer 
-              isSessionActive={session.status === 'in_progress'}
-              isSessionCompleted={session.status === 'completed'}
-            />
-          </div>
-        )}
-
-        {/* Chat Interface */}
-        <Card className="h-[calc(100vh-200px)] flex flex-col overflow-hidden">
+          {/* Chat Interface */}
+          <Card className="flex-1 flex flex-col overflow-hidden m-4 mr-0">
           <CardHeader className="pb-4">
             {/* <div className="flex items-center justify-between">
               <div>
@@ -531,6 +536,71 @@ export default function FoundationSessionChatPage() {
             )}
           </CardContent>
         </Card>
+        </div>
+
+        {/* Right Column - Timer & Status (25%) */}
+        <div className="w-1/4 border-l bg-background/50">
+          <div className="p-4 space-y-4">
+            <h3 className="font-semibold text-sm text-muted-foreground uppercase tracking-wide">Session Info</h3>
+            
+            {/* Session Timer */}
+            {(session.status === 'in_progress' || session.status === 'completed') && (
+              <div className="space-y-3">
+                <SessionTimer 
+                  isSessionActive={session.status === 'in_progress'}
+                  isSessionCompleted={session.status === 'completed'}
+                  className="border-0 bg-transparent p-0"
+                />
+              </div>
+            )}
+
+            {/* Session Status */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-medium">Status</span>
+                {getStatusBadge(session.status)}
+              </div>
+            </div>
+
+            {/* Function Progress for Session 1 */}
+            {sessionNumber === 1 && (
+              <div className="space-y-2">
+                <h4 className="text-sm font-medium">Target Functions</h4>
+                <div className="flex flex-wrap gap-1">
+                  {sessionInfo.functions.map((func) => (
+                    <Badge key={func} variant="outline" className="text-xs">
+                      {func}
+                    </Badge>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Completion Data */}
+            {session.status === 'completed' && session.completionData && (
+              <div className="space-y-2">
+                <h4 className="text-sm font-medium">Results</h4>
+                <div className="space-y-2 text-sm">
+                  {session.completionData.primaryFunction && (
+                    <div>
+                      <span className="font-medium">Primary:</span> {session.completionData.primaryFunction}
+                    </div>
+                  )}
+                  {session.completionData.secondaryFunction && (
+                    <div>
+                      <span className="font-medium">Secondary:</span> {session.completionData.secondaryFunction}
+                    </div>
+                  )}
+                  {session.completionData.confidence && (
+                    <div>
+                      <span className="font-medium">Confidence:</span> {session.completionData.confidence}%
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
       </div>
     </div>
   );
