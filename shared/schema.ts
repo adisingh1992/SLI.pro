@@ -506,6 +506,7 @@ export const foundationSessions = pgTable("foundation_sessions", {
   status: sessionStatusEnum("status").notNull().default("locked"),
   startedAt: timestamp("started_at", { mode: 'date' }),
   completedAt: timestamp("completed_at", { mode: 'date' }),
+  timerElapsed: integer("timer_elapsed").default(0), // Timer elapsed time in seconds
   completionData: jsonb("completion_data").$type<{
     // Session 1 completion criteria
     primaryFunction?: "Finance" | "Operations" | "Sales" | "Marketing" | "Product";

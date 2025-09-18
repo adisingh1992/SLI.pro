@@ -201,7 +201,7 @@ export default function AuthPage() {
       </nav>
 
       {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 py-8">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 pt-8 pb-32">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-stretch min-h-[600px]">
           {/* Left Column - Authentication Forms */}
           <div className="slide-in h-full flex flex-col">

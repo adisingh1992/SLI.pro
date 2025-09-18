@@ -151,11 +151,11 @@ export default function FoundationPage() {
     }
   };
 
-  const calculateOverallProgress = () => {
-    if (!sessions) return 0;
-    const completedSessions = sessions.filter(s => s.status === 'completed').length;
-    return (completedSessions / sessions.length) * 100;
-  };
+  // const calculateOverallProgress = () => {
+  //   if (!sessions) return 0;
+  //   const completedSessions = sessions.filter(s => s.status === 'completed').length;
+  //   return (completedSessions / sessions.length) * 100;
+  // };
 
   if (isLoading) {
     return (
@@ -252,10 +252,10 @@ export default function FoundationPage() {
       <NavBar />
       
       {/* Full-width hero section */}
-      <div className="w-full bg-gradient-to-br from-background via-background/50 to-primary/5 border-b">
-        <div className="w-full px-6 py-12">
+      <div className="w-full bg-gradient-to-br from-background via-background/50 to-primary/5">
+        <div className="w-full px-6">
           <div className="max-w-7xl mx-auto">
-            <div className="text-center mb-8">
+            <div className="text-center">
               <h1 className="text-4xl md:text-5xl font-bold text-foreground mb-4" data-testid="text-page-title">
                 Foundation Sessions
               </h1>
@@ -265,7 +265,7 @@ export default function FoundationPage() {
             </div>
             
             {/* Overall Progress */}
-            <div className="max-w-2xl mx-auto">
+            {/* <div className="max-w-2xl mx-auto">
               <div className="bg-card/80 backdrop-blur-sm rounded-xl p-6 border shadow-sm">
                 <div className="flex items-center justify-between mb-3">
                   <span className="text-base font-semibold">Overall Progress</span>
@@ -279,13 +279,13 @@ export default function FoundationPage() {
                   data-testid="progress-overall"
                 />
               </div>
-            </div>
+            </div> */}
           </div>
         </div>
       </div>
 
       {/* Full-width sessions section */}
-      <div className="w-full px-6 py-16">
+      <div className="w-full px-6 py-12 pb-4">
         <div className="max-w-7xl mx-auto">
           {/* Sessions Grid */}
           <div className="grid gap-8 lg:grid-cols-3 items-stretch">
@@ -308,7 +308,7 @@ export default function FoundationPage() {
 
                   {/* Session Card */}
                   <Card 
-                    className={`relative overflow-hidden transition-all duration-300 hover:shadow-lg group flex flex-col min-h-[520px] ${
+                    className={`relative overflow-hidden transition-all duration-300 hover:shadow-lg group flex flex-col min-h-[420px] ${
                       session.status === 'completed' ? 'ring-2 ring-green-200 dark:ring-green-800' : 
                       session.status === 'in_progress' ? 'ring-2 ring-blue-200 dark:ring-blue-800' : ''
                     }`}
@@ -328,7 +328,7 @@ export default function FoundationPage() {
                             {content.header}
                           </CardTitle>
                           {content.subtext && (
-                            <p className="text-sm font-medium text-primary mt-1">
+                            <p className="text-sm font-medium text-primary mt-3">
                               {content.subtext}
                             </p>
                           )}
@@ -390,12 +390,10 @@ export default function FoundationPage() {
           </div>
 
           {/* Help Text */}
-          <div className="mt-16 text-center max-w-2xl mx-auto">
-            <div className="bg-card/50 rounded-xl p-6 border">
+          <div className="mt-10 text-center max-w-2xl mx-auto">
               <p className="text-sm text-muted-foreground leading-relaxed">
                 Sessions must be completed in order. Each session builds upon the previous one to help you develop your professional foundation.
               </p>
-            </div>
           </div>
         </div>
       </div>
