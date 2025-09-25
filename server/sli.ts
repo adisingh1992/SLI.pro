@@ -204,35 +204,61 @@ async function getFoundationSessionsSummary(foundationSessions: any[]): Promise<
     const data = session.completionData;
     
     if (session.sessionNumber === 1) {
-      summaryText += `\nSession 1 - Functional Identity: ${data.primaryFunction || 'N/A'}`;
-      if (data.secondaryFunction) summaryText += ` + ${data.secondaryFunction}`;
-      if (data.functionalSplit) summaryText += ` (${data.functionalSplit.primary}/${data.functionalSplit.secondary})`;
-      if (data.commitmentStatement) summaryText += `. Commitment: ${data.commitmentStatement}`;
-      if (data.keyInsights && data.keyInsights.length > 0) {
-        summaryText += `. Key Insights: ${data.keyInsights.slice(0, 3).join('; ')}`;
+      summaryText += `\n=== Session 1: Functional Identity Mapping ===\n`;
+      if (data.primaryFunction) summaryText += `Primary Function: ${data.primaryFunction}\n`;
+      if (data.secondaryFunction) summaryText += `Secondary Function: ${data.secondaryFunction}\n`;
+      if (data.functionalSplit) {
+        summaryText += `Functional Split: ${data.functionalSplit.primary}% primary, ${data.functionalSplit.secondary}% secondary\n`;
       }
+      summaryText += `Anti-Generalist Commitment: ${data.antiGeneralistCommitment ? 'Yes' : 'No'}\n`;
+      if (data.commitmentStatement) summaryText += `Commitment: ${data.commitmentStatement}\n`;
+      if (data.functionalLanguageExamples && data.functionalLanguageExamples.length > 0) {
+        summaryText += `Functional Language Examples: ${data.functionalLanguageExamples.join(', ')}\n`;
+      }
+      if (data.keyInsights && data.keyInsights.length > 0) {
+        summaryText += `Key Insights: ${data.keyInsights.join(', ')}\n`;
+      }
+      if (data.confidence) summaryText += `Confidence Level: ${data.confidence}/10\n`;
+      if (data.reasoning) summaryText += `Reasoning: ${data.reasoning}\n`;
     }
     
     if (session.sessionNumber === 2) {
-      summaryText += `\nSession 2 - Credibility: Tier ${data.credibilityTier || 'N/A'}/5`;
-      if (data.brandClaim) summaryText += `. Claim: ${data.brandClaim}`;
+      summaryText += `\n=== Session 2: Credibility Assessment ===\n`;
+      if (data.credibilityTier) summaryText += `Credibility Tier: ${data.credibilityTier}/5\n`;
+      if (data.brandClaim) summaryText += `Brand Claim: ${data.brandClaim}\n`;
+      if (data.checkWorthyReason) summaryText += `Check-Worthy Reason: ${data.checkWorthyReason}\n`;
       if (data.proofBullets && data.proofBullets.length > 0) {
-        summaryText += `. Proof: ${data.proofBullets.slice(0, 2).join('; ')}`;
+        summaryText += `Proof Points:\n`;
+        data.proofBullets.forEach((bullet: string, index: number) => {
+          summaryText += `  ${index + 1}. ${bullet}\n`;
+        });
+      }
+      if (data.nextSteps && data.nextSteps.length > 0) {
+        summaryText += `Next Steps: ${data.nextSteps.join(', ')}\n`;
       }
     }
     
     if (session.sessionNumber === 3) {
-      summaryText += `\nSession 3 - Positioning Story:`;
+      summaryText += `\n=== Session 3: Positioning Story Development ===\n`;
       if (data.signatureStory) {
         const story = data.signatureStory;
-        summaryText += ` ${story.title}. Challenge: ${story.challenge}. Approach: ${story.approach}. Outcome: ${story.outcome}`;
+        summaryText += `Signature Story: ${story.title}\n`;
+        summaryText += `Context: ${story.context}\n`;
+        summaryText += `Challenge: ${story.challenge}\n`;
+        summaryText += `Approach: ${story.approach}\n`;
+        summaryText += `Tension: ${story.tension}\n`;
+        summaryText += `Outcome: ${story.outcome}\n`;
+        summaryText += `Repeatability: ${story.repeatability}\n`;
       }
       if (data.contentAngles && data.contentAngles.length > 0) {
-        summaryText += `. Content Angles: ${data.contentAngles.slice(0, 3).join(', ')}`;
+        summaryText += `Content Angles: ${data.contentAngles.join(', ')}\n`;
       }
+      if (data.methodology) summaryText += `Methodology: ${data.methodology}\n`;
     }
     
-    summaryText += `\n`;
+    if (session.completedAt) {
+      summaryText += `Completed: ${new Date(session.completedAt).toLocaleDateString()}\n`;
+    }
   });
   
   return summaryText;
@@ -255,42 +281,6 @@ async function getLatestCoachingNotes(coachingNotes: any[]): Promise<string> {
   const latestNote = sortedNotes[0];
   
   return `Latest Coaching Note (${new Date(latestNote.createdAt).toLocaleDateString()}):\n${latestNote.content}`;
-}
-
-/**
- * Robust JSON extraction function
- */
-function extractJSON(text: string): string {
-  // First try to find JSON in code blocks
-  const codeBlockMatch = text.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
-  if (codeBlockMatch && codeBlockMatch[1]) {
-    return codeBlockMatch[1].trim();
-  }
-  
-  // Find the first complete JSON object using brace matching
-  let braceCount = 0;
-  let startIndex = -1;
-  let endIndex = -1;
-  
-  for (let i = 0; i < text.length; i++) {
-    if (text[i] === '{') {
-      if (startIndex === -1) startIndex = i;
-      braceCount++;
-    } else if (text[i] === '}') {
-      braceCount--;
-      if (braceCount === 0 && startIndex !== -1) {
-        endIndex = i;
-        break;
-      }
-    }
-  }
-  
-  if (startIndex !== -1 && endIndex !== -1) {
-    return text.substring(startIndex, endIndex + 1);
-  }
-  
-  // Fallback: return original text
-  return text.trim();
 }
 
 /**
@@ -356,9 +346,7 @@ The three SLIs should be meaningfully distinct, highlighting different aspects o
 
 Avoid vague, overly general, or interchangeable phrases. Each SLI should be specific and memorable.
 
-CRITICAL: You MUST respond with ONLY a valid JSON object. No other text, no markdown code blocks, no explanations.
-
-Exact format required:
+Respond with an EXACT JSON structure as follows:
 {
   "title1": "SLI Option 1: [Descriptive Title]",
   "statement1": "The conversational SLI statement for option 1",
@@ -371,7 +359,7 @@ Exact format required:
   "rationale3": "Detailed rationale for option 3..."
 }
 
-Return ONLY valid JSON. Each rationale should be 3-4 paragraphs.`;
+Each rationale section should be 3-4 paragraphs of rich, detailed content. Be sure to format the JSON correctly.`;
 
     // User message
     const userMessage = `Please generate three distinct SLI options for ${userProfile.firstName} ${userProfile.lastName} based on the following information:
@@ -411,7 +399,7 @@ Please generate three distinct, compelling SLI options that this person can use 
         model: CLAUDE_MODEL,
         system: systemPrompt,
         max_tokens: 4096,
-        temperature: 0.2,
+        temperature: 0.5,
         messages: [
           { role: "user", content: userMessage }
         ]
@@ -424,8 +412,12 @@ Please generate three distinct, compelling SLI options that this person can use 
     // Parse the response content to extract the JSON
     const responseContent = response.content.find(item => item.type === 'text')?.text || '';
     
-    const jsonStr = extractJSON(responseContent);
-    log(`Extracted JSON string length: ${jsonStr.length} chars`, "claude");
+    // Extract JSON from the response (it might be wrapped in code blocks)
+    let jsonStr = responseContent;
+    const jsonMatch = responseContent.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
+    if (jsonMatch && jsonMatch[1]) {
+      jsonStr = jsonMatch[1];
+    }
     
     // Parse the JSON
     try {
