@@ -184,30 +184,6 @@ export default function FoundationSessionChatPage() {
     }
   };
 
-  // Complete session mutation
-  const completeSessionMutation = useMutation({
-    mutationFn: async () => {
-      return await apiRequest('PATCH', `/api/foundation-sessions/${sessionNumber}`, {
-        status: 'completed'
-      });
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/foundation-sessions'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/foundation-sessions', sessionNumber, 'messages'] });
-      toast({
-        title: "Session Completed",
-        description: `Foundation Session ${sessionNumber} has been completed successfully!`,
-      });
-    },
-    onError: (error: any) => {
-      toast({
-        title: "Error",
-        description: error.message || "Failed to complete session",
-        variant: "destructive",
-      });
-    },
-  });
-
   // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -250,13 +226,6 @@ export default function FoundationSessionChatPage() {
   };
 
   const sessionInfo = getSessionGuidance();
-
-  const canComplete = () => {
-    if (!sessionData?.session) return false;
-    if (sessionData.session.status !== 'in_progress') return false;
-    if (sessionData.messages.length < 4) return false; // Minimum conversation length
-    return true;
-  };
 
   if (isLoading) {
     return (
@@ -338,25 +307,6 @@ export default function FoundationSessionChatPage() {
       </div>
     );
   }
-
-  const getStatusBadge = (status: FoundationSession['status']) => {
-    const variants = {
-      locked: { variant: "secondary" as const, icon: Lock, text: "Locked" },
-      available: { variant: "default" as const, icon: MessageSquare, text: "Available" },
-      in_progress: { variant: "outline" as const, icon: MessageSquare, text: "In Progress" },
-      completed: { variant: "destructive" as const, icon: CheckCircle, text: "Completed" }
-    };
-    
-    const config = variants[status];
-    const Icon = config.icon;
-    
-    return (
-      <Badge variant={config.variant} className="flex items-center gap-1">
-        <Icon className="h-3 w-3" />
-        {config.text}
-      </Badge>
-    );
-  };
 
   return (
     <div className="min-h-screen bg-background">

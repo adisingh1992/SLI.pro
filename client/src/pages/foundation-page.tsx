@@ -263,17 +263,7 @@ export default function FoundationPage() {
               const showPostMessage = completedPrevious?.status === 'completed';
               
               return (
-                <div key={session.id} className="flex flex-col space-y-4 h-full">
-                  {/* Post-session transition message */}
-                  {showPostMessage && (
-                    <div className="bg-green-50/80 dark:bg-green-900/20 border border-green-200/50 dark:border-green-800/50 rounded-xl p-4 text-center">
-                      <CheckCircle className="h-5 w-5 text-green-600 mx-auto mb-2" />
-                      <p className="text-sm font-medium text-green-800 dark:text-green-200">
-                        {getPostSessionMessage(completedPrevious.sessionNumber)}
-                      </p>
-                    </div>
-                  )}
-
+                <div key={session.id} className="flex flex-col h-full">
                   {/* Session Card */}
                   <Card 
                     className={`relative overflow-hidden transition-all duration-300 hover:shadow-lg group flex flex-col min-h-[420px] ${
@@ -289,7 +279,17 @@ export default function FoundationPage() {
                       session.status === 'available' ? 'bg-orange-500' : 'bg-gray-300'
                     }`} />
 
-                    <CardHeader className="pb-4 space-y-3">
+                    {/* Post-session transition message */}
+                    {showPostMessage && (
+                      <div className="mx-4 mt-4 mb-0 bg-green-50/80 dark:bg-green-900/20 border border-green-200/50 dark:border-green-800/50 rounded-lg p-3 text-center">
+                        <CheckCircle className="h-4 w-4 text-green-600 mx-auto mb-1" />
+                        <p className="text-xs font-medium text-green-800 dark:text-green-200">
+                          {getPostSessionMessage(completedPrevious.sessionNumber)}
+                        </p>
+                      </div>
+                    )}
+
+                    <CardHeader className={`pb-4 space-y-3 ${showPostMessage ? 'pt-3' : ''}`}>
                       <div className="flex items-start justify-between gap-3">
                         <div className="flex-1 min-w-0">
                           <CardTitle className="text-xl font-bold leading-tight" data-testid={`text-session-title-${session.sessionNumber}`}>
