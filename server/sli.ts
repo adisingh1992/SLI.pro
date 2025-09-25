@@ -178,7 +178,10 @@ async function summarizeAdditionalDocs(documents: any[]): Promise<string> {
  * Gets foundation sessions completion data formatted as conversation summary
  */
 async function getFoundationSessionsSummary(foundationSessions: any[]): Promise<string> {
+  log(`Processing ${foundationSessions?.length || 0} total foundation sessions`, "claude");
+  
   if (!foundationSessions || foundationSessions.length === 0) {
+    log(`No foundation sessions provided`, "claude");
     return "No foundation sessions completed";
   }
   
@@ -187,7 +190,11 @@ async function getFoundationSessionsSummary(foundationSessions: any[]): Promise<
     .filter(session => session.status === 'completed' && session.completionData)
     .sort((a, b) => a.sessionNumber - b.sessionNumber);
   
+  const sessionNumbers = completedSessions.map(s => s.sessionNumber);
+  log(`Found ${completedSessions.length} completed sessions: [${sessionNumbers.join(',')}]`, "claude");
+  
   if (completedSessions.length === 0) {
+    log(`No completed sessions found`, "claude");
     return "No foundation sessions completed";
   }
   
@@ -301,6 +308,18 @@ export async function generateSLIs(userProfile: UserProfile): Promise<InsertSli 
     // Get foundation sessions summary
     const foundationSessionsSummary = await getFoundationSessionsSummary(userProfile.foundationSessions || []);
     
+    // Log foundation sessions data being sent to Claude
+    const completedCount = userProfile.foundationSessions?.filter(s => s.status === 'completed').length || 0;
+    log(`Foundation sessions: ${userProfile.foundationSessions?.length || 0} total, ${completedCount} completed, summary: ${foundationSessionsSummary.length} chars`, "claude");
+    
+    // Log full content only in debug mode to avoid PII exposure
+    if (process.env.DEBUG_SLI === 'true') {
+      const truncatedSummary = foundationSessionsSummary.length > 500 
+        ? foundationSessionsSummary.substring(0, 500) + '...[truncated]'
+        : foundationSessionsSummary;
+      log(`Foundation sessions summary: ${truncatedSummary}`, "claude");
+    }
+    
     // Get coaching notes
     const coachingNotesSummary = await getLatestCoachingNotes(userProfile.coachingNotes || []);
     
@@ -367,6 +386,14 @@ Please generate three distinct, compelling SLI options that this person can use 
 
     // Call Claude API with retry mechanism
     log(`Calling Claude API to generate SLIs`, "claude");
+    
+    // Log payload verification before Claude API call
+    const hasFoundationSections = userMessage.includes('FOUNDATION SESSIONS SUMMARY');
+    const startIdx = userMessage.indexOf('FOUNDATION SESSIONS SUMMARY');
+    const endIdx = userMessage.indexOf('COACHING NOTES');
+    const sectionLength = (startIdx >= 0 && endIdx >= 0) ? endIdx - startIdx : -1;
+    
+    log(`Sending to Claude API - contains foundation sessions: ${hasFoundationSections}, section length: ${sectionLength} chars`, "claude");
     const response = await callWithRetry(
       () => anthropic.messages.create({
         model: CLAUDE_MODEL,
