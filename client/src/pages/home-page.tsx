@@ -439,7 +439,7 @@ export default function HomePage() {
                 }}
                 disabled={!userProfile?.questionnaire || userProfile.questionnaire.isDraft === true || !hasRequiredDocuments}
               >
-                Start Sessions
+                View Sessions
                 <ArrowRight className="ml-2 h-4 w-4" />
               </Button>
             </CardFooter>
