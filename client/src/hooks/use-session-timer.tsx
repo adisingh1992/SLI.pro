@@ -44,6 +44,18 @@ export const SESSION_2_CONFIG: SessionTimerConfig = {
   }
 };
 
+// Session 3 specific configuration
+export const SESSION_3_CONFIG: SessionTimerConfig = {
+  targetMinutes: 10,
+  warningMinutes: 9,
+  messages: {
+    initial: "Recommended time: 9-10 minutes (share specific stories with measurable outcomes)",
+    warning: "About 1 minute remaining - focus on the most compelling example with clear results",
+    overtime: "No rush - detailed stories create stronger positioning insights",
+    completed: "Story development complete - compelling narrative extracted"
+  }
+};
+
 export function useSessionTimer(
   config: SessionTimerConfig = DEFAULT_FOUNDATION_SESSION_CONFIG,
   sessionNumber?: number,

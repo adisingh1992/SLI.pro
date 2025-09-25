@@ -3,7 +3,7 @@ import { Clock, AlertCircle, CheckCircle2, Timer } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { useSessionTimer, SessionTimerConfig, DEFAULT_FOUNDATION_SESSION_CONFIG, SESSION_2_CONFIG } from '@/hooks/use-session-timer';
+import { useSessionTimer, SessionTimerConfig, DEFAULT_FOUNDATION_SESSION_CONFIG, SESSION_2_CONFIG, SESSION_3_CONFIG } from '@/hooks/use-session-timer';
 
 interface SessionTimerProps {
   config?: SessionTimerConfig;
@@ -24,7 +24,9 @@ export function SessionTimer({
 }: SessionTimerProps) {
   // Use session-specific config if not provided
   const sessionConfig = config || 
-    (sessionNumber === 2 ? SESSION_2_CONFIG : DEFAULT_FOUNDATION_SESSION_CONFIG);
+    (sessionNumber === 2 ? SESSION_2_CONFIG : 
+     sessionNumber === 3 ? SESSION_3_CONFIG : 
+     DEFAULT_FOUNDATION_SESSION_CONFIG);
   
   const timer = useSessionTimer(sessionConfig, sessionNumber, initialTimerElapsed);
 

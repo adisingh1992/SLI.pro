@@ -524,6 +524,18 @@ export const foundationSessions = pgTable("foundation_sessions", {
     brandClaim?: string;
     checkWorthyReason?: string;
     nextSteps?: string[];
+    // Session 3 completion criteria
+    signatureStory?: {
+      title: string;
+      context: string;
+      challenge: string;
+      approach: string;
+      tension: string;
+      outcome: string;
+      repeatability: string;
+    };
+    contentAngles?: string[];
+    methodology?: string;
     // Common fields
     completedAt?: string;
   }>(),

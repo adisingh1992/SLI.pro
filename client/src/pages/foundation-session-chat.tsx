@@ -216,6 +216,13 @@ export default function FoundationSessionChatPage() {
         prompt: "If I'm writing you a $1M check because you're credible, what SPECIFIC expertise am I investing in? Think like a ruthless, revenue-only investor: what would they throw $1M at YOU to do?",
         functions: ["Finance", "Operations", "Sales", "Marketing", "Product"]
       };
+    } else if (sessionNumber === 3) {
+      return {
+        title: "Positioning Story Development",
+        description: "Extract compelling stories that prove your unique value (9-10 minutes)",
+        prompt: "'I led cross-functional teams' means nothing by itself. We'll excavate the HOW, WHY, STRUGGLE, and INSIGHT so your stories prove credibility and fuel your brand.",
+        functions: ["Finance", "Operations", "Sales", "Marketing", "Product"]
+      };
     }
     return {
       title: `Session ${sessionNumber}`,
