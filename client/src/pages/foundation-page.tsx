@@ -261,6 +261,7 @@ export default function FoundationPage() {
               const content = getSessionContent(session.sessionNumber, session);
               const completedPrevious = sessions.find(s => s.sessionNumber === session.sessionNumber - 1);
               const showPostMessage = completedPrevious?.status === 'completed';
+              const showCompletionMessage = session.status === 'completed';
               
               return (
                 <div key={session.id} className="flex flex-col h-full">
@@ -289,7 +290,17 @@ export default function FoundationPage() {
                       </div>
                     )}
 
-                    <CardHeader className={`pb-4 space-y-3 ${showPostMessage ? 'pt-3' : ''}`}>
+                    {/* Session completion message */}
+                    {showCompletionMessage && (
+                      <div className="mx-4 mt-4 mb-0 bg-green-50/80 dark:bg-green-900/20 border border-green-200/50 dark:border-green-800/50 rounded-lg p-3 text-center">
+                        <CheckCircle className="h-4 w-4 text-green-600 mx-auto mb-1" />
+                        <p className="text-xs font-medium text-green-800 dark:text-green-200">
+                          Session completed successfully! Your insights have been captured and saved.
+                        </p>
+                      </div>
+                    )}
+
+                    <CardHeader className={`pb-4 space-y-3 ${showPostMessage || showCompletionMessage ? 'pt-3' : ''}`}>
                       <div className="flex items-start justify-between gap-3">
                         <div className="flex-1 min-w-0">
                           <CardTitle className="text-xl font-bold leading-tight" data-testid={`text-session-title-${session.sessionNumber}`}>
