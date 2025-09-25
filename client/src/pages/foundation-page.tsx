@@ -261,7 +261,7 @@ export default function FoundationPage() {
               const content = getSessionContent(session.sessionNumber, session);
               const completedPrevious = sessions.find(s => s.sessionNumber === session.sessionNumber - 1);
               const showPostMessage = completedPrevious?.status === 'completed';
-              const showCompletionMessage = session.status === 'completed';
+              const showCompletionMessage = session.status === 'completed' && session.sessionNumber === 1;
               
               return (
                 <div key={session.id} className="flex flex-col h-full">
