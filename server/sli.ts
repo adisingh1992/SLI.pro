@@ -1,7 +1,6 @@
 import { Anthropic } from '@anthropic-ai/sdk';
-import { InsertSli, Sli, UserProfile } from '@shared/schema';
+import { InsertSli, UserProfile } from '@shared/schema';
 import { log } from './vite';
-import { storage } from './storage';
 import { analyzeDocument } from './claude';
 
 const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY;
