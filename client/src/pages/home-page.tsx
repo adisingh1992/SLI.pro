@@ -1,6 +1,6 @@
 import { useAuth } from "@/hooks/use-auth";
 import { useQuery } from "@tanstack/react-query";
-import { FreshnessReport, LinkedinOptimization, Sli, UserProfile, ConversationSummary, HomeworkAssignment } from "@shared/schema";
+import { FreshnessReport, LinkedinOptimization, Sli, UserProfile, ConversationSummary, HomeworkAssignment, FoundationSession } from "@shared/schema";
 import { useToast } from "@/hooks/use-toast";
 import { useLocation } from "wouter";
 import {
@@ -80,6 +80,13 @@ export default function HomePage() {
   // Fetch conversation summaries to check if user has completed any coaching conversations
   const { data: conversationSummaries } = useQuery<ConversationSummary[]>({
     queryKey: ["/api/conversation-summaries"],
+    enabled: !!user,
+    retry: false,
+  });
+  
+  // Fetch foundation sessions to check completion status
+  const { data: foundationSessions } = useQuery<FoundationSession[]>({
+    queryKey: ["/api/foundation-sessions"],
     enabled: !!user,
     retry: false,
   });
@@ -175,17 +182,20 @@ export default function HomePage() {
   
 
   
-  const coachingBadge = getStatusBadge(
+  const foundationSessionsBadge = getStatusBadge(
     !!userProfile?.questionnaire && userProfile.questionnaire.isDraft !== true && !!hasRequiredDocuments,
-    false // Always available once prerequisites are met
+    !!hasFoundationSessionsCompleted
   );
   
   // Check if user has any conversation summaries for Step 4 enablement
   const hasConversationSummaries = conversationSummaries && conversationSummaries.length > 0;
   
+  // Check if any foundation sessions are completed
+  const hasFoundationSessionsCompleted = foundationSessions && foundationSessions.some(session => session.status === 'completed');
+  
   const liveCoachingBadge = getStatusBadge(
-    !!hasConversationSummaries,
-    false // Always available once user has conversation summaries
+    !!hasFoundationSessionsCompleted,
+    false // Always available once foundation sessions are completed
   );
 
   return (
@@ -378,22 +388,80 @@ export default function HomePage() {
             </CardFooter>
           </Card>
           
-
-          {/* Step 4: Schedule Live Coaching Call */}
+          {/* Step 3: Foundation Sessions */}
           <Card className={`overflow-hidden shadow-sm flex flex-col h-full ${
-            !hasConversationSummaries
+            !userProfile?.questionnaire || userProfile.questionnaire.isDraft === true || !hasRequiredDocuments
               ? "border-gray-200 opacity-75"
-              : "border-green-200"
+              : "border-success/20"
           }`}>
             <CardHeader className={`pb-4 ${
-              !hasConversationSummaries
+              !userProfile?.questionnaire || userProfile.questionnaire.isDraft === true || !hasRequiredDocuments
                 ? "bg-gray-50"
                 : "bg-green-50"
             }`}>
               <div className="flex items-center justify-between">
                 <div className="flex items-center">
                   <div className={`p-2 rounded-full mr-3 ${
-                    !hasConversationSummaries
+                    !userProfile?.questionnaire || userProfile.questionnaire.isDraft === true || !hasRequiredDocuments
+                      ? "bg-gray-100 text-gray-500"
+                      : "bg-green-100 text-green-600"
+                  }`}>
+                    <Calendar className="h-5 w-5" />
+                  </div>
+                  <CardTitle className="text-lg">
+                    Step 3: Foundation Sessions
+                  </CardTitle>
+                </div>
+                {foundationSessionsBadge}
+              </div>
+              <CardDescription className="mt-2">
+                Complete three sequential coaching conversations to identify your primary business function and develop your professional foundation.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="p-5 flex-grow">
+              <p className={`text-sm ${!userProfile?.questionnaire || userProfile.questionnaire.isDraft === true || !hasRequiredDocuments ? "text-muted-foreground/70" : "text-muted-foreground"}`}>
+                {!userProfile?.questionnaire || userProfile.questionnaire.isDraft === true || !hasRequiredDocuments
+                  ? `You must ${!userProfile?.questionnaire ? "complete the questionnaire" : userProfile.questionnaire.isDraft === true ? "complete the questionnaire" : "upload your documents"} first`
+                  : "Three AI-powered sessions guide you through functional identity mapping, credibility assessment, and positioning story development to build your professional foundation."}
+              </p>
+            </CardContent>
+            <CardFooter className="bg-gray-50 py-3 px-5 mt-auto">
+              <Button
+                variant="outline"
+                className={`w-full ${
+                  !userProfile?.questionnaire || userProfile.questionnaire.isDraft === true || !hasRequiredDocuments
+                    ? "border-blue-500 text-blue-600 hover:bg-blue-50 cursor-not-allowed"
+                    : "border-green-500 text-green-700 hover:bg-green-50"
+                }`}
+                onClick={() => {
+                  if (userProfile?.questionnaire && userProfile.questionnaire.isDraft !== true && hasRequiredDocuments) {
+                    scrollToTop();
+                    navigate("/foundation");
+                  }
+                }}
+                disabled={!userProfile?.questionnaire || userProfile.questionnaire.isDraft === true || !hasRequiredDocuments}
+              >
+                Start Sessions
+                <ArrowRight className="ml-2 h-4 w-4" />
+              </Button>
+            </CardFooter>
+          </Card>
+
+          {/* Step 4: Schedule Live Coaching Call */}
+          <Card className={`overflow-hidden shadow-sm flex flex-col h-full ${
+            !hasFoundationSessionsCompleted
+              ? "border-gray-200 opacity-75"
+              : "border-green-200"
+          }`}>
+            <CardHeader className={`pb-4 ${
+              !hasFoundationSessionsCompleted
+                ? "bg-gray-50"
+                : "bg-green-50"
+            }`}>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center">
+                  <div className={`p-2 rounded-full mr-3 ${
+                    !hasFoundationSessionsCompleted
                       ? "bg-gray-100 text-gray-500"
                       : "bg-green-100 text-green-600"
                   }`}>
@@ -406,15 +474,15 @@ export default function HomePage() {
                 {liveCoachingBadge}
               </div>
               <CardDescription className="mt-2">
-                {!hasConversationSummaries
-                  ? "Complete your AI-guided discovery conversations to unlock live coaching"
+                {!hasFoundationSessionsCompleted
+                  ? "Complete your AI-guided foundation sessions to unlock live coaching"
                   : "Book your 30-minute session with an SLI.pro expert to refine your professional positioning"}
               </CardDescription>
             </CardHeader>
             <CardContent className="p-5 flex-grow">
-              <p className={`text-sm ${!hasConversationSummaries ? "text-muted-foreground/70" : "text-muted-foreground"}`}>
-                {!hasConversationSummaries
-                  ? "You must complete at least one AI coaching conversation first"
+              <p className={`text-sm ${!hasFoundationSessionsCompleted ? "text-muted-foreground/70" : "text-muted-foreground"}`}>
+                {!hasFoundationSessionsCompleted
+                  ? "You must complete at least one foundation session first"
                   : "Work directly with our experts to polish your Single Lasting Impression and create a powerful professional presence."}
               </p>
             </CardContent>
@@ -422,16 +490,16 @@ export default function HomePage() {
               <Button
                 variant="outline"
                 className={`w-full ${
-                  !hasConversationSummaries
+                  !hasFoundationSessionsCompleted
                     ? "border-gray-300 text-gray-500 cursor-not-allowed"
                     : "border-green-500 text-green-600 hover:bg-green-50"
                 }`}
                 onClick={() => {
-                  if (hasConversationSummaries) {
+                  if (hasFoundationSessionsCompleted) {
                     window.open("https://calendly.com/dcara-sli/haas", "_blank");
                   }
                 }}
-                disabled={!hasConversationSummaries}
+                disabled={!hasFoundationSessionsCompleted}
               >
                 Schedule Now
                 <ArrowRight className="ml-2 h-4 w-4" />
@@ -842,16 +910,16 @@ export default function HomePage() {
               <Button
                 variant="outline"
                 className={`w-full ${
-                  !hasConversationSummaries
+                  !hasFoundationSessionsCompleted
                     ? "border-gray-300 text-gray-500 cursor-not-allowed"
                     : "border-green-500 text-green-600 hover:bg-green-50"
                 }`}
                 onClick={() => {
-                  if (hasConversationSummaries) {
+                  if (hasFoundationSessionsCompleted) {
                     window.open("https://calendly.com/dcara-sli/haas", "_blank");
                   }
                 }}
-                disabled={!hasConversationSummaries}
+                disabled={!hasFoundationSessionsCompleted}
               >
                 Schedule Now
                 <ArrowRight className="ml-2 h-4 w-4" />
