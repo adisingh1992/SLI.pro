@@ -358,7 +358,7 @@ Respond with an EXACT JSON structure as follows:
   "rationale3": "Detailed rationale for option 3..."
 }
 
-Each rationale section should be 3-4 paragraphs of rich, detailed content. Be sure to format the JSON correctly.`;
+Each rationale section should be 3-4 paragraphs of rich, detailed content. Be sure to format the JSON correctly. RESPOND IN JSON ONLY`;
 
     // User message
     const userMessage = `Please generate three distinct SLI options for ${userProfile.firstName} ${userProfile.lastName} based on the following information:
