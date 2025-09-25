@@ -175,76 +175,84 @@ async function summarizeAdditionalDocs(documents: any[]): Promise<string> {
 }
 
 /**
- * Gets the latest conversation summary for a user
+ * Gets foundation sessions completion data formatted as conversation summary
  */
-async function getLatestConversationSummary(conversationSummaries: any[]): Promise<string> {
-  if (!conversationSummaries || conversationSummaries.length === 0) {
-    return "No conversation summaries available";
+async function getFoundationSessionsSummary(foundationSessions: any[]): Promise<string> {
+  if (!foundationSessions || foundationSessions.length === 0) {
+    return "No foundation sessions completed";
   }
   
-  // Sort by creation date (newest first)
-  const sortedSummaries = [...conversationSummaries].sort((a, b) => 
-    new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-  );
+  // Filter only completed sessions and sort by session number
+  const completedSessions = foundationSessions
+    .filter(session => session.status === 'completed' && session.completionData)
+    .sort((a, b) => a.sessionNumber - b.sessionNumber);
   
-  const latest = sortedSummaries[0];
-  
-  let summaryText = "Latest Conversation Summary:\n";
-  
-  // Basic Info
-  if (latest.basicInfo) {
-    summaryText += `\nBasic Info:\n`;
-    if (latest.basicInfo.currentRole) summaryText += `Current Role: ${latest.basicInfo.currentRole}\n`;
-    if (latest.basicInfo.industry) summaryText += `Industry: ${latest.basicInfo.industry}\n`;
-    if (latest.basicInfo.yearsOfExperience) summaryText += `Years of Experience: ${latest.basicInfo.yearsOfExperience}\n`;
-    if (latest.basicInfo.targetTimeline) summaryText += `Target Timeline: ${latest.basicInfo.targetTimeline}\n`;
+  if (completedSessions.length === 0) {
+    return "No foundation sessions completed";
   }
   
-  // Functional Categorization
-  if (latest.functionalCategorization) {
-    summaryText += `\nFunctional Categorization:\n`;
-    if (latest.functionalCategorization.primaryFunction) summaryText += `Primary Function: ${latest.functionalCategorization.primaryFunction}\n`;
-    if (latest.functionalCategorization.secondaryFunction) summaryText += `Secondary Function: ${latest.functionalCategorization.secondaryFunction}\n`;
-    if (latest.functionalCategorization.keyStrengths && latest.functionalCategorization.keyStrengths.length > 0) {
-      summaryText += `Key Strengths: ${latest.functionalCategorization.keyStrengths.join(', ')}\n`;
-    }
-  }
+  let summaryText = "Foundation Sessions Summary:\n";
   
-  // Career Transition
-  if (latest.careerTransition) {
-    summaryText += `\nCareer Transition:\n`;
-    if (latest.careerTransition.currentState) summaryText += `Current State: ${latest.careerTransition.currentState}\n`;
-    if (latest.careerTransition.desiredState) summaryText += `Desired State: ${latest.careerTransition.desiredState}\n`;
-    if (latest.careerTransition.transitionType) summaryText += `Transition Type: ${latest.careerTransition.transitionType}\n`;
-    if (latest.careerTransition.primaryMotivation) summaryText += `Primary Motivation: ${latest.careerTransition.primaryMotivation}\n`;
-  }
-  
-  // Strengths and Positioning
-  if (latest.strengthsAndPositioning) {
-    summaryText += `\nStrengths and Positioning:\n`;
-    if (latest.strengthsAndPositioning.keyStrengths && latest.strengthsAndPositioning.keyStrengths.length > 0) {
-      summaryText += `Key Strengths: ${latest.strengthsAndPositioning.keyStrengths.join(', ')}\n`;
+  completedSessions.forEach(session => {
+    const data = session.completionData;
+    
+    if (session.sessionNumber === 1) {
+      summaryText += `\n=== Session 1: Functional Identity Mapping ===\n`;
+      if (data.primaryFunction) summaryText += `Primary Function: ${data.primaryFunction}\n`;
+      if (data.secondaryFunction) summaryText += `Secondary Function: ${data.secondaryFunction}\n`;
+      if (data.functionalSplit) {
+        summaryText += `Functional Split: ${data.functionalSplit.primary}% primary, ${data.functionalSplit.secondary}% secondary\n`;
+      }
+      summaryText += `Anti-Generalist Commitment: ${data.antiGeneralistCommitment ? 'Yes' : 'No'}\n`;
+      if (data.commitmentStatement) summaryText += `Commitment: ${data.commitmentStatement}\n`;
+      if (data.functionalLanguageExamples && data.functionalLanguageExamples.length > 0) {
+        summaryText += `Functional Language Examples: ${data.functionalLanguageExamples.join(', ')}\n`;
+      }
+      if (data.keyInsights && data.keyInsights.length > 0) {
+        summaryText += `Key Insights: ${data.keyInsights.join(', ')}\n`;
+      }
+      if (data.confidence) summaryText += `Confidence Level: ${data.confidence}/10\n`;
+      if (data.reasoning) summaryText += `Reasoning: ${data.reasoning}\n`;
     }
-    if (latest.strengthsAndPositioning.areasForDevelopment && latest.strengthsAndPositioning.areasForDevelopment.length > 0) {
-      summaryText += `Areas for Development: ${latest.strengthsAndPositioning.areasForDevelopment.join(', ')}\n`;
+    
+    if (session.sessionNumber === 2) {
+      summaryText += `\n=== Session 2: Credibility Assessment ===\n`;
+      if (data.credibilityTier) summaryText += `Credibility Tier: ${data.credibilityTier}/5\n`;
+      if (data.brandClaim) summaryText += `Brand Claim: ${data.brandClaim}\n`;
+      if (data.checkWorthyReason) summaryText += `Check-Worthy Reason: ${data.checkWorthyReason}\n`;
+      if (data.proofBullets && data.proofBullets.length > 0) {
+        summaryText += `Proof Points:\n`;
+        data.proofBullets.forEach((bullet: string, index: number) => {
+          summaryText += `  ${index + 1}. ${bullet}\n`;
+        });
+      }
+      if (data.nextSteps && data.nextSteps.length > 0) {
+        summaryText += `Next Steps: ${data.nextSteps.join(', ')}\n`;
+      }
     }
-    if (latest.strengthsAndPositioning.valueProposition) summaryText += `Value Proposition: ${latest.strengthsAndPositioning.valueProposition}\n`;
-    if (latest.strengthsAndPositioning.achievementExamples && latest.strengthsAndPositioning.achievementExamples.length > 0) {
-      summaryText += `Achievement Examples: ${latest.strengthsAndPositioning.achievementExamples.join(', ')}\n`;
+    
+    if (session.sessionNumber === 3) {
+      summaryText += `\n=== Session 3: Positioning Story Development ===\n`;
+      if (data.signatureStory) {
+        const story = data.signatureStory;
+        summaryText += `Signature Story: ${story.title}\n`;
+        summaryText += `Context: ${story.context}\n`;
+        summaryText += `Challenge: ${story.challenge}\n`;
+        summaryText += `Approach: ${story.approach}\n`;
+        summaryText += `Tension: ${story.tension}\n`;
+        summaryText += `Outcome: ${story.outcome}\n`;
+        summaryText += `Repeatability: ${story.repeatability}\n`;
+      }
+      if (data.contentAngles && data.contentAngles.length > 0) {
+        summaryText += `Content Angles: ${data.contentAngles.join(', ')}\n`;
+      }
+      if (data.methodology) summaryText += `Methodology: ${data.methodology}\n`;
     }
-  }
-  
-  // Recommendations
-  if (latest.recommendations) {
-    summaryText += `\nRecommendations:\n`;
-    if (latest.recommendations.sliDirections && latest.recommendations.sliDirections.length > 0) {
-      summaryText += `SLI Directions: ${latest.recommendations.sliDirections.join(', ')}\n`;
+    
+    if (session.completedAt) {
+      summaryText += `Completed: ${new Date(session.completedAt).toLocaleDateString()}\n`;
     }
-    if (latest.recommendations.contentStrategyDirections && latest.recommendations.contentStrategyDirections.length > 0) {
-      summaryText += `Content Strategy Directions: ${latest.recommendations.contentStrategyDirections.join(', ')}\n`;
-    }
-    if (latest.recommendations.specialConsiderations) summaryText += `Special Considerations: ${latest.recommendations.specialConsiderations}\n`;
-  }
+  });
   
   return summaryText;
 }
@@ -290,8 +298,8 @@ export async function generateSLIs(userProfile: UserProfile): Promise<InsertSli 
     const additionalDocs = userProfile.documents?.filter(doc => doc.type !== 'resume' && doc.type !== 'linkedin') || [];
     const additionalDocsSummary = await summarizeAdditionalDocs(additionalDocs);
     
-    // Get conversation summary
-    const conversationSummary = await getLatestConversationSummary(userProfile.conversationSummaries || []);
+    // Get foundation sessions summary
+    const foundationSessionsSummary = await getFoundationSessionsSummary(userProfile.foundationSessions || []);
     
     // Get coaching notes
     const coachingNotesSummary = await getLatestCoachingNotes(userProfile.coachingNotes || []);
@@ -349,8 +357,8 @@ ${linkedInSummary}
 ADDITIONAL DOCUMENTS:
 ${additionalDocsSummary}
 
-CONVERSATION SUMMARY:
-${conversationSummary}
+FOUNDATION SESSIONS SUMMARY:
+${foundationSessionsSummary}
 
 COACHING NOTES:
 ${coachingNotesSummary}

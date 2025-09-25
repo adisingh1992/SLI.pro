@@ -285,11 +285,14 @@ export class DatabaseStorage implements IStorage {
     const questionnaire = await this.getQuestionnaire(userId);
     const documents = await this.getDocuments(userId);
     const conversations = await this.getConversations(userId);
+    const conversationSummaries = await this.getConversationSummaries(userId);
     const monthlyCheckIns = await this.getMonthlyCheckIns(userId);
     const freshnessReports = await this.getFreshnessReports(userId);
     const coachingNotes = await this.getCoachingNotes(userId);
     const slis = await this.getSlisByUserId(userId);
     const linkedinOptimizations = await this.getLinkedinOptimizations(userId);
+    const homeworkAssignments = await this.getHomeworkAssignments(userId);
+    const foundationSessions = await this.getFoundationSessions(userId);
     
     return {
       ...user,
@@ -301,11 +304,14 @@ export class DatabaseStorage implements IStorage {
       questionnaire,
       documents,
       conversations,
+      conversationSummaries,
       monthlyCheckIns,
       freshnessReports,
       coachingNotes,
       slis,
-      linkedinOptimizations
+      linkedinOptimizations,
+      homeworkAssignments,
+      foundationSessions
     };
   }
 
