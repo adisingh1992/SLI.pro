@@ -902,6 +902,51 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.json(debugInfo);
   });
 
+  // Foundation Sessions routes - ADMIN only
+  app.get("/api/admin/users/:userId/foundation-sessions", isAdmin, async (req, res, next) => {
+    try {
+      const userId = parseInt(req.params.userId);
+      
+      // Initialize foundation sessions for the user if they don't exist
+      const existingSessions = await storage.getFoundationSessions(userId);
+      
+      // If user doesn't have sessions, create them
+      if (existingSessions.length === 0) {
+        const sessionsToCreate = [
+          {
+            userId,
+            sessionNumber: 1,
+            status: "available" as const, // Session 1 is available by default
+          },
+          {
+            userId,
+            sessionNumber: 2,
+            status: "locked" as const, // Sessions 2 and 3 are locked initially
+          },
+          {
+            userId,
+            sessionNumber: 3,
+            status: "locked" as const,
+          }
+        ];
+
+        for (const sessionData of sessionsToCreate) {
+          await storage.createFoundationSession(sessionData);
+        }
+        
+        // Fetch the newly created sessions
+        const sessions = await storage.getFoundationSessions(userId);
+        res.json(sessions);
+      } else {
+        // Return existing sessions
+        res.json(existingSessions);
+      }
+    } catch (error) {
+      console.error("Error fetching admin foundation sessions:", error);
+      next(error);
+    }
+  });
+
   // Coaching Notes routes - ADMIN only
   app.get("/api/admin/users/:userId/coaching-notes", isAdmin, async (req, res, next) => {
     try {
