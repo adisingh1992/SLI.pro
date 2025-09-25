@@ -180,18 +180,16 @@ export default function HomePage() {
     !!latestLinkedinOptimization
   );
   
-
-  
-  const foundationSessionsBadge = getStatusBadge(
-    !!userProfile?.questionnaire && userProfile.questionnaire.isDraft !== true && !!hasRequiredDocuments,
-    !!hasFoundationSessionsCompleted
-  );
-  
   // Check if user has any conversation summaries for Step 4 enablement
   const hasConversationSummaries = conversationSummaries && conversationSummaries.length > 0;
   
   // Check if any foundation sessions are completed
   const hasFoundationSessionsCompleted = foundationSessions && foundationSessions.some(session => session.status === 'completed');
+  
+  const foundationSessionsBadge = getStatusBadge(
+    !!userProfile?.questionnaire && userProfile.questionnaire.isDraft !== true && !!hasRequiredDocuments,
+    !!hasFoundationSessionsCompleted
+  );
   
   const liveCoachingBadge = getStatusBadge(
     !!hasFoundationSessionsCompleted,
