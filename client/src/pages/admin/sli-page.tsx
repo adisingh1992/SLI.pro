@@ -56,6 +56,7 @@ export default function SliPage() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [`/api/admin/users/${userId}/slis`] });
+      refetchSlis(); // Explicitly refetch to ensure UI updates
       toast({
         title: "Success",
         description: "SLIs generated successfully",

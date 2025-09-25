@@ -10,7 +10,6 @@ import {
   ArrowLeft, 
   Award, 
   CheckCircle2,
-  Edit
 } from "lucide-react";
 
 import { 
@@ -26,7 +25,6 @@ import {
 } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
 import { Loader2 } from "lucide-react";
 import { scrollToTop } from "@/lib/utils";
 
