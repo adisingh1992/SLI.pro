@@ -36,10 +36,6 @@ export default function SummaryList({ userId, isAdmin = false }: SummaryListProp
   // Fetch the foundation sessions
   const { data: sessions, isLoading, isError, refetch } = useQuery<FoundationSession[]>({
     queryKey: [endpoint],
-    queryFn: () => fetch(endpoint).then(res => {
-      if (!res.ok) throw new Error('Failed to load foundation sessions');
-      return res.json();
-    }),
   });
 
   if (isLoading) {
