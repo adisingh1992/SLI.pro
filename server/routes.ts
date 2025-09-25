@@ -7,7 +7,6 @@ import { scrypt, randomBytes } from "crypto";
 import { promisify } from "util";
 import { registerSliRoutes } from "./sli-routes";
 import { registerHomeworkRoutes } from "./homework-routes";
-import { registerConversationRoutes } from "./conversation-routes";
 import { registerFreshnessRoutes } from "./freshness-routes";
 import { registerLinkedinOptimizationRoutes } from "./linkedin-optimization-routes";
 import { registerLinkedinContentRoutes } from "./linkedin-content-routes";
@@ -40,7 +39,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
   setupAuth(app);
   
   // Register other route modules
-  registerConversationRoutes(app);
   registerFreshnessRoutes(app);
   registerLinkedinOptimizationRoutes(app);
   registerLinkedinContentRoutes(app);
@@ -758,8 +756,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Register conversation routes (Claude chat interface)
-  registerConversationRoutes(app);
   registerFreshnessRoutes(app);
 
   // Helper function to get all users for admin routes
@@ -805,11 +801,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       return "Freshness Report Generated";
     }
     
-    // Check Conversation Summaries
-    const conversationSummaries = await storage.getConversationSummaries(userId);
-    if (conversationSummaries.length > 0) {
-      return "Chat Session Done";
-    }
     
     // Check Documents
     const documents = await storage.getDocuments(userId);
@@ -992,93 +983,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Admin routes for accessing conversation summaries
-  // Get a conversation summary for a specific user
-  app.get("/api/admin/users/:userId/conversations/:id/summary", isAdmin, async (req: Request, res: Response, next: NextFunction) => {
-    try {
-      const userId = parseInt(req.params.userId);
-      const conversationId = parseInt(req.params.id);
-      
-      // Check if conversation exists
-      const conversation = await storage.getConversation(conversationId);
-      if (!conversation) {
-        return res.status(404).json({ message: "Conversation not found" });
-      }
-      
-      // Check if the conversation belongs to the specified user
-      if (conversation.userId !== userId) {
-        return res.status(404).json({ message: "Conversation not found for this user" });
-      }
-      
-      // Get the summary
-      const summary = await storage.getConversationSummaryByConversationId(conversationId);
-      
-      if (!summary) {
-        return res.status(404).json({ message: "Summary not found" });
-      }
-      
-      res.json(summary);
-    } catch (error) {
-      console.error('Error in admin conversation summary route:', error);
-      next(error);
-    }
-  });
   
-  // Regenerate a summary for a specific conversation (admin access)
-  app.post("/api/admin/users/:userId/conversations/:id/summary/regenerate", isAdmin, async (req: Request, res: Response, next: NextFunction) => {
-    try {
-      const userId = parseInt(req.params.userId);
-      const conversationId = parseInt(req.params.id);
-      
-      // Check if conversation exists
-      const conversation = await storage.getConversation(conversationId);
-      if (!conversation) {
-        return res.status(404).json({ message: "Conversation not found" });
-      }
-      
-      // Check if the conversation belongs to the specified user
-      if (conversation.userId !== userId) {
-        return res.status(404).json({ message: "Conversation not found for this user" });
-      }
-      
-      // Delete existing summary if it exists
-      const existingSummary = await storage.getConversationSummaryByConversationId(conversationId);
-      if (existingSummary) {
-        // We would need to add a delete method for summaries
-        // await storage.deleteConversationSummary(existingSummary.id);
-      }
-      
-      // Generate a new summary
-      const generatedSummary = await generateConversationSummary(conversationId, userId);
-      
-      if (!generatedSummary) {
-        return res.status(500).json({ message: "Failed to generate conversation summary" });
-      }
-      
-      // Save the generated summary
-      const summary = await storage.createConversationSummary(generatedSummary);
-      
-      res.status(201).json(summary);
-    } catch (error) {
-      console.error('Error regenerating conversation summary:', error);
-      next(error);
-    }
-  });
   
-  // Get all summaries for a specific user (admin access)
-  app.get("/api/admin/users/:userId/conversation-summaries", isAdmin, async (req: Request, res: Response, next: NextFunction) => {
-    try {
-      const userId = parseInt(req.params.userId);
-      
-      // Get all summaries for the specified user
-      const summaries = await storage.getConversationSummaries(userId);
-      
-      res.json(summaries);
-    } catch (error) {
-      console.error('Error in admin conversation summaries route:', error);
-      next(error);
-    }
-  });
 
   // Force update the admin user on server start for debugging
   (async () => {
