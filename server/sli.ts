@@ -4,7 +4,7 @@ import { log } from './vite';
 import { analyzeDocument } from './claude';
 
 const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY;
-const CLAUDE_MODEL = process.env.CLAUDE_MODEL || 'claude-3-opus-20240229';
+const CLAUDE_MODEL = process.env.CLAUDE_MODEL || 'claude-3-haiku-20240307';
 
 // Initialize Anthropic client
 const anthropic = new Anthropic({
