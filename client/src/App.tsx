@@ -10,7 +10,6 @@ import ResetPasswordPage from "@/pages/reset-password-page";
 import ProfilePage from "@/pages/profile-page";
 import ProfileCreationPage from "@/pages/profile-creation-page";
 import QuestionnairePage from "@/pages/questionnaire-simple";
-import ChatPage from "@/pages/chat-page";
 import SummaryPage from "@/pages/summary-page";
 import MonthlyCheckInPage from "@/pages/monthly-check-in-page";
 import FreshnessReportPage from "@/pages/freshness-report-page-fixed";
@@ -43,7 +42,6 @@ function Router() {
       <ProtectedRoute path="/profile" component={ProfilePage} />
       <ProtectedRoute path="/profile/create" component={ProfileCreationPage} />
       <ProtectedRoute path="/questionnaire" component={QuestionnairePage} />
-      <ProtectedRoute path="/chat" component={ChatPage} />
       <ProtectedRoute path="/summaries" component={SummaryPage} />
       <ProtectedRoute
         path="/conversations/:id/summary"
