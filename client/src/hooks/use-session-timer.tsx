@@ -32,6 +32,18 @@ export const DEFAULT_FOUNDATION_SESSION_CONFIG: SessionTimerConfig = {
   }
 };
 
+// Session 2 specific configuration
+export const SESSION_2_CONFIG: SessionTimerConfig = {
+  targetMinutes: 10,
+  warningMinutes: 8,
+  messages: {
+    initial: "Recommended time: 8-10 minutes (focus on concrete examples with numbers)",
+    warning: "About 2 minutes remaining - provide specific metrics and measurable outcomes",
+    overtime: "No rush - detailed proof strengthens your credibility assessment", 
+    completed: "Assessment complete - strong evidence documented"
+  }
+};
+
 export function useSessionTimer(
   config: SessionTimerConfig = DEFAULT_FOUNDATION_SESSION_CONFIG,
   sessionNumber?: number,

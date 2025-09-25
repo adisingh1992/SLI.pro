@@ -14,35 +14,7 @@ import { useToast } from "@/hooks/use-toast";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import SessionTimer from "@/components/ui/session-timer";
 
-type FoundationSession = {
-  id: number;
-  userId: number;
-  sessionNumber: number;
-  title: string;
-  description: string;
-  status: 'locked' | 'available' | 'in_progress' | 'completed';
-  startedAt?: string;
-  completedAt?: string;
-  progress?: number;
-  timerElapsed?: number;
-  completionData?: {
-    primaryFunction?: string;
-    secondaryFunction?: string;
-    functionalSplit?: { primary: number; secondary: number };
-    confidence?: number;
-    reasoning?: string;
-    keyInsights?: string[];
-    completedAt?: string;
-  };
-};
-
-type FoundationSessionMessage = {
-  id: number;
-  sessionId: number;
-  role: 'user' | 'assistant';
-  content: string;
-  createdAt: string;
-};
+import type { FoundationSession, FoundationSessionMessage } from '@shared/schema';
 
 type SessionWithMessages = {
   session: FoundationSession;
@@ -160,9 +132,22 @@ export default function FoundationSessionChatPage() {
                 queryClient.invalidateQueries({ queryKey: ['/api/foundation-sessions'] });
               } else if (eventData.type === 'session_completed') {
                 console.log('Session automatically completed:', eventData);
+                
+                // Session-specific completion messages
+                let description = '';
+                if (eventData.sessionNumber === 1) {
+                  description = `Foundation Session 1 completed automatically. Your primary function has been identified as ${eventData.completionData?.primaryFunction}.`;
+                } else if (eventData.sessionNumber === 2) {
+                  const tier = eventData.completionData?.credibilityTier;
+                  const brandClaim = eventData.completionData?.brandClaim;
+                  description = `Professional Credibility Assessment completed. Achieved Tier ${tier} evidence strength${brandClaim ? `: ${brandClaim}` : ''}.`;
+                } else {
+                  description = `Foundation Session ${eventData.sessionNumber} has been completed successfully.`;
+                }
+                
                 toast({
                   title: "Session Completed!",
-                  description: `Foundation Session ${eventData.sessionNumber} has been completed automatically. Your primary function has been identified as ${eventData.completionData?.primaryFunction}.`,
+                  description,
                   duration: 5000,
                 });
                 // Refresh data after auto-completion
@@ -239,13 +224,20 @@ export default function FoundationSessionChatPage() {
     await sendMessage(messageContent);
   };
 
-  // Session 1 specific guardrails and guidance
+  // Session-specific guardrails and guidance
   const getSessionGuidance = () => {
     if (sessionNumber === 1) {
       return {
         title: "Functional Identity Mapping",
         description: "Define your primary business function and positioning (7-9 minutes)",
         prompt: "Hello, I'm here to help you identify your primary business function (Finance, Operations, Sales, Marketing, or Product). Let's start by discussing your current role and what energizes you most about work.",
+        functions: ["Finance", "Operations", "Sales", "Marketing", "Product"]
+      };
+    } else if (sessionNumber === 2) {
+      return {
+        title: "Professional Credibility Assessment",
+        description: "Identify measurable expertise and business impact (8-10 minutes)",
+        prompt: "If I'm writing you a $1M check because you're credible, what SPECIFIC expertise am I investing in? Think like a ruthless, revenue-only investor: what would they throw $1M at YOU to do?",
         functions: ["Finance", "Operations", "Sales", "Marketing", "Product"]
       };
     }
@@ -323,8 +315,8 @@ export default function FoundationSessionChatPage() {
     );
   }
 
-  // Sessions 2 and 3 are not implemented yet
-  if (sessionNumber > 1) {
+  // Session 3 is not implemented yet
+  if (sessionNumber > 2) {
     return (
       <div className="min-h-screen bg-background">
         <NavBar />
@@ -334,7 +326,7 @@ export default function FoundationSessionChatPage() {
               <MessageSquare className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
               <h2 className="text-xl font-semibold mb-2">Coming Soon</h2>
               <p className="text-muted-foreground mb-4">
-                Session {sessionNumber} is not yet available. Focus on completing Session 1 first.
+                Session {sessionNumber} is not yet available. Focus on completing Sessions 1 and 2 first.
               </p>
               <Button onClick={() => navigate('/foundation')} variant="outline">
                 <ArrowLeft className="h-4 w-4 mr-2" />
@@ -397,14 +389,14 @@ export default function FoundationSessionChatPage() {
       <div className="flex h-[calc(100vh-140px)]">
         {/* Left Column - Chat Interface (75%) */}
         <div className="w-3/4 flex flex-col">
-          {/* Session Progress */}
-          {session.status === 'in_progress' && session.progress !== undefined && (
+          {/* Session Progress - based on message count */}
+          {session.status === 'in_progress' && messages.length > 0 && (
             <div className="px-4 py-3 border-b bg-background/50">
               <div className="flex items-center justify-between mb-2">
                 <span className="text-sm font-medium">Session Progress</span>
-                <span className="text-sm text-muted-foreground">{session.progress}%</span>
+                <span className="text-sm text-muted-foreground">{Math.min(Math.floor((messages.length / 10) * 100), 100)}%</span>
               </div>
-              <Progress value={session.progress} className="h-2" data-testid="progress-session" />
+              <Progress value={Math.min(Math.floor((messages.length / 10) * 100), 100)} className="h-2" data-testid="progress-session" />
             </div>
           )}
 
@@ -531,10 +523,12 @@ export default function FoundationSessionChatPage() {
               </div>
             )}
 
-            {/* Function Progress for Session 1 */}
-            {sessionNumber === 1 && (
+            {/* Function Progress for Sessions 1 & 2 */}
+            {(sessionNumber === 1 || sessionNumber === 2) && (
               <div className="space-y-2">
-                <h4 className="text-sm font-medium">Target Functions</h4>
+                <h4 className="text-sm font-medium">
+                  {sessionNumber === 1 ? "Target Functions" : "Credibility Areas"}
+                </h4>
                 <div className="flex flex-wrap gap-1">
                   {sessionInfo.functions.map((func) => (
                     <Badge key={func} variant="outline" className="text-xs">

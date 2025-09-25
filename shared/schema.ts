@@ -515,7 +515,17 @@ export const foundationSessions = pgTable("foundation_sessions", {
     antiGeneralistCommitment?: boolean;
     commitmentStatement?: string;
     functionalLanguageExamples?: string[];
-    // Future sessions will have their own completion criteria
+    keyInsights?: string[];
+    confidence?: number;
+    reasoning?: string;
+    // Session 2 completion criteria
+    credibilityTier?: 1 | 2 | 3 | 4 | 5;
+    proofBullets?: string[];
+    brandClaim?: string;
+    checkWorthyReason?: string;
+    nextSteps?: string[];
+    // Common fields
+    completedAt?: string;
   }>(),
   createdAt: timestamp("created_at", { mode: 'date' }).defaultNow().notNull(),
   updatedAt: timestamp("updated_at", { mode: 'date' }).defaultNow().notNull(),

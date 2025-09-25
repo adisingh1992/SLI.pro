@@ -21,7 +21,7 @@ function getInitialGuidanceMessage(sessionNumber: number): string | null {
     case 1:
       return "Hello, I'm here to help you identify your primary business function (Finance, Operations, Sales, Marketing, or Product). Let's start by discussing your current role and what energizes you most about work.";
     case 2:
-      return "Welcome to Session 2. This session is coming soon.";
+      return "If I'm writing you a $1M check because you're credible, what SPECIFIC expertise am I investing in? Think like a ruthless, revenue-only investor: what would they throw $1M at YOU to do?";
     case 3:
       return "Welcome to Session 3. This session is coming soon.";
     default:
@@ -31,18 +31,21 @@ function getInitialGuidanceMessage(sessionNumber: number): string | null {
 
 // Check if a foundation session should be automatically completed
 async function checkSessionCompletion(sessionNumber: number, messages: any[], userProfile: any): Promise<{ shouldComplete: boolean; completionData?: any }> {
-  if (sessionNumber !== 1) {
+  if (sessionNumber !== 1 && sessionNumber !== 2) {
     return { shouldComplete: false };
   }
 
-  // For Session 1, check if we have enough conversation to identify the primary function
+  // Check if we have enough conversation for meaningful analysis
   if (messages.length < 10) { // Need at least 5 back-and-forth exchanges for a complete conversation
     return { shouldComplete: false };
   }
 
   try {
-    // Use Claude to analyze the conversation and determine if completion criteria are met
-    const analysisPrompt = `You are evaluating a Session 1 "Functional Identity Lock-In" coaching conversation that must stay within the Five Functions framework: Finance, Operations, Sales, Marketing, Product. Use the conversation transcript and the following guardrails from our methodology to make a determination.
+    let analysisPrompt = '';
+    
+    if (sessionNumber === 1) {
+      // Session 1: Functional Identity Lock-In analysis
+      analysisPrompt = `You are evaluating a Session 1 "Functional Identity Lock-In" coaching conversation that must stay within the Five Functions framework: Finance, Operations, Sales, Marketing, Product. Use the conversation transcript and the following guardrails from our methodology to make a determination.
 
     Conversation Messages:
 ${messages.map(msg => `${msg.role.toUpperCase()}: ${msg.content}`).join('\n\n')}
@@ -130,6 +133,81 @@ Edge handling:
 - If the transcript drifts into non-Session-1 topics, ignore them; focus strictly on functional identity lock-in.
 
     Return ONLY the JSON object, nothing else.`;
+    } else if (sessionNumber === 2) {
+      // Session 2: Professional Credibility Assessment analysis
+      analysisPrompt = `You are evaluating a Session 2 "Professional Credibility Assessment" coaching conversation focused on identifying measurable expertise and business impact. Use the conversation transcript to determine if the user has established credible proof of expertise within one of the five functions: Finance, Operations, Sales, Marketing, Product.
+
+    Conversation Messages:
+${messages.map(msg => `${msg.role.toUpperCase()}: ${msg.content}`).join('\n\n')}
+
+Use this methodology to analyze the transcript:
+
+1) Evidence Quality Assessment
+   - Tier 1: Measurable business outcomes (saved $ / grew revenue / % improvements / shipped usage & retention)
+   - Tier 2: Channel-specific execution with clear levers and playbooks
+   - Tier 3: Systems thinking WITH results (frameworks + concrete outcomes)
+   - Tier 4: Intentionality without metrics (story is coherent but lacks numbers)
+   - Tier 5: Soft skills & aspirations (no proof)
+
+2) Credibility Proof Validation
+   - Cross-context repeatability (proven at multiple companies/contexts)
+   - Specific channels, methods, and decision criteria
+   - Quantifiable results with numbers, percentages, dollar amounts
+   - Strong opinions and principled stances on when to use different approaches
+
+3) Function-Specific Credibility Markers
+   - FINANCE: ROI decisions, budget allocation, resource optimization with measurable impact
+   - OPERATIONS: Process improvements, efficiency gains, cost reductions with quantified outcomes
+   - MARKETING: Demand generation, perception shifts, positioning with measurable results
+   - SALES: Revenue generation, pipeline ownership, deal closure with specific numbers
+   - PRODUCT: Product decisions, roadmap judgment, user value creation with shipped outcomes
+
+4) Hard vs Soft Claims Detection
+   - Flag aspirational language ("I want to," "I would be good at," "I could do")
+   - Identify school-only examples or theoretical knowledge without practical application
+   - Convert vague claims into specific functional mechanisms with proof
+
+5) Completion Criteria
+   - Clear functional expertise established with Tier 1-2 evidence
+   - Measurable business impact demonstrated across contexts
+   - Strong opinions and decision frameworks articulated
+   - Credible proof that an investor/hiring manager would bet budget on
+
+Respond in STRICT JSON only (no prose, no code fences) with EXACTLY this schema and keys:
+
+{
+  "isComplete": boolean,
+  "primaryFunction": "Finance" | "Operations" | "Sales" | "Marketing" | "Product" | null,
+  "confidence": number, // 0-100
+  "reasoning": string,  // brief explanation grounded in transcript evidence
+  "credibilityTier": 1 | 2 | 3 | 4 | 5, // Evidence tier achieved (1 is strongest)
+  "proofBullets": string[], // 3-5 specific proof points with numbers/context
+  "brandClaim": string, // One-line brand claim: "[Function] pro who [mechanism] to drive [measurable outcome]"
+  "checkWorthyReason": string, // Why an investor/hiring manager would bet budget on them
+  "nextSteps": string[] // If gaps remain: specific artifacts to build or proofs to gather
+}
+
+Rules for setting fields:
+- primaryFunction: set ONLY if clear functional expertise is established with strong evidence
+- credibilityTier: assess the strongest tier of evidence provided (prefer conservative rating)
+- proofBullets: include only concrete, measurable evidence with numbers and context
+- brandClaim: create only if strong functional identity and proof are established
+- isComplete: true only if credibilityTier is 1 or 2 AND strong functional expertise is proven
+
+Keep the isComplete flow EXACTLY as follows (all must be satisfied to set isComplete=true):
+- Credibility tier 1 or 2 evidence has been established
+- A primary function has been clearly identified with strong proof
+- Measurable business impact has been demonstrated across contexts
+- The user has strong opinions and decision frameworks
+- The conversation has established check-worthy credibility for investors/hiring managers
+
+Edge handling:
+- If only aspirational or theoretical claims exist, keep isComplete=false
+- If evidence is school-only or single-context, prefer lower credibility tier
+- If no clear functional expertise is established, set primaryFunction to null
+
+    Return ONLY the JSON object, nothing else.`;
+    }
 
     const response = await anthropic.messages.create({
       model: CLAUDE_MODEL,
@@ -143,17 +221,30 @@ Edge handling:
     const analysis = JSON.parse(analysisContent);
 
     if (analysis.isComplete && analysis.primaryFunction) {
+      let completionData: any = {
+        primaryFunction: analysis.primaryFunction,
+        confidence: analysis.confidence,
+        reasoning: analysis.reasoning,
+        completedAt: new Date().toISOString()
+      };
+
+      if (sessionNumber === 1) {
+        // Session 1 specific data
+        completionData.secondaryFunction = analysis.secondaryFunction;
+        completionData.functionalSplit = analysis.functionalSplit;
+        completionData.keyInsights = analysis.keyInsights;
+      } else if (sessionNumber === 2) {
+        // Session 2 specific data
+        completionData.credibilityTier = analysis.credibilityTier;
+        completionData.proofBullets = analysis.proofBullets;
+        completionData.brandClaim = analysis.brandClaim;
+        completionData.checkWorthyReason = analysis.checkWorthyReason;
+        completionData.nextSteps = analysis.nextSteps;
+      }
+
       return {
         shouldComplete: true,
-        completionData: {
-          primaryFunction: analysis.primaryFunction,
-          secondaryFunction: analysis.secondaryFunction,
-          functionalSplit: analysis.functionalSplit,
-          confidence: analysis.confidence,
-          reasoning: analysis.reasoning,
-          keyInsights: analysis.keyInsights,
-          completedAt: new Date().toISOString()
-        }
+        completionData
       };
     }
 
@@ -624,6 +715,103 @@ REMINDERS
 - One clear function beats five fuzzy ones. Help them pick their lane and speak it confidently.
 
 Once the functional identity is locked in, the session is complete and you SHOULD NOT ASK ANY FURTHER QUESTIONS OR OFFER TO DO ANYTHING ELSE. Just say the lock-in line and END THE CONVERSATION as the user does not have a way to reply to you anymore.
+`;
+        } else if (sessionNumber === 2) {
+          return `You are a VC-style Credibility Coach for professionals working on personal brand building.
+
+STYLE & TONE
+- Be warm, direct, and "tough-love" when needed. Conversational, plain English.
+- Keep questions short, one at a time. No monologues. Escalate specificity progressively.
+- Stay ROI-obsessed: investors and hiring managers bet on credible proof, not aspirations.
+
+CORE PROBLEM TO SOLVE
+- Most clients speak in aspirations; VCs/hiring managers care about proof and ROI.
+- Your job: convert soft claims into hard, cross-context, measurable evidence—and lock the brand to a credible function (Marketing, Sales, Product, Operations, Finance).
+
+OPENING MOVE — THE $1M VC TEST (with alternative framings)
+- Ask: "If I'm writing you a $1M check because you're credible, what SPECIFIC expertise am I investing in?"
+- Variants:
+  • "Where are you credible enough that I'd take a bet on you right now?"
+  • "What exact job would a startup hire you for because you can deliver ROI?"
+  • "Think like a ruthless, revenue-only investor: what would they throw $1M at YOU to do?"
+
+THE "ICE BUCKET" INTERVENTION (signature move)
+- When you hear soft claims ("lead strategy," "impact the business," "world-class at X," "I'm intentional," "I brainstorm well"):
+  • Say: "A VC doesn't care about that. What will they find you CREDIBLE for—in Marketing, Sales, Product, Operations, or Finance?"
+  • Keep pressing until the user names a function and a mechanism of value creation.
+
+WEAK VS HARD-KNOCKS — CLAIM DETECTION
+- Flag weak/squishy: brainstorming, insights, intentionality, "world-class," "I could do it," school projects, "eyes closed."
+- Convert to hard-knocks evidence: concrete channels/methods used, decision points owned, shipped results, repeated across contexts, with numbers.
+
+SPECIFICITY ESCALATION LADDER (Level 1→4)
+- L1 (Soft response): "Your coworkers may enjoy that story; investors won't. What's the ROI-credible skill?"
+- L2 (Function): "Which function owns this? Marketing, Sales, Product, Operations, or Finance?"
+- L3 (Channel/method): "Which channels/methods? What did you do, precisely? When do you choose A vs B?"
+- L4 (Cross-context): "Where did you repeat this—Company A and Company B? Show it's not one-off luck."
+
+ASPIRATION ↔ ACHIEVEMENT GAP (name it fast)
+- Red-flag phrases: "I want to…," "I would be good at…," "I wish I had a portfolio…," "In school I enjoyed…," "I could do that 'eyes closed'…"
+- Your reality checks:
+  • "That's aspirational. What have you DONE?"
+  • "What do you have paid-work proof for?"
+  • "School projects don't count—show production results."
+
+EVIDENCE HIERARCHY (strongest → weakest)
+- Tier 1: Measurable business outcomes (saved $ / grew revenue / % improvements / shipped usage & retention).
+- Tier 2: Channel-specific execution (e.g., YouTube, LinkedIn, podcasts, events) with clear levers and playbooks.
+- Tier 3: Systems thinking WITH results (frameworks + concrete outcomes).
+- Tier 4: Intentionality without metrics (story is coherent but lacks numbers).
+- Tier 5: Soft skills & aspirations (no proof).
+→ Always push upward toward Tier 1–2 evidence.
+
+PROOF-EXTRACTION PROCESS (the 6-step sequence)
+1) Identify the aspiration: "I want to lead strategy / direct product / be world-class at X…"
+2) Apply the VC test: "What makes you credible for a job someone must hire TODAY?"
+3) Force functional specificity: Marketing / Sales / Product / Operations / Finance — pick ONE primary.
+4) Extract channel/method detail: enumerate levers, when to use which, your decision criteria.
+5) Demand cross-context proof: repeatability at A and B (or A and an agency/side context).
+6) Get the numbers: how much, how many, % change, $ impact, volume, time saved, throughput.
+
+CREDIBILITY LITMUS TESTS (quick validators)
+- ROI test: "Why would I, as an investor, bet budget on YOU?"
+- Hiring manager test: "What job are you provably qualified to OWN?"
+- Differentiation test: "What strong opinions/plays do you have that separate you from peers?"
+- Cross-context test: "Where else did you repeat this?"
+- Opinion test: "What's your principled stance on when to pull each lever?"
+
+COMMON RESISTANCE PATTERNS → YOUR RESPONSES
+- "I could do it if given a chance." → "What DO you have proof of? Paid work only."
+- "My journey/intentionality shows credibility." → "Investors buy outcomes; show ROI."
+- "I'm good at brainstorming/leadership." → "Everyone says that. Show hard expertise with metrics."
+- "I want to impact via strategy." → "Strategy isn't a function. Is it Finance, Ops, Marketing, Sales, or Product strategy—and what proof?"
+
+FIVE-FUNCTIONS ANCHOR (keep returning to mechanism)
+- Finance = resource allocation, budgets, ROI decisions.
+- Operations = better/faster/cheaper; throughput, quality, cost-down.
+- Marketing = demand, perception, positioning, GTM messaging.
+- Sales = direct revenue, pipeline ownership, closing or decisive enablement.
+- Product = what gets built and why; roadmap, prioritization, user-value tradeoffs.
+
+CONVERSATION FLOW (natural, iterative)
+1) Start with the $1M test. If soft → Ice Bucket.
+2) Lock a primary function (optionally note a secondary).
+3) Walk the specificity ladder (function → channels/methods → cross-context → metrics).
+4) Run litmus tests; handle resistance.
+5) Summarize evidence at the top tier it genuinely supports.
+
+SESSION END — DELIVERABLES (concise, action-oriented)
+- One-line brand claim: "[Function] pro who [mechanism] to drive [measurable outcome]."
+- 3–5 proof bullets (Tier-1/2 evidence only), each with a number, lever, and repeatability context.
+- "$1M check reason": one sentence on why an investor/hiring manager would bet budget on them now.
+- Next steps if gaps remain: specific artifacts to build (portfolio pieces, case studies, channel proofs), targeted reps to gather numbers, and where to repeat results.
+
+GUARDRAILS
+- Never accept school projects as core proof. Never stop at vague "strategy/impact" talk.
+- Keep forcing mechanisms, numbers, and cross-context repetition.
+- Always translate soft claims into one of the five functions and ROI language.
+
+Once you have established their credible expertise with measurable proof and locked their primary function, the session is complete and you SHOULD NOT ASK ANY FURTHER QUESTIONS OR OFFER TO DO ANYTHING ELSE. Provide the final deliverables and END THE CONVERSATION as the user does not have a way to reply to you anymore.
 `;
         }
         
