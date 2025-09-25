@@ -4,7 +4,7 @@ import { log } from './vite';
 import { analyzeDocument } from './claude';
 
 const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY;
-const CLAUDE_MODEL = process.env.CLAUDE_MODEL || 'claude-3-haiku-20240307';
+const CLAUDE_MODEL = process.env.CLAUDE_MODEL || 'claude-3-opus-20240229';
 
 // Initialize Anthropic client
 const anthropic = new Anthropic({
@@ -174,9 +174,9 @@ async function summarizeAdditionalDocs(documents: any[]): Promise<string> {
 }
 
 /**
- * Gets foundation sessions completion data formatted as conversation summary
+ * Generate a concise foundation sessions summary using Claude
  */
-async function getFoundationSessionsSummary(foundationSessions: any[]): Promise<string> {
+async function generateFoundationSessionsSummary(foundationSessions: any[]): Promise<string> {
   log(`Processing ${foundationSessions?.length || 0} total foundation sessions`, "claude");
   
   if (!foundationSessions || foundationSessions.length === 0) {
@@ -197,70 +197,42 @@ async function getFoundationSessionsSummary(foundationSessions: any[]): Promise<
     return "No foundation sessions completed";
   }
   
-  let summaryText = "Foundation Sessions Summary:\n";
+  // Prepare clean data for Claude
+  const sessionsData = completedSessions.map(session => ({
+    sessionNumber: session.sessionNumber,
+    completionData: session.completionData,
+    completedAt: session.completedAt
+  }));
   
-  completedSessions.forEach(session => {
-    const data = session.completionData;
+  try {
+    log(`Sending foundation sessions data to Claude for summarization`, "claude");
     
-    if (session.sessionNumber === 1) {
-      summaryText += `\n=== Session 1: Functional Identity Mapping ===\n`;
-      if (data.primaryFunction) summaryText += `Primary Function: ${data.primaryFunction}\n`;
-      if (data.secondaryFunction) summaryText += `Secondary Function: ${data.secondaryFunction}\n`;
-      if (data.functionalSplit) {
-        summaryText += `Functional Split: ${data.functionalSplit.primary}% primary, ${data.functionalSplit.secondary}% secondary\n`;
-      }
-      summaryText += `Anti-Generalist Commitment: ${data.antiGeneralistCommitment ? 'Yes' : 'No'}\n`;
-      if (data.commitmentStatement) summaryText += `Commitment: ${data.commitmentStatement}\n`;
-      if (data.functionalLanguageExamples && data.functionalLanguageExamples.length > 0) {
-        summaryText += `Functional Language Examples: ${data.functionalLanguageExamples.join(', ')}\n`;
-      }
-      if (data.keyInsights && data.keyInsights.length > 0) {
-        summaryText += `Key Insights: ${data.keyInsights.join(', ')}\n`;
-      }
-      if (data.confidence) summaryText += `Confidence Level: ${data.confidence}/10\n`;
-      if (data.reasoning) summaryText += `Reasoning: ${data.reasoning}\n`;
-    }
+    const systemPrompt = `You are a professional branding strategist assistant. Create a concise, well-structured summary of foundation sessions completion data that will be used for SLI generation. Focus on key insights, functional positioning, credibility factors, and positioning stories. Keep the summary professional and avoid special characters that could break JSON parsing.`;
     
-    if (session.sessionNumber === 2) {
-      summaryText += `\n=== Session 2: Credibility Assessment ===\n`;
-      if (data.credibilityTier) summaryText += `Credibility Tier: ${data.credibilityTier}/5\n`;
-      if (data.brandClaim) summaryText += `Brand Claim: ${data.brandClaim}\n`;
-      if (data.checkWorthyReason) summaryText += `Check-Worthy Reason: ${data.checkWorthyReason}\n`;
-      if (data.proofBullets && data.proofBullets.length > 0) {
-        summaryText += `Proof Points:\n`;
-        data.proofBullets.forEach((bullet: string, index: number) => {
-          summaryText += `  ${index + 1}. ${bullet}\n`;
-        });
-      }
-      if (data.nextSteps && data.nextSteps.length > 0) {
-        summaryText += `Next Steps: ${data.nextSteps.join(', ')}\n`;
-      }
-    }
+    const userMessage = `Please create a concise professional summary of these foundation sessions completion data for SLI generation:\n\n${JSON.stringify(sessionsData, null, 2)}\n\nProvide a clean, structured summary without special formatting characters.`;
     
-    if (session.sessionNumber === 3) {
-      summaryText += `\n=== Session 3: Positioning Story Development ===\n`;
-      if (data.signatureStory) {
-        const story = data.signatureStory;
-        summaryText += `Signature Story: ${story.title}\n`;
-        summaryText += `Context: ${story.context}\n`;
-        summaryText += `Challenge: ${story.challenge}\n`;
-        summaryText += `Approach: ${story.approach}\n`;
-        summaryText += `Tension: ${story.tension}\n`;
-        summaryText += `Outcome: ${story.outcome}\n`;
-        summaryText += `Repeatability: ${story.repeatability}\n`;
-      }
-      if (data.contentAngles && data.contentAngles.length > 0) {
-        summaryText += `Content Angles: ${data.contentAngles.join(', ')}\n`;
-      }
-      if (data.methodology) summaryText += `Methodology: ${data.methodology}\n`;
-    }
+    const response = await callWithRetry(
+      () => anthropic.messages.create({
+        model: CLAUDE_MODEL,
+        system: systemPrompt,
+        max_tokens: 1000,
+        temperature: 0.3,
+        messages: [{ role: "user", content: userMessage }]
+      }),
+      3,  // max retries
+      30000,  // initial backoff of 30 seconds
+      "foundation sessions summarization"
+    );
     
-    if (session.completedAt) {
-      summaryText += `Completed: ${new Date(session.completedAt).toLocaleDateString()}\n`;
-    }
-  });
-  
-  return summaryText;
+    const summaryContent = response.content.find(item => item.type === 'text')?.text || 'Foundation sessions summary not available';
+    
+    log(`Generated foundation sessions summary: ${summaryContent.length} characters`, "claude");
+    return summaryContent;
+    
+  } catch (error) {
+    log(`Error generating foundation sessions summary: ${error}`, "claude");
+    return "Foundation sessions data available but summary generation failed";
+  }
 }
 
 /**
@@ -280,6 +252,18 @@ async function getLatestCoachingNotes(coachingNotes: any[]): Promise<string> {
   const latestNote = sortedNotes[0];
   
   return `Latest Coaching Note (${new Date(latestNote.createdAt).toLocaleDateString()}):\n${latestNote.content}`;
+}
+
+/**
+ * Sanitize JSON string to remove control characters
+ */
+function sanitizeJsonString(str: string): string {
+  return str
+    .replace(/[\x00-\x1F\x7F]/g, '')  // Remove control characters
+    .replace(/\\n/g, '\\\\n')        // Escape newlines in strings
+    .replace(/\\r/g, '\\\\r')        // Escape carriage returns
+    .replace(/\\t/g, '\\\\t')        // Escape tabs
+    .trim();
 }
 
 /**
@@ -304,8 +288,8 @@ export async function generateSLIs(userProfile: UserProfile): Promise<InsertSli 
     const additionalDocs = userProfile.documents?.filter(doc => doc.type !== 'resume' && doc.type !== 'linkedin') || [];
     const additionalDocsSummary = await summarizeAdditionalDocs(additionalDocs);
     
-    // Get foundation sessions summary
-    const foundationSessionsSummary = await getFoundationSessionsSummary(userProfile.foundationSessions || []);
+    // Get foundation sessions summary using Claude
+    const foundationSessionsSummary = await generateFoundationSessionsSummary(userProfile.foundationSessions || []);
     
     // Log foundation sessions data being sent to Claude
     const completedCount = userProfile.foundationSessions?.filter(s => s.status === 'completed').length || 0;
@@ -358,7 +342,7 @@ Respond with an EXACT JSON structure as follows:
   "rationale3": "Detailed rationale for option 3..."
 }
 
-Each rationale section should be 3-4 paragraphs of rich, detailed content. Be sure to format the JSON correctly. RESPOND IN JSON ONLY`;
+Each rationale section should be 3-4 paragraphs of rich, detailed content. Be sure to format the JSON correctly.`;
 
     // User message
     const userMessage = `Please generate three distinct SLI options for ${userProfile.firstName} ${userProfile.lastName} based on the following information:
@@ -396,11 +380,11 @@ Please generate three distinct, compelling SLI options that this person can use 
     const response = await callWithRetry(
       () => anthropic.messages.create({
         model: CLAUDE_MODEL,
-        system: systemPrompt,
+        system: systemPrompt + "\n\nIMPORTANT: Return ONLY valid JSON. No additional text or explanations. Ensure all strings are properly escaped.",
         max_tokens: 4096,
-        temperature: 0.5,
+        temperature: 0.1,  // Very low temperature for reliable JSON
         messages: [
-          { role: "user", content: userMessage }
+          { role: "user", content: userMessage + "\n\nReturn only the JSON object with no additional text." }
         ]
       }),
       5,  // max retries
@@ -408,7 +392,7 @@ Please generate three distinct, compelling SLI options that this person can use 
       "SLI generation"
     );
 
-    // Parse the response content to extract the JSON
+    // Parse the response content to extract and sanitize JSON
     const responseContent = response.content.find(item => item.type === 'text')?.text || '';
     
     // Extract JSON from the response (it might be wrapped in code blocks)
@@ -418,29 +402,60 @@ Please generate three distinct, compelling SLI options that this person can use 
       jsonStr = jsonMatch[1];
     }
     
-    // Parse the JSON
+    // Use the sanitizeJsonString function to clean the JSON
+    
+    // Parse the JSON with error recovery
+    let sliData;
     try {
-      const sliData = JSON.parse(jsonStr);
+      const sanitizedJson = sanitizeJsonString(jsonStr);
+      sliData = JSON.parse(sanitizedJson);
+      log(`Successfully parsed SLI JSON response`, "claude");
+    } catch (firstError) {
+      log(`First JSON parse failed: ${firstError}`, "claude");
       
-      // Create the SLI object
+      // Try to fix common JSON issues and retry
+      try {
+        let fixedJson = jsonStr
+          .replace(/[\x00-\x1F\x7F]/g, ' ')  // Replace control chars with spaces
+          .replace(/"([^"]*?)\n([^"]*?)"/g, '"$1\\n$2"')  // Fix unescaped newlines in quotes
+          .replace(/"([^"]*?)\r([^"]*?)"/g, '"$1\\r$2"')  // Fix unescaped returns in quotes
+          .replace(/"([^"]*?)\t([^"]*?)"/g, '"$1\\t$2"')  // Fix unescaped tabs in quotes
+          .trim();
+        
+        sliData = JSON.parse(fixedJson);
+        log(`Successfully parsed SLI JSON after sanitization`, "claude");
+      } catch (secondError) {
+        log(`JSON parsing failed after sanitization. Raw response length: ${responseContent.length}`, "claude");
+        log(`Error location: ${secondError}`, "claude");
+        
+        // Log a snippet around the error for debugging
+        if (process.env.DEBUG_SLI === 'true') {
+          log(`Raw response snippet: ${responseContent.substring(0, 200)}...`, "claude");
+        }
+        return null;
+      }
+    }
+    
+    // Create the SLI object
+    try {
       const sli: InsertSli = {
         userId: userProfile.id,
         adminId: 0, // This will be set by the caller
-        title1: sliData.title1,
-        statement1: sliData.statement1,
-        rationale1: sliData.rationale1,
-        title2: sliData.title2,
-        statement2: sliData.statement2,
-        rationale2: sliData.rationale2,
-        title3: sliData.title3,
-        statement3: sliData.statement3,
-        rationale3: sliData.rationale3,
+        title1: sliData.title1 || 'SLI Option 1',
+        statement1: sliData.statement1 || 'Statement not generated',
+        rationale1: sliData.rationale1 || 'Rationale not generated',
+        title2: sliData.title2 || 'SLI Option 2',
+        statement2: sliData.statement2 || 'Statement not generated',
+        rationale2: sliData.rationale2 || 'Rationale not generated',
+        title3: sliData.title3 || 'SLI Option 3',
+        statement3: sliData.statement3 || 'Statement not generated',
+        rationale3: sliData.rationale3 || 'Rationale not generated',
         selectedSliIndex: null
       };
       
       return sli;
     } catch (error) {
-      log(`Error parsing Claude's SLI response: ${error}`, "claude");
+      log(`Error creating SLI object from parsed data: ${error}`, "claude");
       return null;
     }
   } catch (error) {
