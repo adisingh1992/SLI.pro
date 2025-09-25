@@ -291,8 +291,8 @@ export default function FoundationSessionChatPage() {
     );
   }
 
-  // Session 3 is not implemented yet
-  if (sessionNumber > 2) {
+  // Block access to sessions beyond Session 3
+  if (sessionNumber > 3) {
     return (
       <div className="min-h-screen bg-background">
         <NavBar />
@@ -302,7 +302,7 @@ export default function FoundationSessionChatPage() {
               <MessageSquare className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
               <h2 className="text-xl font-semibold mb-2">Coming Soon</h2>
               <p className="text-muted-foreground mb-4">
-                Session {sessionNumber} is not yet available. Focus on completing Sessions 1 and 2 first.
+                Session {sessionNumber} is not yet available. Focus on completing Sessions 1, 2, and 3 first.
               </p>
               <Button onClick={() => navigate('/foundation')} variant="outline">
                 <ArrowLeft className="h-4 w-4 mr-2" />
