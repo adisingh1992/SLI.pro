@@ -2,6 +2,7 @@ import Anthropic from "@anthropic-ai/sdk";
 import { log } from "./vite";
 import { storage } from "./storage";
 import { InsertConversationSummary, Document } from "@shared/schema";
+import { extractDocumentText, validateExtractedText } from "./document-extractor";
 // Update imports to use namespace import syntax for compatibility
 
 // Check if API key is available
@@ -310,9 +311,13 @@ export async function analyzeDocument(document: Document): Promise<string | null
         analysisPrompt = `Analyze this document thoroughly. Extract the main points, key information, and any insights relevant to professional branding and career development. Format your analysis as a detailed but concise summary.`;
     }
 
-    // Since we're having issues with image processing, let's send just the text content
-    // of the document directly in the prompt
-    const fullPrompt = `${analysisPrompt}\n\nDocument content:\n${document.fileData}`;
+    // Extract readable text from the document using proper parsing libraries
+    log(`Extracting text from document: ${document.fileName}`, "claude");
+    const extractedText = await extractDocumentText(document.fileData, document.fileName);
+    const cleanedText = validateExtractedText(extractedText);
+    
+    log(`Successfully extracted ${cleanedText.length} characters of text`, "claude");
+    const fullPrompt = `${analysisPrompt}\n\nDocument content:\n${cleanedText}`;
 
     // Use callWithRetry for API calls with exponential backoff
     const response = await callWithRetry(
