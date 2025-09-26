@@ -20,6 +20,8 @@ import {
   homeworkAssignments, type HomeworkAssignment, type InsertHomeworkAssignment, type UpdateHomeworkAssignment,
   foundationSessions, type FoundationSession, type InsertFoundationSession, type UpdateFoundationSession,
   foundationSessionMessages, type FoundationSessionMessage, type InsertFoundationSessionMessage,
+  enhancementModules, type EnhancementModule, type InsertEnhancementModule, type UpdateEnhancementModule,
+  enhancementModuleMessages, type EnhancementModuleMessage, type InsertEnhancementModuleMessage,
   type UpdateUser, type UpdateProfile, type UserProfile
 } from "@shared/schema";
 import session from "express-session";
@@ -798,6 +800,91 @@ export class DatabaseStorage implements IStorage {
   async createFoundationSessionMessage(messageData: InsertFoundationSessionMessage): Promise<FoundationSessionMessage> {
     const [newMessage] = await db
       .insert(foundationSessionMessages)
+      .values(messageData)
+      .returning();
+    return newMessage;
+  }
+
+  // Enhancement Modules methods
+  async getEnhancementModulesForUser(userId: number): Promise<EnhancementModule[]> {
+    const modules = await db
+      .select()
+      .from(enhancementModules)
+      .where(eq(enhancementModules.userId, userId))
+      .orderBy(asc(enhancementModules.moduleCode));
+    
+    // If user doesn't have modules A, B, C, create them as available
+    const existingCodes = new Set(modules.map(m => m.moduleCode));
+    const allCodes = ['A', 'B', 'C'];
+    
+    const missingModules = [];
+    for (const code of allCodes) {
+      if (!existingCodes.has(code)) {
+        const newModule = await this.createEnhancementModule({
+          userId,
+          moduleCode: code,
+          status: 'available'
+        });
+        missingModules.push(newModule);
+      }
+    }
+    
+    return [...modules, ...missingModules].sort((a, b) => a.moduleCode.localeCompare(b.moduleCode));
+  }
+
+  async getEnhancementModule(userId: number, moduleCode: string): Promise<EnhancementModule | undefined> {
+    const [module] = await db
+      .select()
+      .from(enhancementModules)
+      .where(and(
+        eq(enhancementModules.userId, userId),
+        eq(enhancementModules.moduleCode, moduleCode)
+      ));
+    return module || undefined;
+  }
+
+  async getEnhancementModuleWithMessages(userId: number, moduleCode: string): Promise<{ module: EnhancementModule; messages: EnhancementModuleMessage[]; } | null> {
+    const module = await this.getEnhancementModule(userId, moduleCode);
+    if (!module) {
+      return null;
+    }
+    
+    const messages = await this.getEnhancementModuleMessages(module.id);
+    return { module, messages };
+  }
+
+  async createEnhancementModule(moduleData: InsertEnhancementModule): Promise<EnhancementModule> {
+    const [newModule] = await db
+      .insert(enhancementModules)
+      .values(moduleData)
+      .returning();
+    return newModule;
+  }
+
+  async updateEnhancementModule(id: number, data: UpdateEnhancementModule): Promise<EnhancementModule | undefined> {
+    const [updatedModule] = await db
+      .update(enhancementModules)
+      .set({
+        ...data,
+        updatedAt: new Date()
+      })
+      .where(eq(enhancementModules.id, id))
+      .returning();
+    return updatedModule || undefined;
+  }
+
+  // Enhancement Module Messages methods
+  async getEnhancementModuleMessages(moduleId: number): Promise<EnhancementModuleMessage[]> {
+    return db
+      .select()
+      .from(enhancementModuleMessages)
+      .where(eq(enhancementModuleMessages.moduleId, moduleId))
+      .orderBy(asc(enhancementModuleMessages.createdAt));
+  }
+
+  async createEnhancementModuleMessage(messageData: InsertEnhancementModuleMessage): Promise<EnhancementModuleMessage> {
+    const [newMessage] = await db
+      .insert(enhancementModuleMessages)
       .values(messageData)
       .returning();
     return newMessage;
