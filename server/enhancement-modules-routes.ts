@@ -230,7 +230,7 @@ export function setupEnhancementModulesRoutes(app: Express) {
         // Create new module
         module = await storage.createEnhancementModule({
           userId: req.user!.id,
-          moduleCode,
+          moduleCode: moduleCode as 'A' | 'B' | 'C',
           status: 'in_progress',
           startedAt: new Date()
         });
