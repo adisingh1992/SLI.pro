@@ -82,7 +82,7 @@ function Router() {
       <ProtectedRoute path="/foundation" component={FoundationPage} />
       <ProtectedRoute path="/foundation/session/:sessionNumber" component={FoundationSessionChatPage} />
       <ProtectedRoute path="/enhancement-modules" component={EnhancementModulesPage} />
-      <ProtectedRoute path="/enhancement-modules/module/:moduleCode" component={EnhancementModuleChatPage} />
+      <ProtectedRoute path="/enhancement-modules/:moduleCode" component={EnhancementModuleChatPage} />
       
       {/* Admin routes */}
       <Route path="/admin/login" component={AdminLoginPage} />
