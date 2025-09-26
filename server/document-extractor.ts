@@ -49,12 +49,19 @@ export async function extractDocumentText(fileData: string, fileName: string): P
  */
 async function extractPdfText(buffer: Buffer): Promise<string> {
   try {
-    // Use dynamic import to avoid initialization issues with pdf-parse
-    log(`Attempting to import pdf-parse library`, "document-extractor");
-    const pdfModule = await import('pdf-parse');
+    // Import pdf-parse using require() in try-catch for better compatibility
+    log(`Attempting to load pdf-parse library`, "document-extractor");
     
-    // TypeScript shows us pdf-parse exports as { default: function }
-    const pdfParse = pdfModule.default;
+    let pdfParse;
+    try {
+      // Try require first
+      pdfParse = require('pdf-parse');
+    } catch (requireError) {
+      log(`require() failed, trying dynamic import: ${requireError}`, "document-extractor");
+      // Fallback to dynamic import
+      const pdfModule = await import('pdf-parse');
+      pdfParse = pdfModule.default || pdfModule;
+    }
     
     if (!pdfParse || typeof pdfParse !== 'function') {
       throw new Error(`PDF parsing library not available - found: ${typeof pdfParse}`);
