@@ -1,4 +1,4 @@
-import { pgTable, text, serial, integer, boolean, timestamp, jsonb, pgEnum, unique, check, index } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, boolean, timestamp, jsonb, pgEnum, unique, check, index, varchar } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
@@ -592,6 +592,89 @@ export type InsertFoundationSessionMessage = z.infer<typeof insertFoundationSess
 export type UpdateFoundationSession = z.infer<typeof updateFoundationSessionSchema>;
 export type FoundationSession = typeof foundationSessions.$inferSelect;
 export type FoundationSessionMessage = typeof foundationSessionMessages.$inferSelect;
+
+// Enhancement Modules schema - independent modules A, B, C
+export const enhancementModules = pgTable("enhancement_modules", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
+  moduleCode: varchar("module_code", { length: 1 }).notNull(), // 'A', 'B', or 'C'
+  status: sessionStatusEnum("status").notNull().default("available"), // No locked state, all available by default
+  startedAt: timestamp("started_at", { mode: 'date' }),
+  completedAt: timestamp("completed_at", { mode: 'date' }),
+  timerElapsed: integer("timer_elapsed").default(0), // Timer elapsed time in seconds
+  completionData: jsonb("completion_data").$type<{
+    // Module A: Digital Behavior Analysis completion criteria
+    digitalBehaviorInsights?: string[];
+    contentStrategyRecommendations?: string[];
+    linkedinPresenceScore?: number;
+    barriers?: string[];
+    actionPlan?: string[];
+    // Module B: Network Position Mapping completion criteria
+    networkAnalysis?: {
+      currentPosition: string;
+      strategicGaps: string[];
+      influenceMapping: string[];
+    };
+    relationshipStrategy?: string[];
+    positioningPlan?: string[];
+    // Module C: Career Aspiration Alignment completion criteria
+    aspirationalGoals?: string[];
+    currentPositionGaps?: string[];
+    alignmentStrategy?: string[];
+    longTermRoadmap?: string[];
+    // Common fields
+    confidence?: number;
+    reasoning?: string;
+    completedAt?: string;
+  }>(),
+  createdAt: timestamp("created_at", { mode: 'date' }).defaultNow().notNull(),
+  updatedAt: timestamp("updated_at", { mode: 'date' }).defaultNow().notNull(),
+}, (table) => ({
+  // Unique constraint to prevent duplicate modules for same user/module
+  userModuleUnique: unique().on(table.userId, table.moduleCode),
+  // Check constraint to ensure module code is A, B, or C
+  moduleCodeCheck: check("module_code_check", sql`${table.moduleCode} IN ('A', 'B', 'C')`),
+  // Index for efficient lookups
+  userModuleIndex: index("enhancement_modules_user_module_idx").on(table.userId, table.moduleCode),
+}));
+
+export const enhancementModuleMessages = pgTable("enhancement_module_messages", {
+  id: serial("id").primaryKey(),
+  moduleId: integer("module_id").notNull().references(() => enhancementModules.id, { onDelete: 'cascade' }),
+  role: messageRoleEnum("role").notNull(),
+  content: text("content").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => ({
+  // Index for efficient chronological message retrieval
+  moduleTimeIndex: index("enhancement_module_messages_module_time_idx").on(table.moduleId, table.createdAt),
+}));
+
+export const insertEnhancementModuleSchema = createInsertSchema(enhancementModules, {
+  moduleCode: z.enum(["A", "B", "C"]),
+  status: z.enum(["available", "in_progress", "completed"]).optional(),
+}).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertEnhancementModuleMessageSchema = createInsertSchema(enhancementModuleMessages, {
+  role: z.enum(["user", "assistant"]),
+}).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const updateEnhancementModuleSchema = insertEnhancementModuleSchema.omit({
+  userId: true,
+  moduleCode: true,
+}).partial();
+
+export type InsertEnhancementModule = z.infer<typeof insertEnhancementModuleSchema>;
+export type InsertEnhancementModuleMessage = z.infer<typeof insertEnhancementModuleMessageSchema>;
+export type UpdateEnhancementModule = z.infer<typeof updateEnhancementModuleSchema>;
+export type EnhancementModule = typeof enhancementModules.$inferSelect;
+export type EnhancementModuleMessage = typeof enhancementModuleMessages.$inferSelect;
 
 export type UserProfile = User & {
   experiences?: Experience[];

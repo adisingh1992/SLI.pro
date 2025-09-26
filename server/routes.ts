@@ -11,6 +11,7 @@ import { registerFreshnessRoutes } from "./freshness-routes";
 import { registerLinkedinOptimizationRoutes } from "./linkedin-optimization-routes";
 import { registerLinkedinContentRoutes } from "./linkedin-content-routes";
 import { registerFoundationSessionsRoutes } from "./foundation-sessions-routes";
+import { setupEnhancementModulesRoutes } from "./enhancement-modules-routes";
 import {
   insertExperienceSchema,
   insertEducationSchema,
@@ -45,6 +46,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   registerSliRoutes(app, storage);
   registerHomeworkRoutes(app, storage);
   registerFoundationSessionsRoutes(app);
+  setupEnhancementModulesRoutes(app);
 
   // Middleware to check if user is authenticated
   const isAuthenticated = (req: Request, res: Response, next: NextFunction) => {

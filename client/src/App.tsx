@@ -21,6 +21,8 @@ import LinkedinContentDraftsPage from "@/pages/linkedin-content-drafts-page";
 import HomeworkPage from "@/pages/homework-page";
 import FoundationPage from "@/pages/foundation-page";
 import FoundationSessionChatPage from "@/pages/foundation-session-chat";
+import EnhancementModulesPage from "@/pages/enhancement-modules-page";
+import EnhancementModuleChatPage from "@/pages/enhancement-module-chat";
 import { AuthProvider } from "@/hooks/use-auth";
 import { ProtectedRoute } from "@/lib/protected-route";
 
@@ -79,6 +81,8 @@ function Router() {
       <ProtectedRoute path="/homework" component={HomeworkPage} />
       <ProtectedRoute path="/foundation" component={FoundationPage} />
       <ProtectedRoute path="/foundation/session/:sessionNumber" component={FoundationSessionChatPage} />
+      <ProtectedRoute path="/enhancement-modules" component={EnhancementModulesPage} />
+      <ProtectedRoute path="/enhancement-modules/module/:moduleCode" component={EnhancementModuleChatPage} />
       
       {/* Admin routes */}
       <Route path="/admin/login" component={AdminLoginPage} />

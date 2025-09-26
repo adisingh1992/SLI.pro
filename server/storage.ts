@@ -20,6 +20,8 @@ import {
   homeworkAssignments, type HomeworkAssignment, type InsertHomeworkAssignment, type UpdateHomeworkAssignment,
   foundationSessions, type FoundationSession, type InsertFoundationSession, type UpdateFoundationSession,
   foundationSessionMessages, type FoundationSessionMessage, type InsertFoundationSessionMessage,
+  enhancementModules, type EnhancementModule, type InsertEnhancementModule, type UpdateEnhancementModule,
+  enhancementModuleMessages, type EnhancementModuleMessage, type InsertEnhancementModuleMessage,
   type UpdateUser, type UpdateProfile, type UserProfile
 } from "@shared/schema";
 import session from "express-session";
@@ -161,6 +163,17 @@ export interface IStorage {
   getFoundationSessionMessages(sessionId: number): Promise<FoundationSessionMessage[]>;
   createFoundationSessionMessage(message: InsertFoundationSessionMessage): Promise<FoundationSessionMessage>;
 
+  // Enhancement Modules operations
+  getEnhancementModulesForUser(userId: number): Promise<EnhancementModule[]>;
+  getEnhancementModule(userId: number, moduleCode: string): Promise<EnhancementModule | undefined>;
+  getEnhancementModuleWithMessages(userId: number, moduleCode: string): Promise<{ module: EnhancementModule; messages: EnhancementModuleMessage[]; } | null>;
+  createEnhancementModule(moduleData: InsertEnhancementModule): Promise<EnhancementModule>;
+  updateEnhancementModule(id: number, data: UpdateEnhancementModule): Promise<EnhancementModule | undefined>;
+  
+  // Enhancement Module Messages operations
+  getEnhancementModuleMessages(moduleId: number): Promise<EnhancementModuleMessage[]>;
+  createEnhancementModuleMessage(message: InsertEnhancementModuleMessage): Promise<EnhancementModuleMessage>;
+
   // Session store
   sessionStore: session.Store;
 }
@@ -186,6 +199,8 @@ export class MemStorage implements IStorage {
   private linkedinContentDrafts: Map<number, LinkedinContentDraft>;
   private foundationSessions: Map<number, FoundationSession>;
   private foundationSessionMessages: Map<number, FoundationSessionMessage>;
+  private enhancementModules: Map<number, EnhancementModule>;
+  private enhancementModuleMessages: Map<number, EnhancementModuleMessage>;
   
   private userId: number;
   private experienceId: number;
@@ -207,6 +222,8 @@ export class MemStorage implements IStorage {
   private linkedinContentDraftId: number;
   private foundationSessionId: number;
   private foundationSessionMessageId: number;
+  private enhancementModuleId: number;
+  private enhancementModuleMessageId: number;
   
   sessionStore: session.Store;
 
@@ -231,6 +248,8 @@ export class MemStorage implements IStorage {
     this.linkedinContentDrafts = new Map();
     this.foundationSessions = new Map();
     this.foundationSessionMessages = new Map();
+    this.enhancementModules = new Map();
+    this.enhancementModuleMessages = new Map();
     
     this.userId = 1;
     this.experienceId = 1;
@@ -252,6 +271,8 @@ export class MemStorage implements IStorage {
     this.linkedinContentDraftId = 1;
     this.foundationSessionId = 1;
     this.foundationSessionMessageId = 1;
+    this.enhancementModuleId = 1;
+    this.enhancementModuleMessageId = 1;
     
     this.sessionStore = new MemoryStore({
       checkPeriod: 86400000,
@@ -924,6 +945,88 @@ export class MemStorage implements IStorage {
       createdAt: new Date()
     };
     this.foundationSessionMessages.set(id, newMessage);
+    return newMessage;
+  }
+
+  // Enhancement Modules methods
+  async getEnhancementModulesForUser(userId: number): Promise<EnhancementModule[]> {
+    const modules = Array.from(this.enhancementModules.values())
+      .filter(module => module.userId === userId)
+      .sort((a, b) => a.moduleCode.localeCompare(b.moduleCode));
+    
+    // If user doesn't have modules A, B, C, create them as available
+    const existingCodes = new Set(modules.map(m => m.moduleCode));
+    const allCodes = ['A', 'B', 'C'];
+    
+    for (const code of allCodes) {
+      if (!existingCodes.has(code)) {
+        const newModule = await this.createEnhancementModule({
+          userId,
+          moduleCode: code,
+          status: 'available'
+        });
+        modules.push(newModule);
+      }
+    }
+    
+    return modules.sort((a, b) => a.moduleCode.localeCompare(b.moduleCode));
+  }
+
+  async getEnhancementModule(userId: number, moduleCode: string): Promise<EnhancementModule | undefined> {
+    return Array.from(this.enhancementModules.values())
+      .find(module => module.userId === userId && module.moduleCode === moduleCode);
+  }
+
+  async getEnhancementModuleWithMessages(userId: number, moduleCode: string): Promise<{ module: EnhancementModule; messages: EnhancementModuleMessage[]; } | null> {
+    const module = await this.getEnhancementModule(userId, moduleCode);
+    if (!module) {
+      return null;
+    }
+    
+    const messages = await this.getEnhancementModuleMessages(module.id);
+    return { module, messages };
+  }
+
+  async createEnhancementModule(moduleData: InsertEnhancementModule): Promise<EnhancementModule> {
+    const id = this.enhancementModuleId++;
+    const newModule: EnhancementModule = {
+      ...moduleData,
+      id,
+      createdAt: new Date(),
+      updatedAt: new Date()
+    };
+    this.enhancementModules.set(id, newModule);
+    return newModule;
+  }
+
+  async updateEnhancementModule(id: number, data: UpdateEnhancementModule): Promise<EnhancementModule | undefined> {
+    const module = this.enhancementModules.get(id);
+    if (!module) return undefined;
+
+    const updatedModule: EnhancementModule = {
+      ...module,
+      ...data,
+      updatedAt: new Date()
+    };
+    this.enhancementModules.set(id, updatedModule);
+    return updatedModule;
+  }
+
+  // Enhancement Module Messages methods
+  async getEnhancementModuleMessages(moduleId: number): Promise<EnhancementModuleMessage[]> {
+    return Array.from(this.enhancementModuleMessages.values())
+      .filter(message => message.moduleId === moduleId)
+      .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+  }
+
+  async createEnhancementModuleMessage(messageData: InsertEnhancementModuleMessage): Promise<EnhancementModuleMessage> {
+    const id = this.enhancementModuleMessageId++;
+    const newMessage: EnhancementModuleMessage = {
+      ...messageData,
+      id,
+      createdAt: new Date()
+    };
+    this.enhancementModuleMessages.set(id, newMessage);
     return newMessage;
   }
 }
