@@ -65,9 +65,19 @@ export default function EnhancementModuleChatPage() {
     },
   });
 
-  // Auto-start module if available
+  // Update timer mutation for Enhancement Modules
+  const updateTimerMutation = useMutation({
+    mutationFn: async (timerElapsed: number) => {
+      return await apiRequest('PATCH', `/api/enhancement-modules/${moduleCode}`, { timerElapsed });
+    },
+    onError: (error: any) => {
+      console.error('Failed to update timer:', error);
+    },
+  });
+
+  // Auto-start module if available (similar to Foundation Sessions)
   useEffect(() => {
-    if (moduleData?.module && moduleData.module.status === 'available' && moduleCode === 'A') {
+    if (moduleData?.module && moduleData.module.status === 'available') {
       startModuleMutation.mutate(moduleCode);
     }
   }, [moduleData?.module?.status, moduleCode]);
@@ -431,6 +441,7 @@ export default function EnhancementModuleChatPage() {
                 />
               </div>
             )}
+
 
             {/* Function Progress for Enhancement Modules */}
             <div className="space-y-2">

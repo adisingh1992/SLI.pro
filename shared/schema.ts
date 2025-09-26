@@ -603,12 +603,27 @@ export const enhancementModules = pgTable("enhancement_modules", {
   completedAt: timestamp("completed_at", { mode: 'date' }),
   timerElapsed: integer("timer_elapsed").default(0), // Timer elapsed time in seconds
   completionData: jsonb("completion_data").$type<{
-    // Module A: Digital Behavior Analysis completion criteria
+    // Module A: Digital Behavior Analysis completion criteria (updated schema)
+    brandClaim?: string;
+    featuredArticleSeeds?: string[];
+    contentStrategy?: {
+      naturalFormats: string[];
+      phasedPlan: string[];
+      barriers: string[];
+      behaviorChange: string;
+    };
+    linkedinOptimization?: {
+      headline: string;
+      profileScore: number;
+      keyImprovements: string[];
+    };
+    actionPlan?: string[];
+    successMetrics?: string[];
+    // Legacy Module A fields (backwards compatibility)
     digitalBehaviorInsights?: string[];
     contentStrategyRecommendations?: string[];
     linkedinPresenceScore?: number;
     barriers?: string[];
-    actionPlan?: string[];
     // Module B: Network Position Mapping completion criteria
     networkAnalysis?: {
       currentPosition: string;

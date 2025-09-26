@@ -342,7 +342,7 @@ Current user context:
 ${userProfile ? `Name: ${userProfile.firstName} ${userProfile.lastName}
 Bio: ${userProfile.bio || 'Not provided'}
 Current role: ${userProfile.experiences?.[0]?.title || 'Not specified'} at ${userProfile.experiences?.[0]?.company || 'Not specified'}
-LinkedIn: ${userProfile.linkedinUrl || 'Not provided'}
+LinkedIn: Not available in profile
 Industry focus: ${userProfile.experiences?.[0]?.description?.substring(0, 50) || 'Not specified'}` : 'Limited profile information available'}`;
       };
 
