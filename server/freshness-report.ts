@@ -494,6 +494,8 @@ Please analyze this additional document in relation to their other materials and
 // Helper function to calculate profile content quality grade
 function calculateProfileContentQuality(resumeAnalysis: any, linkedinAnalysis: any): { grade: string, explanation: string } {
   try {
+    log(`=== Starting Profile Content Quality Calculation ===`, "freshness");
+    
     // Extract relevant information from analyses
     const resumeExperience = resumeAnalysis?.presentationStyle?.clarity || '';
     const linkedinHeadline = linkedinAnalysis?.profileCompleteness?.headlineEffectiveness || '';
@@ -501,80 +503,120 @@ function calculateProfileContentQuality(resumeAnalysis: any, linkedinAnalysis: a
     const linkedinExperience = linkedinAnalysis?.profileCompleteness?.experienceDetailLevel || '';
     const skillsSection = linkedinAnalysis?.profileCompleteness?.skillsRelevance || '';
     const education = linkedinAnalysis?.profileCompleteness?.educationPresentation || '';
-    
+
+    // LOG ALL EXTRACTED VALUES
+    log(`Raw extracted values:`, "freshness");
+    log(`  resumeExperience: "${resumeExperience}"`, "freshness");
+    log(`  linkedinHeadline: "${linkedinHeadline}"`, "freshness");
+    log(`  linkedinAbout: "${linkedinAbout}"`, "freshness");
+    log(`  linkedinExperience: "${linkedinExperience}"`, "freshness");
+    log(`  skillsSection: "${skillsSection}"`, "freshness");
+    log(`  education: "${education}"`, "freshness");
+
     // Assess headline quality
     let headlineScore = 0;
+    log(`Analyzing headline quality...`, "freshness");
     if (linkedinHeadline.toLowerCase().includes('strong') || linkedinHeadline.toLowerCase().includes('compelling')) {
       headlineScore = 4;
+      log(`  headlineScore = 4 (found 'strong' or 'compelling')`, "freshness");
     } else if (linkedinHeadline.toLowerCase().includes('good')) {
       headlineScore = 3;
+      log(`  headlineScore = 3 (found 'good')`, "freshness");
     } else if (linkedinHeadline.toLowerCase().includes('basic')) {
       headlineScore = 2;
+      log(`  headlineScore = 2 (found 'basic')`, "freshness");
     } else if (linkedinHeadline.toLowerCase().includes('weak')) {
       headlineScore = 1;
+      log(`  headlineScore = 1 (found 'weak')`, "freshness");
     } else {
       headlineScore = 0;
+      log(`  headlineScore = 0 (NO MATCHING KEYWORDS FOUND)`, "freshness");
     }
     
     // Assess About section quality
     let aboutScore = 0;
+    log(`Analyzing about section quality...`, "freshness");
     if (linkedinAbout.toLowerCase().includes('compelling')) {
       aboutScore = 4;
+      log(`  aboutScore = 4 (found 'compelling')`, "freshness");
     } else if (linkedinAbout.toLowerCase().includes('solid')) {
       aboutScore = 3;
+      log(`  aboutScore = 3 (found 'solid')`, "freshness");
     } else if (linkedinAbout.toLowerCase().includes('standard')) {
       aboutScore = 2;
+      log(`  aboutScore = 2 (found 'standard')`, "freshness");
     } else if (linkedinAbout.toLowerCase().includes('minimal')) {
       aboutScore = 1;
+      log(`  aboutScore = 1 (found 'minimal')`, "freshness");
     } else {
       aboutScore = 0;
+      log(`  aboutScore = 0 (NO MATCHING KEYWORDS FOUND)`, "freshness");
     }
     
     // Assess Experience section quality
     let experienceScore = 0;
+    log(`Analyzing experience section quality...`, "freshness");
     if ((resumeExperience.toLowerCase().includes('clear') && resumeExperience.toLowerCase().includes('detailed')) || 
         (linkedinExperience.toLowerCase().includes('detailed') && linkedinExperience.toLowerCase().includes('achievement'))) {
       experienceScore = 4;
+      log(`  experienceScore = 4 (found clear+detailed OR detailed+achievement)`, "freshness");
     } else if (linkedinExperience.toLowerCase().includes('detailed') || resumeExperience.toLowerCase().includes('good')) {
       experienceScore = 3;
+      log(`  experienceScore = 3 (found 'detailed' or 'good')`, "freshness");
     } else if (linkedinExperience.toLowerCase().includes('basic')) {
       experienceScore = 2;
+      log(`  experienceScore = 2 (found 'basic')`, "freshness");
     } else if (linkedinExperience.toLowerCase().includes('sparse')) {
       experienceScore = 1;
+      log(`  experienceScore = 1 (found 'sparse')`, "freshness");
     } else {
       experienceScore = 0;
+      log(`  experienceScore = 0 (NO MATCHING KEYWORDS FOUND)`, "freshness");
     }
     
     // Assess Skills section quality
     let skillsScore = 0;
+    log(`Analyzing skills section quality...`, "freshness");
     if (skillsSection.toLowerCase().includes('comprehensive') || skillsSection.toLowerCase().includes('highly relevant')) {
       skillsScore = 4;
+      log(`  skillsScore = 4 (found 'comprehensive' or 'highly relevant')`, "freshness");
     } else if (skillsSection.toLowerCase().includes('good') || skillsSection.toLowerCase().includes('mostly')) {
       skillsScore = 3;
+      log(`  skillsScore = 3 (found 'good' or 'mostly')`, "freshness");
     } else if (skillsSection.toLowerCase().includes('partial')) {
       skillsScore = 2;
+      log(`  skillsScore = 2 (found 'partial')`, "freshness");
     } else if (skillsSection.toLowerCase().includes('few') || skillsSection.toLowerCase().includes('limited')) {
       skillsScore = 1;
+      log(`  skillsScore = 1 (found 'few' or 'limited')`, "freshness");
     } else {
       skillsScore = 0;
+      log(`  skillsScore = 0 (NO MATCHING KEYWORDS FOUND)`, "freshness");
     }
     
     // Assess Education section quality
     let educationScore = 0;
+    log(`Analyzing education section quality...`, "freshness");
     if (education.toLowerCase().includes('complete') || education.toLowerCase().includes('detailed')) {
       educationScore = 4;
+      log(`  educationScore = 4 (found 'complete' or 'detailed')`, "freshness");
     } else if (education.toLowerCase().includes('good')) {
       educationScore = 3;
+      log(`  educationScore = 3 (found 'good')`, "freshness");
     } else if (education.toLowerCase().includes('basic')) {
       educationScore = 2;
+      log(`  educationScore = 2 (found 'basic')`, "freshness");
     } else if (education.toLowerCase().includes('incomplete')) {
       educationScore = 1;
+      log(`  educationScore = 1 (found 'incomplete')`, "freshness");
     } else {
       educationScore = 0;
+      log(`  educationScore = 0 (NO MATCHING KEYWORDS FOUND)`, "freshness");
     }
     
     // Calculate overall score (out of 20 possible points)
     const totalScore = headlineScore + aboutScore + experienceScore + skillsScore + educationScore;
+    log(`Final calculation: total=${totalScore} (headline=${headlineScore} + about=${aboutScore} + exp=${experienceScore} + skills=${skillsScore} + edu=${educationScore})`, "freshness");
     
     // Determine grade based on score
     let grade: string;
@@ -583,20 +625,26 @@ function calculateProfileContentQuality(resumeAnalysis: any, linkedinAnalysis: a
     if (totalScore >= 18) {
       grade = 'A';
       explanation = 'Strong headline; compelling About section; detailed experience with quantified achievements; fully populated Skills section; complete Education section.';
+      log(`Grade calculation: ${totalScore} >= 18 = Grade A`, "freshness");
     } else if (totalScore >= 14) {
       grade = 'B';
       explanation = 'Good headline; solid About section; detailed experience with some achievements; mostly populated Skills section; complete Education section.';
+      log(`Grade calculation: ${totalScore} >= 14 = Grade B`, "freshness");
     } else if (totalScore >= 10) {
       grade = 'C';
       explanation = 'Basic headline; standard About section; experience listed but few details; partially populated Skills section; basic Education information.';
+      log(`Grade calculation: ${totalScore} >= 10 = Grade C`, "freshness");
     } else if (totalScore >= 6) {
       grade = 'D';
       explanation = 'Weak headline; minimal About section; sparse experience details; few listed Skills; incomplete Education section.';
+      log(`Grade calculation: ${totalScore} >= 6 = Grade D`, "freshness");
     } else {
       grade = 'F';
       explanation = 'Missing/inappropriate headline; no About section; minimal experience details; empty or irrelevant Skills section; missing Education information.';
+      log(`Grade calculation: ${totalScore} < 6 = Grade F`, "freshness");
     }
     
+    log(`=== Profile Content Quality Final Result: Grade ${grade} ===`, "freshness");
     return { grade, explanation };
   } catch (error) {
     log(`Error calculating profile content quality grade: ${error}`, "freshness");
