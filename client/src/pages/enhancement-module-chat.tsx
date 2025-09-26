@@ -8,29 +8,13 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, Send, ArrowLeft, CheckCircle, MessageSquare, AlertCircle } from "lucide-react";
+import { Progress } from "@/components/ui/progress";
+import { Loader2, Send, ArrowLeft, Lock, CheckCircle, MessageSquare, AlertCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import SessionTimer from "@/components/ui/session-timer";
 
-type EnhancementModule = {
-  id: number;
-  userId: number;
-  moduleCode: string;
-  status: 'available' | 'in_progress' | 'completed';
-  startedAt?: string;
-  completedAt?: string;
-  timerElapsed?: number;
-  completionData?: Record<string, any>;
-};
-
-type EnhancementModuleMessage = {
-  id: number;
-  moduleId: number;
-  role: 'user' | 'assistant';
-  content: string;
-  createdAt: string;
-};
+import type { EnhancementModule, EnhancementModuleMessage } from '@shared/schema';
 
 type ModuleWithMessages = {
   module: EnhancementModule;
@@ -81,293 +65,404 @@ export default function EnhancementModuleChatPage() {
     },
   });
 
-  // Send message mutation
-  const sendMessageMutation = useMutation({
-    mutationFn: async (content: string) => {
-      return await apiRequest('POST', `/api/enhancement-modules/${moduleCode}/message`, { content });
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/enhancement-modules', moduleCode] });
-      queryClient.invalidateQueries({ queryKey: ['/api/enhancement-modules'] });
-      setCurrentMessage('');
-      setStreamingResponse('');
-    },
-    onError: (error: any) => {
+  // Auto-start module if available
+  useEffect(() => {
+    if (moduleData?.module && moduleData.module.status === 'available' && moduleCode === 'A') {
+      startModuleMutation.mutate(moduleCode);
+    }
+  }, [moduleData?.module?.status, moduleCode]);
+
+  // Send message with streaming response (similar to Foundation Sessions)
+  const sendMessage = async (content: string) => {
+    if (!content.trim() || isStreaming) return;
+
+    setIsStreaming(true);
+    setStreamingResponse('');
+    
+    try {
+      // Use fetch directly for streaming
+      const response = await fetch(`/api/enhancement-modules/${moduleCode}/messages/stream`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ content: content.trim() }),
+        credentials: 'include'
+      });
+
+      if (!response.body) {
+        throw new Error('ReadableStream not supported');
+      }
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Stream request failed: ${response.status} ${errorText}`);
+      }
+
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      
+      let done = false;
+      let accumulatedData = '';
+
+      while (!done) {
+        const { value, done: readerDone } = await reader.read();
+        done = readerDone;
+
+        if (done) break;
+
+        const text = decoder.decode(value, { stream: true });
+        accumulatedData += text;
+
+        // Process SSE data
+        const lines = accumulatedData.split('\n\n');
+
+        for (let i = 0; i < lines.length - 1; i++) {
+          const line = lines[i];
+          if (line.startsWith('data: ')) {
+            try {
+              const eventData = JSON.parse(line.substring(6));
+
+              if (eventData.type === 'chunk') {
+                setStreamingResponse(prev => prev + eventData.content);
+              } else if (eventData.type === 'complete') {
+                console.log('Stream completed');
+                // Refresh data after completion
+                queryClient.invalidateQueries({ queryKey: ['/api/enhancement-modules', moduleCode] });
+                queryClient.invalidateQueries({ queryKey: ['/api/enhancement-modules'] });
+              } else if (eventData.type === 'module_completed') {
+                console.log('Module automatically completed:', eventData);
+                
+                // Module-specific completion messages
+                let description = '';
+                if (eventData.moduleCode === 'A') {
+                  description = `Digital Behavior Analysis completed! Your LinkedIn strategy has been optimized.`;
+                } else if (eventData.moduleCode === 'B') {
+                  description = `Network Position Mapping completed! Your relationship strategy is now clear.`;
+                } else if (eventData.moduleCode === 'C') {
+                  description = `Career Aspiration Alignment completed! Your goals are now aligned with your positioning.`;
+                } else {
+                  description = `Enhancement Module ${eventData.moduleCode} has been completed successfully.`;
+                }
+                
+                toast({
+                  title: "Module Completed!",
+                  description,
+                  duration: 5000,
+                });
+                // Refresh data after auto-completion
+                queryClient.invalidateQueries({ queryKey: ['/api/enhancement-modules', moduleCode] });
+                queryClient.invalidateQueries({ queryKey: ['/api/enhancement-modules'] });
+              } else if (eventData.type === 'error') {
+                console.error('Error from server:', eventData.message);
+                throw new Error(eventData.message || 'Server error');
+              }
+            } catch (e) {
+              console.error('Error parsing event data:', e);
+            }
+          }
+        }
+
+        // Keep remaining data for next iteration
+        accumulatedData = lines[lines.length - 1];
+      }
+
+    } catch (error: any) {
       toast({
         title: "Error",
         description: error.message || "Failed to send message",
         variant: "destructive",
       });
-    },
-  });
-
-  // Update timer mutation
-  const updateTimerMutation = useMutation({
-    mutationFn: async (timerElapsed: number) => {
-      return await apiRequest('PATCH', `/api/enhancement-modules/${moduleCode}`, { timerElapsed });
-    },
-    onError: (error: any) => {
-      console.error('Failed to update timer:', error);
-    },
-  });
-
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  };
-
-  useEffect(() => {
-    scrollToBottom();
-  }, [moduleData?.messages, streamingResponse]);
-
-  const handleSendMessage = () => {
-    if (!currentMessage.trim() || sendMessageMutation.isPending) return;
-    
-    sendMessageMutation.mutate(currentMessage.trim());
-  };
-
-  const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      handleSendMessage();
+    } finally {
+      setIsStreaming(false);
+      setStreamingResponse('');
+      setCurrentMessage('');
+      // Refocus the input after clearing the message
+      setTimeout(() => {
+        messageInputRef.current?.focus();
+      }, 0);
     }
   };
 
-  const getModuleDetails = (moduleCode: string) => {
-    const details = {
-      'A': {
-        title: "Module A: Digital Behavior Analysis Framework",
-        subtitle: "LinkedIn Presence & Content Strategy Assessment",
-        description: "Understanding Digital Behavior Patterns & Barriers"
-      },
-      'B': {
-        title: "Module B: Network Position Mapping Framework", 
-        subtitle: "Strategic Relationship & Influence Analysis",
-        description: "Random Networking vs. Strategic Positioning"
-      },
-      'C': {
-        title: "Module C: Career Aspiration Alignment Framework",
-        subtitle: "Long-Term Goals & Positioning Refinement", 
-        description: "Aspirational Goals vs. Current Positioning Reality"
-      }
-    };
-    return details[moduleCode as keyof typeof details] || { title: `Module ${moduleCode}`, subtitle: "", description: "" };
+  // Auto-scroll to bottom when new messages arrive
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [moduleData?.messages, streamingResponse]);
+
+  // Handle message submission
+  const handleSendMessage = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!currentMessage.trim() || isStreaming) {
+      return;
+    }
+
+    const messageContent = currentMessage.trim();
+    await sendMessage(messageContent);
   };
 
-  const getStatusBadge = (status: EnhancementModule['status']) => {
-    const variants = {
-      available: { variant: "default" as const, icon: MessageSquare, text: "Available" },
-      in_progress: { variant: "outline" as const, icon: MessageSquare, text: "In Progress" },
-      completed: { variant: "destructive" as const, icon: CheckCircle, text: "Completed" }
+  // Module-specific information and guidance
+  const getModuleGuidance = () => {
+    if (moduleCode === 'A') {
+      return {
+        title: "Digital Behavior Analysis",
+        description: "LinkedIn Content Strategy & Professional Brand Development (15-20 minutes)",
+        prompt: "People scan a LinkedIn profile in 4–10 seconds. Let's do that with yours.",
+        functions: ["Content Strategy", "Brand Development", "LinkedIn Optimization"]
+      };
+    } else if (moduleCode === 'B') {
+      return {
+        title: "Network Position Mapping",
+        description: "Strategic Relationship Analysis & Influence Assessment (12-15 minutes)",
+        prompt: "Let's analyze your current network positioning and identify strategic relationship gaps.",
+        functions: ["Network Analysis", "Relationship Strategy", "Influence Mapping"]
+      };
+    } else if (moduleCode === 'C') {
+      return {
+        title: "Career Aspiration Alignment",
+        description: "Goal Alignment & Long-term Positioning Strategy (10-15 minutes)",
+        prompt: "Let's align your career aspirations with your current professional positioning.",
+        functions: ["Goal Alignment", "Career Strategy", "Position Optimization"]
+      };
+    }
+    return {
+      title: `Enhancement Module ${moduleCode}`,
+      description: "This module is not yet available.",
+      prompt: "This module is coming soon.",
+      functions: []
     };
-    
-    const config = variants[status];
-    const Icon = config.icon;
-    
-    return (
-      <Badge variant={config.variant} className="flex items-center gap-1">
-        <Icon className="h-3 w-3" />
-        {config.text}
-      </Badge>
-    );
   };
+
+  const moduleInfo = getModuleGuidance();
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100">
+      <div className="min-h-screen bg-background">
         <NavBar />
-        <div className="container mx-auto px-4 py-8">
-          <div className="flex items-center justify-center py-12">
-            <Loader2 className="h-8 w-8 animate-spin" />
-          </div>
+        <div className="flex items-center justify-center min-h-[calc(100vh-80px)]">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
         </div>
       </div>
     );
   }
 
-  if (error || !moduleData) {
+  if (error || !moduleData || !moduleData.module) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100">
+      <div className="min-h-screen bg-background">
         <NavBar />
         <div className="container mx-auto px-4 py-8">
-          <div className="text-center py-12">
-            <AlertCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
-            <h2 className="text-xl font-semibold text-slate-800 mb-2">Module Not Found</h2>
-            <p className="text-slate-600 mb-4">This module doesn't exist or you don't have access to it.</p>
-            <Button onClick={() => navigate('/enhancement-modules')} variant="outline">
-              <ArrowLeft className="mr-2 h-4 w-4" />
-              Back to Modules
-            </Button>
-          </div>
+          <Card className="max-w-md mx-auto">
+            <CardContent className="p-6 text-center">
+              <AlertCircle className="h-12 w-12 text-destructive mx-auto mb-4" />
+              <p className="text-red-600 mb-4">Error loading Enhancement Module</p>
+              <Button onClick={() => navigate('/enhancement-modules')} variant="outline">
+                <ArrowLeft className="h-4 w-4 mr-2" />
+                Back to Enhancement Modules
+              </Button>
+            </CardContent>
+          </Card>
         </div>
       </div>
     );
   }
 
   const { module, messages } = moduleData;
-  const details = getModuleDetails(moduleCode);
-
-  // Auto-start if module is available
-  useEffect(() => {
-    if (module.status === 'available' && !startModuleMutation.isPending) {
-      startModuleMutation.mutate(moduleCode);
-    }
-  }, [module.status, moduleCode]);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100">
+    <div className="min-h-screen bg-background">
       <NavBar />
       
-      <div className="container mx-auto px-4 py-6">
-        {/* Header */}
-        <div className="flex items-center justify-between mb-6">
-          <Button 
-            onClick={() => navigate('/enhancement-modules')}
-            variant="outline"
-            className="border-slate-200 hover:bg-slate-50"
-            data-testid="button-back-to-modules"
-          >
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            Back to Modules
-          </Button>
-          
+      {/* Header */}
+      <div className="w-full px-4 py-2 border-b bg-background">
+        <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
-            {module.status === 'in_progress' && (
-              <SessionTimer 
-                initialElapsed={module.timerElapsed || 0}
-                onElapsedUpdate={(elapsed) => updateTimerMutation.mutate(elapsed)}
-              />
-            )}
-            {getStatusBadge(module.status)}
+            <Button 
+              onClick={() => navigate('/enhancement-modules')} 
+              variant="outline" 
+              size="sm"
+              data-testid="button-back-to-overview"
+            >
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Back
+            </Button>
+            <div>
+              <h1 className="text-2xl font-bold text-foreground" data-testid="text-module-title">
+                {moduleInfo.title}
+              </h1>
+              <p className="text-sm text-muted-foreground">{moduleInfo.description}</p>
+            </div>
           </div>
         </div>
+      </div>
 
-        {/* Module Info */}
-        <Card className="mb-6 border-0 shadow-lg bg-white/90 backdrop-blur-sm">
-          <CardHeader>
-            <CardTitle className="text-2xl font-bold text-slate-800">
-              {details.title}
-            </CardTitle>
-            <CardDescription className="text-lg text-blue-600 font-medium">
-              {details.subtitle}
-            </CardDescription>
-            <p className="text-slate-600 mt-2">
-              {details.description}
-            </p>
-          </CardHeader>
-        </Card>
+      {/* 2-Column Layout */}
+      <div className="flex h-[calc(100vh-140px)]">
+        {/* Left Column - Chat Interface (75%) */}
+        <div className="w-3/4 flex flex-col">
+          {/* Module Progress - based on message count */}
+          {module.status === 'in_progress' && messages.length > 0 && (
+            <div className="px-4 py-3 border-b bg-background/50">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-sm font-medium">Module Progress</span>
+                <span className="text-sm text-muted-foreground">{Math.min(Math.floor((messages.length / 20) * 100), 100)}%</span>
+              </div>
+              <Progress value={Math.min(Math.floor((messages.length / 20) * 100), 100)} className="h-2" data-testid="progress-module" />
+            </div>
+          )}
 
-        {/* Chat Interface */}
-        <div className="grid gap-6 lg:grid-cols-1">
-          <Card className="border-0 shadow-xl bg-white/90 backdrop-blur-sm">
-            <CardHeader className="pb-4">
-              <CardTitle className="text-lg font-semibold text-slate-800">
-                Coaching Conversation
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {/* Messages */}
-              <ScrollArea className="h-[500px] w-full pr-4">
-                <div className="space-y-4">
-                  {messages.map((message) => (
-                    <div
-                      key={message.id}
-                      className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
-                      data-testid={`message-${message.role}-${message.id}`}
-                    >
-                      <div
-                        className={`max-w-[80%] px-4 py-3 rounded-lg ${
-                          message.role === 'user'
-                            ? 'bg-blue-600 text-white ml-4'
-                            : 'bg-slate-100 text-slate-800 mr-4'
-                        }`}
-                      >
-                        <div className="whitespace-pre-wrap break-words">
-                          {message.content}
-                        </div>
-                        <div
-                          className={`text-xs mt-2 opacity-70 ${
-                            message.role === 'user' ? 'text-blue-100' : 'text-slate-500'
-                          }`}
-                        >
-                          {new Date(message.createdAt).toLocaleTimeString()}
-                        </div>
-                      </div>
+          {/* Chat Interface */}
+          <Card className="flex-1 flex flex-col overflow-hidden m-0 rounded-none">       
+          <CardContent className="flex-1 min-h-0 flex flex-col p-0 overflow-hidden py-2">
+            {/* Messages Area */}
+            <ScrollArea className="flex-1 min-h-0 px-6">
+              <div className="space-y-4 pb-4">
+
+                {/* Conversation messages */}
+                {messages.map((message, index) => (
+                  <div 
+                    key={message.id} 
+                    className={`flex gap-3 ${message.role === 'user' ? 'flex-row-reverse' : ''}`}
+                    data-testid={`message-${message.role}-${index}`}
+                  >
+                    <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
+                      message.role === 'user' 
+                        ? 'bg-primary text-primary-foreground' 
+                        : 'bg-muted text-muted-foreground'
+                    }`}>
+                      {message.role === 'user' ? 'U' : 'M'}
                     </div>
-                  ))}
-                  
-                  {/* Streaming response */}
-                  {streamingResponse && (
-                    <div className="flex justify-start">
-                      <div className="max-w-[80%] px-4 py-3 rounded-lg bg-slate-100 text-slate-800 mr-4">
-                        <div className="whitespace-pre-wrap break-words">
-                          {streamingResponse}
-                        </div>
-                        <div className="flex items-center gap-1 mt-2">
-                          <Loader2 className="h-3 w-3 animate-spin" />
-                          <span className="text-xs text-slate-500">AI is typing...</span>
-                        </div>
+                    <div className={`flex-1 ${message.role === 'user' ? 'max-w-[calc(100%-6rem)]' : 'max-w-[calc(100%-6rem)]'}`}>
+                      <div className={`rounded-lg p-4 break-words ${
+                        message.role === 'user' 
+                          ? 'bg-primary text-primary-foreground ml-8' 
+                          : 'bg-muted mr-8'
+                      }`}>
+                        <p className="text-sm whitespace-pre-wrap break-words">{message.content}</p>
                       </div>
+                      <p className={`text-xs text-muted-foreground mt-1 ${
+                        message.role === 'user' ? 'text-right' : ''
+                      }`}>
+                        {message.role === 'user' ? 'You' : 'Module'} • {new Date(message.createdAt).toLocaleTimeString()}
+                      </p>
                     </div>
-                  )}
-                  
-                  <div ref={messagesEndRef} />
-                </div>
-              </ScrollArea>
-              
-              {/* Input */}
-              {module.status !== 'completed' && (
-                <div className="flex gap-3 pt-4 border-t">
+                  </div>
+                ))}
+
+                {/* Streaming response */}
+                {streamingResponse && (
+                  <div className="flex gap-3">
+                    <div className="w-8 h-8 bg-muted rounded-full flex items-center justify-center">
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    </div>
+                    <div className="flex-1 max-w-[calc(100%-6rem)]">
+                      <div className="bg-muted rounded-lg p-4 mr-8 break-words">
+                        <p className="text-sm break-words">{streamingResponse}</p>
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-1">Module • typing...</p>
+                    </div>
+                  </div>
+                )}
+
+                <div ref={messagesEndRef} />
+              </div>
+            </ScrollArea>
+
+            {/* Message Input */}
+            {module.status === 'in_progress' && (
+              <form onSubmit={handleSendMessage} className="border-t p-6">
+                <div className="flex gap-3">
                   <Textarea
                     ref={messageInputRef}
                     value={currentMessage}
                     onChange={(e) => setCurrentMessage(e.target.value)}
-                    onKeyPress={handleKeyPress}
                     placeholder="Type your message here..."
-                    className="flex-1 resize-none min-h-[60px] border-slate-200 focus:border-blue-300 focus:ring-blue-200"
-                    disabled={sendMessageMutation.isPending || module.status === 'completed'}
+                    className="min-h-[60px] resize-none"
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && !e.shiftKey) {
+                        e.preventDefault();
+                        handleSendMessage(e);
+                      }
+                    }}
+                    disabled={isStreaming}
                     data-testid="input-message"
                   />
-                  <Button
-                    onClick={handleSendMessage}
-                    disabled={!currentMessage.trim() || sendMessageMutation.isPending || module.status === 'completed'}
-                    className="bg-blue-600 hover:bg-blue-700 text-white px-6 self-end"
+                  <Button 
+                    type="submit" 
+                    size="lg"
+                    disabled={!currentMessage.trim() || isStreaming}
                     data-testid="button-send-message"
                   >
-                    {sendMessageMutation.isPending ? (
+                    {isStreaming ? (
                       <Loader2 className="h-4 w-4 animate-spin" />
                     ) : (
-                      <>
-                        <Send className="h-4 w-4 mr-2" />
-                        Send
-                      </>
+                      <Send className="h-4 w-4" />
                     )}
                   </Button>
                 </div>
-              )}
-              
-              {/* Completed State */}
-              {module.status === 'completed' && (
-                <div className="pt-4 border-t bg-green-50 rounded-lg p-4 mt-4">
-                  <div className="flex items-center gap-3 mb-3">
-                    <CheckCircle className="h-5 w-5 text-green-600" />
-                    <h3 className="font-semibold text-green-800">
-                      Module Completed!
-                    </h3>
-                  </div>
-                  
-                  {module.completionData && (
-                    <div className="space-y-3 text-sm text-green-700">
-                      {module.completionData.confidence && (
-                        <div>
-                          <span className="font-medium">Confidence:</span> {module.completionData.confidence}%
-                        </div>
-                      )}
+              </form>
+            )}
+
+            {/* Completed module message */}
+            {module.status === 'completed' && (
+              <div className="border-t p-6 text-center">
+                <CheckCircle className="h-6 w-6 text-green-600 mx-auto mb-2" />
+                <p className="text-sm text-muted-foreground">
+                  This module has been completed. You can review the conversation above.
+                </p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+        </div>
+
+        {/* Right Column - Timer & Status (25%) */}
+        <div className="w-1/4 border-l bg-background/50">
+          <div className="p-4 space-y-4">
+            <h3 className="font-semibold text-sm text-muted-foreground uppercase tracking-wide">Module Info</h3>
+            
+            {/* Module Timer */}
+            {(module.status === 'in_progress' || module.status === 'completed') && (
+              <div className="space-y-3">
+                <SessionTimer 
+                  isSessionActive={module.status === 'in_progress'}
+                  isSessionCompleted={module.status === 'completed'}
+                  className="border-0 bg-transparent p-0"
+                  sessionNumber={moduleCode === 'A' ? 1 : moduleCode === 'B' ? 2 : 3}
+                  initialTimerElapsed={module.timerElapsed || 0}
+                />
+              </div>
+            )}
+
+            {/* Function Progress for Enhancement Modules */}
+            <div className="space-y-2">
+              <h4 className="text-sm font-medium">Focus Areas</h4>
+              <div className="flex flex-wrap gap-1">
+                {moduleInfo.functions.map((func) => (
+                  <Badge key={func} variant="outline" className="text-xs">
+                    {func}
+                  </Badge>
+                ))}
+              </div>
+            </div>
+
+            {/* Completion Data */}
+            {module.status === 'completed' && module.completionData && (
+              <div className="space-y-2">
+                <h4 className="text-sm font-medium">Results</h4>
+                <div className="space-y-2 text-sm">
+                  {module.completionData.confidence && (
+                    <div>
+                      <span className="font-medium">Confidence:</span> {module.completionData.confidence}%
+                    </div>
+                  )}
+                  {module.completionData.brandClaim && (
+                    <div>
+                      <span className="font-medium">Brand Claim:</span> {module.completionData.brandClaim}
                     </div>
                   )}
                 </div>
-              )}
-            </CardContent>
-          </Card>
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </div>
