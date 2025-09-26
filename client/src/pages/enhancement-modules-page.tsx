@@ -44,7 +44,7 @@ export default function EnhancementModulesPage() {
         description: `Enhancement Module ${moduleCode} has been started.`,
       });
       // Navigate to the chat interface for this module
-      navigate(`/enhancement-modules/module/${moduleCode}`);
+      navigate(`/enhancement-modules/${moduleCode}`);
     },
     onError: (error: any) => {
       toast({
@@ -99,7 +99,7 @@ export default function EnhancementModulesPage() {
   };
 
   const handleContinueModule = (moduleCode: string) => {
-    navigate(`/enhancement-modules/module/${moduleCode}`);
+    navigate(`/enhancement-modules/${moduleCode}`);
   };
 
   if (isLoading) {
