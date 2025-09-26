@@ -9,12 +9,81 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import { Loader2, Send, ArrowLeft, Lock, CheckCircle, MessageSquare, AlertCircle } from "lucide-react";
+import { Loader2, Send, ArrowLeft, Lock, CheckCircle, MessageSquare, AlertCircle, Clock, CheckCircle2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import SessionTimer from "@/components/ui/session-timer";
-
 import type { EnhancementModule, EnhancementModuleMessage } from '@shared/schema';
+
+// Simple timer component for Enhancement Modules
+interface EnhancementModuleTimerProps {
+  isActive: boolean;
+  isCompleted: boolean;
+  initialTimerElapsed: number;
+  onTimerUpdate: (elapsed: number) => void;
+}
+
+function EnhancementModuleTimer({ isActive, isCompleted, initialTimerElapsed, onTimerUpdate }: EnhancementModuleTimerProps) {
+  const [timeElapsed, setTimeElapsed] = useState(initialTimerElapsed);
+  const intervalRef = useRef<NodeJS.Timeout | null>(null);
+  const lastUpdateRef = useRef<number>(0);
+
+  useEffect(() => {
+    setTimeElapsed(initialTimerElapsed);
+  }, [initialTimerElapsed]);
+
+  useEffect(() => {
+    if (isActive && !isCompleted) {
+      intervalRef.current = setInterval(() => {
+        setTimeElapsed(prev => {
+          const newElapsed = prev + 1;
+          
+          // Call onTimerUpdate every 10 seconds
+          if (newElapsed - lastUpdateRef.current >= 10) {
+            onTimerUpdate(newElapsed);
+            lastUpdateRef.current = newElapsed;
+          }
+          
+          return newElapsed;
+        });
+      }, 1000);
+    } else {
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+        intervalRef.current = null;
+      }
+    }
+
+    return () => {
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+      }
+    };
+  }, [isActive, isCompleted, onTimerUpdate]);
+
+  const formatTime = (seconds: number): string => {
+    const minutes = Math.floor(seconds / 60);
+    const remainingSeconds = seconds % 60;
+    return `${minutes.toString().padStart(2, '0')}:${remainingSeconds.toString().padStart(2, '0')}`;
+  };
+
+  const getIcon = () => {
+    return isCompleted ? CheckCircle2 : Clock;
+  };
+
+  const getColorClass = () => {
+    return isCompleted ? 'text-green-600' : 'text-blue-600';
+  };
+
+  const Icon = getIcon();
+
+  return (
+    <div className={`flex items-center gap-2 ${getColorClass()}`}>
+      <Icon className="h-4 w-4" />
+      <span className="font-medium">{formatTime(timeElapsed)}</span>
+      {isCompleted && <span className="text-sm text-green-600">Complete</span>}
+    </div>
+  );
+}
 
 type ModuleWithMessages = {
   module: EnhancementModule;
@@ -432,12 +501,16 @@ export default function EnhancementModuleChatPage() {
             {/* Module Timer */}
             {(module.status === 'in_progress' || module.status === 'completed') && (
               <div className="space-y-3">
-                <SessionTimer 
-                  isSessionActive={module.status === 'in_progress'}
-                  isSessionCompleted={module.status === 'completed'}
-                  className="border-0 bg-transparent p-0"
-                  sessionNumber={moduleCode === 'A' ? 1 : moduleCode === 'B' ? 2 : 3}
+                <EnhancementModuleTimer 
+                  isActive={module.status === 'in_progress'}
+                  isCompleted={module.status === 'completed'}
                   initialTimerElapsed={module.timerElapsed || 0}
+                  onTimerUpdate={(elapsed: number) => {
+                    // Update timer in database every 10 seconds
+                    if (module.status === 'in_progress') {
+                      updateTimerMutation.mutate(elapsed);
+                    }
+                  }}
                 />
               </div>
             )}
