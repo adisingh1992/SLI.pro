@@ -25,10 +25,13 @@ interface EnhancementModuleTimerProps {
 function EnhancementModuleTimer({ isActive, isCompleted, initialTimerElapsed, onTimerUpdate }: EnhancementModuleTimerProps) {
   const [timeElapsed, setTimeElapsed] = useState(initialTimerElapsed);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
-  const lastUpdateRef = useRef<number>(0);
+  const lastUpdateRef = useRef<number>(initialTimerElapsed);
 
   useEffect(() => {
+    // Always set the timer to the saved value when the component mounts or when initialTimerElapsed changes
+    console.log('Timer initializing with elapsed time:', initialTimerElapsed);
     setTimeElapsed(initialTimerElapsed);
+    lastUpdateRef.current = initialTimerElapsed; // Reset the update reference too
   }, [initialTimerElapsed]);
 
   useEffect(() => {
