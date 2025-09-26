@@ -268,9 +268,9 @@ Please analyze this information and create a structured summary of their profess
   return await callClaude(systemPrompt, userPrompt);
 }
 
-// 2. Analyze resume data
-export async function generateResumeSummary(resumeContent: string, questionnaireAnalysis: any) {
-  const systemPrompt = `You are an expert resume analyst for SLI.pro, a professional branding service. Your task is to extract key career insights from a client's resume and compare them against their stated career goals and aspirations.
+// 2a. Step 1: Summarize resume content only (token-efficient)
+async function summarizeResumeContent(resumeContent: string) {
+  const systemPrompt = `You are an expert resume analyst for SLI.pro, a professional branding service. Your task is to extract and summarize key career insights from a client's resume.
 
 EXTREMELY IMPORTANT: You MUST respond with VALID JSON ONLY. Your entire response must be parseable by JSON.parse(). DO NOT include any explanatory text, comments, markdown formatting, or code blocks. Your response should start with '{' and end with '}' without any other characters.
 
@@ -304,7 +304,27 @@ The JSON output must strictly follow this structure:
     "focusAreas": string[],
     "potentialGaps": string[],
     "formatEffectiveness": string
-  },
+  }
+}`;
+
+  const userPrompt = `Here is the client's resume content:
+
+${resumeContent}
+
+Please analyze and summarize the resume content according to the structure in your instructions. Focus on extracting career trajectory, skills, accomplishments, and presentation style. Be concise but comprehensive. DO NOT MAKEUP NEW THINGS ON YOUR OWN. ONLY USE THE INFORMATION PROVIDED.`;
+
+  return await callClaude(systemPrompt, userPrompt);
+}
+
+// 2b. Step 2: Analyze resume alignment with questionnaire (token-efficient)
+async function analyzeResumeAlignment(resumeSummary: any, questionnaireAnalysis: any) {
+  const systemPrompt = `You are an expert career alignment analyst for SLI.pro, a professional branding service. Your task is to compare a client's resume summary against their questionnaire responses to identify alignment and gaps.
+
+EXTREMELY IMPORTANT: You MUST respond with VALID JSON ONLY. Your entire response must be parseable by JSON.parse(). DO NOT include any explanatory text, comments, markdown formatting, or code blocks. Your response should start with '{' and end with '}' without any other characters.
+
+The JSON output must strictly follow this structure:
+
+{
   "alignmentWithQuestionnaireResponses": {
     "consistencies": string[],
     "discrepancies": string[],
@@ -313,16 +333,39 @@ The JSON output must strictly follow this structure:
   }
 }`;
 
-  const userPrompt = `Here is the client's resume content:
+  const userPrompt = `Here is the client's resume summary:
 
-${resumeContent}
+${JSON.stringify(resumeSummary, null, 2)}
 
 And here is the analysis of their questionnaire responses:
+
 ${JSON.stringify(questionnaireAnalysis, null, 2)}
 
-Please analyze the resume content in relation to their questionnaire responses and create a structured analysis according to the structure in your instructions. Focus on identifying strengths, gaps, and alignment between their resume and their stated career aspirations.`;
+Please analyze the alignment between the resume summary and questionnaire responses according to the structure in your instructions. Focus on identifying consistencies, discrepancies, missing elements, and overall congruence. DO NOT MAKEUP NEW THINGS ON YOUR OWN. ONLY USE THE INFORMATION PROVIDED.`;
 
   return await callClaude(systemPrompt, userPrompt);
+}
+
+// 2. Analyze resume data (orchestrator function using two-step approach)
+export async function generateResumeSummary(resumeContent: string, questionnaireAnalysis: any) {  
+  try {
+    // Step 1: Summarize the resume content only (reduces token usage)
+    const resumeSummary = await summarizeResumeContent(resumeContent);
+    
+    // Step 2: Analyze alignment between resume summary and questionnaire
+    const alignmentAnalysis = await analyzeResumeAlignment(resumeSummary, questionnaireAnalysis);
+    
+    // Combine both results into the expected format
+    const combinedResult = {
+      ...resumeSummary,
+      ...alignmentAnalysis
+    };
+    
+    return combinedResult;
+  } catch (error) {
+    log(`Error in generateResumeSummary: ${error}`, "claude");
+    throw error;
+  }
 }
 
 // 3. Analyze LinkedIn profile
