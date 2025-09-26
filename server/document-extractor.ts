@@ -1,6 +1,5 @@
-import pdfParse from 'pdf-parse';
 import mammoth from 'mammoth';
-import { log } from './vite.js';
+import { log } from './vite';
 
 /**
  * Extract readable text from various document formats
@@ -46,10 +45,12 @@ export async function extractDocumentText(fileData: string, fileName: string): P
 }
 
 /**
- * Extract text from PDF files using pdf-parse
+ * Extract text from PDF files using pdf-parse (dynamic import)
  */
 async function extractPdfText(buffer: Buffer): Promise<string> {
   try {
+    // Use dynamic import to avoid initialization issues with pdf-parse
+    const pdfParse = (await import('pdf-parse')).default;
     const data = await pdfParse(buffer);
     const text = data.text.trim();
     

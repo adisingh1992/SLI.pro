@@ -1,6 +1,7 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { log } from "./vite";
 import { Document } from "@shared/schema";
+import { extractDocumentText, validateExtractedText } from "./document-extractor";
 
 // Initialize Anthropic client
 const anthropic = new Anthropic({
@@ -463,8 +464,9 @@ The JSON output must strictly follow this structure:
   }
 }`;
 
-    // Decode base64 document data to readable text for Claude analysis
-    const documentText = Buffer.from(document.fileData, 'base64').toString('utf-8');
+    // Extract readable text from document using proper parsing libraries
+    const extractedText = await extractDocumentText(document.fileData, document.fileName);
+    const documentText = validateExtractedText(extractedText);
     
     const userPrompt = `Here is the client's additional document (${document.type}) content:
 

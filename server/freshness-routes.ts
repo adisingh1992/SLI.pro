@@ -3,26 +3,8 @@ import { storage } from "./storage";
 import { z } from "zod";
 import { insertFreshnessReportSchema, MonthlyCheckIn } from "@shared/schema";
 import { generateQuestionnaireSummary, generateResumeSummary, generateLinkedInSummary, generateAdditionalDocsSummary, generateFinalSynthesis } from "./freshness-report";
+import { extractDocumentText, validateExtractedText } from "./document-extractor";
 
-// Utility function to decode base64 data to readable text
-function decodeBase64ToText(base64Data: string): string {
-  try {
-    // Decode base64 to buffer and then to UTF-8 string
-    const buffer = Buffer.from(base64Data, 'base64');
-    const text = buffer.toString('utf-8');
-    
-    // Basic validation to ensure we got readable text
-    if (!text || text.trim().length === 0) {
-      console.warn("Decoded base64 resulted in empty text");
-      return "No readable content found in document";
-    }
-    
-    return text;
-  } catch (error) {
-    console.error("Error decoding base64 to text:", error);
-    return "Error: Unable to decode document content";
-  }
-}
 
 // Middleware to check if user is authenticated
 const isAuthenticated = (req: Request, res: Response, next: NextFunction) => {
@@ -159,8 +141,9 @@ export function registerFreshnessRoutes(app: Express) {
         let resumeAnalysis = null;
         try {
           if (resumeDocument) {
-            // Decode base64 resume data to readable text for Claude analysis
-            const resumeText = decodeBase64ToText(resumeDocument.fileData);
+            // Extract readable text from resume document using proper parsing
+            const extractedText = await extractDocumentText(resumeDocument.fileData, resumeDocument.fileName);
+            const resumeText = validateExtractedText(extractedText);
             resumeAnalysis = await generateResumeSummary(resumeText, questionnaireAnalysis);
           } else {
             resumeAnalysis = null;
@@ -177,8 +160,9 @@ export function registerFreshnessRoutes(app: Express) {
         let linkedinAnalysis = null;
         try {
           if (linkedinDocument) {
-            // Decode base64 LinkedIn data to readable text for Claude analysis
-            const linkedinText = decodeBase64ToText(linkedinDocument.fileData);
+            // Extract readable text from LinkedIn document using proper parsing
+            const extractedText = await extractDocumentText(linkedinDocument.fileData, linkedinDocument.fileName);
+            const linkedinText = validateExtractedText(extractedText);
             linkedinAnalysis = await generateLinkedInSummary(linkedinText, questionnaireAnalysis, resumeAnalysis);
           } else {
             linkedinAnalysis = null;
