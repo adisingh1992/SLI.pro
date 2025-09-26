@@ -463,9 +463,12 @@ The JSON output must strictly follow this structure:
   }
 }`;
 
+    // Decode base64 document data to readable text for Claude analysis
+    const documentText = Buffer.from(document.fileData, 'base64').toString('utf-8');
+    
     const userPrompt = `Here is the client's additional document (${document.type}) content:
 
-${document.fileData}
+${documentText}
 
 Here is the analysis of their questionnaire responses:
 ${JSON.stringify(questionnaireAnalysis, null, 2)}

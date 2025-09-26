@@ -4,6 +4,26 @@ import { z } from "zod";
 import { insertFreshnessReportSchema, MonthlyCheckIn } from "@shared/schema";
 import { generateQuestionnaireSummary, generateResumeSummary, generateLinkedInSummary, generateAdditionalDocsSummary, generateFinalSynthesis } from "./freshness-report";
 
+// Utility function to decode base64 data to readable text
+function decodeBase64ToText(base64Data: string): string {
+  try {
+    // Decode base64 to buffer and then to UTF-8 string
+    const buffer = Buffer.from(base64Data, 'base64');
+    const text = buffer.toString('utf-8');
+    
+    // Basic validation to ensure we got readable text
+    if (!text || text.trim().length === 0) {
+      console.warn("Decoded base64 resulted in empty text");
+      return "No readable content found in document";
+    }
+    
+    return text;
+  } catch (error) {
+    console.error("Error decoding base64 to text:", error);
+    return "Error: Unable to decode document content";
+  }
+}
+
 // Middleware to check if user is authenticated
 const isAuthenticated = (req: Request, res: Response, next: NextFunction) => {
   if (req.isAuthenticated()) {
@@ -138,9 +158,13 @@ export function registerFreshnessRoutes(app: Express) {
         const resumeDocument = userProfile.documents?.find(doc => doc.type === 'resume');
         let resumeAnalysis = null;
         try {
-          resumeAnalysis = resumeDocument ? 
-            await generateResumeSummary(resumeDocument.fileData, questionnaireAnalysis) : 
-            null;
+          if (resumeDocument) {
+            // Decode base64 resume data to readable text for Claude analysis
+            const resumeText = decodeBase64ToText(resumeDocument.fileData);
+            resumeAnalysis = await generateResumeSummary(resumeText, questionnaireAnalysis);
+          } else {
+            resumeAnalysis = null;
+          }
           console.log('Step 2: Resume analysis completed successfully');
         } catch (error) {
           console.error('Step 2: Error during resume analysis:', error);
@@ -152,9 +176,13 @@ export function registerFreshnessRoutes(app: Express) {
         const linkedinDocument = userProfile.documents?.find(doc => doc.type === 'linkedin');
         let linkedinAnalysis = null;
         try {
-          linkedinAnalysis = linkedinDocument ? 
-            await generateLinkedInSummary(linkedinDocument.fileData, questionnaireAnalysis, resumeAnalysis) : 
-            null;
+          if (linkedinDocument) {
+            // Decode base64 LinkedIn data to readable text for Claude analysis
+            const linkedinText = decodeBase64ToText(linkedinDocument.fileData);
+            linkedinAnalysis = await generateLinkedInSummary(linkedinText, questionnaireAnalysis, resumeAnalysis);
+          } else {
+            linkedinAnalysis = null;
+          }
           console.log('Step 3: LinkedIn analysis completed successfully');
         } catch (error) {
           console.error('Step 3: Error during LinkedIn analysis:', error);
