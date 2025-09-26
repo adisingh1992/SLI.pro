@@ -516,18 +516,19 @@ function calculateProfileContentQuality(resumeAnalysis: any, linkedinAnalysis: a
     // Assess headline quality
     let headlineScore = 0;
     log(`Analyzing headline quality...`, "freshness");
-    if (linkedinHeadline.toLowerCase().includes('strong') || linkedinHeadline.toLowerCase().includes('compelling')) {
+    const headlineLower = linkedinHeadline.toLowerCase();
+    if (headlineLower.includes('strong') || headlineLower.includes('compelling') || headlineLower.includes('excellent') || headlineLower.includes('outstanding') || headlineLower.includes('exceptional')) {
       headlineScore = 4;
-      log(`  headlineScore = 4 (found 'strong' or 'compelling')`, "freshness");
-    } else if (linkedinHeadline.toLowerCase().includes('good')) {
+      log(`  headlineScore = 4 (found excellent/strong keywords)`, "freshness");
+    } else if (headlineLower.includes('good') || headlineLower.includes('effective') || headlineLower.includes('solid') || headlineLower.includes('clear') || headlineLower.includes('professional')) {
       headlineScore = 3;
-      log(`  headlineScore = 3 (found 'good')`, "freshness");
-    } else if (linkedinHeadline.toLowerCase().includes('basic')) {
+      log(`  headlineScore = 3 (found good/effective keywords)`, "freshness");
+    } else if (headlineLower.includes('basic') || headlineLower.includes('adequate') || headlineLower.includes('standard') || headlineLower.includes('fair') || headlineLower.includes('decent')) {
       headlineScore = 2;
-      log(`  headlineScore = 2 (found 'basic')`, "freshness");
-    } else if (linkedinHeadline.toLowerCase().includes('weak')) {
+      log(`  headlineScore = 2 (found basic/adequate keywords)`, "freshness");
+    } else if (headlineLower.includes('weak') || headlineLower.includes('poor') || headlineLower.includes('limited') || headlineLower.includes('unclear') || headlineLower.includes('vague')) {
       headlineScore = 1;
-      log(`  headlineScore = 1 (found 'weak')`, "freshness");
+      log(`  headlineScore = 1 (found weak/poor keywords)`, "freshness");
     } else {
       headlineScore = 0;
       log(`  headlineScore = 0 (NO MATCHING KEYWORDS FOUND)`, "freshness");
@@ -536,18 +537,19 @@ function calculateProfileContentQuality(resumeAnalysis: any, linkedinAnalysis: a
     // Assess About section quality
     let aboutScore = 0;
     log(`Analyzing about section quality...`, "freshness");
-    if (linkedinAbout.toLowerCase().includes('compelling')) {
+    const aboutLower = linkedinAbout.toLowerCase();
+    if (aboutLower.includes('compelling') || aboutLower.includes('excellent') || aboutLower.includes('outstanding') || aboutLower.includes('exceptional') || aboutLower.includes('strong')) {
       aboutScore = 4;
-      log(`  aboutScore = 4 (found 'compelling')`, "freshness");
-    } else if (linkedinAbout.toLowerCase().includes('solid')) {
+      log(`  aboutScore = 4 (found excellent/compelling keywords)`, "freshness");
+    } else if (aboutLower.includes('solid') || aboutLower.includes('good') || aboutLower.includes('effective') || aboutLower.includes('clear') || aboutLower.includes('well-written') || aboutLower.includes('professional')) {
       aboutScore = 3;
-      log(`  aboutScore = 3 (found 'solid')`, "freshness");
-    } else if (linkedinAbout.toLowerCase().includes('standard')) {
+      log(`  aboutScore = 3 (found good/solid keywords)`, "freshness");
+    } else if (aboutLower.includes('standard') || aboutLower.includes('basic') || aboutLower.includes('adequate') || aboutLower.includes('fair') || aboutLower.includes('decent') || aboutLower.includes('average')) {
       aboutScore = 2;
-      log(`  aboutScore = 2 (found 'standard')`, "freshness");
-    } else if (linkedinAbout.toLowerCase().includes('minimal')) {
+      log(`  aboutScore = 2 (found standard/basic keywords)`, "freshness");
+    } else if (aboutLower.includes('minimal') || aboutLower.includes('weak') || aboutLower.includes('poor') || aboutLower.includes('limited') || aboutLower.includes('incomplete') || aboutLower.includes('sparse')) {
       aboutScore = 1;
-      log(`  aboutScore = 1 (found 'minimal')`, "freshness");
+      log(`  aboutScore = 1 (found minimal/weak keywords)`, "freshness");
     } else {
       aboutScore = 0;
       log(`  aboutScore = 0 (NO MATCHING KEYWORDS FOUND)`, "freshness");
@@ -556,19 +558,27 @@ function calculateProfileContentQuality(resumeAnalysis: any, linkedinAnalysis: a
     // Assess Experience section quality
     let experienceScore = 0;
     log(`Analyzing experience section quality...`, "freshness");
-    if ((resumeExperience.toLowerCase().includes('clear') && resumeExperience.toLowerCase().includes('detailed')) || 
-        (linkedinExperience.toLowerCase().includes('detailed') && linkedinExperience.toLowerCase().includes('achievement'))) {
+    const resumeExpLower = resumeExperience.toLowerCase();
+    const linkedinExpLower = linkedinExperience.toLowerCase();
+    
+    if ((resumeExpLower.includes('clear') && resumeExpLower.includes('detailed')) || 
+        (linkedinExpLower.includes('detailed') && linkedinExpLower.includes('achievement')) ||
+        linkedinExpLower.includes('comprehensive') || linkedinExpLower.includes('excellent') || linkedinExpLower.includes('outstanding')) {
       experienceScore = 4;
-      log(`  experienceScore = 4 (found clear+detailed OR detailed+achievement)`, "freshness");
-    } else if (linkedinExperience.toLowerCase().includes('detailed') || resumeExperience.toLowerCase().includes('good')) {
+      log(`  experienceScore = 4 (found excellent/comprehensive keywords)`, "freshness");
+    } else if (linkedinExpLower.includes('detailed') || resumeExpLower.includes('good') || linkedinExpLower.includes('solid') || 
+               linkedinExpLower.includes('effective') || linkedinExpLower.includes('clear') || linkedinExpLower.includes('strong') ||
+               resumeExpLower.includes('well-structured') || resumeExpLower.includes('quantifiable')) {
       experienceScore = 3;
-      log(`  experienceScore = 3 (found 'detailed' or 'good')`, "freshness");
-    } else if (linkedinExperience.toLowerCase().includes('basic')) {
+      log(`  experienceScore = 3 (found good/detailed keywords)`, "freshness");
+    } else if (linkedinExpLower.includes('basic') || linkedinExpLower.includes('adequate') || linkedinExpLower.includes('standard') ||
+               linkedinExpLower.includes('fair') || linkedinExpLower.includes('decent') || resumeExpLower.includes('basic')) {
       experienceScore = 2;
-      log(`  experienceScore = 2 (found 'basic')`, "freshness");
-    } else if (linkedinExperience.toLowerCase().includes('sparse')) {
+      log(`  experienceScore = 2 (found basic/adequate keywords)`, "freshness");
+    } else if (linkedinExpLower.includes('sparse') || linkedinExpLower.includes('minimal') || linkedinExpLower.includes('weak') ||
+               linkedinExpLower.includes('poor') || linkedinExpLower.includes('limited') || linkedinExpLower.includes('incomplete')) {
       experienceScore = 1;
-      log(`  experienceScore = 1 (found 'sparse')`, "freshness");
+      log(`  experienceScore = 1 (found sparse/minimal keywords)`, "freshness");
     } else {
       experienceScore = 0;
       log(`  experienceScore = 0 (NO MATCHING KEYWORDS FOUND)`, "freshness");
@@ -577,18 +587,25 @@ function calculateProfileContentQuality(resumeAnalysis: any, linkedinAnalysis: a
     // Assess Skills section quality
     let skillsScore = 0;
     log(`Analyzing skills section quality...`, "freshness");
-    if (skillsSection.toLowerCase().includes('comprehensive') || skillsSection.toLowerCase().includes('highly relevant')) {
+    const skillsLower = skillsSection.toLowerCase();
+    if (skillsLower.includes('comprehensive') || skillsLower.includes('highly relevant') || skillsLower.includes('excellent') ||
+        skillsLower.includes('outstanding') || skillsLower.includes('extensive') || skillsLower.includes('strong')) {
       skillsScore = 4;
-      log(`  skillsScore = 4 (found 'comprehensive' or 'highly relevant')`, "freshness");
-    } else if (skillsSection.toLowerCase().includes('good') || skillsSection.toLowerCase().includes('mostly')) {
+      log(`  skillsScore = 4 (found comprehensive/excellent keywords)`, "freshness");
+    } else if (skillsLower.includes('good') || skillsLower.includes('mostly') || skillsLower.includes('relevant') ||
+               skillsLower.includes('solid') || skillsLower.includes('effective') || skillsLower.includes('appropriate') ||
+               skillsLower.includes('well-aligned') || skillsLower.includes('suitable')) {
       skillsScore = 3;
-      log(`  skillsScore = 3 (found 'good' or 'mostly')`, "freshness");
-    } else if (skillsSection.toLowerCase().includes('partial')) {
+      log(`  skillsScore = 3 (found good/relevant keywords)`, "freshness");
+    } else if (skillsLower.includes('partial') || skillsLower.includes('basic') || skillsLower.includes('adequate') ||
+               skillsLower.includes('standard') || skillsLower.includes('fair') || skillsLower.includes('decent')) {
       skillsScore = 2;
-      log(`  skillsScore = 2 (found 'partial')`, "freshness");
-    } else if (skillsSection.toLowerCase().includes('few') || skillsSection.toLowerCase().includes('limited')) {
+      log(`  skillsScore = 2 (found partial/basic keywords)`, "freshness");
+    } else if (skillsLower.includes('few') || skillsLower.includes('limited') || skillsLower.includes('minimal') ||
+               skillsLower.includes('weak') || skillsLower.includes('poor') || skillsLower.includes('sparse') ||
+               skillsLower.includes('irrelevant') || skillsLower.includes('incomplete')) {
       skillsScore = 1;
-      log(`  skillsScore = 1 (found 'few' or 'limited')`, "freshness");
+      log(`  skillsScore = 1 (found few/limited keywords)`, "freshness");
     } else {
       skillsScore = 0;
       log(`  skillsScore = 0 (NO MATCHING KEYWORDS FOUND)`, "freshness");
@@ -597,18 +614,24 @@ function calculateProfileContentQuality(resumeAnalysis: any, linkedinAnalysis: a
     // Assess Education section quality
     let educationScore = 0;
     log(`Analyzing education section quality...`, "freshness");
-    if (education.toLowerCase().includes('complete') || education.toLowerCase().includes('detailed')) {
+    const educationLower = education.toLowerCase();
+    if (educationLower.includes('complete') || educationLower.includes('detailed') || educationLower.includes('comprehensive') ||
+        educationLower.includes('excellent') || educationLower.includes('outstanding') || educationLower.includes('thorough')) {
       educationScore = 4;
-      log(`  educationScore = 4 (found 'complete' or 'detailed')`, "freshness");
-    } else if (education.toLowerCase().includes('good')) {
+      log(`  educationScore = 4 (found complete/detailed keywords)`, "freshness");
+    } else if (educationLower.includes('good') || educationLower.includes('solid') || educationLower.includes('effective') ||
+               educationLower.includes('clear') || educationLower.includes('well-presented') || educationLower.includes('professional')) {
       educationScore = 3;
-      log(`  educationScore = 3 (found 'good')`, "freshness");
-    } else if (education.toLowerCase().includes('basic')) {
+      log(`  educationScore = 3 (found good/solid keywords)`, "freshness");
+    } else if (educationLower.includes('basic') || educationLower.includes('adequate') || educationLower.includes('standard') ||
+               educationLower.includes('fair') || educationLower.includes('decent') || educationLower.includes('sufficient')) {
       educationScore = 2;
-      log(`  educationScore = 2 (found 'basic')`, "freshness");
-    } else if (education.toLowerCase().includes('incomplete')) {
+      log(`  educationScore = 2 (found basic/adequate keywords)`, "freshness");
+    } else if (educationLower.includes('incomplete') || educationLower.includes('minimal') || educationLower.includes('weak') ||
+               educationLower.includes('poor') || educationLower.includes('limited') || educationLower.includes('sparse') ||
+               educationLower.includes('missing')) {
       educationScore = 1;
-      log(`  educationScore = 1 (found 'incomplete')`, "freshness");
+      log(`  educationScore = 1 (found incomplete/minimal keywords)`, "freshness");
     } else {
       educationScore = 0;
       log(`  educationScore = 0 (NO MATCHING KEYWORDS FOUND)`, "freshness");
