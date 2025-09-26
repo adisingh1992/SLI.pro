@@ -250,6 +250,19 @@ export function setupEnhancementModulesRoutes(app: Express) {
           status: 'in_progress',
           startedAt: new Date()
         });
+
+        // Check if module has any messages, if not add initial guidance message
+        const existingMessages = await storage.getEnhancementModuleMessages(module.id);
+        if (existingMessages.length === 0) {
+          const initialMessage = getInitialGuidanceMessage(moduleCode);
+          if (initialMessage) {
+            await storage.createEnhancementModuleMessage({
+              moduleId: module.id,
+              role: 'assistant',
+              content: initialMessage
+            });
+          }
+        }
       }
 
       res.json({ success: true, moduleId: module.id });
