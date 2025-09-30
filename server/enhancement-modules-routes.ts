@@ -132,54 +132,36 @@ Evaluate completion based on:
 - Are outreach strategies defined (templates, engagement tactics)?
 - Is there a concrete action plan with measurable 30/60/90-day milestones?
 
-Respond in STRICT JSON only (no prose, no code fences) with EXACTLY this schema:
+Respond in STRICT JSON only. Return only one JSON object, no backticks, no comments, no prose.
 
+Required schema:
 {
   "shouldComplete": boolean,
   "completionData": {
-    "networkAudit": {
-      "connectionCount": string, // e.g., "1000-2000" or specific number
-      "targetIndustryPercentage": string, // % in target industry
-      "decisionMakerPercentage": string, // % who can hire them
-      "currentComposition": string, // description of current network makeup
-      "positioningGap": string // the diagnosed gap statement
-    },
-    "strategicGaps": {
-      "missingDecisionMakers": string[], // specific roles they should connect with
-      "targetCompanies": string[], // companies with zero connections
-      "ecosystemGaps": string[] // influencers, mentors, peers missing
-    },
-    "tierStrategy": {
-      "tier1Targets": string[], // top 10 people who can directly hire them
-      "tier2Targets": string[], // 20 people who can make introductions
-      "tier3Engagement": string[] // peers and content creators to engage with
-    },
-    "outreachPlan": {
-      "valueProposition": string, // their unique insight/expertise to offer
-      "engagementTactics": string[], // specific ways to add value first
-      "contentStrategy": string, // how they'll use content for visibility
-      "templates": string[] // outreach approaches customized to their voice
-    },
-    "actionPlan": {
-      "thirtyDayGoals": string[], // specific networking actions for first 30 days
-      "sixtyDayGoals": string[], // actions for days 31-60
-      "ninetyDayGoals": string[], // actions for days 61-90
-      "successMetrics": string[] // how to measure networking effectiveness
-    },
-    "confidence": number, // 0-100 completion confidence
-    "reasoning": string // brief explanation of completion status
+    "brandClaim": string,
+    "networkAuditSummary": string,
+    "positioningGap": string,
+    "functionalIdentity": string,
+    "tier1Targets": string[],
+    "strategicGaps": string[],
+    "valueProposition": string,
+    "outreachTemplates": string[],
+    "actionPlan": string[],
+    "successMetrics": string[],
+    "confidence": number,
+    "reasoning": string
   }
 }
 
 Rules for completion (ALL must be satisfied for shouldComplete=true):
-- Network audit completed with specific connection count and composition percentages
-- Positioning gap clearly diagnosed ("You want X but your network is Y")
-- At least 10 specific Tier 1 decision-maker targets identified by name/title/company
-- Strategic gaps identified with specific roles and companies
-- Value proposition clearly articulated based on their functional credibility
-- Outreach tactics defined with specific engagement strategies
-- Action plan includes concrete 30/60/90-day networking milestones
-- Success metrics defined for measuring network positioning progress
+- Network audit completed with specific findings about composition and gaps
+- Functional identity clearly locked (one of five functions)
+- Positioning gap diagnosed ("You want X but your network is Y")
+- At least 8-10 specific Tier 1 decision-maker targets identified
+- Value proposition articulated based on their credibility
+- Outreach approaches defined with specific tactics
+- Action plan includes concrete 30/60/90-day milestones
+- Success metrics defined
 
 If these criteria aren't fully met, set shouldComplete=false and indicate what's missing in reasoning.`;
     } else if (moduleCode === 'C') {
@@ -218,13 +200,51 @@ Analyze this conversation and determine if the module is complete. Return a JSON
     const responseText = completion.content[0].type === 'text' ? completion.content[0].text : '';
     
     try {
-      const analysisResult = JSON.parse(responseText);
+      // Extract JSON from response - handle potential prose and code fences
+      let cleanedText = responseText.trim();
+      
+      // Remove code fences with flexible whitespace
+      cleanedText = cleanedText.replace(/^```json\s*\n/i, '').replace(/\n\s*```\s*$/i, '');
+      cleanedText = cleanedText.replace(/^```\s*\n/i, '').replace(/\n\s*```\s*$/i, '');
+      
+      // Try to find JSON object if there's prose
+      const jsonMatch = cleanedText.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        cleanedText = jsonMatch[0];
+      }
+      
+      const analysisResult = JSON.parse(cleanedText);
+      
+      // Post-parse validation for Module B
+      if (moduleCode === 'B' && analysisResult.completionData) {
+        const data = analysisResult.completionData;
+        
+        // Validate required fields exist and are correct types
+        if (!data.tier1Targets || !Array.isArray(data.tier1Targets) || data.tier1Targets.length < 8) {
+          console.log(`[Module B] Incomplete - needs at least 8 Tier 1 targets, got ${data.tier1Targets?.length || 0}`);
+          return { shouldComplete: false };
+        }
+        
+        if (!data.actionPlan || !Array.isArray(data.actionPlan) || data.actionPlan.length < 3) {
+          console.log(`[Module B] Incomplete - needs concrete action plan with milestones`);
+          return { shouldComplete: false };
+        }
+        
+        if (!data.functionalIdentity || typeof data.functionalIdentity !== 'string') {
+          console.log(`[Module B] Incomplete - needs clear functional identity`);
+          return { shouldComplete: false };
+        }
+      }
+      
+      console.log(`[Module ${moduleCode}] Completion check - shouldComplete: ${analysisResult.shouldComplete}, confidence: ${analysisResult.completionData?.confidence || 'N/A'}`);
+      
       return {
         shouldComplete: analysisResult.shouldComplete,
         completionData: analysisResult.completionData
       };
     } catch (parseError) {
-      console.error('Failed to parse Claude completion analysis:', parseError);
+      console.error(`[Module ${moduleCode}] Failed to parse Claude completion analysis:`, parseError);
+      console.error(`[Module ${moduleCode}] Response preview:`, responseText.substring(0, 200) + '...');
       return { shouldComplete: false };
     }
 
