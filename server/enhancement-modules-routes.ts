@@ -209,24 +209,69 @@ Action plan includes a concrete 30-day plan (weekly steps) AND measurable 30/60/
 
 If any criterion is missing, set shouldComplete=false and use reasoning to state exactly what’s missing.`;
     } else if (moduleCode === "C") {
-      // Module C: Career Aspiration Alignment analysis
-      analysisPrompt = `You are evaluating a Module C "Career Aspiration Alignment Framework" coaching conversation focused on long-term goals and positioning refinement. Use the conversation transcript to determine completion.
+      // Module C: Career Aspiration Alignment comprehensive analysis
+      analysisPrompt = `You are evaluating a Module C "Career Aspiration Alignment Framework" coaching conversation. This module guides clients from 25-year aspiration through realistic progression pathways with gap analysis and actionable plans.
 
 Conversation Messages:
 ${messages.map((msg) => `${msg.role.toUpperCase()}: ${msg.content}`).join("\n\n")}
 
-Analyze this conversation and determine if the module is complete. Return a JSON object with:
+COMPLETION CRITERIA — ALL MUST BE SATISFIED:
+✅ 25-year backwards narrative articulated (what they want to be known for)
+✅ Current positioning clearly stated (credibility + function + core story)
+✅ Target role/impact specified (2-5 year goal)
+✅ Tier classification identified (Tier 1: same path advancement, Tier 2: single pivot, Tier 3: Earth-to-Moon)
+✅ Gap analysis completed with at least 2 gaps mapped across the 4 categories:
+   - Experience gaps (missing leadership, P&L, etc.)
+   - Functional gaps (influence vs ownership)
+   - Scale gaps (startup vs enterprise proof)
+   - Industry gaps (adjacent vs deep domain)
+✅ All 3 stepping stones defined with specific titles and competencies added:
+   - Immediate (6-12 months): next role adding ONE missing competency
+   - Intermediate (2-3 years): role adding second competency + complexity
+   - Ultimate (5+ years): realistic target once experiences accumulated
+✅ Positioning adjustments identified with at least 2 actions in each category:
+   - Credibility expansion (content/projects for target domain)
+   - Network repositioning (shift network composition)
+   - Narrative reframing (transferable skills emphasis)
+   - Skill gap filling (specific competencies to acquire)
+✅ Complete Alignment Statement formed: "CURRENT → TARGET → PATHWAY → POSITIONING ADJUSTMENTS → TIMELINE REALITY"
+✅ Timeline reality acknowledged (X-year journey, if Earth-to-Moon then realistic alternative provided)
+✅ 30/90/6-month check-ins defined with trackable metrics:
+   - 30-day actions (immediate steps toward next role)
+   - 90-day milestones (measurable progress on gaps)
+   - 6-month metrics (success indicators)
+
+Extract these fields from the conversation and return JSON:
 {
   "shouldComplete": boolean,
   "completionData": {
-    "aspirationalGoals": ["goal1", "goal2"],
-    "currentPositionGaps": ["gap1", "gap2"],
-    "alignmentStrategy": ["strategy1", "strategy2"],
-    "longTermRoadmap": ["milestone1", "milestone2"],
+    "backwardsNarrative": "25-year legacy/aspiration statement",
+    "currentPositioning": "Current credibility + function + proven results",
+    "targetRole": "Target role/impact description (2-5 years)",
+    "tierClassification": "Tier 1" | "Tier 2" | "Tier 3",
+    "experienceGaps": ["missing competency 1", "missing competency 2"],
+    "functionalGaps": ["gap 1", "gap 2"],
+    "scaleGaps": ["gap 1", "gap 2"],
+    "industryGaps": ["gap 1", "gap 2"],
+    "immediateStep": "6-12 month role with competency added",
+    "intermediateStep": "2-3 year role with layered competency",
+    "ultimateGoal": "5+ year realistic target role",
+    "credibilityExpansion": ["action 1", "action 2"],
+    "networkRepositioning": ["action 1", "action 2"],
+    "narrativeReframing": ["action 1", "action 2"],
+    "skillGapFilling": ["action 1", "action 2"],
+    "alignmentStatement": "Complete CURRENT → TARGET → PATHWAY statement",
+    "timelineReality": "X-year journey with readiness timeframe",
+    "positioningScore": number (1-5 based on checklist score),
+    "thirtyDayActions": ["action 1", "action 2"],
+    "ninetyDayMilestones": ["milestone 1", "milestone 2"],
+    "sixMonthMetrics": ["metric 1", "metric 2"],
     "confidence": number (1-100),
-    "reasoning": "explanation of why this is complete or not"
+    "reasoning": "explanation of completion status and what key deliverables were achieved"
   }
-}`;
+}
+
+Mark shouldComplete as true ONLY if ALL completion criteria are satisfied with specific, actionable content (no generic placeholders).`;
     }
 
     // Call Claude to analyze completion
