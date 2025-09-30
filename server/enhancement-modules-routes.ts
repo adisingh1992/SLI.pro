@@ -108,62 +108,98 @@ Rules for completion (ALL must be satisfied for shouldComplete=true):
 If these criteria aren't fully met, set shouldComplete=false and indicate what's missing in reasoning.`;
     } else if (moduleCode === 'B') {
       // Module B: Network Position Mapping analysis
-      analysisPrompt = `You are evaluating a Module B "Network Position Mapping Framework" coaching conversation focused on strategic relationships and influence analysis. This follows a structured framework from network audit through strategic action planning. Analyze the conversation transcript to determine if the module is complete.
+      analysisPrompt = `You are evaluating a Network Positioning & Relationship Strategy coaching conversation aligned to the “Personal Brand & Network Positioning Coach” system prompt (LinkedIn + strategic network positioning). Analyze the transcript to determine if the module is complete.
 
 Conversation Messages:
 ${messages.map(msg => `${msg.role.toUpperCase()}: ${msg.content}`).join('\n\n')}
 
-The coaching framework covers these steps:
-1) Network Audit: Quality over Quantity assessment (connection count, composition, decision-maker %)
-2) Positioning vs. Networking Diagnosis (gap between current network and target role)
-3) Strategic Gap Identification (who SHOULD be in network based on functional identity)
-4) "Who Needs to Hear Your Story" Strategy (target audience identification)
-5) Relationship Development Strategy (Tier 1/2/3 prioritization system)
-6) Value-First Connection Strategy (offering insight, not asking favors)
-7) Network Expansion Tactics (advocates identification, content engagement strategy)
-8) Action Plan Lock-In (Top 10 targets, 30/60/90-day milestones)
+The coaching framework you must check for (summarize evidence only from the transcript):
+
+Network Position Audit (quality > quantity): current composition, target-industry %, decision-maker %, recent activity.
+
+Positioning vs Networking Diagnosis: explicit gap between who they need (for their role) vs who they currently have.
+
+Functional Identity Anchor: one clear primary function (Finance, Operations, Sales, Marketing, or Product).
+
+Ecosystem Mapping & Strategic Gaps: missing decision-makers, influencers, peers, mentors by title/role/company.
+
+“Who Needs to Hear Your Story First?” Targeting: named titles/companies (or people) most likely to act.
+
+Tiered Relationship Strategy: Top-10 (Tier 1) decision-makers, plus Tier 2 and Tier 3 prioritization.
+
+Value-First Connection Approach: outreach framed as specific insight/help, not favors; presence of concrete message patterns.
+
+Content-as-Networking Tactics: commenting/sharing/creation plan that supports outreach (phased if present).
+
+Action Plan & Metrics: a concrete 30-day plan (weekly steps), plus measurable 30/60/90-day success metrics (quant + qual).
 
 Evaluate completion based on:
-- Has a network audit been conducted with specific numbers/percentages?
-- Has the positioning gap been diagnosed (current vs. target network composition)?
-- Are strategic gaps clearly identified with specific titles/roles?
-- Has target audience been identified with specificity (names, titles, companies)?
-- Is there a clear Tier 1/2/3 prioritization with at least 10 Tier 1 targets?
-- Are outreach strategies defined (templates, engagement tactics)?
-- Is there a concrete action plan with measurable 30/60/90-day milestones?
+
+Has a network position audit been conducted with specific numbers/percentages (e.g., target-industry %, decision-maker %)?
+
+Has the positioning gap been diagnosed (current vs target composition)?
+
+Is functional identity clearly locked to ONE of the five functions?
+
+Are strategic gaps identified with specific titles/roles/companies?
+
+Is there a clear Tier 1/2/3 prioritization with at least 10 Tier-1 decision-makers?
+
+Are value-first outreach strategies defined (message patterns/templates; engagement tactics)?
+
+Is there a concrete action plan (at minimum a 30-day weekly plan) plus measurable 30/60/90-day success metrics?
+
+Evidence rules:
+
+Base judgments ONLY on transcript evidence. Do not invent details.
+
+If evidence is partial or contradictory, keep confidence low and mark missing pieces in reasoning.
+
+Lists (targets/templates/metrics) should reflect what the transcript actually provides; otherwise leave arrays empty and explain gaps.
 
 Respond in STRICT JSON only. Return only one JSON object, no backticks, no comments, no prose.
 
 Required schema:
 {
-  "shouldComplete": boolean,
-  "completionData": {
-    "brandClaim": string,
-    "networkAuditSummary": string,
-    "positioningGap": string,
-    "functionalIdentity": string,
-    "tier1Targets": string[],
-    "strategicGaps": string[],
-    "valueProposition": string,
-    "outreachTemplates": string[],
-    "actionPlan": string[],
-    "successMetrics": string[],
-    "confidence": number,
-    "reasoning": string
-  }
+"shouldComplete": boolean,
+"completionData": {
+"brandClaim": string,
+"functionalIdentity": string,
+"psychologicalBarriers": string[],
+"digitalPresenceAudit": string,
+"networkAuditSummary": string,
+"positioningGap": string,
+"tier1Targets": string[],
+"tier2Targets": string[],
+"strategicGaps": string[],
+"valueProposition": string,
+"outreachTemplates": string[],
+"contentStrategy": string,
+"profileOptimization": string[],
+"thirtyDayPlan": string[],
+"successMetrics": string[],
+"confidence": number,
+"reasoning": string
+}
 }
 
 Rules for completion (ALL must be satisfied for shouldComplete=true):
-- Network audit completed with specific findings about composition and gaps
-- Functional identity clearly locked (one of five functions)
-- Positioning gap diagnosed ("You want X but your network is Y")
-- At least 8-10 specific Tier 1 decision-maker targets identified
-- Value proposition articulated based on their credibility
-- Outreach approaches defined with specific tactics
-- Action plan includes concrete 30/60/90-day milestones
-- Success metrics defined
 
-If these criteria aren't fully met, set shouldComplete=false and indicate what's missing in reasoning.`;
+Network audit completed with specific findings about composition and gaps (include any stated %s).
+
+Functional identity clearly locked (one of five functions).
+
+Positioning gap diagnosed (“You want X but your network is Y”).
+
+≥10 specific Tier-1 decision-maker targets identified (names or titles+companies).
+
+Value proposition articulated (“why you / why now” for the targets).
+
+Outreach approaches defined with concrete message patterns/templates and engagement tactics.
+
+Action plan includes a concrete 30-day plan (weekly steps) AND measurable 30/60/90-day success metrics.
+
+If any criterion is missing, set shouldComplete=false and use reasoning to state exactly what’s missing.`;
     } else if (moduleCode === 'C') {
       // Module C: Career Aspiration Alignment analysis
       analysisPrompt = `You are evaluating a Module C "Career Aspiration Alignment Framework" coaching conversation focused on long-term goals and positioning refinement. Use the conversation transcript to determine completion.
@@ -215,23 +251,73 @@ Analyze this conversation and determine if the module is complete. Return a JSON
       
       const analysisResult = JSON.parse(cleanedText);
       
-      // Post-parse validation for Module B
+      // Post-parse validation for Module B - check for comprehensive deliverables
       if (moduleCode === 'B' && analysisResult.completionData) {
         const data = analysisResult.completionData;
         
-        // Validate required fields exist and are correct types
+        // Check brand claim
+        if (!data.brandClaim || typeof data.brandClaim !== 'string' || data.brandClaim.length < 10) {
+          console.log(`[Module B] Incomplete - needs clear brand claim / Starbucks Line`);
+          return { shouldComplete: false };
+        }
+        
+        // Check functional identity
+        if (!data.functionalIdentity || typeof data.functionalIdentity !== 'string') {
+          console.log(`[Module B] Incomplete - needs functional identity locked`);
+          return { shouldComplete: false };
+        }
+        
+        // Check psychological barriers addressed
+        if (!data.psychologicalBarriers || !Array.isArray(data.psychologicalBarriers) || data.psychologicalBarriers.length < 1) {
+          console.log(`[Module B] Incomplete - needs psychological barriers identified`);
+          return { shouldComplete: false };
+        }
+        
+        // Check network audit
+        if (!data.networkAuditSummary || typeof data.networkAuditSummary !== 'string' || data.networkAuditSummary.length < 20) {
+          console.log(`[Module B] Incomplete - needs network audit with specific findings`);
+          return { shouldComplete: false };
+        }
+        
+        // Check Tier 1 targets
         if (!data.tier1Targets || !Array.isArray(data.tier1Targets) || data.tier1Targets.length < 8) {
           console.log(`[Module B] Incomplete - needs at least 8 Tier 1 targets, got ${data.tier1Targets?.length || 0}`);
           return { shouldComplete: false };
         }
         
-        if (!data.actionPlan || !Array.isArray(data.actionPlan) || data.actionPlan.length < 3) {
-          console.log(`[Module B] Incomplete - needs concrete action plan with milestones`);
+        // Check Tier 2 targets
+        if (!data.tier2Targets || !Array.isArray(data.tier2Targets) || data.tier2Targets.length < 3) {
+          console.log(`[Module B] Incomplete - needs at least 3 Tier 2 connectors`);
           return { shouldComplete: false };
         }
         
-        if (!data.functionalIdentity || typeof data.functionalIdentity !== 'string') {
-          console.log(`[Module B] Incomplete - needs clear functional identity`);
+        // Check outreach templates
+        if (!data.outreachTemplates || !Array.isArray(data.outreachTemplates) || data.outreachTemplates.length < 2) {
+          console.log(`[Module B] Incomplete - needs at least 2 outreach templates`);
+          return { shouldComplete: false };
+        }
+        
+        // Check content strategy
+        if (!data.contentStrategy || typeof data.contentStrategy !== 'string' || data.contentStrategy.length < 20) {
+          console.log(`[Module B] Incomplete - needs content strategy defined`);
+          return { shouldComplete: false };
+        }
+        
+        // Check profile optimization
+        if (!data.profileOptimization || !Array.isArray(data.profileOptimization) || data.profileOptimization.length < 3) {
+          console.log(`[Module B] Incomplete - needs profile optimization recommendations`);
+          return { shouldComplete: false };
+        }
+        
+        // Check 30-day plan
+        if (!data.thirtyDayPlan || !Array.isArray(data.thirtyDayPlan) || data.thirtyDayPlan.length < 4) {
+          console.log(`[Module B] Incomplete - needs 30-day plan with weekly milestones (at least 4)`);
+          return { shouldComplete: false };
+        }
+        
+        // Check success metrics
+        if (!data.successMetrics || !Array.isArray(data.successMetrics) || data.successMetrics.length < 3) {
+          console.log(`[Module B] Incomplete - needs success metrics defined`);
           return { shouldComplete: false };
         }
       }
