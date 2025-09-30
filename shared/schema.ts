@@ -632,7 +632,42 @@ export const enhancementModules = pgTable("enhancement_modules", {
     };
     relationshipStrategy?: string[];
     positioningPlan?: string[];
-    // Module C: Career Aspiration Alignment completion criteria
+    // Module B comprehensive fields (new schema)
+    functionalIdentity?: string;
+    psychologicalBarriers?: string[];
+    digitalPresenceAudit?: string;
+    networkAuditSummary?: string;
+    positioningGap?: string;
+    tier1Targets?: string[];
+    tier2Targets?: string[];
+    strategicGaps?: string[];
+    valueProposition?: string;
+    outreachTemplates?: string[];
+    profileOptimization?: string[];
+    thirtyDayPlan?: string[];
+    // Module C: Career Aspiration Alignment comprehensive completion criteria
+    backwardsNarrative?: string; // 25-year aspiration narrative
+    currentPositioning?: string; // Current credibility + function + core story
+    targetRole?: string; // Target role/impact description
+    tierClassification?: "Tier 1" | "Tier 2" | "Tier 3"; // Advancement tier (Tier 1: same path, Tier 2: single pivot, Tier 3: Earth-to-Moon)
+    experienceGaps?: string[]; // Missing experience competencies
+    functionalGaps?: string[]; // Functional ownership gaps
+    scaleGaps?: string[]; // Scale/complexity gaps
+    industryGaps?: string[]; // Industry domain gaps
+    immediateStep?: string; // 6-12 month next role with competency added
+    intermediateStep?: string; // 2-3 year role with layered competency
+    ultimateGoal?: string; // 5+ year realistic target role
+    credibilityExpansion?: string[]; // Content/projects for target domain
+    networkRepositioning?: string[]; // Network shift actions
+    narrativeReframing?: string[]; // Transferable skills messaging
+    skillGapFilling?: string[]; // Specific skills to acquire
+    alignmentStatement?: string; // Complete Current → Target → Pathway statement
+    timelineReality?: string; // X-year journey with readiness timeframe
+    positioningScore?: number; // Alignment score (1-5 based on checklist)
+    thirtyDayActions?: string[]; // 30-day immediate actions
+    ninetyDayMilestones?: string[]; // 90-day progress markers
+    sixMonthMetrics?: string[]; // 6-month success metrics
+    // Legacy Module C fields (backwards compatibility)
     aspirationalGoals?: string[];
     currentPositionGaps?: string[];
     alignmentStrategy?: string[];
