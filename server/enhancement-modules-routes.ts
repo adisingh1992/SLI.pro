@@ -271,7 +271,9 @@ Extract these fields from the conversation and return JSON:
   }
 }
 
-Mark shouldComplete as true ONLY if ALL completion criteria are satisfied with specific, actionable content (no generic placeholders).`;
+Mark shouldComplete as true ONLY if ALL completion criteria are satisfied with specific, actionable content (no generic placeholders).
+
+RETURN STRICT JSON ONLY. No prose, no explanation, just the JSON object.`;
     }
 
     // Call Claude to analyze completion
