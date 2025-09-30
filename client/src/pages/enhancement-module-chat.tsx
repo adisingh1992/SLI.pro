@@ -410,7 +410,7 @@ export default function EnhancementModuleChatPage() {
                         ? 'bg-primary text-primary-foreground' 
                         : 'bg-muted text-muted-foreground'
                     }`}>
-                      {message.role === 'user' ? 'U' : 'M'}
+                      {message.role === 'user' ? 'U' : 'S'}
                     </div>
                     <div className={`flex-1 ${message.role === 'user' ? 'max-w-[calc(100%-6rem)]' : 'max-w-[calc(100%-6rem)]'}`}>
                       <div className={`rounded-lg p-4 break-words ${
@@ -423,7 +423,7 @@ export default function EnhancementModuleChatPage() {
                       <p className={`text-xs text-muted-foreground mt-1 ${
                         message.role === 'user' ? 'text-right' : ''
                       }`}>
-                        {message.role === 'user' ? 'You' : 'Module'} • {new Date(message.createdAt).toLocaleTimeString()}
+                        {message.role === 'user' ? 'You' : 'SLI'} • {new Date(message.createdAt).toLocaleTimeString()}
                       </p>
                     </div>
                   </div>
@@ -439,7 +439,7 @@ export default function EnhancementModuleChatPage() {
                       <div className="bg-muted rounded-lg p-4 mr-8 break-words">
                         <p className="text-sm break-words">{streamingResponse}</p>
                       </div>
-                      <p className="text-xs text-muted-foreground mt-1">Module • typing...</p>
+                      <p className="text-xs text-muted-foreground mt-1">SLI • typing...</p>
                     </div>
                   </div>
                 )}

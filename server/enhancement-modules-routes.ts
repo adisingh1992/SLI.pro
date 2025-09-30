@@ -21,7 +21,7 @@ function getInitialGuidanceMessage(moduleCode: string): string | null {
     case 'A':
       return "People scan a LinkedIn profile in 4–10 seconds. Let's do that with yours. What immediate impression do you want them to have—what do you DO and what's your expertise?";
     case 'B':
-      return "Welcome to Module B: Network Position Mapping Framework. We'll analyze your strategic relationships and influence patterns. Let's begin by mapping your current network position and identifying strategic opportunities.";
+      return "Quality over quantity. You need 50 relevant connections, not 500 random ones. Let's start: How many connections do you currently have on LinkedIn? (Rough estimate is fine)";
     case 'C':
       return "Welcome to Module C: Career Aspiration Alignment Framework. I'll help you align your long-term goals with your current positioning reality. Let's start by exploring your aspirational goals and identifying any gaps.";
     default:
@@ -108,26 +108,80 @@ Rules for completion (ALL must be satisfied for shouldComplete=true):
 If these criteria aren't fully met, set shouldComplete=false and indicate what's missing in reasoning.`;
     } else if (moduleCode === 'B') {
       // Module B: Network Position Mapping analysis
-      analysisPrompt = `You are evaluating a Module B "Network Position Mapping Framework" coaching conversation focused on strategic relationships and influence analysis. Use the conversation transcript to determine completion.
+      analysisPrompt = `You are evaluating a Module B "Network Position Mapping Framework" coaching conversation focused on strategic relationships and influence analysis. This follows a structured framework from network audit through strategic action planning. Analyze the conversation transcript to determine if the module is complete.
 
 Conversation Messages:
 ${messages.map(msg => `${msg.role.toUpperCase()}: ${msg.content}`).join('\n\n')}
 
-Analyze this conversation and determine if the module is complete. Return a JSON object with:
+The coaching framework covers these steps:
+1) Network Audit: Quality over Quantity assessment (connection count, composition, decision-maker %)
+2) Positioning vs. Networking Diagnosis (gap between current network and target role)
+3) Strategic Gap Identification (who SHOULD be in network based on functional identity)
+4) "Who Needs to Hear Your Story" Strategy (target audience identification)
+5) Relationship Development Strategy (Tier 1/2/3 prioritization system)
+6) Value-First Connection Strategy (offering insight, not asking favors)
+7) Network Expansion Tactics (advocates identification, content engagement strategy)
+8) Action Plan Lock-In (Top 10 targets, 30/60/90-day milestones)
+
+Evaluate completion based on:
+- Has a network audit been conducted with specific numbers/percentages?
+- Has the positioning gap been diagnosed (current vs. target network composition)?
+- Are strategic gaps clearly identified with specific titles/roles?
+- Has target audience been identified with specificity (names, titles, companies)?
+- Is there a clear Tier 1/2/3 prioritization with at least 10 Tier 1 targets?
+- Are outreach strategies defined (templates, engagement tactics)?
+- Is there a concrete action plan with measurable 30/60/90-day milestones?
+
+Respond in STRICT JSON only (no prose, no code fences) with EXACTLY this schema:
+
 {
   "shouldComplete": boolean,
   "completionData": {
-    "networkAnalysis": {
-      "currentPosition": "description",
-      "strategicGaps": ["gap1", "gap2"],
-      "influenceMapping": ["influence1", "influence2"]
+    "networkAudit": {
+      "connectionCount": string, // e.g., "1000-2000" or specific number
+      "targetIndustryPercentage": string, // % in target industry
+      "decisionMakerPercentage": string, // % who can hire them
+      "currentComposition": string, // description of current network makeup
+      "positioningGap": string // the diagnosed gap statement
     },
-    "relationshipStrategy": ["strategy1", "strategy2"],
-    "positioningPlan": ["plan1", "plan2"],
-    "confidence": number (1-100),
-    "reasoning": "explanation of why this is complete or not"
+    "strategicGaps": {
+      "missingDecisionMakers": string[], // specific roles they should connect with
+      "targetCompanies": string[], // companies with zero connections
+      "ecosystemGaps": string[] // influencers, mentors, peers missing
+    },
+    "tierStrategy": {
+      "tier1Targets": string[], // top 10 people who can directly hire them
+      "tier2Targets": string[], // 20 people who can make introductions
+      "tier3Engagement": string[] // peers and content creators to engage with
+    },
+    "outreachPlan": {
+      "valueProposition": string, // their unique insight/expertise to offer
+      "engagementTactics": string[], // specific ways to add value first
+      "contentStrategy": string, // how they'll use content for visibility
+      "templates": string[] // outreach approaches customized to their voice
+    },
+    "actionPlan": {
+      "thirtyDayGoals": string[], // specific networking actions for first 30 days
+      "sixtyDayGoals": string[], // actions for days 31-60
+      "ninetyDayGoals": string[], // actions for days 61-90
+      "successMetrics": string[] // how to measure networking effectiveness
+    },
+    "confidence": number, // 0-100 completion confidence
+    "reasoning": string // brief explanation of completion status
   }
-}`;
+}
+
+Rules for completion (ALL must be satisfied for shouldComplete=true):
+- Network audit completed with specific connection count and composition percentages
+- Positioning gap clearly diagnosed ("You want X but your network is Y")
+- At least 10 specific Tier 1 decision-maker targets identified by name/title/company
+- Strategic gaps identified with specific roles and companies
+- Value proposition clearly articulated based on their functional credibility
+- Outreach tactics defined with specific engagement strategies
+- Action plan includes concrete 30/60/90-day networking milestones
+- Success metrics defined for measuring network positioning progress
+
+If these criteria aren't fully met, set shouldComplete=false and indicate what's missing in reasoning.`;
     } else if (moduleCode === 'C') {
       // Module C: Career Aspiration Alignment analysis
       analysisPrompt = `You are evaluating a Module C "Career Aspiration Alignment Framework" coaching conversation focused on long-term goals and positioning refinement. Use the conversation transcript to determine completion.
@@ -359,8 +413,77 @@ LinkedIn: Not available in profile
 Industry focus: ${userProfile.experiences?.[0]?.description?.substring(0, 50) || 'Not specified'}` : 'Limited profile information available'}`;
       };
 
+      // Generate Module B-specific system prompt with Network Position Mapping coaching
+      const getModuleBSystemPrompt = () => {
+        return `You are a Network Position Mapping & Strategic Relationship Coach. Your mission: shift the client from random networking to strategic positioning—diagnosing their network composition, identifying gaps, and building a Tier 1/2/3 outreach plan that aligns with their functional credibility.
+
+STYLE
+- Warm, direct, practical. Plain English. One short question at a time.
+- Diagnostic before prescriptive. Show them the gap before offering the fix.
+- Keep pressure on specificity (titles, companies, names). No generic "people in my industry."
+
+HIGH-LEVEL FLOW (keep it conversational; move forward when a step is solid)
+1) Network Audit: Quality Over Quantity
+   - Current connection count (meaningless alone)
+   - Composition analysis: % in target industry vs current industry
+   - % who could hire you for [FUNCTIONAL_IDENTITY] roles
+   - % decision-makers vs peers vs random connections
+
+2) Positioning vs. Networking Diagnosis
+   - The gap: "You want [TARGET_ROLE] but your network is [CURRENT_COMPOSITION]"
+   - Examples: Product Marketing role but 80% Operations network = positioning problem
+   - Core insight: "That's a positioning problem, not a connection problem"
+
+3) Strategic Gap Identification
+   - Who SHOULD be in their network based on [FUNCTIONAL_IDENTITY]
+   - Decision-maker mapping by function (COOs for Ops, CMOs for Marketing, CFOs for Finance, etc.)
+   - Industry ecosystem gaps: Decision-makers, Influencers, Peers, Mentors
+   - Missing connections at target companies
+
+4) "Who Needs to Hear Your Story" Strategy
+   - Target audience identification (specific titles, companies)
+   - Who has authority to hire or refer?
+   - Which industry leaders should know they exist?
+   - Strategic storytelling: positioning their proof story to right audience
+
+5) Relationship Development Strategy - Tier System
+   TIER 1 (Top 10): Can directly hire you; influential; active on LinkedIn
+   TIER 2 (Next 20): One degree from Tier 1; can make strategic introductions
+   TIER 3 (Next 20): Ecosystem engagement; peers; content creators in your domain
+
+6) Value-First Connection Strategy
+   - Not asking for favors; offering unique perspective
+   - Demonstrate insight through content engagement first
+   - Specific value based on proof story
+   - Strategic conversation requests, not "pick your brain"
+
+7) Network Expansion Tactics
+   - Identify current advocates (who already sees them as expert)
+   - Content engagement as networking (strategic commenting/sharing)
+   - Strategic outreach templates (cold outreach, conference follow-up, content-based)
+
+8) Action Plan Lock-In
+   - Top 10 Tier 1 connections to target
+   - 30/60/90-day networking milestones
+   - Content engagement strategy
+   - Measurable success metrics
+
+Ask one specific question at a time. Keep responses SHORT and focused. Use their functional identity and credibility domain to make connections strategic, not random.
+
+Current user context:
+${userProfile ? `Name: ${userProfile.firstName} ${userProfile.lastName}
+Current role: ${userProfile.experiences?.[0]?.title || 'Not specified'} at ${userProfile.experiences?.[0]?.company || 'Not specified'}
+Functional identity: ${userProfile.experiences?.[0]?.title?.includes('Product') ? 'Product' : 
+  userProfile.experiences?.[0]?.title?.includes('Marketing') ? 'Marketing' :
+  userProfile.experiences?.[0]?.title?.includes('Sales') || userProfile.experiences?.[0]?.title?.includes('Business Development') ? 'Sales' :
+  userProfile.experiences?.[0]?.title?.includes('Finance') || userProfile.experiences?.[0]?.title?.includes('CFO') ? 'Finance' :
+  userProfile.experiences?.[0]?.title?.includes('Operations') || userProfile.experiences?.[0]?.title?.includes('COO') ? 'Operations' : 'To be determined'}
+Industry: ${userProfile.experiences?.[0]?.company || 'Not specified'}` : 'Limited profile information available'}`;
+      };
+
       // Generate system prompt based on module
       const systemPrompt = moduleCode === 'A' ? getModuleASystemPrompt() : 
+        moduleCode === 'B' ? getModuleBSystemPrompt() :
         `You are a professional coaching assistant for Enhancement Module ${moduleCode}. Provide thoughtful, actionable guidance.`;
 
       try {
