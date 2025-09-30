@@ -59,7 +59,8 @@ export const SESSION_3_CONFIG: SessionTimerConfig = {
 export function useSessionTimer(
   config: SessionTimerConfig = DEFAULT_FOUNDATION_SESSION_CONFIG,
   sessionNumber?: number,
-  initialTimerElapsed: number = 0
+  initialTimerElapsed: number = 0,
+  customSaveCallback?: (elapsed: number) => Promise<void>
 ) {
   const [startTime, setStartTime] = useState<number | null>(null);
   const [timeElapsed, setTimeElapsed] = useState<number>(initialTimerElapsed);
@@ -96,17 +97,22 @@ export function useSessionTimer(
 
   // Save timer elapsed time to database
   const saveTimerToDatabase = useCallback(async (elapsed: number) => {
-    if (sessionNumber && elapsed !== lastSavedTime) {
+    if (elapsed !== lastSavedTime) {
       try {
-        await apiRequest('PATCH', `/api/foundation-sessions/${sessionNumber}/timer`, {
-          timerElapsed: elapsed
-        });
+        // Use custom callback if provided, otherwise use default Foundation Session save
+        if (customSaveCallback) {
+          await customSaveCallback(elapsed);
+        } else if (sessionNumber) {
+          await apiRequest('PATCH', `/api/foundation-sessions/${sessionNumber}/timer`, {
+            timerElapsed: elapsed
+          });
+        }
         setLastSavedTime(elapsed);
       } catch (error) {
         console.error('Failed to save timer to database:', error);
       }
     }
-  }, [sessionNumber, lastSavedTime]);
+  }, [customSaveCallback, sessionNumber, lastSavedTime]);
 
   // Start the timer
   const startTimer = useCallback(() => {
@@ -115,8 +121,8 @@ export function useSessionTimer(
       setIsRunning(true);
       setPhase(calculatePhase(timeElapsed));
       
-      // Start save interval - save every 10 seconds
-      if (sessionNumber && !saveIntervalRef.current) {
+      // Start save interval - save every 10 seconds (if custom callback or sessionNumber provided)
+      if ((customSaveCallback || sessionNumber) && !saveIntervalRef.current) {
         saveIntervalRef.current = setInterval(() => {
           const currentElapsed = timeElapsedRef.current;
           const currentLastSaved = lastSavedTimeRef.current;
@@ -126,7 +132,7 @@ export function useSessionTimer(
         }, 10000);
       }
     }
-  }, [isRunning, timeElapsed, calculatePhase, sessionNumber, lastSavedTime, saveTimerToDatabase]);
+  }, [isRunning, timeElapsed, calculatePhase, customSaveCallback, sessionNumber, lastSavedTime, saveTimerToDatabase]);
 
   // Stop the timer
   const stopTimer = useCallback(() => {

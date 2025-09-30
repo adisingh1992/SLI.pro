@@ -9,84 +9,46 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import { Loader2, Send, ArrowLeft, Lock, CheckCircle, MessageSquare, AlertCircle, Clock, CheckCircle2 } from "lucide-react";
+import { Loader2, Send, ArrowLeft, Lock, CheckCircle, MessageSquare, AlertCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import type { EnhancementModule, EnhancementModuleMessage } from '@shared/schema';
+import { SessionTimer } from "@/components/ui/session-timer";
+import type { SessionTimerConfig } from '@/hooks/use-session-timer';
 
-// Simple timer component for Enhancement Modules
-interface EnhancementModuleTimerProps {
-  isActive: boolean;
-  isCompleted: boolean;
-  initialTimerElapsed: number;
-  onTimerUpdate: (elapsed: number) => void;
-}
+// Timer configurations for Enhancement Modules
+const MODULE_A_TIMER_CONFIG: SessionTimerConfig = {
+  targetMinutes: 15,
+  warningMinutes: 12,
+  messages: {
+    initial: "Recommended time: 15-20 minutes (thoughtful responses improve your LinkedIn strategy)",
+    warning: "About 3 minutes remaining - focus on your key content challenges",
+    overtime: "No rush - quality insights create better positioning outcomes",
+    completed: "Digital Behavior Analysis complete - your LinkedIn strategy is optimized"
+  }
+};
 
-function EnhancementModuleTimer({ isActive, isCompleted, initialTimerElapsed, onTimerUpdate }: EnhancementModuleTimerProps) {
-  const [timeElapsed, setTimeElapsed] = useState(initialTimerElapsed);
-  const intervalRef = useRef<NodeJS.Timeout | null>(null);
-  const lastUpdateRef = useRef<number>(initialTimerElapsed);
+const MODULE_B_TIMER_CONFIG: SessionTimerConfig = {
+  targetMinutes: 12,
+  warningMinutes: 10,
+  messages: {
+    initial: "Recommended time: 12-15 minutes (detailed answers reveal network positioning gaps)",
+    warning: "About 2 minutes remaining - identify your key relationship targets",
+    overtime: "No rush - thorough analysis creates stronger relationship strategies",
+    completed: "Network Position Mapping complete - your relationship strategy is clear"
+  }
+};
 
-  useEffect(() => {
-    // Always set the timer to the saved value when the component mounts or when initialTimerElapsed changes
-    console.log('Timer initializing with elapsed time:', initialTimerElapsed);
-    setTimeElapsed(initialTimerElapsed);
-    lastUpdateRef.current = initialTimerElapsed; // Reset the update reference too
-  }, [initialTimerElapsed]);
-
-  useEffect(() => {
-    if (isActive && !isCompleted) {
-      intervalRef.current = setInterval(() => {
-        setTimeElapsed(prev => {
-          const newElapsed = prev + 1;
-          
-          // Call onTimerUpdate every 10 seconds
-          if (newElapsed - lastUpdateRef.current >= 10) {
-            onTimerUpdate(newElapsed);
-            lastUpdateRef.current = newElapsed;
-          }
-          
-          return newElapsed;
-        });
-      }, 1000);
-    } else {
-      if (intervalRef.current) {
-        clearInterval(intervalRef.current);
-        intervalRef.current = null;
-      }
-    }
-
-    return () => {
-      if (intervalRef.current) {
-        clearInterval(intervalRef.current);
-      }
-    };
-  }, [isActive, isCompleted, onTimerUpdate]);
-
-  const formatTime = (seconds: number): string => {
-    const minutes = Math.floor(seconds / 60);
-    const remainingSeconds = seconds % 60;
-    return `${minutes.toString().padStart(2, '0')}:${remainingSeconds.toString().padStart(2, '0')}`;
-  };
-
-  const getIcon = () => {
-    return isCompleted ? CheckCircle2 : Clock;
-  };
-
-  const getColorClass = () => {
-    return isCompleted ? 'text-green-600' : 'text-blue-600';
-  };
-
-  const Icon = getIcon();
-
-  return (
-    <div className={`flex items-center gap-2 ${getColorClass()}`}>
-      <Icon className="h-4 w-4" />
-      <span className="font-medium">{formatTime(timeElapsed)}</span>
-      {isCompleted && <span className="text-sm text-green-600">Complete</span>}
-    </div>
-  );
-}
+const MODULE_C_TIMER_CONFIG: SessionTimerConfig = {
+  targetMinutes: 10,
+  warningMinutes: 8,
+  messages: {
+    initial: "Recommended time: 10-15 minutes (clear goals improve alignment)",
+    warning: "About 2 minutes remaining - clarify your top aspirational goals",
+    overtime: "No rush - thoughtful planning strengthens career positioning",
+    completed: "Career Aspiration Alignment complete - your goals are aligned"
+  }
+};
 
 type ModuleWithMessages = {
   module: EnhancementModule;
@@ -314,6 +276,21 @@ export default function EnhancementModuleChatPage() {
     };
   };
 
+  // Get timer config for the current module
+  const getTimerConfig = (): SessionTimerConfig => {
+    if (moduleCode === 'A') return MODULE_A_TIMER_CONFIG;
+    if (moduleCode === 'B') return MODULE_B_TIMER_CONFIG;
+    if (moduleCode === 'C') return MODULE_C_TIMER_CONFIG;
+    return MODULE_A_TIMER_CONFIG; // Default
+  };
+
+  // Timer save callback
+  const handleTimerSave = async (elapsed: number) => {
+    if (module.status === 'in_progress') {
+      updateTimerMutation.mutate(elapsed);
+    }
+  };
+
   const moduleInfo = getModuleGuidance();
 
   if (isLoading) {
@@ -502,21 +479,13 @@ export default function EnhancementModuleChatPage() {
             <h3 className="font-semibold text-sm text-muted-foreground uppercase tracking-wide">Module Info</h3>
             
             {/* Module Timer */}
-            {(module.status === 'in_progress' || module.status === 'completed') && (
-              <div className="space-y-3">
-                <EnhancementModuleTimer 
-                  isActive={module.status === 'in_progress'}
-                  isCompleted={module.status === 'completed'}
-                  initialTimerElapsed={module.timerElapsed || 0}
-                  onTimerUpdate={(elapsed: number) => {
-                    // Update timer in database every 10 seconds
-                    if (module.status === 'in_progress') {
-                      updateTimerMutation.mutate(elapsed);
-                    }
-                  }}
-                />
-              </div>
-            )}
+            <SessionTimer
+              config={getTimerConfig()}
+              isSessionActive={module.status === 'in_progress'}
+              isSessionCompleted={module.status === 'completed'}
+              initialTimerElapsed={module.timerElapsed || 0}
+              onTimerSave={handleTimerSave}
+            />
 
 
             {/* Function Progress for Enhancement Modules */}

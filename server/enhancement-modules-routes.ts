@@ -1,9 +1,12 @@
 import { Express, Request, Response, NextFunction } from "express";
 import { storage } from "./storage";
-import { insertEnhancementModuleMessageSchema, updateEnhancementModuleSchema } from "../shared/schema";
+import {
+  insertEnhancementModuleMessageSchema,
+  updateEnhancementModuleSchema,
+} from "../shared/schema";
 import Anthropic from "@anthropic-ai/sdk";
 
-const CLAUDE_MODEL = process.env.CLAUDE_MODEL || 'claude-3-7-sonnet-20250219';
+const CLAUDE_MODEL = process.env.CLAUDE_MODEL || "claude-3-7-sonnet-20250219";
 const anthropic = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY,
 });
@@ -18,11 +21,11 @@ const isAuthenticated = (req: Request, res: Response, next: NextFunction) => {
 // Get initial guidance message for each module
 function getInitialGuidanceMessage(moduleCode: string): string | null {
   switch (moduleCode) {
-    case 'A':
+    case "A":
       return "People scan a LinkedIn profile in 4–10 seconds. Let's do that with yours. What immediate impression do you want them to have—what do you DO and what's your expertise?";
-    case 'B':
+    case "B":
       return "Quality over quantity. You need 50 relevant connections, not 500 random ones. Let's start: How many connections do you currently have on LinkedIn? (Rough estimate is fine)";
-    case 'C':
+    case "C":
       return "Welcome to Module C: Career Aspiration Alignment Framework. I'll help you align your long-term goals with your current positioning reality. Let's start by exploring your aspirational goals and identifying any gaps.";
     default:
       return null;
@@ -30,25 +33,30 @@ function getInitialGuidanceMessage(moduleCode: string): string | null {
 }
 
 // Check if an enhancement module should be automatically completed
-async function checkModuleCompletion(moduleCode: string, messages: any[], userProfile: any): Promise<{ shouldComplete: boolean; completionData?: any }> {
-  if (!['A', 'B', 'C'].includes(moduleCode)) {
+async function checkModuleCompletion(
+  moduleCode: string,
+  messages: any[],
+  userProfile: any,
+): Promise<{ shouldComplete: boolean; completionData?: any }> {
+  if (!["A", "B", "C"].includes(moduleCode)) {
     return { shouldComplete: false };
   }
 
   // Check if we have enough conversation for meaningful analysis
-  if (messages.length < 10) { // Need at least 5 back-and-forth exchanges for a complete conversation
+  if (messages.length < 10) {
+    // Need at least 5 back-and-forth exchanges for a complete conversation
     return { shouldComplete: false };
   }
 
   try {
-    let analysisPrompt = '';
-    
-    if (moduleCode === 'A') {
+    let analysisPrompt = "";
+
+    if (moduleCode === "A") {
       // Module A: Digital Behavior Analysis analysis based on the coaching framework
       analysisPrompt = `You are evaluating a Module A "Digital Behavior & LinkedIn Content Strategy" coaching conversation. This follows a specific 12-step framework from profile scanning through action planning. Analyze the conversation transcript to determine if the module is complete.
 
 Conversation Messages:
-${messages.map(msg => `${msg.role.toUpperCase()}: ${msg.content}`).join('\n\n')}
+${messages.map((msg) => `${msg.role.toUpperCase()}: ${msg.content}`).join("\n\n")}
 
 The coaching framework covers these steps:
 1) 4–10s Profile Scan + "Starbucks Line" test
@@ -106,12 +114,12 @@ Rules for completion (ALL must be satisfied for shouldComplete=true):
 - User has committed to specific behavioral changes and next steps
 
 If these criteria aren't fully met, set shouldComplete=false and indicate what's missing in reasoning.`;
-    } else if (moduleCode === 'B') {
+    } else if (moduleCode === "B") {
       // Module B: Network Position Mapping analysis
       analysisPrompt = `You are evaluating a Network Positioning & Relationship Strategy coaching conversation aligned to the “Personal Brand & Network Positioning Coach” system prompt (LinkedIn + strategic network positioning). Analyze the transcript to determine if the module is complete.
 
 Conversation Messages:
-${messages.map(msg => `${msg.role.toUpperCase()}: ${msg.content}`).join('\n\n')}
+${messages.map((msg) => `${msg.role.toUpperCase()}: ${msg.content}`).join("\n\n")}
 
 The coaching framework you must check for (summarize evidence only from the transcript):
 
@@ -191,7 +199,7 @@ Functional identity clearly locked (one of five functions).
 
 Positioning gap diagnosed (“You want X but your network is Y”).
 
-≥10 specific Tier-1 decision-maker targets identified (names or titles+companies).
+≥3 specific Tier-1 decision-maker targets identified (names or titles+companies).
 
 Value proposition articulated (“why you / why now” for the targets).
 
@@ -200,12 +208,12 @@ Outreach approaches defined with concrete message patterns/templates and engagem
 Action plan includes a concrete 30-day plan (weekly steps) AND measurable 30/60/90-day success metrics.
 
 If any criterion is missing, set shouldComplete=false and use reasoning to state exactly what’s missing.`;
-    } else if (moduleCode === 'C') {
+    } else if (moduleCode === "C") {
       // Module C: Career Aspiration Alignment analysis
       analysisPrompt = `You are evaluating a Module C "Career Aspiration Alignment Framework" coaching conversation focused on long-term goals and positioning refinement. Use the conversation transcript to determine completion.
 
 Conversation Messages:
-${messages.map(msg => `${msg.role.toUpperCase()}: ${msg.content}`).join('\n\n')}
+${messages.map((msg) => `${msg.role.toUpperCase()}: ${msg.content}`).join("\n\n")}
 
 Analyze this conversation and determine if the module is complete. Return a JSON object with:
 {
@@ -227,268 +235,240 @@ Analyze this conversation and determine if the module is complete. Return a JSON
       max_tokens: 2000,
       messages: [
         {
-          role: 'user',
-          content: analysisPrompt
-        }
-      ]
+          role: "user",
+          content: analysisPrompt,
+        },
+      ],
     });
 
-    const responseText = completion.content[0].type === 'text' ? completion.content[0].text : '';
-    
+    const responseText =
+      completion.content[0].type === "text" ? completion.content[0].text : "";
+
     try {
       // Extract JSON from response - handle potential prose and code fences
       let cleanedText = responseText.trim();
-      
+
       // Remove code fences with flexible whitespace
-      cleanedText = cleanedText.replace(/^```json\s*\n/i, '').replace(/\n\s*```\s*$/i, '');
-      cleanedText = cleanedText.replace(/^```\s*\n/i, '').replace(/\n\s*```\s*$/i, '');
-      
+      cleanedText = cleanedText
+        .replace(/^```json\s*\n/i, "")
+        .replace(/\n\s*```\s*$/i, "");
+      cleanedText = cleanedText
+        .replace(/^```\s*\n/i, "")
+        .replace(/\n\s*```\s*$/i, "");
+
       // Try to find JSON object if there's prose
       const jsonMatch = cleanedText.match(/\{[\s\S]*\}/);
       if (jsonMatch) {
         cleanedText = jsonMatch[0];
       }
-      
+
       const analysisResult = JSON.parse(cleanedText);
-      
-      // Post-parse validation for Module B - check for comprehensive deliverables
-      if (moduleCode === 'B' && analysisResult.completionData) {
-        const data = analysisResult.completionData;
-        
-        // Check brand claim
-        if (!data.brandClaim || typeof data.brandClaim !== 'string' || data.brandClaim.length < 10) {
-          console.log(`[Module B] Incomplete - needs clear brand claim / Starbucks Line`);
-          return { shouldComplete: false };
-        }
-        
-        // Check functional identity
-        if (!data.functionalIdentity || typeof data.functionalIdentity !== 'string') {
-          console.log(`[Module B] Incomplete - needs functional identity locked`);
-          return { shouldComplete: false };
-        }
-        
-        // Check psychological barriers addressed
-        if (!data.psychologicalBarriers || !Array.isArray(data.psychologicalBarriers) || data.psychologicalBarriers.length < 1) {
-          console.log(`[Module B] Incomplete - needs psychological barriers identified`);
-          return { shouldComplete: false };
-        }
-        
-        // Check network audit
-        if (!data.networkAuditSummary || typeof data.networkAuditSummary !== 'string' || data.networkAuditSummary.length < 20) {
-          console.log(`[Module B] Incomplete - needs network audit with specific findings`);
-          return { shouldComplete: false };
-        }
-        
-        // Check Tier 1 targets
-        if (!data.tier1Targets || !Array.isArray(data.tier1Targets) || data.tier1Targets.length < 8) {
-          console.log(`[Module B] Incomplete - needs at least 8 Tier 1 targets, got ${data.tier1Targets?.length || 0}`);
-          return { shouldComplete: false };
-        }
-        
-        // Check Tier 2 targets
-        if (!data.tier2Targets || !Array.isArray(data.tier2Targets) || data.tier2Targets.length < 3) {
-          console.log(`[Module B] Incomplete - needs at least 3 Tier 2 connectors`);
-          return { shouldComplete: false };
-        }
-        
-        // Check outreach templates
-        if (!data.outreachTemplates || !Array.isArray(data.outreachTemplates) || data.outreachTemplates.length < 2) {
-          console.log(`[Module B] Incomplete - needs at least 2 outreach templates`);
-          return { shouldComplete: false };
-        }
-        
-        // Check content strategy
-        if (!data.contentStrategy || typeof data.contentStrategy !== 'string' || data.contentStrategy.length < 20) {
-          console.log(`[Module B] Incomplete - needs content strategy defined`);
-          return { shouldComplete: false };
-        }
-        
-        // Check profile optimization
-        if (!data.profileOptimization || !Array.isArray(data.profileOptimization) || data.profileOptimization.length < 3) {
-          console.log(`[Module B] Incomplete - needs profile optimization recommendations`);
-          return { shouldComplete: false };
-        }
-        
-        // Check 30-day plan
-        if (!data.thirtyDayPlan || !Array.isArray(data.thirtyDayPlan) || data.thirtyDayPlan.length < 4) {
-          console.log(`[Module B] Incomplete - needs 30-day plan with weekly milestones (at least 4)`);
-          return { shouldComplete: false };
-        }
-        
-        // Check success metrics
-        if (!data.successMetrics || !Array.isArray(data.successMetrics) || data.successMetrics.length < 3) {
-          console.log(`[Module B] Incomplete - needs success metrics defined`);
-          return { shouldComplete: false };
-        }
-      }
-      
-      console.log(`[Module ${moduleCode}] Completion check - shouldComplete: ${analysisResult.shouldComplete}, confidence: ${analysisResult.completionData?.confidence || 'N/A'}`);
-      
+
+      console.log(
+        `[Module ${moduleCode}] Completion check - shouldComplete: ${analysisResult.shouldComplete}, confidence: ${analysisResult.completionData?.confidence || "N/A"}`,
+      );
+
       return {
         shouldComplete: analysisResult.shouldComplete,
-        completionData: analysisResult.completionData
+        completionData: analysisResult.completionData,
       };
     } catch (parseError) {
-      console.error(`[Module ${moduleCode}] Failed to parse Claude completion analysis:`, parseError);
-      console.error(`[Module ${moduleCode}] Response preview:`, responseText.substring(0, 200) + '...');
+      console.error(
+        `[Module ${moduleCode}] Failed to parse Claude completion analysis:`,
+        parseError,
+      );
+      console.error(
+        `[Module ${moduleCode}] Response preview:`,
+        responseText.substring(0, 200) + "...",
+      );
       return { shouldComplete: false };
     }
-
   } catch (error) {
-    console.error('Error in checkModuleCompletion:', error);
+    console.error("Error in checkModuleCompletion:", error);
     return { shouldComplete: false };
   }
 }
 
 export function setupEnhancementModulesRoutes(app: Express) {
   // GET /api/enhancement-modules - Get all modules for user
-  app.get('/api/enhancement-modules', isAuthenticated, async (req: Request, res: Response) => {
-    try {
-      const modules = await storage.getEnhancementModulesForUser(req.user!.id);
-      res.json(modules);
-    } catch (error) {
-      console.error('Error fetching enhancement modules:', error);
-      res.status(500).json({ error: 'Failed to fetch enhancement modules' });
-    }
-  });
+  app.get(
+    "/api/enhancement-modules",
+    isAuthenticated,
+    async (req: Request, res: Response) => {
+      try {
+        const modules = await storage.getEnhancementModulesForUser(
+          req.user!.id,
+        );
+        res.json(modules);
+      } catch (error) {
+        console.error("Error fetching enhancement modules:", error);
+        res.status(500).json({ error: "Failed to fetch enhancement modules" });
+      }
+    },
+  );
 
   // GET /api/enhancement-modules/:moduleCode - Get specific module with messages
-  app.get('/api/enhancement-modules/:moduleCode', isAuthenticated, async (req: Request, res: Response) => {
-    try {
-      const { moduleCode } = req.params;
-      
-      if (!['A', 'B', 'C'].includes(moduleCode)) {
-        return res.status(400).json({ error: 'Invalid module code' });
-      }
+  app.get(
+    "/api/enhancement-modules/:moduleCode",
+    isAuthenticated,
+    async (req: Request, res: Response) => {
+      try {
+        const { moduleCode } = req.params;
 
-      const moduleData = await storage.getEnhancementModuleWithMessages(req.user!.id, moduleCode);
-      
-      if (!moduleData) {
-        return res.status(404).json({ error: 'Module not found' });
-      }
+        if (!["A", "B", "C"].includes(moduleCode)) {
+          return res.status(400).json({ error: "Invalid module code" });
+        }
 
-      res.json(moduleData);
-    } catch (error) {
-      console.error('Error fetching enhancement module:', error);
-      res.status(500).json({ error: 'Failed to fetch enhancement module' });
-    }
-  });
+        const moduleData = await storage.getEnhancementModuleWithMessages(
+          req.user!.id,
+          moduleCode,
+        );
+
+        if (!moduleData) {
+          return res.status(404).json({ error: "Module not found" });
+        }
+
+        res.json(moduleData);
+      } catch (error) {
+        console.error("Error fetching enhancement module:", error);
+        res.status(500).json({ error: "Failed to fetch enhancement module" });
+      }
+    },
+  );
 
   // POST /api/enhancement-modules/:moduleCode/start - Start or continue a module
-  app.post('/api/enhancement-modules/:moduleCode/start', isAuthenticated, async (req: Request, res: Response) => {
-    try {
-      const { moduleCode } = req.params;
-      
-      if (!['A', 'B', 'C'].includes(moduleCode)) {
-        return res.status(400).json({ error: 'Invalid module code' });
-      }
+  app.post(
+    "/api/enhancement-modules/:moduleCode/start",
+    isAuthenticated,
+    async (req: Request, res: Response) => {
+      try {
+        const { moduleCode } = req.params;
 
-      // Check if module already exists
-      let module = await storage.getEnhancementModule(req.user!.id, moduleCode);
-      
-      if (!module) {
-        // Create new module
-        module = await storage.createEnhancementModule({
-          userId: req.user!.id,
-          moduleCode: moduleCode as 'A' | 'B' | 'C',
-          status: 'in_progress',
-          startedAt: new Date()
-        });
-
-        // Add initial guidance message
-        const initialMessage = getInitialGuidanceMessage(moduleCode);
-        if (initialMessage) {
-          await storage.createEnhancementModuleMessage({
-            moduleId: module.id,
-            role: 'assistant',
-            content: initialMessage
-          });
+        if (!["A", "B", "C"].includes(moduleCode)) {
+          return res.status(400).json({ error: "Invalid module code" });
         }
-      } else if (module.status === 'available') {
-        // Update status to in_progress if it was available
-        await storage.updateEnhancementModule(module.id, {
-          status: 'in_progress',
-          startedAt: new Date()
-        });
 
-        // Check if module has any messages, if not add initial guidance message
-        const existingMessages = await storage.getEnhancementModuleMessages(module.id);
-        if (existingMessages.length === 0) {
+        // Check if module already exists
+        let module = await storage.getEnhancementModule(
+          req.user!.id,
+          moduleCode,
+        );
+
+        if (!module) {
+          // Create new module
+          module = await storage.createEnhancementModule({
+            userId: req.user!.id,
+            moduleCode: moduleCode as "A" | "B" | "C",
+            status: "in_progress",
+            startedAt: new Date(),
+          });
+
+          // Add initial guidance message
           const initialMessage = getInitialGuidanceMessage(moduleCode);
           if (initialMessage) {
             await storage.createEnhancementModuleMessage({
               moduleId: module.id,
-              role: 'assistant',
-              content: initialMessage
+              role: "assistant",
+              content: initialMessage,
             });
           }
-        }
-      }
+        } else if (module.status === "available") {
+          // Update status to in_progress if it was available
+          await storage.updateEnhancementModule(module.id, {
+            status: "in_progress",
+            startedAt: new Date(),
+          });
 
-      res.json({ success: true, moduleId: module.id });
-    } catch (error) {
-      console.error('Error starting enhancement module:', error);
-      res.status(500).json({ error: 'Failed to start enhancement module' });
-    }
-  });
+          // Check if module has any messages, if not add initial guidance message
+          const existingMessages = await storage.getEnhancementModuleMessages(
+            module.id,
+          );
+          if (existingMessages.length === 0) {
+            const initialMessage = getInitialGuidanceMessage(moduleCode);
+            if (initialMessage) {
+              await storage.createEnhancementModuleMessage({
+                moduleId: module.id,
+                role: "assistant",
+                content: initialMessage,
+              });
+            }
+          }
+        }
+
+        res.json({ success: true, moduleId: module.id });
+      } catch (error) {
+        console.error("Error starting enhancement module:", error);
+        res.status(500).json({ error: "Failed to start enhancement module" });
+      }
+    },
+  );
 
   // POST /api/enhancement-modules/:moduleCode/messages/stream - Send message with streaming response
-  app.post("/api/enhancement-modules/:moduleCode/messages/stream", isAuthenticated, async (req: Request, res: Response, next: NextFunction) => {
-    try {
-      const moduleCode = req.params.moduleCode as 'A' | 'B' | 'C';
-      const userId = req.user!.id;
+  app.post(
+    "/api/enhancement-modules/:moduleCode/messages/stream",
+    isAuthenticated,
+    async (req: Request, res: Response, next: NextFunction) => {
+      try {
+        const moduleCode = req.params.moduleCode as "A" | "B" | "C";
+        const userId = req.user!.id;
 
-      if (!['A', 'B', 'C'].includes(moduleCode)) {
-        return res.status(400).json({ error: "Invalid module code. Must be A, B, or C" });
-      }
+        if (!["A", "B", "C"].includes(moduleCode)) {
+          return res
+            .status(400)
+            .json({ error: "Invalid module code. Must be A, B, or C" });
+        }
 
-      const module = await storage.getEnhancementModule(userId, moduleCode);
-      if (!module) {
-        return res.status(404).json({ error: "Module not found" });
-      }
+        const module = await storage.getEnhancementModule(userId, moduleCode);
+        if (!module) {
+          return res.status(404).json({ error: "Module not found" });
+        }
 
-      if (module.status !== 'in_progress') {
-        return res.status(400).json({ error: "Module must be in progress to send messages" });
-      }
+        if (module.status !== "in_progress") {
+          return res
+            .status(400)
+            .json({ error: "Module must be in progress to send messages" });
+        }
 
-      const { content } = req.body;
-      if (!content || typeof content !== 'string') {
-        return res.status(400).json({ error: "Message content is required" });
-      }
+        const { content } = req.body;
+        if (!content || typeof content !== "string") {
+          return res.status(400).json({ error: "Message content is required" });
+        }
 
-      // Save user message
-      const userMessage = await storage.createEnhancementModuleMessage({
-        moduleId: module.id,
-        role: 'user',
-        content: content.trim()
-      });
+        // Save user message
+        const userMessage = await storage.createEnhancementModuleMessage({
+          moduleId: module.id,
+          role: "user",
+          content: content.trim(),
+        });
 
-      // Get all messages from this module for context
-      const messages = await storage.getEnhancementModuleMessages(module.id);
-      
-      // Format messages for Claude API
-      const formattedMessages = messages.map(msg => ({
-        role: msg.role as 'user' | 'assistant',
-        content: msg.content
-      }));
+        // Get all messages from this module for context
+        const messages = await storage.getEnhancementModuleMessages(module.id);
 
-      // Get user profile data for context
-      const userProfile = await storage.getUserProfile(userId);
+        // Format messages for Claude API
+        const formattedMessages = messages.map((msg) => ({
+          role: msg.role as "user" | "assistant",
+          content: msg.content,
+        }));
 
-      // Set up SSE headers
-      res.setHeader('Content-Type', 'text/event-stream');
-      res.setHeader('Cache-Control', 'no-cache');
-      res.setHeader('Connection', 'keep-alive');
+        // Get user profile data for context
+        const userProfile = await storage.getUserProfile(userId);
 
-      // Send user message ID first
-      res.write(`data: ${JSON.stringify({ type: 'user_message', id: userMessage.id })}\n\n`);
+        // Set up SSE headers
+        res.setHeader("Content-Type", "text/event-stream");
+        res.setHeader("Cache-Control", "no-cache");
+        res.setHeader("Connection", "keep-alive");
 
-      // Initialize empty assistant content for accumulation
-      let assistantContent = '';
+        // Send user message ID first
+        res.write(
+          `data: ${JSON.stringify({ type: "user_message", id: userMessage.id })}\n\n`,
+        );
 
-      // Generate Module A-specific system prompt with the attached coaching prompt
-      const getModuleASystemPrompt = () => {
-        return `You are a Digital Behavior & LinkedIn Content Strategy Coach. Your goal is to help a professional transform a vague online presence into a focused, credible brand—using fast visual tests, a structured audit, barrier-specific interventions, and a simple content system that fits real life.
+        // Initialize empty assistant content for accumulation
+        let assistantContent = "";
+
+        // Generate Module A-specific system prompt with the attached coaching prompt
+        const getModuleASystemPrompt = () => {
+          return `You are a Digital Behavior & LinkedIn Content Strategy Coach. Your goal is to help a professional transform a vague online presence into a focused, credible brand—using fast visual tests, a structured audit, barrier-specific interventions, and a simple content system that fits real life.
 
 STYLE
 - Warm, direct, practical. Plain English. One short question at a time.
@@ -512,16 +492,20 @@ HIGH-LEVEL FLOW (keep it conversational; move forward if a step is solid)
 Use the conversation context to determine which step you're on and proceed naturally. Keep responses short, focused, and actionable. Ask one specific question at a time to keep the conversation moving forward.
 
 Current user context:
-${userProfile ? `Name: ${userProfile.firstName} ${userProfile.lastName}
-Bio: ${userProfile.bio || 'Not provided'}
-Current role: ${userProfile.experiences?.[0]?.title || 'Not specified'} at ${userProfile.experiences?.[0]?.company || 'Not specified'}
+${
+  userProfile
+    ? `Name: ${userProfile.firstName} ${userProfile.lastName}
+Bio: ${userProfile.bio || "Not provided"}
+Current role: ${userProfile.experiences?.[0]?.title || "Not specified"} at ${userProfile.experiences?.[0]?.company || "Not specified"}
 LinkedIn: Not available in profile
-Industry focus: ${userProfile.experiences?.[0]?.description?.substring(0, 50) || 'Not specified'}` : 'Limited profile information available'}`;
-      };
+Industry focus: ${userProfile.experiences?.[0]?.description?.substring(0, 50) || "Not specified"}`
+    : "Limited profile information available"
+}`;
+        };
 
-      // Generate Module B-specific system prompt with Personal Brand & Network Positioning coaching
-      const getModuleBSystemPrompt = () => {
-        return `You are a Personal Brand & Network Positioning Coach. Your job is to turn a vague online presence into a focused, credible brand AND a strategic, opportunity-rich network.
+        // Generate Module B-specific system prompt with Personal Brand & Network Positioning coaching
+        const getModuleBSystemPrompt = () => {
+          return `You are a Personal Brand & Network Positioning Coach. Your job is to turn a vague online presence into a focused, credible brand AND a strategic, opportunity-rich network.
 
 STYLE
 - Warm, direct, practical. Plain English.
@@ -628,194 +612,261 @@ REMINDERS
 - Keep tying everything back to a SINGLE functional identity and visible proof.
 
 Current user context:
-${userProfile ? `Name: ${userProfile.firstName} ${userProfile.lastName}
-Current role: ${userProfile.experiences?.[0]?.title || 'Not specified'} at ${userProfile.experiences?.[0]?.company || 'Not specified'}
-Functional identity: ${userProfile.experiences?.[0]?.title?.includes('Product') ? 'Product' : 
-  userProfile.experiences?.[0]?.title?.includes('Marketing') ? 'Marketing' :
-  userProfile.experiences?.[0]?.title?.includes('Sales') || userProfile.experiences?.[0]?.title?.includes('Business Development') ? 'Sales' :
-  userProfile.experiences?.[0]?.title?.includes('Finance') || userProfile.experiences?.[0]?.title?.includes('CFO') ? 'Finance' :
-  userProfile.experiences?.[0]?.title?.includes('Operations') || userProfile.experiences?.[0]?.title?.includes('COO') ? 'Operations' : 'To be determined'}
-Industry: ${userProfile.experiences?.[0]?.company || 'Not specified'}` : 'Limited profile information available'}`;
-      };
+${
+  userProfile
+    ? `Name: ${userProfile.firstName} ${userProfile.lastName}
+Current role: ${userProfile.experiences?.[0]?.title || "Not specified"} at ${userProfile.experiences?.[0]?.company || "Not specified"}
+Functional identity: ${
+        userProfile.experiences?.[0]?.title?.includes("Product")
+          ? "Product"
+          : userProfile.experiences?.[0]?.title?.includes("Marketing")
+            ? "Marketing"
+            : userProfile.experiences?.[0]?.title?.includes("Sales") ||
+                userProfile.experiences?.[0]?.title?.includes(
+                  "Business Development",
+                )
+              ? "Sales"
+              : userProfile.experiences?.[0]?.title?.includes("Finance") ||
+                  userProfile.experiences?.[0]?.title?.includes("CFO")
+                ? "Finance"
+                : userProfile.experiences?.[0]?.title?.includes("Operations") ||
+                    userProfile.experiences?.[0]?.title?.includes("COO")
+                  ? "Operations"
+                  : "To be determined"
+      }
+Industry: ${userProfile.experiences?.[0]?.company || "Not specified"}`
+    : "Limited profile information available"
+}`;
+        };
 
-      // Generate system prompt based on module
-      const systemPrompt = moduleCode === 'A' ? getModuleASystemPrompt() : 
-        moduleCode === 'B' ? getModuleBSystemPrompt() :
-        `You are a professional coaching assistant for Enhancement Module ${moduleCode}. Provide thoughtful, actionable guidance.`;
+        // Generate system prompt based on module
+        const systemPrompt =
+          moduleCode === "A"
+            ? getModuleASystemPrompt()
+            : moduleCode === "B"
+              ? getModuleBSystemPrompt()
+              : `You are a professional coaching assistant for Enhancement Module ${moduleCode}. Provide thoughtful, actionable guidance.`;
 
-      try {
-        // Stream response from Claude
-        const stream = await anthropic.messages.create({
-          model: CLAUDE_MODEL,
-          max_tokens: 1500,
-          system: systemPrompt,
-          messages: formattedMessages,
-          stream: true
-        });
-
-        for await (const chunk of stream) {
-          if (chunk.type === 'content_block_delta' && chunk.delta.type === 'text_delta') {
-            const text = chunk.delta.text;
-            assistantContent += text;
-            res.write(`data: ${JSON.stringify({ type: 'chunk', content: text })}\n\n`);
-          }
-        }
-
-        // Save assistant response
-        const assistantMessage = await storage.createEnhancementModuleMessage({
-          moduleId: module.id,
-          role: 'assistant',
-          content: assistantContent
-        });
-
-        // Check for automatic completion
-        const allMessages = await storage.getEnhancementModuleMessages(module.id);
-        const completionCheck = await checkModuleCompletion(moduleCode, allMessages, userProfile);
-
-        if (completionCheck.shouldComplete && completionCheck.completionData) {
-          // Mark module as completed
-          await storage.updateEnhancementModule(module.id, {
-            status: 'completed',
-            completedAt: new Date(),
-            completionData: completionCheck.completionData
+        try {
+          // Stream response from Claude
+          const stream = await anthropic.messages.create({
+            model: CLAUDE_MODEL,
+            max_tokens: 1500,
+            system: systemPrompt,
+            messages: formattedMessages,
+            stream: true,
           });
 
-          // Send completion event
-          res.write(`data: ${JSON.stringify({ 
-            type: 'module_completed', 
+          for await (const chunk of stream) {
+            if (
+              chunk.type === "content_block_delta" &&
+              chunk.delta.type === "text_delta"
+            ) {
+              const text = chunk.delta.text;
+              assistantContent += text;
+              res.write(
+                `data: ${JSON.stringify({ type: "chunk", content: text })}\n\n`,
+              );
+            }
+          }
+
+          // Save assistant response
+          const assistantMessage = await storage.createEnhancementModuleMessage(
+            {
+              moduleId: module.id,
+              role: "assistant",
+              content: assistantContent,
+            },
+          );
+
+          // Check for automatic completion
+          const allMessages = await storage.getEnhancementModuleMessages(
+            module.id,
+          );
+          const completionCheck = await checkModuleCompletion(
             moduleCode,
-            completionData: completionCheck.completionData 
-          })}\n\n`);
+            allMessages,
+            userProfile,
+          );
+
+          if (
+            completionCheck.shouldComplete &&
+            completionCheck.completionData
+          ) {
+            // Mark module as completed
+            await storage.updateEnhancementModule(module.id, {
+              status: "completed",
+              completedAt: new Date(),
+              completionData: completionCheck.completionData,
+            });
+
+            // Send completion event
+            res.write(
+              `data: ${JSON.stringify({
+                type: "module_completed",
+                moduleCode,
+                completionData: completionCheck.completionData,
+              })}\n\n`,
+            );
+          }
+
+          // Send completion signal
+          res.write(
+            `data: ${JSON.stringify({ type: "complete", messageId: assistantMessage.id })}\n\n`,
+          );
+          res.end();
+        } catch (streamError) {
+          console.error("Error in Claude streaming:", streamError);
+          res.write(
+            `data: ${JSON.stringify({ type: "error", message: "Failed to generate response" })}\n\n`,
+          );
+          res.end();
         }
-
-        // Send completion signal
-        res.write(`data: ${JSON.stringify({ type: 'complete', messageId: assistantMessage.id })}\n\n`);
-        res.end();
-
-      } catch (streamError) {
-        console.error("Error in Claude streaming:", streamError);
-        res.write(`data: ${JSON.stringify({ type: 'error', message: 'Failed to generate response' })}\n\n`);
+      } catch (error) {
+        console.error("Error in Enhancement Module streaming chat:", error);
+        res.write(
+          `data: ${JSON.stringify({ type: "error", message: "Failed to generate response" })}\n\n`,
+        );
         res.end();
       }
-
-    } catch (error) {
-      console.error("Error in Enhancement Module streaming chat:", error);
-      res.write(`data: ${JSON.stringify({ type: 'error', message: 'Failed to generate response' })}\n\n`);
-      res.end();
-    }
-  });
+    },
+  );
 
   // POST /api/enhancement-modules/:moduleCode/message - Send message to module (legacy endpoint)
-  app.post('/api/enhancement-modules/:moduleCode/message', isAuthenticated, async (req: Request, res: Response) => {
-    try {
-      const { moduleCode } = req.params;
-      const { content } = req.body;
+  app.post(
+    "/api/enhancement-modules/:moduleCode/message",
+    isAuthenticated,
+    async (req: Request, res: Response) => {
+      try {
+        const { moduleCode } = req.params;
+        const { content } = req.body;
 
-      if (!['A', 'B', 'C'].includes(moduleCode)) {
-        return res.status(400).json({ error: 'Invalid module code' });
-      }
+        if (!["A", "B", "C"].includes(moduleCode)) {
+          return res.status(400).json({ error: "Invalid module code" });
+        }
 
-      if (!content || typeof content !== 'string') {
-        return res.status(400).json({ error: 'Message content is required' });
-      }
+        if (!content || typeof content !== "string") {
+          return res.status(400).json({ error: "Message content is required" });
+        }
 
-      // Get the module
-      const module = await storage.getEnhancementModule(req.user!.id, moduleCode);
-      if (!module) {
-        return res.status(404).json({ error: 'Module not found' });
-      }
+        // Get the module
+        const module = await storage.getEnhancementModule(
+          req.user!.id,
+          moduleCode,
+        );
+        if (!module) {
+          return res.status(404).json({ error: "Module not found" });
+        }
 
-      if (module.status === 'completed') {
-        return res.status(400).json({ error: 'Module is already completed' });
-      }
+        if (module.status === "completed") {
+          return res.status(400).json({ error: "Module is already completed" });
+        }
 
-      // Save user message
-      await storage.createEnhancementModuleMessage({
-        moduleId: module.id,
-        role: 'user',
-        content
-      });
+        // Save user message
+        await storage.createEnhancementModuleMessage({
+          moduleId: module.id,
+          role: "user",
+          content,
+        });
 
-      // Get all messages for context
-      const messages = await storage.getEnhancementModuleMessages(module.id);
-      
-      // Generate AI response (placeholder for now - you'll add real prompts later)
-      const systemPrompt = `You are a professional coaching assistant helping with ${
-        moduleCode === 'A' ? 'Digital Behavior Analysis Framework: LinkedIn Presence & Content Strategy Assessment' :
-        moduleCode === 'B' ? 'Network Position Mapping Framework: Strategic Relationship & Influence Analysis' :
-        'Career Aspiration Alignment Framework: Long-Term Goals & Positioning Refinement'
-      }. 
+        // Get all messages for context
+        const messages = await storage.getEnhancementModuleMessages(module.id);
+
+        // Generate AI response (placeholder for now - you'll add real prompts later)
+        const systemPrompt = `You are a professional coaching assistant helping with ${
+          moduleCode === "A"
+            ? "Digital Behavior Analysis Framework: LinkedIn Presence & Content Strategy Assessment"
+            : moduleCode === "B"
+              ? "Network Position Mapping Framework: Strategic Relationship & Influence Analysis"
+              : "Career Aspiration Alignment Framework: Long-Term Goals & Positioning Refinement"
+        }. 
       
       Provide thoughtful, actionable guidance based on the conversation context.`;
 
-      const userMessages = messages.slice(-10).map((msg: any) => ({
-        role: msg.role as 'user' | 'assistant',
-        content: msg.content
-      }));
+        const userMessages = messages.slice(-10).map((msg: any) => ({
+          role: msg.role as "user" | "assistant",
+          content: msg.content,
+        }));
 
-      const completion = await anthropic.messages.create({
-        model: CLAUDE_MODEL,
-        max_tokens: 1000,
-        system: systemPrompt,
-        messages: userMessages
-      });
-
-      const assistantResponse = completion.content[0].type === 'text' ? completion.content[0].text : 'I apologize, but I encountered an error generating a response.';
-
-      // Save assistant message
-      await storage.createEnhancementModuleMessage({
-        moduleId: module.id,
-        role: 'assistant',
-        content: assistantResponse
-      });
-
-      // Check for completion
-      const userProfile = await storage.getUserProfile(req.user!.id);
-      const allMessages = await storage.getEnhancementModuleMessages(module.id);
-      const completionCheck = await checkModuleCompletion(moduleCode, allMessages, userProfile);
-
-      if (completionCheck.shouldComplete && completionCheck.completionData) {
-        await storage.updateEnhancementModule(module.id, {
-          status: 'completed',
-          completedAt: new Date(),
-          completionData: completionCheck.completionData
+        const completion = await anthropic.messages.create({
+          model: CLAUDE_MODEL,
+          max_tokens: 1000,
+          system: systemPrompt,
+          messages: userMessages,
         });
+
+        const assistantResponse =
+          completion.content[0].type === "text"
+            ? completion.content[0].text
+            : "I apologize, but I encountered an error generating a response.";
+
+        // Save assistant message
+        await storage.createEnhancementModuleMessage({
+          moduleId: module.id,
+          role: "assistant",
+          content: assistantResponse,
+        });
+
+        // Check for completion
+        const userProfile = await storage.getUserProfile(req.user!.id);
+        const allMessages = await storage.getEnhancementModuleMessages(
+          module.id,
+        );
+        const completionCheck = await checkModuleCompletion(
+          moduleCode,
+          allMessages,
+          userProfile,
+        );
+
+        if (completionCheck.shouldComplete && completionCheck.completionData) {
+          await storage.updateEnhancementModule(module.id, {
+            status: "completed",
+            completedAt: new Date(),
+            completionData: completionCheck.completionData,
+          });
+        }
+
+        res.json({
+          success: true,
+          message: assistantResponse,
+          completed: completionCheck.shouldComplete,
+        });
+      } catch (error) {
+        console.error("Error processing module message:", error);
+        res.status(500).json({ error: "Failed to process message" });
       }
-
-      res.json({
-        success: true,
-        message: assistantResponse,
-        completed: completionCheck.shouldComplete
-      });
-
-    } catch (error) {
-      console.error('Error processing module message:', error);
-      res.status(500).json({ error: 'Failed to process message' });
-    }
-  });
+    },
+  );
 
   // PATCH /api/enhancement-modules/:moduleCode - Update module (e.g., timer elapsed)
-  app.patch('/api/enhancement-modules/:moduleCode', isAuthenticated, async (req: Request, res: Response) => {
-    try {
-      const { moduleCode } = req.params;
-      
-      if (!['A', 'B', 'C'].includes(moduleCode)) {
-        return res.status(400).json({ error: 'Invalid module code' });
-      }
+  app.patch(
+    "/api/enhancement-modules/:moduleCode",
+    isAuthenticated,
+    async (req: Request, res: Response) => {
+      try {
+        const { moduleCode } = req.params;
 
-      const updateData = updateEnhancementModuleSchema.parse(req.body);
-      
-      const module = await storage.getEnhancementModule(req.user!.id, moduleCode);
-      if (!module) {
-        return res.status(404).json({ error: 'Module not found' });
-      }
+        if (!["A", "B", "C"].includes(moduleCode)) {
+          return res.status(400).json({ error: "Invalid module code" });
+        }
 
-      await storage.updateEnhancementModule(module.id, updateData);
-      
-      res.json({ success: true });
-    } catch (error) {
-      console.error('Error updating enhancement module:', error);
-      res.status(500).json({ error: 'Failed to update enhancement module' });
-    }
-  });
+        const updateData = updateEnhancementModuleSchema.parse(req.body);
+
+        const module = await storage.getEnhancementModule(
+          req.user!.id,
+          moduleCode,
+        );
+        if (!module) {
+          return res.status(404).json({ error: "Module not found" });
+        }
+
+        await storage.updateEnhancementModule(module.id, updateData);
+
+        res.json({ success: true });
+      } catch (error) {
+        console.error("Error updating enhancement module:", error);
+        res.status(500).json({ error: "Failed to update enhancement module" });
+      }
+    },
+  );
 }

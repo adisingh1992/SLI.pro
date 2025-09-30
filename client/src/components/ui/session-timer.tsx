@@ -12,6 +12,7 @@ interface SessionTimerProps {
   className?: string;
   sessionNumber?: number;
   initialTimerElapsed?: number;
+  onTimerSave?: (elapsed: number) => Promise<void>;
 }
 
 export function SessionTimer({ 
@@ -20,7 +21,8 @@ export function SessionTimer({
   isSessionCompleted = false,
   className,
   sessionNumber,
-  initialTimerElapsed = 0
+  initialTimerElapsed = 0,
+  onTimerSave
 }: SessionTimerProps) {
   // Use session-specific config if not provided
   const sessionConfig = config || 
@@ -28,7 +30,7 @@ export function SessionTimer({
      sessionNumber === 3 ? SESSION_3_CONFIG : 
      DEFAULT_FOUNDATION_SESSION_CONFIG);
   
-  const timer = useSessionTimer(sessionConfig, sessionNumber, initialTimerElapsed);
+  const timer = useSessionTimer(sessionConfig, sessionNumber, initialTimerElapsed, onTimerSave);
 
   // Auto-start timer when session becomes active
   useEffect(() => {
