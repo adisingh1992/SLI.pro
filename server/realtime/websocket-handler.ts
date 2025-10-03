@@ -9,7 +9,8 @@ import { OpenAIRealtimeSession } from './openai-realtime';
 
 interface VoiceSession {
   userId: number;
-  sessionNumber: number;
+  sessionNumber?: number;
+  moduleCode?: string;
   ws: WebSocket;
   openaiSession: OpenAIRealtimeSession | null;
 }
@@ -99,7 +100,7 @@ export function setupWebSocketServer(server: Server) {
         switch (message.type) {
           case 'start':
             // Validate that the requested userId matches the authenticated user
-            const { userId, sessionNumber } = message;
+            const { userId, sessionNumber, moduleCode } = message;
             
             if (userId !== authenticatedUserId) {
               ws.send(JSON.stringify({
@@ -110,9 +111,13 @@ export function setupWebSocketServer(server: Server) {
               return;
             }
 
-            sessionKey = `${userId}-${sessionNumber}`;
+            // Create session key based on type (foundation session or enhancement module)
+            sessionKey = sessionNumber 
+              ? `session-${userId}-${sessionNumber}`
+              : `module-${userId}-${moduleCode}`;
             
-            console.log(`[WebSocket] Starting voice session for user ${userId}, session ${sessionNumber}`);
+            const sessionType = sessionNumber ? `session ${sessionNumber}` : `module ${moduleCode}`;
+            console.log(`[WebSocket] Starting voice ${sessionType} for user ${userId}`);
             
             // Create OpenAI Realtime session
             const openaiSession = new OpenAIRealtimeSession({
@@ -138,14 +143,16 @@ export function setupWebSocketServer(server: Server) {
 
             await openaiSession.connect();
             
-            voiceSession = {
+            const newVoiceSession: VoiceSession = {
               userId,
-              sessionNumber,
+              ...(sessionNumber && { sessionNumber }),
+              ...(moduleCode && { moduleCode }),
               ws,
               openaiSession
             };
             
-            activeSessions.set(sessionKey, voiceSession);
+            voiceSession = newVoiceSession;
+            activeSessions.set(sessionKey, newVoiceSession);
             
             ws.send(JSON.stringify({
               type: 'session_started',

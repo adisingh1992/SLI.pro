@@ -3,7 +3,8 @@ import { useToast } from './use-toast';
 
 interface VoiceRecordingConfig {
   userId: number;
-  sessionNumber: number;
+  sessionNumber?: number;
+  moduleCode?: string;
   onTranscriptionComplete: (text: string) => void;
 }
 
@@ -48,11 +49,12 @@ export function useVoiceRecording(config: VoiceRecordingConfig) {
     
     ws.onopen = () => {
       console.log('[Voice] WebSocket connected');
-      // Start voice session
+      // Start voice session (either foundation session or enhancement module)
       ws.send(JSON.stringify({
         type: 'start',
         userId: config.userId,
-        sessionNumber: config.sessionNumber
+        ...(config.sessionNumber && { sessionNumber: config.sessionNumber }),
+        ...(config.moduleCode && { moduleCode: config.moduleCode })
       }));
     };
 
