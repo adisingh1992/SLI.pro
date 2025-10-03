@@ -168,12 +168,16 @@ export default function EnhancementModulesPage() {
             const gradientColor = moduleColors[module.moduleCode as keyof typeof moduleColors];
             
             return (
-              <Card key={module.id} className="relative overflow-hidden bg-card border-2 border-primary/30 hover:border-primary/60 hover:shadow-xl transition-all duration-300 group">
+              <Card key={module.id} className="relative overflow-hidden bg-card border-2 hover:shadow-xl transition-all duration-300 group" style={{ borderColor: 'hsl(167, 40%, 70%)' }}>
                 {/* Decorative gradient overlay */}
                 <div className={`absolute inset-0 bg-gradient-to-br ${gradientColor} pointer-events-none`} />
                 
                 {/* Module letter badge */}
-                <div className="absolute top-4 right-4 w-12 h-12 rounded-full bg-primary/40 border-2 border-primary/60 flex items-center justify-center font-bold text-2xl text-primary z-10 shadow-md">
+                <div className="absolute top-4 right-4 w-12 h-12 rounded-full border-2 flex items-center justify-center font-bold text-2xl z-10 shadow-md" style={{
+                  backgroundColor: 'hsl(167, 40%, 90%)',
+                  borderColor: 'hsl(167, 40%, 35%)',
+                  color: 'hsl(167, 40%, 35%)'
+                }}>
                   {module.moduleCode}
                 </div>
                 
@@ -183,8 +187,8 @@ export default function EnhancementModulesPage() {
                       <CardTitle className="text-xl md:text-2xl font-bold text-foreground mb-2 leading-tight">
                         {details.title}
                       </CardTitle>
-                      <div className="text-base text-primary font-semibold mb-3 flex items-center gap-2">
-                        <div className="h-1 w-8 bg-primary rounded-full" />
+                      <div className="text-base font-semibold mb-3 flex items-center gap-2" style={{ color: 'hsl(167, 40%, 35%)' }}>
+                        <div className="h-1 w-8 rounded-full" style={{ backgroundColor: 'hsl(167, 40%, 35%)' }} />
                         {details.subtitle}
                       </div>
                       <p className="text-muted-foreground leading-relaxed">
@@ -207,7 +211,11 @@ export default function EnhancementModulesPage() {
                         </div>
                       )}
                       {module.completedAt && (
-                        <div className="text-sm text-primary font-semibold bg-primary/30 px-3 py-1 rounded-full border-2 border-primary">
+                        <div className="text-sm font-semibold px-3 py-1 rounded-full border-2" style={{ 
+                          color: 'hsl(167, 40%, 35%)', 
+                          backgroundColor: 'hsl(167, 40%, 90%)',
+                          borderColor: 'hsl(167, 40%, 35%)'
+                        }}>
                           ✓ {new Date(module.completedAt).toLocaleDateString()}
                         </div>
                       )}
@@ -218,7 +226,12 @@ export default function EnhancementModulesPage() {
                         <Button 
                           onClick={() => handleStartModule(module.moduleCode)}
                           disabled={startModuleMutation.isPending}
-                          className="font-medium px-6 py-2 shadow-lg hover:shadow-xl transition-shadow bg-primary text-primary-foreground hover:bg-primary/90"
+                          className="font-medium px-6 py-2 shadow-lg hover:shadow-xl transition-all text-white"
+                          style={{ 
+                            backgroundColor: 'hsl(167, 40%, 35%)',
+                          }}
+                          onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'hsl(167, 40%, 30%)'}
+                          onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'hsl(167, 40%, 35%)'}
                           data-testid={`button-start-module-${module.moduleCode}`}
                         >
                           {startModuleMutation.isPending ? (
@@ -239,7 +252,19 @@ export default function EnhancementModulesPage() {
                         <Button 
                           onClick={() => handleContinueModule(module.moduleCode)}
                           variant="outline"
-                          className="font-medium px-6 py-2 border-2 border-primary text-primary hover:bg-primary hover:text-primary-foreground bg-background"
+                          className="font-medium px-6 py-2 border-2 bg-white hover:text-white transition-all"
+                          style={{ 
+                            borderColor: 'hsl(167, 40%, 35%)',
+                            color: 'hsl(167, 40%, 35%)'
+                          }}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.backgroundColor = 'hsl(167, 40%, 35%)';
+                            e.currentTarget.style.color = 'white';
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.backgroundColor = 'white';
+                            e.currentTarget.style.color = 'hsl(167, 40%, 35%)';
+                          }}
                           data-testid={`button-continue-module-${module.moduleCode}`}
                         >
                           <MessageSquare className="mr-2 h-4 w-4" />
@@ -251,7 +276,19 @@ export default function EnhancementModulesPage() {
                         <Button 
                           onClick={() => handleContinueModule(module.moduleCode)}
                           variant="outline"
-                          className="font-medium px-6 py-2 border-2 border-primary text-primary hover:bg-primary hover:text-primary-foreground bg-background"
+                          className="font-medium px-6 py-2 border-2 bg-white hover:text-white transition-all"
+                          style={{ 
+                            borderColor: 'hsl(167, 40%, 35%)',
+                            color: 'hsl(167, 40%, 35%)'
+                          }}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.backgroundColor = 'hsl(167, 40%, 35%)';
+                            e.currentTarget.style.color = 'white';
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.backgroundColor = 'white';
+                            e.currentTarget.style.color = 'hsl(167, 40%, 35%)';
+                          }}
                           data-testid={`button-view-module-${module.moduleCode}`}
                         >
                           <CheckCircle className="mr-2 h-4 w-4" />
