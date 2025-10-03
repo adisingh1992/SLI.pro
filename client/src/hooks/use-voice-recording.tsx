@@ -181,27 +181,45 @@ export function useVoiceRecording(config: VoiceRecordingConfig) {
       });
 
       mediaRecorderRef.current = mediaRecorder;
+      
+      // Collect all audio chunks
+      const audioChunks: Blob[] = [];
 
-      // Send audio chunks to server
-      mediaRecorder.ondataavailable = async (event) => {
-        if (event.data.size > 0 && ws.readyState === WebSocket.OPEN) {
-          // Convert blob to base64
+      // Collect audio chunks (don't send yet)
+      mediaRecorder.ondataavailable = (event) => {
+        if (event.data.size > 0) {
+          audioChunks.push(event.data);
+        }
+      };
+
+      // Send complete audio when recording stops
+      mediaRecorder.onstop = async () => {
+        if (audioChunks.length > 0 && ws.readyState === WebSocket.OPEN) {
+          // Combine all chunks into a single blob
+          const audioBlob = new Blob(audioChunks, { type: mimeType });
+          
+          // Convert complete blob to base64
           const reader = new FileReader();
           reader.onloadend = () => {
             const base64 = reader.result as string;
             const audioData = base64.split(',')[1]; // Remove data:audio/... prefix
             
+            // Send complete audio file
             ws.send(JSON.stringify({
               type: 'audio',
-              data: audioData
+              data: audioData,
+              mimeType: mimeType
             }));
+            
+            // Signal stop/transcribe
+            ws.send(JSON.stringify({ type: 'stop' }));
           };
-          reader.readAsDataURL(event.data);
+          reader.readAsDataURL(audioBlob);
         }
       };
 
-      // Start recording with 100ms chunks for real-time streaming
-      mediaRecorder.start(100);
+      // Start recording (will collect until stopped)
+      mediaRecorder.start();
       
       setState(prev => ({
         ...prev,
@@ -237,15 +255,12 @@ export function useVoiceRecording(config: VoiceRecordingConfig) {
   const stopRecording = useCallback(() => {
     if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
       mediaRecorderRef.current.stop();
+      // Note: The actual audio data and stop signal are sent in the onstop handler
     }
 
     if (streamRef.current) {
       streamRef.current.getTracks().forEach(track => track.stop());
       streamRef.current = null;
-    }
-
-    if (wsRef.current) {
-      wsRef.current.send(JSON.stringify({ type: 'stop' }));
     }
 
     setState(prev => ({

@@ -36,18 +36,19 @@ export class OpenAIRealtimeSession {
     }
   }
 
-  async sendAudio(audioBase64: string) {
+  async sendAudio(audioBase64: string, mimeType?: string) {
     if (!this.isConnected) {
       throw new Error('Not connected');
     }
 
     try {
-      // Convert base64 to buffer and store
+      // Convert base64 to buffer - this is now the complete audio file
       const audioBuffer = Buffer.from(audioBase64, 'base64');
-      this.audioChunks.push(audioBuffer);
       
-      // Send delta feedback to frontend (empty for now, will transcribe on stop)
-      this.config.onTranscriptionDelta('');
+      // Store as complete audio (replacing any previous chunks)
+      this.audioChunks = [audioBuffer];
+      
+      log(`[OpenAI Voice] Received complete audio: ${audioBuffer.length} bytes, type: ${mimeType || 'unknown'}`);
     } catch (error) {
       log(`[OpenAI Voice] Error receiving audio: ${error}`);
       throw error;

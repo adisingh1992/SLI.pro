@@ -154,9 +154,9 @@ export function setupWebSocketServer(server: Server) {
             break;
 
           case 'audio':
-            // Forward audio chunk to OpenAI
+            // Forward complete audio to OpenAI
             if (voiceSession?.openaiSession) {
-              await voiceSession.openaiSession.sendAudio(message.data);
+              await voiceSession.openaiSession.sendAudio(message.data, message.mimeType);
             } else {
               ws.send(JSON.stringify({
                 type: 'error',
