@@ -148,11 +148,6 @@ export default function EnhancementModulesPage() {
 
         {/* Header Section */}
         <div className="text-center mb-12">
-          <div className="inline-block mb-4">
-            <div className="bg-primary/20 text-primary px-4 py-2 rounded-full text-sm font-semibold border-2 border-primary/40">
-              Professional Development
-            </div>
-          </div>
           <h1 className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-foreground via-primary to-foreground bg-clip-text text-transparent mb-4">
             Enhancement Modules
           </h1>
@@ -188,10 +183,10 @@ export default function EnhancementModulesPage() {
                       <CardTitle className="text-xl md:text-2xl font-bold text-foreground mb-2 leading-tight">
                         {details.title}
                       </CardTitle>
-                      <CardDescription className="text-base text-primary font-semibold mb-3 flex items-center gap-2">
-                        <div className="h-1 w-8 bg-primary rounded-full opacity-80" />
+                      <div className="text-base text-primary font-semibold mb-3 flex items-center gap-2">
+                        <div className="h-1 w-8 bg-primary rounded-full" />
                         {details.subtitle}
-                      </CardDescription>
+                      </div>
                       <p className="text-muted-foreground leading-relaxed">
                         {details.description}
                       </p>
@@ -207,12 +202,12 @@ export default function EnhancementModulesPage() {
                   <div className="flex items-center justify-between pt-4 border-t border-primary/20">
                     <div className="flex items-center gap-4">
                       {module.timerElapsed && module.timerElapsed > 0 && (
-                        <div className="text-sm text-muted-foreground bg-primary/15 px-3 py-1 rounded-full border border-primary/30">
+                        <div className="text-sm text-foreground font-medium bg-muted px-3 py-1 rounded-full border-2 border-border">
                           ⏱️ {Math.floor(module.timerElapsed / 60)}m {module.timerElapsed % 60}s
                         </div>
                       )}
                       {module.completedAt && (
-                        <div className="text-sm text-primary font-medium bg-primary/20 px-3 py-1 rounded-full border border-primary/40">
+                        <div className="text-sm text-primary font-semibold bg-primary/30 px-3 py-1 rounded-full border-2 border-primary">
                           ✓ {new Date(module.completedAt).toLocaleDateString()}
                         </div>
                       )}
@@ -244,7 +239,7 @@ export default function EnhancementModulesPage() {
                         <Button 
                           onClick={() => handleContinueModule(module.moduleCode)}
                           variant="outline"
-                          className="font-medium px-6 py-2 border-2 border-primary/50 text-primary hover:bg-primary/20 bg-primary/5"
+                          className="font-medium px-6 py-2 border-2 border-primary text-primary hover:bg-primary hover:text-primary-foreground bg-background"
                           data-testid={`button-continue-module-${module.moduleCode}`}
                         >
                           <MessageSquare className="mr-2 h-4 w-4" />
@@ -256,7 +251,7 @@ export default function EnhancementModulesPage() {
                         <Button 
                           onClick={() => handleContinueModule(module.moduleCode)}
                           variant="outline"
-                          className="font-medium px-6 py-2 border-2 border-primary/50 text-primary hover:bg-primary/20 bg-primary/5"
+                          className="font-medium px-6 py-2 border-2 border-primary text-primary hover:bg-primary hover:text-primary-foreground bg-background"
                           data-testid={`button-view-module-${module.moduleCode}`}
                         >
                           <CheckCircle className="mr-2 h-4 w-4" />
