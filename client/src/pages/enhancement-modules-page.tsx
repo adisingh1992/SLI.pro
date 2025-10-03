@@ -7,7 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import { Loader2, Play, CheckCircle, MessageSquare } from "lucide-react";
+import { Loader2, Play, CheckCircle, MessageSquare, ArrowLeft } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 type EnhancementModule = {
@@ -133,10 +133,23 @@ export default function EnhancementModulesPage() {
       <NavBar />
       
       <div className="container mx-auto px-4 py-8">
+        {/* Back Button */}
+        <div className="mb-6">
+          <Button
+            variant="ghost"
+            onClick={() => navigate('/')}
+            className="gap-2 hover:bg-primary/10"
+            data-testid="button-back-home"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            Back to Home
+          </Button>
+        </div>
+
         {/* Header Section */}
         <div className="text-center mb-12">
           <div className="inline-block mb-4">
-            <div className="bg-primary/10 text-primary px-4 py-2 rounded-full text-sm font-semibold border border-primary/20">
+            <div className="bg-primary/20 text-primary px-4 py-2 rounded-full text-sm font-semibold border-2 border-primary/40">
               Professional Development
             </div>
           </div>
@@ -160,12 +173,12 @@ export default function EnhancementModulesPage() {
             const gradientColor = moduleColors[module.moduleCode as keyof typeof moduleColors];
             
             return (
-              <Card key={module.id} className="relative overflow-hidden bg-card border-2 border-primary/20 hover:border-primary/40 hover:shadow-xl transition-all duration-300 group">
+              <Card key={module.id} className="relative overflow-hidden bg-card border-2 border-primary/30 hover:border-primary/60 hover:shadow-xl transition-all duration-300 group">
                 {/* Decorative gradient overlay */}
-                <div className={`absolute inset-0 bg-gradient-to-br ${gradientColor} pointer-events-none opacity-50`} />
+                <div className={`absolute inset-0 bg-gradient-to-br ${gradientColor} pointer-events-none`} />
                 
                 {/* Module letter badge */}
-                <div className="absolute top-4 right-4 w-12 h-12 rounded-full bg-primary/20 border-2 border-primary/30 flex items-center justify-center font-bold text-2xl text-primary z-10">
+                <div className="absolute top-4 right-4 w-12 h-12 rounded-full bg-primary/40 border-2 border-primary/60 flex items-center justify-center font-bold text-2xl text-primary z-10 shadow-md">
                   {module.moduleCode}
                 </div>
                 
@@ -176,7 +189,7 @@ export default function EnhancementModulesPage() {
                         {details.title}
                       </CardTitle>
                       <CardDescription className="text-base text-primary font-semibold mb-3 flex items-center gap-2">
-                        <div className="h-1 w-8 bg-primary rounded-full" />
+                        <div className="h-1 w-8 bg-primary rounded-full opacity-80" />
                         {details.subtitle}
                       </CardDescription>
                       <p className="text-muted-foreground leading-relaxed">
@@ -191,15 +204,15 @@ export default function EnhancementModulesPage() {
                 </CardHeader>
                 
                 <CardContent className="relative z-10">
-                  <div className="flex items-center justify-between pt-4 border-t border-primary/10">
+                  <div className="flex items-center justify-between pt-4 border-t border-primary/20">
                     <div className="flex items-center gap-4">
                       {module.timerElapsed && module.timerElapsed > 0 && (
-                        <div className="text-sm text-muted-foreground bg-primary/5 px-3 py-1 rounded-full">
+                        <div className="text-sm text-muted-foreground bg-primary/15 px-3 py-1 rounded-full border border-primary/30">
                           ⏱️ {Math.floor(module.timerElapsed / 60)}m {module.timerElapsed % 60}s
                         </div>
                       )}
                       {module.completedAt && (
-                        <div className="text-sm text-primary font-medium bg-primary/10 px-3 py-1 rounded-full border border-primary/20">
+                        <div className="text-sm text-primary font-medium bg-primary/20 px-3 py-1 rounded-full border border-primary/40">
                           ✓ {new Date(module.completedAt).toLocaleDateString()}
                         </div>
                       )}
@@ -210,7 +223,7 @@ export default function EnhancementModulesPage() {
                         <Button 
                           onClick={() => handleStartModule(module.moduleCode)}
                           disabled={startModuleMutation.isPending}
-                          className="font-medium px-6 py-2 shadow-lg hover:shadow-xl transition-shadow"
+                          className="font-medium px-6 py-2 shadow-lg hover:shadow-xl transition-shadow bg-primary text-primary-foreground hover:bg-primary/90"
                           data-testid={`button-start-module-${module.moduleCode}`}
                         >
                           {startModuleMutation.isPending ? (
@@ -231,7 +244,7 @@ export default function EnhancementModulesPage() {
                         <Button 
                           onClick={() => handleContinueModule(module.moduleCode)}
                           variant="outline"
-                          className="font-medium px-6 py-2 border-2 border-primary/30 text-primary hover:bg-primary/10"
+                          className="font-medium px-6 py-2 border-2 border-primary/50 text-primary hover:bg-primary/20 bg-primary/5"
                           data-testid={`button-continue-module-${module.moduleCode}`}
                         >
                           <MessageSquare className="mr-2 h-4 w-4" />
@@ -243,7 +256,7 @@ export default function EnhancementModulesPage() {
                         <Button 
                           onClick={() => handleContinueModule(module.moduleCode)}
                           variant="outline"
-                          className="font-medium px-6 py-2 border-2 border-primary/30 text-primary hover:bg-primary/10"
+                          className="font-medium px-6 py-2 border-2 border-primary/50 text-primary hover:bg-primary/20 bg-primary/5"
                           data-testid={`button-view-module-${module.moduleCode}`}
                         >
                           <CheckCircle className="mr-2 h-4 w-4" />
