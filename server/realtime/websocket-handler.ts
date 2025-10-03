@@ -2,6 +2,9 @@ import { WebSocketServer, WebSocket } from 'ws';
 import { Server } from 'http';
 import { IncomingMessage } from 'http';
 import { parse } from 'url';
+import { parse as parseCookie } from 'cookie';
+import session from 'express-session';
+import { storage } from '../storage';
 import { OpenAIRealtimeSession } from './openai-realtime';
 
 interface VoiceSession {
@@ -13,26 +16,78 @@ interface VoiceSession {
 
 const activeSessions = new Map<string, VoiceSession>();
 
+// Get session from request
+async function getSessionFromRequest(request: IncomingMessage): Promise<any> {
+  return new Promise((resolve, reject) => {
+    const sessionSettings: session.SessionOptions = {
+      secret: process.env.SESSION_SECRET || "supersecretkey",
+      resave: false,
+      saveUninitialized: false,
+      store: storage.sessionStore,
+      cookie: {
+        maxAge: 24 * 60 * 60 * 1000
+      }
+    };
+
+    const sessionMiddleware = session(sessionSettings);
+    
+    // Create mock response object
+    const mockRes: any = {
+      getHeader: () => {},
+      setHeader: () => {},
+      end: () => {}
+    };
+
+    sessionMiddleware(request as any, mockRes, () => {
+      const sess = (request as any).session;
+      if (sess && sess.passport && sess.passport.user) {
+        resolve(sess.passport.user);
+      } else {
+        reject(new Error('Unauthorized'));
+      }
+    });
+  });
+}
+
 export function setupWebSocketServer(server: Server) {
   const wss = new WebSocketServer({ 
     noServer: true,
     path: '/ws/voice'
   });
 
-  server.on('upgrade', (request: IncomingMessage, socket, head) => {
+  server.on('upgrade', async (request: IncomingMessage, socket, head) => {
     const { pathname } = parse(request.url || '');
     
     if (pathname === '/ws/voice') {
-      wss.handleUpgrade(request, socket, head, (ws) => {
-        wss.emit('connection', ws, request);
-      });
+      try {
+        // Authenticate the WebSocket connection
+        const userId = await getSessionFromRequest(request);
+        
+        if (!userId) {
+          socket.write('HTTP/1.1 401 Unauthorized\r\n\r\n');
+          socket.destroy();
+          return;
+        }
+
+        // Store userId on request for later use
+        (request as any).userId = userId;
+
+        wss.handleUpgrade(request, socket, head, (ws) => {
+          wss.emit('connection', ws, request);
+        });
+      } catch (error) {
+        console.error('[WebSocket] Authentication failed:', error);
+        socket.write('HTTP/1.1 401 Unauthorized\r\n\r\n');
+        socket.destroy();
+      }
     } else {
       socket.destroy();
     }
   });
 
   wss.on('connection', async (ws: WebSocket, request: IncomingMessage) => {
-    console.log('[WebSocket] New voice connection');
+    const authenticatedUserId = (request as any).userId;
+    console.log(`[WebSocket] New voice connection for user ${authenticatedUserId}`);
     
     let sessionKey: string | null = null;
     let voiceSession: VoiceSession | null = null;
@@ -43,8 +98,18 @@ export function setupWebSocketServer(server: Server) {
         
         switch (message.type) {
           case 'start':
-            // Start a new voice session
+            // Validate that the requested userId matches the authenticated user
             const { userId, sessionNumber } = message;
+            
+            if (userId !== authenticatedUserId) {
+              ws.send(JSON.stringify({
+                type: 'error',
+                message: 'Unauthorized: User ID mismatch'
+              }));
+              ws.close();
+              return;
+            }
+
             sessionKey = `${userId}-${sessionNumber}`;
             
             console.log(`[WebSocket] Starting voice session for user ${userId}, session ${sessionNumber}`);
@@ -126,7 +191,7 @@ export function setupWebSocketServer(server: Server) {
     });
 
     ws.on('close', async () => {
-      console.log('[WebSocket] Connection closed');
+      console.log(`[WebSocket] Connection closed for user ${authenticatedUserId}`);
       if (sessionKey && voiceSession?.openaiSession) {
         await voiceSession.openaiSession.disconnect();
         activeSessions.delete(sessionKey);
@@ -135,6 +200,10 @@ export function setupWebSocketServer(server: Server) {
 
     ws.on('error', (error) => {
       console.error('[WebSocket] WebSocket error:', error);
+      if (sessionKey && voiceSession?.openaiSession) {
+        voiceSession.openaiSession.disconnect();
+        activeSessions.delete(sessionKey);
+      }
     });
   });
 

@@ -107,10 +107,48 @@ export function useVoiceRecording(config: VoiceRecordingConfig) {
         isRecording: false,
         isProcessing: false
       }));
+      toast({
+        title: "Connection Error",
+        description: "Voice connection lost. Please try again.",
+        variant: "destructive"
+      });
+      
+      // Clean up on error
+      if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+        mediaRecorderRef.current.stop();
+      }
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach(track => track.stop());
+        streamRef.current = null;
+      }
     };
 
-    ws.onclose = () => {
-      console.log('[Voice] WebSocket closed');
+    ws.onclose = (event) => {
+      console.log('[Voice] WebSocket closed', event.code, event.reason);
+      
+      // Only show error if it was unexpected (not a normal closure)
+      if (event.code !== 1000) {
+        setState(prev => ({
+          ...prev,
+          error: 'Connection closed unexpectedly',
+          isRecording: false,
+          isProcessing: false
+        }));
+        toast({
+          title: "Connection Closed",
+          description: "Voice connection was interrupted. Please try again.",
+          variant: "destructive"
+        });
+      }
+      
+      // Clean up on close
+      if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+        mediaRecorderRef.current.stop();
+      }
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach(track => track.stop());
+        streamRef.current = null;
+      }
     };
 
     wsRef.current = ws;
