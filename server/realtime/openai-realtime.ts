@@ -70,10 +70,10 @@ export class OpenAIRealtimeSession {
       const transcription = await this.openai.audio.transcriptions.create({
         file: audioStream as any,
         model: 'whisper-1',
-        response_format: 'text'
+        response_format: 'verbose_json'
       });
 
-      const transcriptText = typeof transcription === 'string' ? transcription : transcription.text;
+      const transcriptText = transcription.text;
       
       log(`[OpenAI Voice] Transcription complete: ${transcriptText.substring(0, 50)}...`);
       

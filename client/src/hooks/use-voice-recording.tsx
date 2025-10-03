@@ -1,0 +1,256 @@
+import { useState, useRef, useCallback, useEffect } from 'react';
+import { useToast } from './use-toast';
+
+interface VoiceRecordingConfig {
+  userId: number;
+  sessionNumber: number;
+  onTranscriptionComplete: (text: string) => void;
+}
+
+interface VoiceRecordingState {
+  isRecording: boolean;
+  isProcessing: boolean;
+  transcriptionPreview: string;
+  error: string | null;
+}
+
+export function useVoiceRecording(config: VoiceRecordingConfig) {
+  const { toast } = useToast();
+  const [state, setState] = useState<VoiceRecordingState>({
+    isRecording: false,
+    isProcessing: false,
+    transcriptionPreview: '',
+    error: null
+  });
+
+  const wsRef = useRef<WebSocket | null>(null);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const streamRef = useRef<MediaStream | null>(null);
+
+  // Get supported MIME type for cross-browser compatibility
+  const getSupportedMimeType = useCallback(() => {
+    const types = [
+      'audio/webm;codecs=opus',
+      'audio/webm',
+      'audio/ogg;codecs=opus',
+      'audio/mp4',
+      'audio/wav'
+    ];
+    return types.find(type => MediaRecorder.isTypeSupported(type)) || 'audio/webm';
+  }, []);
+
+  // Initialize WebSocket connection
+  const connectWebSocket = useCallback(() => {
+    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const wsUrl = `${protocol}//${window.location.host}/ws/voice`;
+    
+    const ws = new WebSocket(wsUrl);
+    
+    ws.onopen = () => {
+      console.log('[Voice] WebSocket connected');
+      // Start voice session
+      ws.send(JSON.stringify({
+        type: 'start',
+        userId: config.userId,
+        sessionNumber: config.sessionNumber
+      }));
+    };
+
+    ws.onmessage = (event) => {
+      const message = JSON.parse(event.data);
+      
+      switch (message.type) {
+        case 'session_started':
+          console.log('[Voice] Session started');
+          break;
+          
+        case 'transcription_delta':
+          // Update preview with streaming text
+          setState(prev => ({
+            ...prev,
+            transcriptionPreview: prev.transcriptionPreview + message.text
+          }));
+          break;
+          
+        case 'transcription_complete':
+          console.log('[Voice] Transcription complete:', message.text);
+          setState(prev => ({
+            ...prev,
+            isProcessing: false,
+            transcriptionPreview: ''
+          }));
+          config.onTranscriptionComplete(message.text);
+          break;
+          
+        case 'error':
+          console.error('[Voice] Error:', message.message);
+          setState(prev => ({
+            ...prev,
+            error: message.message,
+            isRecording: false,
+            isProcessing: false
+          }));
+          toast({
+            title: "Voice Error",
+            description: message.message,
+            variant: "destructive"
+          });
+          break;
+      }
+    };
+
+    ws.onerror = (error) => {
+      console.error('[Voice] WebSocket error:', error);
+      setState(prev => ({
+        ...prev,
+        error: 'Connection error',
+        isRecording: false,
+        isProcessing: false
+      }));
+    };
+
+    ws.onclose = () => {
+      console.log('[Voice] WebSocket closed');
+    };
+
+    wsRef.current = ws;
+    return ws;
+  }, [config, toast]);
+
+  // Start recording
+  const startRecording = useCallback(async () => {
+    try {
+      // Request microphone permission
+      const stream = await navigator.mediaDevices.getUserMedia({ 
+        audio: {
+          channelCount: 1,
+          sampleRate: 24000,
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true
+        } 
+      });
+
+      streamRef.current = stream;
+      
+      // Connect WebSocket
+      const ws = connectWebSocket();
+      
+      // Set up MediaRecorder
+      const mimeType = getSupportedMimeType();
+      const mediaRecorder = new MediaRecorder(stream, {
+        mimeType
+      });
+
+      mediaRecorderRef.current = mediaRecorder;
+
+      // Send audio chunks to server
+      mediaRecorder.ondataavailable = async (event) => {
+        if (event.data.size > 0 && ws.readyState === WebSocket.OPEN) {
+          // Convert blob to base64
+          const reader = new FileReader();
+          reader.onloadend = () => {
+            const base64 = reader.result as string;
+            const audioData = base64.split(',')[1]; // Remove data:audio/... prefix
+            
+            ws.send(JSON.stringify({
+              type: 'audio',
+              data: audioData
+            }));
+          };
+          reader.readAsDataURL(event.data);
+        }
+      };
+
+      // Start recording with 100ms chunks for real-time streaming
+      mediaRecorder.start(100);
+      
+      setState(prev => ({
+        ...prev,
+        isRecording: true,
+        error: null,
+        transcriptionPreview: ''
+      }));
+
+      // Add haptic feedback for mobile
+      if ('vibrate' in navigator) {
+        navigator.vibrate(50);
+      }
+
+    } catch (error) {
+      console.error('[Voice] Error starting recording:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Failed to access microphone';
+      
+      setState(prev => ({
+        ...prev,
+        error: errorMessage,
+        isRecording: false
+      }));
+      
+      toast({
+        title: "Microphone Error",
+        description: errorMessage,
+        variant: "destructive"
+      });
+    }
+  }, [connectWebSocket, getSupportedMimeType, toast]);
+
+  // Stop recording
+  const stopRecording = useCallback(() => {
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+      mediaRecorderRef.current.stop();
+    }
+
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach(track => track.stop());
+      streamRef.current = null;
+    }
+
+    if (wsRef.current) {
+      wsRef.current.send(JSON.stringify({ type: 'stop' }));
+    }
+
+    setState(prev => ({
+      ...prev,
+      isRecording: false,
+      isProcessing: true
+    }));
+
+    // Add haptic feedback for mobile
+    if ('vibrate' in navigator) {
+      navigator.vibrate(50);
+    }
+  }, []);
+
+  // Toggle recording
+  const toggleRecording = useCallback(() => {
+    if (state.isRecording) {
+      stopRecording();
+    } else {
+      startRecording();
+    }
+  }, [state.isRecording, startRecording, stopRecording]);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+        mediaRecorderRef.current.stop();
+      }
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach(track => track.stop());
+      }
+      if (wsRef.current) {
+        wsRef.current.send(JSON.stringify({ type: 'end' }));
+        wsRef.current.close();
+      }
+    };
+  }, []);
+
+  return {
+    ...state,
+    startRecording,
+    stopRecording,
+    toggleRecording
+  };
+}
