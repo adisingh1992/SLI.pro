@@ -1,6 +1,8 @@
 import OpenAI from 'openai';
 import { log } from '../vite';
-import { Readable } from 'stream';
+import { writeFile, unlink } from 'fs/promises';
+import { join } from 'path';
+import { tmpdir } from 'os';
 
 interface RealtimeSessionConfig {
   onTranscriptionDelta: (text: string) => void;
@@ -57,18 +59,27 @@ export class OpenAIRealtimeSession {
       return;
     }
 
+    let tempFilePath: string | null = null;
+
     try {
       log('[OpenAI Voice] Transcribing audio...');
       
       // Combine all audio chunks
       const completeAudio = Buffer.concat(this.audioChunks);
       
-      // Create a readable stream from the buffer
-      const audioStream = Readable.from(completeAudio);
+      // Create a temporary file with .webm extension
+      const timestamp = Date.now();
+      const randomId = Math.random().toString(36).substring(7);
+      tempFilePath = join(tmpdir(), `voice-recording-${timestamp}-${randomId}.webm`);
       
-      // Use Whisper API for transcription
+      // Write audio buffer to temporary file
+      await writeFile(tempFilePath, completeAudio);
+      
+      log(`[OpenAI Voice] Created temp file: ${tempFilePath}, size: ${completeAudio.length} bytes`);
+      
+      // Use Whisper API for transcription with the file
       const transcription = await this.openai.audio.transcriptions.create({
-        file: audioStream as any,
+        file: await import('fs').then(fs => fs.createReadStream(tempFilePath!)),
         model: 'whisper-1',
         response_format: 'verbose_json'
       });
@@ -85,6 +96,16 @@ export class OpenAIRealtimeSession {
     } catch (error) {
       log(`[OpenAI Voice] Transcription error: ${error}`);
       this.config.onError(error instanceof Error ? error.message : 'Transcription failed');
+    } finally {
+      // Clean up temporary file
+      if (tempFilePath) {
+        try {
+          await unlink(tempFilePath);
+          log(`[OpenAI Voice] Cleaned up temp file: ${tempFilePath}`);
+        } catch (cleanupError) {
+          log(`[OpenAI Voice] Failed to cleanup temp file: ${cleanupError}`);
+        }
+      }
     }
   }
 
