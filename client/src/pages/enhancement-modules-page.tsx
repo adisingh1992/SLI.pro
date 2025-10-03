@@ -104,11 +104,11 @@ export default function EnhancementModulesPage() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100">
+      <div className="min-h-screen bg-background flex flex-col">
         <NavBar />
         <div className="container mx-auto px-4 py-8">
           <div className="flex items-center justify-center py-12">
-            <Loader2 className="h-8 w-8 animate-spin" />
+            <Loader2 className="h-8 w-8 animate-spin text-primary" />
           </div>
         </div>
       </div>
@@ -117,11 +117,11 @@ export default function EnhancementModulesPage() {
 
   if (error) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100">
+      <div className="min-h-screen bg-background flex flex-col">
         <NavBar />
         <div className="container mx-auto px-4 py-8">
           <div className="text-center py-12">
-            <p className="text-red-600">Error loading enhancement modules</p>
+            <p className="text-destructive">Error loading enhancement modules</p>
           </div>
         </div>
       </div>
@@ -129,16 +129,16 @@ export default function EnhancementModulesPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100">
+    <div className="min-h-screen bg-background flex flex-col">
       <NavBar />
       
       <div className="container mx-auto px-4 py-8">
         {/* Header Section */}
         <div className="text-center mb-12">
-          <h1 className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-blue-600 via-purple-600 to-blue-800 bg-clip-text text-transparent mb-4">
+          <h1 className="text-4xl md:text-5xl font-bold text-foreground mb-4">
             Professional Enhancement Modules
           </h1>
-          <p className="text-lg md:text-xl text-slate-600 max-w-3xl mx-auto leading-relaxed">
+          <p className="text-lg md:text-xl text-muted-foreground max-w-3xl mx-auto leading-relaxed">
             Advance your professional growth through specialized coaching modules designed to enhance your digital presence, strategic networking, and career positioning.
           </p>
         </div>
@@ -148,17 +148,17 @@ export default function EnhancementModulesPage() {
           {modules?.map((module) => {
             const details = getModuleDetails(module.moduleCode);
             return (
-              <Card key={module.id} className="relative overflow-hidden border-0 shadow-xl bg-white/80 backdrop-blur-sm hover:shadow-2xl transition-all duration-300 group hover:scale-[1.02]">
+              <Card key={module.id} className="relative overflow-hidden bg-card border border-border hover:shadow-lg transition-all duration-300 group">
                 <CardHeader className="pb-4">
                   <div className="flex items-start justify-between mb-4">
                     <div className="flex-1">
-                      <CardTitle className="text-xl md:text-2xl font-bold text-slate-800 mb-2 leading-tight">
+                      <CardTitle className="text-xl md:text-2xl font-bold text-foreground mb-2 leading-tight">
                         {details.title}
                       </CardTitle>
-                      <CardDescription className="text-base text-blue-600 font-medium mb-3">
+                      <CardDescription className="text-base text-primary font-medium mb-3">
                         {details.subtitle}
                       </CardDescription>
-                      <p className="text-slate-600 leading-relaxed">
+                      <p className="text-muted-foreground leading-relaxed">
                         {details.description}
                       </p>
                     </div>
@@ -172,12 +172,12 @@ export default function EnhancementModulesPage() {
                   <div className="flex items-center justify-between pt-4">
                     <div className="flex items-center gap-4">
                       {module.timerElapsed && module.timerElapsed > 0 && (
-                        <div className="text-sm text-slate-500">
+                        <div className="text-sm text-muted-foreground">
                           Time spent: {Math.floor(module.timerElapsed / 60)}m {module.timerElapsed % 60}s
                         </div>
                       )}
                       {module.completedAt && (
-                        <div className="text-sm text-green-600 font-medium">
+                        <div className="text-sm text-primary font-medium">
                           Completed: {new Date(module.completedAt).toLocaleDateString()}
                         </div>
                       )}
@@ -188,7 +188,7 @@ export default function EnhancementModulesPage() {
                         <Button 
                           onClick={() => handleStartModule(module.moduleCode)}
                           disabled={startModuleMutation.isPending}
-                          className="bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white font-medium px-6 py-2 rounded-lg shadow-lg hover:shadow-xl transition-all duration-200"
+                          className="font-medium px-6 py-2"
                           data-testid={`button-start-module-${module.moduleCode}`}
                         >
                           {startModuleMutation.isPending ? (
@@ -209,7 +209,7 @@ export default function EnhancementModulesPage() {
                         <Button 
                           onClick={() => handleContinueModule(module.moduleCode)}
                           variant="outline"
-                          className="border-2 border-blue-200 text-blue-600 hover:bg-blue-50 font-medium px-6 py-2 rounded-lg shadow-md hover:shadow-lg transition-all duration-200"
+                          className="font-medium px-6 py-2"
                           data-testid={`button-continue-module-${module.moduleCode}`}
                         >
                           <MessageSquare className="mr-2 h-4 w-4" />
@@ -221,7 +221,7 @@ export default function EnhancementModulesPage() {
                         <Button 
                           onClick={() => handleContinueModule(module.moduleCode)}
                           variant="outline"
-                          className="border-2 border-green-200 text-green-600 hover:bg-green-50 font-medium px-6 py-2 rounded-lg shadow-md hover:shadow-lg transition-all duration-200"
+                          className="font-medium px-6 py-2"
                           data-testid={`button-view-module-${module.moduleCode}`}
                         >
                           <CheckCircle className="mr-2 h-4 w-4" />

@@ -26,7 +26,7 @@ function getInitialGuidanceMessage(moduleCode: string): string | null {
     case "B":
       return "Quality over quantity. You need 50 relevant connections, not 500 random ones. Let's start: How many connections do you currently have on LinkedIn? (Rough estimate is fine)";
     case "C":
-      return "Welcome to Module C: Career Aspiration Alignment Framework. I'll help you align your long-term goals with your current positioning reality. Let's start by exploring your aspirational goals and identifying any gaps.";
+      return "Career Aspiration Alignment Framework. I'll help you align your long-term goals with your current positioning reality. Let's start by exploring your aspirational goals and identifying any gaps.";
     default:
       return null;
   }
