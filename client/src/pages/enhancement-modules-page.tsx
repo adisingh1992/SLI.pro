@@ -133,25 +133,24 @@ export default function EnhancementModulesPage() {
       <NavBar />
       
       <div className="container mx-auto px-4 py-8">
-        {/* Back Button */}
-        <div className="mb-6">
-          <Button
-            variant="ghost"
-            onClick={() => navigate('/')}
-            className="gap-2 hover:bg-primary/10"
-            data-testid="button-back-home"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            Back to Home
-          </Button>
-        </div>
-
-        {/* Header Section */}
-        <div className="text-center mb-12">
-          <h1 className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-foreground via-primary to-foreground bg-clip-text text-transparent mb-4">
-            Enhancement Modules
-          </h1>
-          <p className="text-lg md:text-xl text-muted-foreground max-w-3xl mx-auto leading-relaxed">
+        {/* Header Section with Back Button */}
+        <div className="mb-12">
+          <div className="flex items-center justify-between mb-8">
+            <Button
+              variant="ghost"
+              onClick={() => navigate('/')}
+              className="gap-2 hover:bg-primary/10"
+              data-testid="button-back-home"
+            >
+              <ArrowLeft className="h-4 w-4" />
+              Back to Home
+            </Button>
+            <h1 className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-foreground via-primary to-foreground bg-clip-text text-transparent">
+              Enhancement Modules
+            </h1>
+            <div className="w-32"></div> {/* Spacer for balance */}
+          </div>
+          <p className="text-lg md:text-xl text-muted-foreground max-w-3xl mx-auto leading-relaxed text-center">
             Advance your professional growth through specialized coaching modules designed to enhance your digital presence, strategic networking, and career positioning.
           </p>
         </div>
