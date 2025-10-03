@@ -7,7 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import { Loader2, Lock, Play, CheckCircle, MessageSquare } from "lucide-react";
+import { Loader2, Lock, Play, CheckCircle, MessageSquare, ArrowLeft } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 type FoundationSession = {
@@ -238,16 +238,26 @@ export default function FoundationPage() {
       
       {/* Full-width hero section */}
       <div className="w-full bg-gradient-to-br from-background via-background/50 to-primary/5">
-        <div className="w-full px-6">
+        <div className="w-full px-6 py-8">
           <div className="max-w-7xl mx-auto">
-            <div className="text-center">
-              <h1 className="text-4xl md:text-5xl font-bold text-foreground mb-4" data-testid="text-page-title">
+            <div className="flex items-center justify-between mb-4">
+              <Button
+                variant="ghost"
+                onClick={() => navigate('/')}
+                className="gap-2 hover:bg-primary/10"
+                data-testid="button-back-home"
+              >
+                <ArrowLeft className="h-4 w-4" />
+                Back to Home
+              </Button>
+              <h1 className="text-4xl md:text-5xl font-bold text-foreground" data-testid="text-page-title">
                 Foundation Sessions
               </h1>
-              <p className="text-lg text-muted-foreground max-w-3xl mx-auto">
-                Complete three sequential coaching conversations to identify your primary business function and develop your professional foundation.
-              </p>
+              <div className="w-32"></div> {/* Spacer for balance */}
             </div>
+            <p className="text-lg text-muted-foreground max-w-3xl mx-auto text-center">
+              Complete three sequential coaching conversations to identify your primary business function and develop your professional foundation.
+            </p>
           </div>
         </div>
       </div>
