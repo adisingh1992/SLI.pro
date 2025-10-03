@@ -428,39 +428,23 @@ export default function FoundationSessionChatPage() {
               </div>
             </ScrollArea>
 
-            {/* Message Input - Voice First */}
+            {/* Message Input */}
             {session.status === 'in_progress' && (
-              <div className="border-t p-6 space-y-4">
-                {/* Voice Input - Primary */}
-                <div className="flex justify-center">
-                  <VoiceMicButton
-                    isRecording={voiceRecording.isRecording}
-                    isProcessing={voiceRecording.isProcessing}
-                    disabled={isStreaming}
-                    onClick={voiceRecording.toggleRecording}
-                    transcriptionPreview={voiceRecording.transcriptionPreview}
-                  />
-                </div>
-
-                {/* Divider */}
-                <div className="relative">
-                  <div className="absolute inset-0 flex items-center">
-                    <div className="w-full border-t border-muted"></div>
-                  </div>
-                  <div className="relative flex justify-center text-xs uppercase">
-                    <span className="bg-background px-2 text-muted-foreground">or type</span>
-                  </div>
-                </div>
-
-                {/* Text Input - Secondary */}
+              <div className="border-t p-6">
                 <form onSubmit={handleSendMessage}>
                   <div className="flex gap-2">
+                    <VoiceMicButton
+                      isRecording={voiceRecording.isRecording}
+                      isProcessing={voiceRecording.isProcessing}
+                      disabled={isStreaming}
+                      onClick={voiceRecording.toggleRecording}
+                    />
                     <Textarea
                       ref={messageInputRef}
                       value={currentMessage}
                       onChange={(e) => setCurrentMessage(e.target.value)}
-                      placeholder="Type your message here (optional)..."
-                      className="min-h-[60px] resize-none text-sm"
+                      placeholder="Type or use voice to send a message..."
+                      className="min-h-[60px] resize-none text-sm flex-1"
                       onKeyDown={(e) => {
                         if (e.key === 'Enter' && !e.shiftKey) {
                           e.preventDefault();
@@ -475,6 +459,7 @@ export default function FoundationSessionChatPage() {
                       size="default"
                       disabled={!currentMessage.trim() || isStreaming || voiceRecording.isRecording}
                       data-testid="button-send-message"
+                      className="h-[60px]"
                     >
                       {isStreaming ? (
                         <Loader2 className="h-4 w-4 animate-spin" />
@@ -484,6 +469,21 @@ export default function FoundationSessionChatPage() {
                     </Button>
                   </div>
                 </form>
+                
+                {/* Status indicator */}
+                {(voiceRecording.isRecording || voiceRecording.isProcessing) && (
+                  <div className="mt-2 text-sm">
+                    {voiceRecording.isProcessing ? (
+                      <p className="text-muted-foreground animate-pulse" data-testid="text-voice-status">
+                        Processing voice...
+                      </p>
+                    ) : voiceRecording.isRecording ? (
+                      <p className="text-red-600 dark:text-red-400 font-medium" data-testid="text-voice-status">
+                        Recording... Click mic to stop
+                      </p>
+                    ) : null}
+                  </div>
+                )}
               </div>
             )}
 
