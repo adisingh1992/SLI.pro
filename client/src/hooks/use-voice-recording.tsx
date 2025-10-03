@@ -126,8 +126,9 @@ export function useVoiceRecording(config: VoiceRecordingConfig) {
     ws.onclose = (event) => {
       console.log('[Voice] WebSocket closed', event.code, event.reason);
       
-      // Only show error if it was unexpected (not a normal closure)
-      if (event.code !== 1000) {
+      // Only show error if it was unexpected AND the user is actively recording
+      // Don't show errors for normal closures (1000) or when navigating away from the page
+      if (event.code !== 1000 && state.isRecording) {
         setState(prev => ({
           ...prev,
           error: 'Connection closed unexpectedly',
