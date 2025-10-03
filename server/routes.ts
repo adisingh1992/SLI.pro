@@ -12,6 +12,7 @@ import { registerLinkedinOptimizationRoutes } from "./linkedin-optimization-rout
 import { registerLinkedinContentRoutes } from "./linkedin-content-routes";
 import { registerFoundationSessionsRoutes } from "./foundation-sessions-routes";
 import { setupEnhancementModulesRoutes } from "./enhancement-modules-routes";
+import { setupWebSocketServer } from "./realtime/websocket-handler";
 import {
   insertExperienceSchema,
   insertEducationSchema,
@@ -1066,5 +1067,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   })();
 
   const httpServer = createServer(app);
+  
+  // Set up WebSocket server for voice functionality
+  setupWebSocketServer(httpServer);
+  
   return httpServer;
 }
