@@ -129,14 +129,19 @@ export default function EnhancementModulesPage() {
   }
 
   return (
-    <div className="min-h-screen bg-background flex flex-col">
+    <div className="min-h-screen bg-gradient-to-br from-background via-primary/5 to-primary/10 flex flex-col">
       <NavBar />
       
       <div className="container mx-auto px-4 py-8">
         {/* Header Section */}
         <div className="text-center mb-12">
-          <h1 className="text-4xl md:text-5xl font-bold text-foreground mb-4">
-            Professional Enhancement Modules
+          <div className="inline-block mb-4">
+            <div className="bg-primary/10 text-primary px-4 py-2 rounded-full text-sm font-semibold border border-primary/20">
+              Professional Development
+            </div>
+          </div>
+          <h1 className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-foreground via-primary to-foreground bg-clip-text text-transparent mb-4">
+            Enhancement Modules
           </h1>
           <p className="text-lg md:text-xl text-muted-foreground max-w-3xl mx-auto leading-relaxed">
             Advance your professional growth through specialized coaching modules designed to enhance your digital presence, strategic networking, and career positioning.
@@ -147,38 +152,55 @@ export default function EnhancementModulesPage() {
         <div className="grid gap-8 md:grid-cols-1 lg:grid-cols-1 max-w-4xl mx-auto">
           {modules?.map((module) => {
             const details = getModuleDetails(module.moduleCode);
+            const moduleColors = {
+              'A': 'from-primary/20 via-primary/10 to-transparent',
+              'B': 'from-primary/15 via-primary/8 to-transparent',
+              'C': 'from-primary/20 via-primary/10 to-transparent'
+            };
+            const gradientColor = moduleColors[module.moduleCode as keyof typeof moduleColors];
+            
             return (
-              <Card key={module.id} className="relative overflow-hidden bg-card border border-border hover:shadow-lg transition-all duration-300 group">
-                <CardHeader className="pb-4">
-                  <div className="flex items-start justify-between mb-4">
+              <Card key={module.id} className="relative overflow-hidden bg-card border-2 border-primary/20 hover:border-primary/40 hover:shadow-xl transition-all duration-300 group">
+                {/* Decorative gradient overlay */}
+                <div className={`absolute inset-0 bg-gradient-to-br ${gradientColor} pointer-events-none opacity-50`} />
+                
+                {/* Module letter badge */}
+                <div className="absolute top-4 right-4 w-12 h-12 rounded-full bg-primary/20 border-2 border-primary/30 flex items-center justify-center font-bold text-2xl text-primary z-10">
+                  {module.moduleCode}
+                </div>
+                
+                <CardHeader className="pb-4 relative z-10">
+                  <div className="flex items-start justify-between mb-4 pr-16">
                     <div className="flex-1">
                       <CardTitle className="text-xl md:text-2xl font-bold text-foreground mb-2 leading-tight">
                         {details.title}
                       </CardTitle>
-                      <CardDescription className="text-base text-primary font-medium mb-3">
+                      <CardDescription className="text-base text-primary font-semibold mb-3 flex items-center gap-2">
+                        <div className="h-1 w-8 bg-primary rounded-full" />
                         {details.subtitle}
                       </CardDescription>
                       <p className="text-muted-foreground leading-relaxed">
                         {details.description}
                       </p>
                     </div>
-                    <div className="flex flex-col items-end gap-3 ml-4">
-                      {getStatusBadge(module.status)}
-                    </div>
+                  </div>
+                  
+                  <div className="flex items-center gap-2 mt-4">
+                    {getStatusBadge(module.status)}
                   </div>
                 </CardHeader>
                 
-                <CardContent>
-                  <div className="flex items-center justify-between pt-4">
+                <CardContent className="relative z-10">
+                  <div className="flex items-center justify-between pt-4 border-t border-primary/10">
                     <div className="flex items-center gap-4">
                       {module.timerElapsed && module.timerElapsed > 0 && (
-                        <div className="text-sm text-muted-foreground">
-                          Time spent: {Math.floor(module.timerElapsed / 60)}m {module.timerElapsed % 60}s
+                        <div className="text-sm text-muted-foreground bg-primary/5 px-3 py-1 rounded-full">
+                          ⏱️ {Math.floor(module.timerElapsed / 60)}m {module.timerElapsed % 60}s
                         </div>
                       )}
                       {module.completedAt && (
-                        <div className="text-sm text-primary font-medium">
-                          Completed: {new Date(module.completedAt).toLocaleDateString()}
+                        <div className="text-sm text-primary font-medium bg-primary/10 px-3 py-1 rounded-full border border-primary/20">
+                          ✓ {new Date(module.completedAt).toLocaleDateString()}
                         </div>
                       )}
                     </div>
@@ -188,7 +210,7 @@ export default function EnhancementModulesPage() {
                         <Button 
                           onClick={() => handleStartModule(module.moduleCode)}
                           disabled={startModuleMutation.isPending}
-                          className="font-medium px-6 py-2"
+                          className="font-medium px-6 py-2 shadow-lg hover:shadow-xl transition-shadow"
                           data-testid={`button-start-module-${module.moduleCode}`}
                         >
                           {startModuleMutation.isPending ? (
@@ -209,7 +231,7 @@ export default function EnhancementModulesPage() {
                         <Button 
                           onClick={() => handleContinueModule(module.moduleCode)}
                           variant="outline"
-                          className="font-medium px-6 py-2"
+                          className="font-medium px-6 py-2 border-2 border-primary/30 text-primary hover:bg-primary/10"
                           data-testid={`button-continue-module-${module.moduleCode}`}
                         >
                           <MessageSquare className="mr-2 h-4 w-4" />
@@ -221,7 +243,7 @@ export default function EnhancementModulesPage() {
                         <Button 
                           onClick={() => handleContinueModule(module.moduleCode)}
                           variant="outline"
-                          className="font-medium px-6 py-2"
+                          className="font-medium px-6 py-2 border-2 border-primary/30 text-primary hover:bg-primary/10"
                           data-testid={`button-view-module-${module.moduleCode}`}
                         >
                           <CheckCircle className="mr-2 h-4 w-4" />
