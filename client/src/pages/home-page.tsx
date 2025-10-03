@@ -466,7 +466,7 @@ export default function HomePage() {
                     <Sparkles className="h-5 w-5" />
                   </div>
                   <CardTitle className="text-lg">
-                    Step 3 (Optional) - Enhancement Modules
+                    Step 3 (Optional): Enhancement Modules
                   </CardTitle>
                 </div>
                 {getStatusBadge(
