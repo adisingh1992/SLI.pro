@@ -445,6 +445,68 @@ export default function HomePage() {
             </CardFooter>
           </Card>
 
+          {/* Step 3 (Optional): Enhancement Modules */}
+          <Card className={`overflow-hidden shadow-sm flex flex-col h-full ${
+            !hasFoundationSessionsCompleted
+              ? "border-gray-200 opacity-75"
+              : "border-success/20"
+          }`}>
+            <CardHeader className={`pb-4 ${
+              !hasFoundationSessionsCompleted
+                ? "bg-gray-50"
+                : "bg-green-50"
+            }`}>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center">
+                  <div className={`p-2 rounded-full mr-3 ${
+                    !hasFoundationSessionsCompleted
+                      ? "bg-gray-100 text-gray-500"
+                      : "bg-green-100 text-green-600"
+                  }`}>
+                    <Sparkles className="h-5 w-5" />
+                  </div>
+                  <CardTitle className="text-lg">
+                    Step 3 (Optional) - Enhancement Modules
+                  </CardTitle>
+                </div>
+                {getStatusBadge(
+                  !!hasFoundationSessionsCompleted,
+                  false // Always available once foundation sessions are completed
+                )}
+              </div>
+              <CardDescription className="mt-2">
+                Advance your professional growth through specialized coaching modules designed to enhance your digital presence, strategic networking, and career positioning.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="p-5 flex-grow">
+              <p className={`text-sm ${!hasFoundationSessionsCompleted ? "text-muted-foreground/70" : "text-muted-foreground"}`}>
+                {!hasFoundationSessionsCompleted
+                  ? "You must complete at least one foundation session first"
+                  : "Explore targeted modules to deepen your expertise in digital behavior analysis, network positioning, and career aspiration alignment."}
+              </p>
+            </CardContent>
+            <CardFooter className="bg-gray-50 py-3 px-5 mt-auto">
+              <Button
+                variant="outline"
+                className={`w-full ${
+                  !hasFoundationSessionsCompleted
+                    ? "border-gray-300 text-gray-500 cursor-not-allowed"
+                    : "border-green-500 text-green-700 hover:bg-green-50"
+                }`}
+                onClick={() => {
+                  if (hasFoundationSessionsCompleted) {
+                    scrollToTop();
+                    navigate("/enhancement-modules");
+                  }
+                }}
+                disabled={!hasFoundationSessionsCompleted}
+              >
+                View Modules
+                <ArrowRight className="ml-2 h-4 w-4" />
+              </Button>
+            </CardFooter>
+          </Card>
+
           {/* Step 4: Schedule Live Coaching Call */}
           <Card className={`overflow-hidden shadow-sm flex flex-col h-full ${
             !hasFoundationSessionsCompleted
