@@ -10,6 +10,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Loader2, Send, ArrowLeft, Lock, CheckCircle, MessageSquare, AlertCircle } from "lucide-react";
+import VoiceMicButton from "@/components/VoiceMicButton";
+import { useVoiceRecording } from "@/hooks/use-voice-recording";
 import { useToast } from "@/hooks/use-toast";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import SessionTimer from "@/components/ui/session-timer";
@@ -34,6 +36,18 @@ export default function FoundationSessionChatPage() {
   const [streamingResponse, setStreamingResponse] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messageInputRef = useRef<HTMLTextAreaElement>(null);
+
+  // Voice recording hook
+  const voiceRecording = useVoiceRecording({
+    userId: user?.id || 0,
+    sessionNumber,
+    onTranscriptionComplete: (text: string) => {
+      // Insert transcribed text into the message input
+      setCurrentMessage(prev => prev + (prev ? ' ' : '') + text);
+      // Focus the text area for potential editing
+      setTimeout(() => messageInputRef.current?.focus(), 100);
+    }
+  });
 
   // Validate session number
   if (isNaN(sessionNumber) || sessionNumber < 1 || sessionNumber > 3) {
@@ -414,39 +428,63 @@ export default function FoundationSessionChatPage() {
               </div>
             </ScrollArea>
 
-            {/* Message Input */}
+            {/* Message Input - Voice First */}
             {session.status === 'in_progress' && (
-              <form onSubmit={handleSendMessage} className="border-t p-6">
-                <div className="flex gap-3">
-                  <Textarea
-                    ref={messageInputRef}
-                    value={currentMessage}
-                    onChange={(e) => setCurrentMessage(e.target.value)}
-                    placeholder="Type your message here..."
-                    className="min-h-[60px] resize-none"
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter' && !e.shiftKey) {
-                        e.preventDefault();
-                        handleSendMessage(e);
-                      }
-                    }}
+              <div className="border-t p-6 space-y-4">
+                {/* Voice Input - Primary */}
+                <div className="flex justify-center">
+                  <VoiceMicButton
+                    isRecording={voiceRecording.isRecording}
+                    isProcessing={voiceRecording.isProcessing}
                     disabled={isStreaming}
-                    data-testid="input-message"
+                    onClick={voiceRecording.toggleRecording}
+                    transcriptionPreview={voiceRecording.transcriptionPreview}
                   />
-                  <Button 
-                    type="submit" 
-                    size="lg"
-                    disabled={!currentMessage.trim() || isStreaming}
-                    data-testid="button-send-message"
-                  >
-                    {isStreaming ? (
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                    ) : (
-                      <Send className="h-4 w-4" />
-                    )}
-                  </Button>
                 </div>
-              </form>
+
+                {/* Divider */}
+                <div className="relative">
+                  <div className="absolute inset-0 flex items-center">
+                    <div className="w-full border-t border-muted"></div>
+                  </div>
+                  <div className="relative flex justify-center text-xs uppercase">
+                    <span className="bg-background px-2 text-muted-foreground">or type</span>
+                  </div>
+                </div>
+
+                {/* Text Input - Secondary */}
+                <form onSubmit={handleSendMessage}>
+                  <div className="flex gap-2">
+                    <Textarea
+                      ref={messageInputRef}
+                      value={currentMessage}
+                      onChange={(e) => setCurrentMessage(e.target.value)}
+                      placeholder="Type your message here (optional)..."
+                      className="min-h-[60px] resize-none text-sm"
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' && !e.shiftKey) {
+                          e.preventDefault();
+                          handleSendMessage(e);
+                        }
+                      }}
+                      disabled={isStreaming || voiceRecording.isRecording}
+                      data-testid="input-message"
+                    />
+                    <Button 
+                      type="submit" 
+                      size="default"
+                      disabled={!currentMessage.trim() || isStreaming || voiceRecording.isRecording}
+                      data-testid="button-send-message"
+                    >
+                      {isStreaming ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <Send className="h-4 w-4" />
+                      )}
+                    </Button>
+                  </div>
+                </form>
+              </div>
             )}
 
             {/* Completed session message */}
