@@ -359,7 +359,7 @@ export default function FoundationSessionChatPage() {
       {/* 2-Column Layout */}
       <div className="flex h-[calc(100vh-140px)]">
         {/* Left Column - Chat Interface (75%) */}
-        <div className="w-3/4 flex flex-col">
+        <div className="w-full lg:w-3/4 flex flex-col">
           {/* Session Progress - based on message count */}
           {session.status === 'in_progress' && messages.length > 0 && (
             <div className="px-4 py-3 border-b bg-background/50">
@@ -501,7 +501,7 @@ export default function FoundationSessionChatPage() {
         </div>
 
         {/* Right Column - Timer & Status (25%) */}
-        <div className="w-1/4 border-l bg-background/50">
+        <div className="hidden lg:block w-1/4 border-l bg-background/50">
           <div className="p-4 space-y-4">
             <h3 className="font-semibold text-sm text-muted-foreground uppercase tracking-wide">Session Info</h3>
             
