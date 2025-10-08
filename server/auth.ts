@@ -89,7 +89,7 @@ export function setupAuth(app: Express) {
           clientID: process.env.LINKEDIN_CLIENT_ID,
           clientSecret: process.env.LINKEDIN_CLIENT_SECRET,
           callbackURL,
-          scope: ["r_liteprofile", "r_emailaddress"],
+          scope: ["openid", "profile", "email"],
           state: true,
         },
         async (accessToken: string, refreshToken: string, profile: any, done: any) => {
