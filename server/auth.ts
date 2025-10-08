@@ -1,6 +1,6 @@
 import passport from "passport";
 import { Strategy as LocalStrategy } from "passport-local";
-import { Strategy as LinkedInStrategy } from "passport-linkedin-oauth2";
+import { Strategy as OAuth2Strategy } from "passport-oauth2";
 import { Express, Request } from "express";
 import session from "express-session";
 import { scrypt, randomBytes, timingSafeEqual } from "crypto";
@@ -90,66 +90,84 @@ export function setupAuth(app: Express) {
 
     console.log(callbackURL);
     
-    passport.use(
-      new LinkedInStrategy(
-        {
-          clientID: process.env.LINKEDIN_CLIENT_ID,
-          clientSecret: process.env.LINKEDIN_CLIENT_SECRET,
-          callbackURL,
-          scope: ["openid", "profile", "email"],
-          state: true, // Enable CSRF protection via automatic state parameter handling
-          profileURL: "https://api.linkedin.com/v2/userinfo", // Use OpenID Connect userinfo endpoint
-        } as any, // Type assertion needed as @types/passport-linkedin-oauth2 doesn't include state option
-        async (accessToken: string, refreshToken: string, profile: any, done: any) => {
-          try {
-            console.log('[LinkedIn OAuth] Profile received:', JSON.stringify(profile, null, 2));
-            
-            const linkedinId = profile.id;
-            const email = profile.emails?.[0]?.value;
-            const firstName = profile.name?.givenName || "";
-            const lastName = profile.name?.familyName || "";
+    // LinkedIn OpenID Connect Strategy
+    const linkedInStrategy = new OAuth2Strategy(
+      {
+        authorizationURL: "https://www.linkedin.com/oauth/v2/authorization",
+        tokenURL: "https://www.linkedin.com/oauth/v2/accessToken",
+        clientID: process.env.LINKEDIN_CLIENT_ID,
+        clientSecret: process.env.LINKEDIN_CLIENT_SECRET,
+        callbackURL,
+        scope: ["openid", "profile", "email"],
+        state: true,
+      },
+      async (accessToken: string, refreshToken: string, params: any, profile: any, done: any) => {
+        try {
+          // Manually fetch user profile from OpenID Connect userinfo endpoint
+          const response = await fetch("https://api.linkedin.com/v2/userinfo", {
+            headers: {
+              Authorization: `Bearer ${accessToken}`,
+            },
+          });
 
-            console.log('[LinkedIn OAuth] Extracted data:', { linkedinId, email, firstName, lastName });
-
-            let user = await storage.getUserByLinkedinId(linkedinId);
-            console.log('[LinkedIn OAuth] User by LinkedIn ID:', user ? `Found: ${user.id}` : 'Not found');
-
-            if (!user && email) {
-              user = await storage.getUserByUsername(email);
-              console.log('[LinkedIn OAuth] User by email:', user ? `Found: ${user.id}` : 'Not found');
-              
-              if (user) {
-                user = await storage.updateUser(user.id, { linkedinId });
-                console.log('[LinkedIn OAuth] Updated existing user with LinkedIn ID');
-              }
-            }
-
-            if (!user) {
-              console.log('[LinkedIn OAuth] Creating new user');
-              user = await storage.createUser({
-                username: email || `linkedin_${linkedinId}@placeholder.com`,
-                firstName,
-                lastName,
-                linkedinId,
-              });
-
-              await storage.createProfile({
-                userId: user.id,
-                completionStep: 0,
-                isComplete: false,
-              });
-              console.log('[LinkedIn OAuth] New user created:', user.id);
-            }
-
-            console.log('[LinkedIn OAuth] Returning user to Passport:', user.id);
-            return done(null, user);
-          } catch (err) {
-            console.error('[LinkedIn OAuth] Error in verify callback:', err);
-            return done(err);
+          if (!response.ok) {
+            throw new Error(`Failed to fetch user profile: ${response.status} ${response.statusText}`);
           }
+
+          const profileData = await response.json();
+          console.log('[LinkedIn OAuth] Profile received:', JSON.stringify(profileData, null, 2));
+          
+          // OpenID Connect userinfo response format:
+          // { sub: "linkedin_id", email: "user@example.com", name: "First Last", given_name: "First", family_name: "Last" }
+          const linkedinId = profileData.sub;
+          const email = profileData.email;
+          const firstName = profileData.given_name || "";
+          const lastName = profileData.family_name || "";
+
+          console.log('[LinkedIn OAuth] Extracted data:', { linkedinId, email, firstName, lastName });
+
+          let user = await storage.getUserByLinkedinId(linkedinId);
+          console.log('[LinkedIn OAuth] User by LinkedIn ID:', user ? `Found: ${user.id}` : 'Not found');
+
+          if (!user && email) {
+            user = await storage.getUserByUsername(email);
+            console.log('[LinkedIn OAuth] User by email:', user ? `Found: ${user.id}` : 'Not found');
+            
+            if (user) {
+              user = await storage.updateUser(user.id, { linkedinId });
+              console.log('[LinkedIn OAuth] Updated existing user with LinkedIn ID');
+            }
+          }
+
+          if (!user) {
+            console.log('[LinkedIn OAuth] Creating new user');
+            user = await storage.createUser({
+              username: email || `linkedin_${linkedinId}@placeholder.com`,
+              firstName,
+              lastName,
+              linkedinId,
+            });
+
+            await storage.createProfile({
+              userId: user.id,
+              completionStep: 0,
+              isComplete: false,
+            });
+            console.log('[LinkedIn OAuth] New user created:', user.id);
+          }
+
+          console.log('[LinkedIn OAuth] Returning user to Passport:', user.id);
+          return done(null, user);
+        } catch (err) {
+          console.error('[LinkedIn OAuth] Error in verify callback:', err);
+          return done(err as Error);
         }
-      )
+      }
     );
+    
+    // Name the strategy 'linkedin' for compatibility with existing routes
+    linkedInStrategy.name = 'linkedin';
+    passport.use(linkedInStrategy);
   }
 
   passport.serializeUser((user, done) => done(null, user.id));
