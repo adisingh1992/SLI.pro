@@ -48,13 +48,18 @@ const registerSchema = insertUserSchema.extend({
 });
 
 export function setupAuth(app: Express) {
+  const isProduction = process.env.NODE_ENV === 'production' || process.env.REPLIT_DEPLOYMENT === '1';
+  
   const sessionSettings: session.SessionOptions = {
     secret: process.env.SESSION_SECRET || "supersecretkey",
     resave: false,
     saveUninitialized: false,
     store: storage.sessionStore,
     cookie: {
-      maxAge: 24 * 60 * 60 * 1000 // 24 hours
+      maxAge: 24 * 60 * 60 * 1000, // 24 hours
+      secure: isProduction, // Use secure cookies in production (HTTPS)
+      sameSite: 'lax', // CSRF protection while allowing OAuth redirects
+      httpOnly: true, // Prevent XSS attacks
     }
   };
 
@@ -90,8 +95,8 @@ export function setupAuth(app: Express) {
           clientSecret: process.env.LINKEDIN_CLIENT_SECRET,
           callbackURL,
           scope: ["openid", "profile", "email"],
-          state: true,
-        },
+          state: true, // Enable CSRF protection via automatic state parameter handling
+        } as any, // Type assertion needed as @types/passport-linkedin-oauth2 doesn't include state option
         async (accessToken: string, refreshToken: string, profile: any, done: any) => {
           try {
             const linkedinId = profile.id;
@@ -368,7 +373,7 @@ export function setupAuth(app: Express) {
     if (!process.env.LINKEDIN_CLIENT_ID || !process.env.LINKEDIN_CLIENT_SECRET) {
       return res.status(503).json({ message: "LinkedIn login is not configured" });
     }
-    passport.authenticate("linkedin", { state: "SOME_STATE_VALUE" })(req, res, next);
+    passport.authenticate("linkedin")(req, res, next);
   });
 
   app.get(
@@ -377,18 +382,33 @@ export function setupAuth(app: Express) {
       if (!process.env.LINKEDIN_CLIENT_ID || !process.env.LINKEDIN_CLIENT_SECRET) {
         return res.redirect("/auth");
       }
-      passport.authenticate("linkedin", { failureRedirect: "/auth" })(req, res, next);
-    },
-    async (req, res) => {
-      try {
-        if (req.user) {
-          await storage.updateUser(req.user.id, { lastLoginAt: new Date() });
+      passport.authenticate("linkedin", (err: any, user: any, info: any) => {
+        if (err) {
+          console.error("LinkedIn authentication error:", err);
+          return res.redirect("/auth");
         }
-        res.redirect("/");
-      } catch (error) {
-        console.error("Error in LinkedIn callback:", error);
-        res.redirect("/auth");
-      }
+        if (!user) {
+          console.error("LinkedIn authentication failed: no user returned");
+          return res.redirect("/auth");
+        }
+        
+        // Explicitly log the user in
+        req.login(user, async (loginErr) => {
+          if (loginErr) {
+            console.error("LinkedIn login error:", loginErr);
+            return res.redirect("/auth");
+          }
+          
+          try {
+            // Update last login timestamp
+            await storage.updateUser(user.id, { lastLoginAt: new Date() });
+            res.redirect("/");
+          } catch (error) {
+            console.error("Error updating last login:", error);
+            res.redirect("/");
+          }
+        });
+      })(req, res, next);
     }
   );
 }

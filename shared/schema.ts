@@ -63,14 +63,15 @@ export const profiles = pgTable("profiles", {
   isComplete: boolean("is_complete").default(false),
 });
 
-// Insert schemas
-export const insertUserSchema = createInsertSchema(users).pick({
-  username: true,
-  password: true,
-  firstName: true,
-  lastName: true,
-  phoneNumber: true,
-  isAdmin: true,
+// Base insert schema with all fields optional to support both form registration and OAuth
+export const insertUserSchema = z.object({
+  username: z.string(),
+  password: z.string().optional(),
+  firstName: z.string(),
+  lastName: z.string(),
+  phoneNumber: z.string().optional(),
+  linkedinId: z.string().optional(),
+  isAdmin: z.boolean().optional(),
 });
 
 export const insertExperienceSchema = createInsertSchema(experiences).omit({
