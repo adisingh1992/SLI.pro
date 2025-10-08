@@ -87,6 +87,8 @@ export function setupAuth(app: Express) {
     console.error("LinkedIn OAuth credentials not configured. LinkedIn login will not be available.");
   } else {
     const callbackURL = process.env.LINKEDIN_CALLBACK_URL || `${process.env.REPLIT_DEV_DOMAIN ? `https://${process.env.REPLIT_DEV_DOMAIN}` : 'http://localhost:5000'}/api/auth/linkedin/callback`;
+
+    console.log(callbackURL);
     
     passport.use(
       new LinkedInStrategy(
@@ -96,6 +98,7 @@ export function setupAuth(app: Express) {
           callbackURL,
           scope: ["openid", "profile", "email"],
           state: true, // Enable CSRF protection via automatic state parameter handling
+          profileURL: "https://api.linkedin.com/v2/userinfo", // Use OpenID Connect userinfo endpoint
         } as any, // Type assertion needed as @types/passport-linkedin-oauth2 doesn't include state option
         async (accessToken: string, refreshToken: string, profile: any, done: any) => {
           try {
