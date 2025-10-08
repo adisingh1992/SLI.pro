@@ -10,10 +10,11 @@ export const messageRoleEnum = pgEnum("message_role", ["user", "assistant"]);
 export const users = pgTable("users", {
   id: serial("id").primaryKey(),
   username: text("username").notNull().unique(),
-  password: text("password").notNull(),
+  password: text("password"),
   firstName: text("first_name").notNull(),
   lastName: text("last_name").notNull(),
-  phoneNumber: text("phone_number").notNull(),
+  phoneNumber: text("phone_number"),
+  linkedinId: text("linkedin_id").unique(),
   headline: text("headline"),
   bio: text("bio"),
   location: text("location"),
