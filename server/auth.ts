@@ -1,5 +1,6 @@
 import passport from "passport";
 import { Strategy as LocalStrategy } from "passport-local";
+import { Strategy as LinkedInStrategy } from "passport-linkedin-oauth2";
 import { Express, Request } from "express";
 import session from "express-session";
 import { scrypt, randomBytes, timingSafeEqual } from "crypto";
@@ -66,7 +67,7 @@ export function setupAuth(app: Express) {
     new LocalStrategy(async (username, password, done) => {
       try {
         const user = await storage.getUserByUsername(username);
-        if (!user || !(await comparePasswords(password, user.password))) {
+        if (!user || !user.password || !(await comparePasswords(password, user.password))) {
           return done(null, false);
         } else {
           return done(null, user);
@@ -75,6 +76,55 @@ export function setupAuth(app: Express) {
         return done(err);
       }
     }),
+  );
+
+  passport.use(
+    new LinkedInStrategy(
+      {
+        clientID: process.env.LINKEDIN_CLIENT_ID!,
+        clientSecret: process.env.LINKEDIN_CLIENT_SECRET!,
+        callbackURL: "/api/auth/linkedin/callback",
+        scope: ["openid", "profile", "email"],
+        state: true,
+      },
+      async (accessToken: string, refreshToken: string, profile: any, done: any) => {
+        try {
+          const linkedinId = profile.id;
+          const email = profile.emails?.[0]?.value;
+          const firstName = profile.name?.givenName || "";
+          const lastName = profile.name?.familyName || "";
+
+          let user = await storage.getUserByLinkedinId(linkedinId);
+
+          if (!user && email) {
+            user = await storage.getUserByUsername(email);
+            
+            if (user) {
+              user = await storage.updateUser(user.id, { linkedinId });
+            }
+          }
+
+          if (!user) {
+            user = await storage.createUser({
+              username: email || `linkedin_${linkedinId}@placeholder.com`,
+              firstName,
+              lastName,
+              linkedinId,
+            });
+
+            await storage.createProfile({
+              userId: user.id,
+              completionStep: 0,
+              isComplete: false,
+            });
+          }
+
+          return done(null, user);
+        } catch (err) {
+          return done(err);
+        }
+      }
+    )
   );
 
   passport.serializeUser((user, done) => done(null, user.id));
@@ -307,4 +357,22 @@ export function setupAuth(app: Express) {
       next(error);
     }
   });
+
+  app.get("/api/auth/linkedin", passport.authenticate("linkedin", { state: "SOME_STATE_VALUE" }));
+
+  app.get(
+    "/api/auth/linkedin/callback",
+    passport.authenticate("linkedin", { failureRedirect: "/auth" }),
+    async (req, res) => {
+      try {
+        if (req.user) {
+          await storage.updateUser(req.user.id, { lastLoginAt: new Date() });
+        }
+        res.redirect("/");
+      } catch (error) {
+        console.error("Error in LinkedIn callback:", error);
+        res.redirect("/auth");
+      }
+    }
+  );
 }
