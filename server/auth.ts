@@ -99,22 +99,30 @@ export function setupAuth(app: Express) {
         } as any, // Type assertion needed as @types/passport-linkedin-oauth2 doesn't include state option
         async (accessToken: string, refreshToken: string, profile: any, done: any) => {
           try {
+            console.log('[LinkedIn OAuth] Profile received:', JSON.stringify(profile, null, 2));
+            
             const linkedinId = profile.id;
             const email = profile.emails?.[0]?.value;
             const firstName = profile.name?.givenName || "";
             const lastName = profile.name?.familyName || "";
 
+            console.log('[LinkedIn OAuth] Extracted data:', { linkedinId, email, firstName, lastName });
+
             let user = await storage.getUserByLinkedinId(linkedinId);
+            console.log('[LinkedIn OAuth] User by LinkedIn ID:', user ? `Found: ${user.id}` : 'Not found');
 
             if (!user && email) {
               user = await storage.getUserByUsername(email);
+              console.log('[LinkedIn OAuth] User by email:', user ? `Found: ${user.id}` : 'Not found');
               
               if (user) {
                 user = await storage.updateUser(user.id, { linkedinId });
+                console.log('[LinkedIn OAuth] Updated existing user with LinkedIn ID');
               }
             }
 
             if (!user) {
+              console.log('[LinkedIn OAuth] Creating new user');
               user = await storage.createUser({
                 username: email || `linkedin_${linkedinId}@placeholder.com`,
                 firstName,
@@ -127,10 +135,13 @@ export function setupAuth(app: Express) {
                 completionStep: 0,
                 isComplete: false,
               });
+              console.log('[LinkedIn OAuth] New user created:', user.id);
             }
 
+            console.log('[LinkedIn OAuth] Returning user to Passport:', user.id);
             return done(null, user);
           } catch (err) {
+            console.error('[LinkedIn OAuth] Error in verify callback:', err);
             return done(err);
           }
         }
@@ -379,32 +390,47 @@ export function setupAuth(app: Express) {
   app.get(
     "/api/auth/linkedin/callback",
     (req, res, next) => {
+      console.log('[LinkedIn Callback] Route hit');
+      console.log('[LinkedIn Callback] Query params:', req.query);
+      console.log('[LinkedIn Callback] Session ID:', req.sessionID);
+      
       if (!process.env.LINKEDIN_CLIENT_ID || !process.env.LINKEDIN_CLIENT_SECRET) {
+        console.error('[LinkedIn Callback] Missing credentials');
         return res.redirect("/auth");
       }
+      
       passport.authenticate("linkedin", (err: any, user: any, info: any) => {
+        console.log('[LinkedIn Callback] Authenticate callback - err:', err, 'user:', user ? `ID: ${user.id}` : null, 'info:', info);
+        
         if (err) {
-          console.error("LinkedIn authentication error:", err);
+          console.error("[LinkedIn Callback] Authentication error:", err);
           return res.redirect("/auth");
         }
         if (!user) {
-          console.error("LinkedIn authentication failed: no user returned");
+          console.error("[LinkedIn Callback] Authentication failed: no user returned", info);
           return res.redirect("/auth");
         }
+        
+        console.log('[LinkedIn Callback] User found, calling req.login()');
         
         // Explicitly log the user in
         req.login(user, async (loginErr) => {
           if (loginErr) {
-            console.error("LinkedIn login error:", loginErr);
+            console.error("[LinkedIn Callback] Login error:", loginErr);
             return res.redirect("/auth");
           }
+          
+          console.log('[LinkedIn Callback] req.login() successful');
+          console.log('[LinkedIn Callback] Session after login:', req.session);
+          console.log('[LinkedIn Callback] req.user:', req.user ? `ID: ${req.user.id}` : null);
           
           try {
             // Update last login timestamp
             await storage.updateUser(user.id, { lastLoginAt: new Date() });
+            console.log('[LinkedIn Callback] Last login updated, redirecting to /');
             res.redirect("/");
           } catch (error) {
-            console.error("Error updating last login:", error);
+            console.error("[LinkedIn Callback] Error updating last login:", error);
             res.redirect("/");
           }
         });
