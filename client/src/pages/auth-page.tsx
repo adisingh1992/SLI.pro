@@ -20,6 +20,7 @@ import {
 } from "@/components/ui/form";
 import { useState, useEffect } from "react";
 import { Loader2, UserPlus, LogIn } from "lucide-react";
+import { SiLinkedin } from "react-icons/si";
 import sliProLogo from "@/assets/sliPro-logos_aqua.png";
 
 // Login schema
@@ -326,6 +327,7 @@ export default function AuthPage() {
                             type="submit"
                             className="w-full py-3 px-4 bg-[#bed6d1] hover:bg-opacity-90 focus:ring-2 focus:ring-offset-2 focus:ring-[#bed6d1]"
                             disabled={loginMutation.isPending}
+                            data-testid="button-login"
                           >
                             {loginMutation.isPending ? (
                               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -333,6 +335,26 @@ export default function AuthPage() {
                               <LogIn className="mr-2 h-4 w-4" />
                             )}
                             Log In
+                          </Button>
+
+                          <div className="relative my-6">
+                            <div className="absolute inset-0 flex items-center">
+                              <div className="w-full border-t border-gray-300"></div>
+                            </div>
+                            <div className="relative flex justify-center text-sm">
+                              <span className="px-2 bg-white text-gray-500">Or continue with</span>
+                            </div>
+                          </div>
+
+                          <Button
+                            type="button"
+                            variant="outline"
+                            className="w-full py-3 px-4 border-2 border-[#0077B5] text-[#0077B5] hover:bg-[#0077B5] hover:text-white transition-colors"
+                            onClick={() => window.location.href = "/api/auth/linkedin"}
+                            data-testid="button-linkedin-login"
+                          >
+                            <SiLinkedin className="mr-2 h-5 w-5" />
+                            Continue with LinkedIn
                           </Button>
                         </form>
                       </Form>

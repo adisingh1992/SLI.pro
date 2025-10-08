@@ -78,54 +78,60 @@ export function setupAuth(app: Express) {
     }),
   );
 
-  passport.use(
-    new LinkedInStrategy(
-      {
-        clientID: process.env.LINKEDIN_CLIENT_ID!,
-        clientSecret: process.env.LINKEDIN_CLIENT_SECRET!,
-        callbackURL: "/api/auth/linkedin/callback",
-        scope: ["openid", "profile", "email"],
-        state: true,
-      },
-      async (accessToken: string, refreshToken: string, profile: any, done: any) => {
-        try {
-          const linkedinId = profile.id;
-          const email = profile.emails?.[0]?.value;
-          const firstName = profile.name?.givenName || "";
-          const lastName = profile.name?.familyName || "";
+  if (!process.env.LINKEDIN_CLIENT_ID || !process.env.LINKEDIN_CLIENT_SECRET) {
+    console.error("LinkedIn OAuth credentials not configured. LinkedIn login will not be available.");
+  } else {
+    const callbackURL = process.env.LINKEDIN_CALLBACK_URL || `${process.env.REPLIT_DEV_DOMAIN ? `https://${process.env.REPLIT_DEV_DOMAIN}` : 'http://localhost:5000'}/api/auth/linkedin/callback`;
+    
+    passport.use(
+      new LinkedInStrategy(
+        {
+          clientID: process.env.LINKEDIN_CLIENT_ID,
+          clientSecret: process.env.LINKEDIN_CLIENT_SECRET,
+          callbackURL,
+          scope: ["r_liteprofile", "r_emailaddress"],
+          state: true,
+        },
+        async (accessToken: string, refreshToken: string, profile: any, done: any) => {
+          try {
+            const linkedinId = profile.id;
+            const email = profile.emails?.[0]?.value;
+            const firstName = profile.name?.givenName || "";
+            const lastName = profile.name?.familyName || "";
 
-          let user = await storage.getUserByLinkedinId(linkedinId);
+            let user = await storage.getUserByLinkedinId(linkedinId);
 
-          if (!user && email) {
-            user = await storage.getUserByUsername(email);
-            
-            if (user) {
-              user = await storage.updateUser(user.id, { linkedinId });
+            if (!user && email) {
+              user = await storage.getUserByUsername(email);
+              
+              if (user) {
+                user = await storage.updateUser(user.id, { linkedinId });
+              }
             }
+
+            if (!user) {
+              user = await storage.createUser({
+                username: email || `linkedin_${linkedinId}@placeholder.com`,
+                firstName,
+                lastName,
+                linkedinId,
+              });
+
+              await storage.createProfile({
+                userId: user.id,
+                completionStep: 0,
+                isComplete: false,
+              });
+            }
+
+            return done(null, user);
+          } catch (err) {
+            return done(err);
           }
-
-          if (!user) {
-            user = await storage.createUser({
-              username: email || `linkedin_${linkedinId}@placeholder.com`,
-              firstName,
-              lastName,
-              linkedinId,
-            });
-
-            await storage.createProfile({
-              userId: user.id,
-              completionStep: 0,
-              isComplete: false,
-            });
-          }
-
-          return done(null, user);
-        } catch (err) {
-          return done(err);
         }
-      }
-    )
-  );
+      )
+    );
+  }
 
   passport.serializeUser((user, done) => done(null, user.id));
   passport.deserializeUser(async (id: number, done) => {
@@ -358,11 +364,21 @@ export function setupAuth(app: Express) {
     }
   });
 
-  app.get("/api/auth/linkedin", passport.authenticate("linkedin", { state: "SOME_STATE_VALUE" }));
+  app.get("/api/auth/linkedin", (req, res, next) => {
+    if (!process.env.LINKEDIN_CLIENT_ID || !process.env.LINKEDIN_CLIENT_SECRET) {
+      return res.status(503).json({ message: "LinkedIn login is not configured" });
+    }
+    passport.authenticate("linkedin", { state: "SOME_STATE_VALUE" })(req, res, next);
+  });
 
   app.get(
     "/api/auth/linkedin/callback",
-    passport.authenticate("linkedin", { failureRedirect: "/auth" }),
+    (req, res, next) => {
+      if (!process.env.LINKEDIN_CLIENT_ID || !process.env.LINKEDIN_CLIENT_SECRET) {
+        return res.redirect("/auth");
+      }
+      passport.authenticate("linkedin", { failureRedirect: "/auth" })(req, res, next);
+    },
     async (req, res) => {
       try {
         if (req.user) {
