@@ -51,7 +51,7 @@ export default function FoundationSessionChatPage() {
 
   // Validate session number
   if (isNaN(sessionNumber) || sessionNumber < 1 || sessionNumber > 3) {
-    navigate('/foundation');
+    navigate('/');
     return null;
   }
 
@@ -268,9 +268,9 @@ export default function FoundationSessionChatPage() {
             <CardContent className="p-6 text-center">
               <AlertCircle className="h-12 w-12 text-destructive mx-auto mb-4" />
               <p className="text-red-600 mb-4">Error loading Foundation Session</p>
-              <Button onClick={() => navigate('/foundation')} variant="outline">
+              <Button onClick={() => navigate('/')} variant="outline">
                 <ArrowLeft className="h-4 w-4 mr-2" />
-                Back to Foundation Sessions
+                Back to Home
               </Button>
             </CardContent>
           </Card>
@@ -294,9 +294,9 @@ export default function FoundationSessionChatPage() {
               <p className="text-muted-foreground mb-4">
                 Complete the previous session to unlock Session {sessionNumber}.
               </p>
-              <Button onClick={() => navigate('/foundation')} variant="outline">
+              <Button onClick={() => navigate('/')} variant="outline">
                 <ArrowLeft className="h-4 w-4 mr-2" />
-                Back to Foundation Sessions
+                Back to Home
               </Button>
             </CardContent>
           </Card>
@@ -318,9 +318,9 @@ export default function FoundationSessionChatPage() {
               <p className="text-muted-foreground mb-4">
                 Session {sessionNumber} is not yet available. Focus on completing Sessions 1, 2, and 3 first.
               </p>
-              <Button onClick={() => navigate('/foundation')} variant="outline">
+              <Button onClick={() => navigate('/')} variant="outline">
                 <ArrowLeft className="h-4 w-4 mr-2" />
-                Back to Foundation Sessions
+                Back to Home
               </Button>
             </CardContent>
           </Card>
@@ -338,7 +338,7 @@ export default function FoundationSessionChatPage() {
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
             <Button 
-              onClick={() => navigate('/foundation')} 
+              onClick={() => navigate('/')} 
               variant="outline" 
               size="sm"
               data-testid="button-back-to-overview"

@@ -85,7 +85,7 @@ export default function EnhancementModuleChatPage() {
 
   // Validate module code
   if (!['A', 'B', 'C'].includes(moduleCode)) {
-    navigate('/enhancement-modules');
+    navigate('/');
     return null;
   }
 
@@ -327,9 +327,9 @@ export default function EnhancementModuleChatPage() {
             <CardContent className="p-6 text-center">
               <AlertCircle className="h-12 w-12 text-destructive mx-auto mb-4" />
               <p className="text-red-600 mb-4">Error loading Enhancement Module</p>
-              <Button onClick={() => navigate('/enhancement-modules')} variant="outline">
+              <Button onClick={() => navigate('/')} variant="outline">
                 <ArrowLeft className="h-4 w-4 mr-2" />
-                Back to Enhancement Modules
+                Back to Home
               </Button>
             </CardContent>
           </Card>
@@ -349,7 +349,7 @@ export default function EnhancementModuleChatPage() {
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
             <Button 
-              onClick={() => navigate('/enhancement-modules')} 
+              onClick={() => navigate('/')} 
               variant="outline" 
               size="sm"
               data-testid="button-back-to-overview"
