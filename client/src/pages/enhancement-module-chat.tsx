@@ -454,7 +454,7 @@ export default function EnhancementModuleChatPage() {
                       ref={messageInputRef}
                       value={currentMessage}
                       onChange={(e) => setCurrentMessage(e.target.value)}
-                      placeholder="Type or use voice to send a message..."
+                      placeholder="Type or click the microphone to speak your response naturally..."
                       className="min-h-[60px] resize-none text-sm flex-1"
                       onKeyDown={(e) => {
                         if (e.key === 'Enter' && !e.shiftKey) {
