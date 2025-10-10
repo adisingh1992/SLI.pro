@@ -556,128 +556,111 @@ export default function HomePage() {
               </Button>
             </CardFooter>
           </Card>
-          
-          {/* Step 3: Foundation Sessions */}
-          <Card className={`overflow-hidden shadow-sm flex flex-col h-full ${
-            !userProfile?.questionnaire || userProfile.questionnaire.isDraft === true || !hasRequiredDocuments
-              ? "border-gray-200 opacity-75"
-              : "border-success/20"
-          }`}>
-            <CardHeader className={`pb-4 ${
-              !userProfile?.questionnaire || userProfile.questionnaire.isDraft === true || !hasRequiredDocuments
-                ? "bg-gray-50"
-                : "bg-green-50"
-            }`}>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center">
-                  <div className={`p-2 rounded-full mr-3 ${
-                    !userProfile?.questionnaire || userProfile.questionnaire.isDraft === true || !hasRequiredDocuments
-                      ? "bg-gray-100 text-gray-500"
-                      : "bg-green-100 text-green-600"
-                  }`}>
-                    <Calendar className="h-5 w-5" />
-                  </div>
-                  <CardTitle className="text-lg">
-                    Step 3: Foundation Sessions
-                  </CardTitle>
-                </div>
-                {foundationSessionsBadge}
-              </div>
-              <CardDescription className="mt-2">
-                Complete three sequential coaching conversations to identify your primary business function and develop your professional foundation.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="p-5 flex-grow">
-              <p className={`text-sm ${!userProfile?.questionnaire || userProfile.questionnaire.isDraft === true || !hasRequiredDocuments ? "text-muted-foreground/70" : "text-muted-foreground"}`}>
-                {!userProfile?.questionnaire || userProfile.questionnaire.isDraft === true || !hasRequiredDocuments
-                  ? `You must ${!userProfile?.questionnaire ? "complete the questionnaire" : userProfile.questionnaire.isDraft === true ? "complete the questionnaire" : "upload your documents"} first`
-                  : "Three AI-powered sessions guide you through functional identity mapping, credibility assessment, and positioning story development to build your professional foundation."}
-              </p>
-            </CardContent>
-            <CardFooter className="bg-gray-50 py-3 px-5 mt-auto">
-              <Button
-                variant="outline"
-                className={`w-full ${
-                  !userProfile?.questionnaire || userProfile.questionnaire.isDraft === true || !hasRequiredDocuments
-                    ? "border-blue-500 text-blue-600 hover:bg-blue-50 cursor-not-allowed"
-                    : "border-green-500 text-green-700 hover:bg-green-50"
-                }`}
-                onClick={() => {
-                  if (userProfile?.questionnaire && userProfile.questionnaire.isDraft !== true && hasRequiredDocuments) {
-                    scrollToTop();
-                    navigate("/foundation");
-                  }
-                }}
-                disabled={!userProfile?.questionnaire || userProfile.questionnaire.isDraft === true || !hasRequiredDocuments}
-              >
-                View Sessions
-                <ArrowRight className="ml-2 h-4 w-4" />
-              </Button>
-            </CardFooter>
-          </Card>
+        </div>
 
-          {/* Step 3 (Optional): Enhancement Modules */}
-          <Card className={`overflow-hidden shadow-sm flex flex-col h-full ${
-            !hasFoundationSessionsCompleted
-              ? "border-gray-200 opacity-75"
-              : "border-success/20"
-          }`}>
-            <CardHeader className={`pb-4 ${
-              !hasFoundationSessionsCompleted
-                ? "bg-gray-50"
-                : "bg-green-50"
-            }`}>
+        {/* Step 3: Professional Development Sessions - Full Width */}
+        <div className="mt-6">
+          <Card className="overflow-hidden shadow-sm">
+            <CardHeader className="pb-4 bg-gradient-to-r from-green-50 to-blue-50">
               <div className="flex items-center justify-between">
-                <div className="flex items-center">
-                  <div className={`p-2 rounded-full mr-3 ${
-                    !hasFoundationSessionsCompleted
-                      ? "bg-gray-100 text-gray-500"
-                      : "bg-green-100 text-green-600"
-                  }`}>
-                    <Sparkles className="h-5 w-5" />
-                  </div>
-                  <CardTitle className="text-lg">
-                    Step 3 (Optional): Enhancement Modules
-                  </CardTitle>
+                <div>
+                  <CardTitle className="text-xl font-semibold">Step 3: Professional Development Sessions</CardTitle>
+                  <CardDescription className="mt-2">
+                    Complete foundation sessions and optional enhancement modules to develop your professional identity
+                  </CardDescription>
                 </div>
-                {getStatusBadge(
-                  !!hasFoundationSessionsCompleted,
-                  false // Always available once foundation sessions are completed
+              </div>
+            </CardHeader>
+            <CardContent className="p-6 space-y-8">
+              {/* Foundation Sessions Section */}
+              <div>
+                <div className="flex items-center gap-2 mb-4">
+                  <Calendar className="h-5 w-5 text-green-600" />
+                  <h3 className="text-lg font-semibold">Foundation Sessions</h3>
+                  {foundationSessionsBadge}
+                </div>
+                
+                {!userProfile?.questionnaire || userProfile.questionnaire.isDraft === true || !hasRequiredDocuments ? (
+                  <div className="p-4 bg-muted/50 rounded-lg text-muted-foreground">
+                    You must {!userProfile?.questionnaire ? "complete the questionnaire" : userProfile.questionnaire.isDraft === true ? "complete the questionnaire" : "upload your documents"} first
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    {foundationSessions?.slice(0, 3).map((session) => {
+                      const content = getSessionContent(session.sessionNumber);
+                      return (
+                        <Card 
+                          key={session.id} 
+                          className={`cursor-pointer transition-all hover:shadow-md ${
+                            session.status === 'locked' ? 'opacity-60' : ''
+                          }`}
+                          onClick={() => session.status !== 'locked' && handleSessionAction(session)}
+                          data-testid={`card-foundation-session-${session.sessionNumber}`}
+                        >
+                          <CardHeader className="pb-3">
+                            <div className="flex items-center justify-between mb-2">
+                              <span className="text-sm font-medium text-muted-foreground">{content.header}</span>
+                              {getSessionStatusBadge(session.status)}
+                            </div>
+                            <CardTitle className="text-base">{content.title}</CardTitle>
+                          </CardHeader>
+                          <CardContent>
+                            <p className="text-sm text-muted-foreground">{content.description}</p>
+                          </CardContent>
+                        </Card>
+                      );
+                    })}
+                  </div>
                 )}
               </div>
-              <CardDescription className="mt-2">
-                Advance your professional growth through specialized coaching modules designed to enhance your digital presence, strategic networking, and career positioning.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="p-5 flex-grow">
-              <p className={`text-sm ${!hasFoundationSessionsCompleted ? "text-muted-foreground/70" : "text-muted-foreground"}`}>
-                {!hasFoundationSessionsCompleted
-                  ? "You must complete at least one foundation session first"
-                  : "Explore targeted modules to deepen your expertise in digital behavior analysis, network positioning, and career aspiration alignment."}
-              </p>
-            </CardContent>
-            <CardFooter className="bg-gray-50 py-3 px-5 mt-auto">
-              <Button
-                variant="outline"
-                className={`w-full ${
-                  !hasFoundationSessionsCompleted
-                    ? "border-gray-300 text-gray-500 cursor-not-allowed"
-                    : "border-green-500 text-green-700 hover:bg-green-50"
-                }`}
-                onClick={() => {
-                  if (hasFoundationSessionsCompleted) {
-                    scrollToTop();
-                    navigate("/enhancement-modules");
-                  }
-                }}
-                disabled={!hasFoundationSessionsCompleted}
-              >
-                View Modules
-                <ArrowRight className="ml-2 h-4 w-4" />
-              </Button>
-            </CardFooter>
-          </Card>
 
+              {/* Enhancement Modules Section */}
+              <div>
+                <div className="flex items-center gap-2 mb-4">
+                  <Sparkles className="h-5 w-5 text-blue-600" />
+                  <h3 className="text-lg font-semibold">Enhancement Modules (Optional)</h3>
+                  {getStatusBadge(
+                    !!hasFoundationSessionsCompleted,
+                    false
+                  )}
+                </div>
+                
+                {!hasFoundationSessionsCompleted ? (
+                  <div className="p-4 bg-muted/50 rounded-lg text-muted-foreground">
+                    You must complete at least one foundation session first
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    {enhancementModules?.slice(0, 3).map((module) => {
+                      const details = getModuleDetails(module.moduleCode);
+                      return (
+                        <Card 
+                          key={module.id} 
+                          className="cursor-pointer transition-all hover:shadow-md"
+                          onClick={() => handleModuleAction(module)}
+                          data-testid={`card-enhancement-module-${module.moduleCode}`}
+                        >
+                          <CardHeader className="pb-3">
+                            <div className="flex items-center justify-between mb-2">
+                              <span className="text-sm font-medium text-muted-foreground">{details.title}</span>
+                              {getModuleStatusBadge(module.status)}
+                            </div>
+                            <CardTitle className="text-base">{details.subtitle}</CardTitle>
+                          </CardHeader>
+                          <CardContent>
+                            <p className="text-sm text-muted-foreground">{details.description}</p>
+                          </CardContent>
+                        </Card>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
           {/* Step 4: Schedule Live Coaching Call */}
           <Card className={`overflow-hidden shadow-sm flex flex-col h-full ${
             !hasFoundationSessionsCompleted
