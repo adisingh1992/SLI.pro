@@ -8,7 +8,7 @@ import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import NavBar from "@/components/nav-bar";
-import { ArrowLeft, Copy, Loader2, FileText, PenLine, RefreshCw, Calendar, MessageSquare } from "lucide-react";
+import { ArrowLeft, Copy, Loader2, FileText, PenLine, RefreshCw, Calendar, MessageSquare, Linkedin, Share2 } from "lucide-react";
 import { queryClient } from "@/lib/query-client";
 
 interface LinkedinContentDraft {
@@ -48,6 +48,7 @@ const formatDate = (date: Date): string => {
 
 const LinkedinContentDraftsPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState("post1");
+  const [postingPostNumber, setPostingPostNumber] = useState<number | null>(null);
   const { toast } = useToast();
   const [, navigate] = useLocation();
   
@@ -92,6 +93,58 @@ const LinkedinContentDraftsPage: React.FC = () => {
       });
     },
   });
+
+  // Post to LinkedIn mutation
+  const postToLinkedinMutation = useMutation({
+    mutationFn: async ({ draftId, postNumber, content }: { draftId: number; postNumber: number; content: string }) => {
+      setPostingPostNumber(postNumber);
+      const response = await fetch(`/api/linkedin-content-drafts/${draftId}/post/${postNumber}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ content }),
+      });
+      
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || "Failed to post to LinkedIn");
+      }
+      
+      return response.json();
+    },
+    onSuccess: (_, variables) => {
+      setPostingPostNumber(null);
+      toast({
+        title: "Posted to LinkedIn",
+        description: "Your post has been published to LinkedIn successfully!",
+      });
+      // Invalidate share count query to refresh the count
+      queryClient.invalidateQueries({ queryKey: ["/api/linkedin-content-drafts", variables.draftId, "shares", variables.postNumber] });
+    },
+    onError: (error: any) => {
+      setPostingPostNumber(null);
+      toast({
+        title: "Post failed",
+        description: error.message || "Failed to post to LinkedIn. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Fetch share count for a post
+  const useShareCount = (draftId: number | undefined, postNumber: number) => {
+    return useQuery<{ shareCount: number; lastSharedAt: string | null }>({
+      queryKey: ["/api/linkedin-content-drafts", draftId, "shares", postNumber],
+      queryFn: async () => {
+        const response = await fetch(`/api/linkedin-content-drafts/${draftId}/shares/${postNumber}`);
+        if (!response.ok) {
+          throw new Error("Failed to fetch share count");
+        }
+        return response.json();
+      },
+      enabled: !!draftId,
+      refetchOnWindowFocus: false,
+    });
+  };
 
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text).then(() => {
@@ -175,6 +228,10 @@ const LinkedinContentDraftsPage: React.FC = () => {
 
   const latestDraft = contentDrafts && contentDrafts.length > 0 ? contentDrafts[0] : null;
 
+  // Fetch share counts for both posts
+  const post1ShareData = useShareCount(latestDraft?.id, 1);
+  const post2ShareData = useShareCount(latestDraft?.id, 2);
+
   return (
     <div className="container mx-auto px-4">
       <NavBar />
@@ -234,21 +291,51 @@ const LinkedinContentDraftsPage: React.FC = () => {
                     <Card>
                       <CardHeader>
                         <CardTitle className="text-lg">
-                          <div className="flex items-center">
+                          <div className="flex items-center justify-between">
                             <span>Post Type: {latestDraft.post1Type}</span>
-                            <Button 
-                              variant="ghost" 
-                              size="sm" 
-                              onClick={() => copyToClipboard(formatFullPost(latestDraft.post1Content))}
-                              className="ml-auto"
-                            >
-                              <Copy className="h-4 w-4 mr-2" />
-                              Copy Full Post
-                            </Button>
+                            <div className="flex items-center gap-2">
+                              <Button 
+                                variant="ghost" 
+                                size="sm" 
+                                onClick={() => copyToClipboard(formatFullPost(latestDraft.post1Content))}
+                                data-testid="button-copy-post-1"
+                              >
+                                <Copy className="h-4 w-4 mr-2" />
+                                Copy Full Post
+                              </Button>
+                              <Button 
+                                variant="default" 
+                                size="sm" 
+                                onClick={() => postToLinkedinMutation.mutate({
+                                  draftId: latestDraft.id,
+                                  postNumber: 1,
+                                  content: formatFullPost(latestDraft.post1Content)
+                                })}
+                                disabled={postingPostNumber === 1}
+                                data-testid="button-post-to-linkedin-1"
+                              >
+                                {postingPostNumber === 1 ? (
+                                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                ) : (
+                                  <Linkedin className="h-4 w-4 mr-2" />
+                                )}
+                                Post to LinkedIn
+                              </Button>
+                            </div>
                           </div>
                         </CardTitle>
-                        <CardDescription>
-                          Created on {new Date(latestDraft.createdAt).toLocaleDateString()}
+                        <CardDescription className="flex items-center justify-between">
+                          <span>Created on {new Date(latestDraft.createdAt).toLocaleDateString()}</span>
+                          <span className="text-sm flex items-center gap-1" data-testid="text-share-count-1">
+                            <Share2 className="h-3 w-3" />
+                            {post1ShareData.isLoading ? (
+                              "Loading..."
+                            ) : post1ShareData.error ? (
+                              "Error loading count"
+                            ) : (
+                              `Posted ${post1ShareData.data?.shareCount || 0} ${post1ShareData.data?.shareCount === 1 ? 'time' : 'times'}`
+                            )}
+                          </span>
                         </CardDescription>
                       </CardHeader>
                       <CardContent>
@@ -289,21 +376,51 @@ const LinkedinContentDraftsPage: React.FC = () => {
                     <Card>
                       <CardHeader>
                         <CardTitle className="text-lg">
-                          <div className="flex items-center">
+                          <div className="flex items-center justify-between">
                             <span>Post Type: {latestDraft.post2Type}</span>
-                            <Button 
-                              variant="ghost" 
-                              size="sm" 
-                              onClick={() => copyToClipboard(formatFullPost(latestDraft.post2Content))}
-                              className="ml-auto"
-                            >
-                              <Copy className="h-4 w-4 mr-2" />
-                              Copy Full Post
-                            </Button>
+                            <div className="flex items-center gap-2">
+                              <Button 
+                                variant="ghost" 
+                                size="sm" 
+                                onClick={() => copyToClipboard(formatFullPost(latestDraft.post2Content))}
+                                data-testid="button-copy-post-2"
+                              >
+                                <Copy className="h-4 w-4 mr-2" />
+                                Copy Full Post
+                              </Button>
+                              <Button 
+                                variant="default" 
+                                size="sm" 
+                                onClick={() => postToLinkedinMutation.mutate({
+                                  draftId: latestDraft.id,
+                                  postNumber: 2,
+                                  content: formatFullPost(latestDraft.post2Content)
+                                })}
+                                disabled={postingPostNumber === 2}
+                                data-testid="button-post-to-linkedin-2"
+                              >
+                                {postingPostNumber === 2 ? (
+                                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                ) : (
+                                  <Linkedin className="h-4 w-4 mr-2" />
+                                )}
+                                Post to LinkedIn
+                              </Button>
+                            </div>
                           </div>
                         </CardTitle>
-                        <CardDescription>
-                          Created on {new Date(latestDraft.createdAt).toLocaleDateString()}
+                        <CardDescription className="flex items-center justify-between">
+                          <span>Created on {new Date(latestDraft.createdAt).toLocaleDateString()}</span>
+                          <span className="text-sm flex items-center gap-1" data-testid="text-share-count-2">
+                            <Share2 className="h-3 w-3" />
+                            {post2ShareData.isLoading ? (
+                              "Loading..."
+                            ) : post2ShareData.error ? (
+                              "Error loading count"
+                            ) : (
+                              `Posted ${post2ShareData.data?.shareCount || 0} ${post2ShareData.data?.shareCount === 1 ? 'time' : 'times'}`
+                            )}
+                          </span>
                         </CardDescription>
                       </CardHeader>
                       <CardContent>
