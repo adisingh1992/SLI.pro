@@ -46,6 +46,295 @@ const formatDate = (date: Date): string => {
   });
 };
 
+// Separate component for draft display that handles hooks
+interface DraftDisplayProps {
+  draft: LinkedinContentDraft;
+  activeTab: string;
+  setActiveTab: (tab: string) => void;
+  copyToClipboard: (text: string) => void;
+  formatFullPost: (postContent: LinkedinContentDraft["post1Content"]) => string;
+  postToLinkedIn: (params: { draftId: number; postNumber: number; content: string }) => void;
+  postingPostNumber: number | null;
+  dueDate: Date;
+  navigate: (path: string) => void;
+}
+
+const DraftDisplay: React.FC<DraftDisplayProps> = ({
+  draft,
+  activeTab,
+  setActiveTab,
+  copyToClipboard,
+  formatFullPost,
+  postToLinkedIn,
+  postingPostNumber,
+  dueDate,
+  navigate
+}) => {
+  // Fetch share counts for both posts - hooks are always called here since component only renders with valid draft
+  const post1ShareData = useQuery<{ shareCount: number; lastSharedAt: string | null }>({
+    queryKey: ["/api/linkedin-content-drafts", draft.id, "shares", 1],
+    queryFn: async () => {
+      const response = await fetch(`/api/linkedin-content-drafts/${draft.id}/shares/1`);
+      if (!response.ok) {
+        throw new Error("Failed to fetch share count");
+      }
+      return response.json();
+    },
+    refetchOnWindowFocus: false,
+  });
+
+  const post2ShareData = useQuery<{ shareCount: number; lastSharedAt: string | null }>({
+    queryKey: ["/api/linkedin-content-drafts", draft.id, "shares", 2],
+    queryFn: async () => {
+      const response = await fetch(`/api/linkedin-content-drafts/${draft.id}/shares/2`);
+      if (!response.ok) {
+        throw new Error("Failed to fetch share count");
+      }
+      return response.json();
+    },
+    refetchOnWindowFocus: false,
+  });
+
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+      {/* Left Column (75% width) */}
+      <div className="md:col-span-3">
+        <Card>
+          <CardHeader>
+            <CardTitle>Ready-to-Use LinkedIn Content</CardTitle>
+            <CardDescription>
+              These posts are designed to enhance your professional brand and reinforce your SLI.
+              Simply copy and paste directly to LinkedIn.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+              <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger value="post1">
+                  Post 1: {draft.post1Type}
+                </TabsTrigger>
+                <TabsTrigger value="post2">
+                  Post 2: {draft.post2Type}
+                </TabsTrigger>
+              </TabsList>
+              
+              <TabsContent value="post1" className="mt-4">
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-lg">
+                      <div className="flex items-center justify-between">
+                        <span>Post Type: {draft.post1Type}</span>
+                        <div className="flex items-center gap-2">
+                          <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            onClick={() => copyToClipboard(formatFullPost(draft.post1Content))}
+                            data-testid="button-copy-post-1"
+                          >
+                            <Copy className="h-4 w-4 mr-2" />
+                            Copy Full Post
+                          </Button>
+                          <Button 
+                            variant="default" 
+                            size="sm" 
+                            onClick={() => postToLinkedIn({
+                              draftId: draft.id,
+                              postNumber: 1,
+                              content: formatFullPost(draft.post1Content)
+                            })}
+                            disabled={postingPostNumber === 1}
+                            data-testid="button-post-to-linkedin-1"
+                          >
+                            {postingPostNumber === 1 ? (
+                              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                            ) : (
+                              <Linkedin className="h-4 w-4 mr-2" />
+                            )}
+                            Post to LinkedIn
+                          </Button>
+                        </div>
+                      </div>
+                    </CardTitle>
+                    <CardDescription className="flex items-center justify-between">
+                      <span>Created on {new Date(draft.createdAt).toLocaleDateString()}</span>
+                      <span className="text-sm flex items-center gap-1" data-testid="text-share-count-1">
+                        <Share2 className="h-3 w-3" />
+                        {post1ShareData.isLoading ? (
+                          "Loading..."
+                        ) : post1ShareData.error ? (
+                          "Error loading count"
+                        ) : (
+                          `Posted ${post1ShareData.data?.shareCount || 0} ${post1ShareData.data?.shareCount === 1 ? 'time' : 'times'}`
+                        )}
+                      </span>
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-4">
+                      <div>
+                        <h3 className="font-medium text-sm mb-1">Hook</h3>
+                        <div className="p-3 rounded-md bg-muted/50">
+                          {draft.post1Content.hook}
+                        </div>
+                      </div>
+                      
+                      <div>
+                        <h3 className="font-medium text-sm mb-1">Body</h3>
+                        <div className="p-3 rounded-md bg-muted/50 whitespace-pre-line">
+                          {draft.post1Content.body}
+                        </div>
+                      </div>
+                      
+                      <div>
+                        <h3 className="font-medium text-sm mb-1">Closing</h3>
+                        <div className="p-3 rounded-md bg-muted/50">
+                          {draft.post1Content.closing}
+                        </div>
+                      </div>
+                      
+                      <div>
+                        <h3 className="font-medium text-sm mb-1">Hashtags</h3>
+                        <div className="p-3 rounded-md bg-muted/50">
+                          {draft.post1Content.hashtags}
+                        </div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+              
+              <TabsContent value="post2" className="mt-4">
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-lg">
+                      <div className="flex items-center justify-between">
+                        <span>Post Type: {draft.post2Type}</span>
+                        <div className="flex items-center gap-2">
+                          <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            onClick={() => copyToClipboard(formatFullPost(draft.post2Content))}
+                            data-testid="button-copy-post-2"
+                          >
+                            <Copy className="h-4 w-4 mr-2" />
+                            Copy Full Post
+                          </Button>
+                          <Button 
+                            variant="default" 
+                            size="sm" 
+                            onClick={() => postToLinkedIn({
+                              draftId: draft.id,
+                              postNumber: 2,
+                              content: formatFullPost(draft.post2Content)
+                            })}
+                            disabled={postingPostNumber === 2}
+                            data-testid="button-post-to-linkedin-2"
+                          >
+                            {postingPostNumber === 2 ? (
+                              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                            ) : (
+                              <Linkedin className="h-4 w-4 mr-2" />
+                            )}
+                            Post to LinkedIn
+                          </Button>
+                        </div>
+                      </div>
+                    </CardTitle>
+                    <CardDescription className="flex items-center justify-between">
+                      <span>Created on {new Date(draft.createdAt).toLocaleDateString()}</span>
+                      <span className="text-sm flex items-center gap-1" data-testid="text-share-count-2">
+                        <Share2 className="h-3 w-3" />
+                        {post2ShareData.isLoading ? (
+                          "Loading..."
+                        ) : post2ShareData.error ? (
+                          "Error loading count"
+                        ) : (
+                          `Posted ${post2ShareData.data?.shareCount || 0} ${post2ShareData.data?.shareCount === 1 ? 'time' : 'times'}`
+                        )}
+                      </span>
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-4">
+                      <div>
+                        <h3 className="font-medium text-sm mb-1">Hook</h3>
+                        <div className="p-3 rounded-md bg-muted/50">
+                          {draft.post2Content.hook}
+                        </div>
+                      </div>
+                      
+                      <div>
+                        <h3 className="font-medium text-sm mb-1">Body</h3>
+                        <div className="p-3 rounded-md bg-muted/50 whitespace-pre-line">
+                          {draft.post2Content.body}
+                        </div>
+                      </div>
+                      
+                      <div>
+                        <h3 className="font-medium text-sm mb-1">Closing</h3>
+                        <div className="p-3 rounded-md bg-muted/50">
+                          {draft.post2Content.closing}
+                        </div>
+                      </div>
+                      
+                      <div>
+                        <h3 className="font-medium text-sm mb-1">Hashtags</h3>
+                        <div className="p-3 rounded-md bg-muted/50">
+                          {draft.post2Content.hashtags}
+                        </div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+            </Tabs>
+          </CardContent>
+          <CardFooter className="flex justify-between">
+            <div className="text-sm text-muted-foreground">
+              These posts are aligned with your SLI and professional goals.
+            </div>
+          </CardFooter>
+        </Card>
+      </div>
+      
+      {/* Right Column (25% width) - Feedback Widget */}
+      <div className="md:col-span-1">
+        <Card className="h-full bg-blue-50 border-blue-200">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-lg text-blue-700">Provide Feedback</CardTitle>
+            <CardDescription>
+              Tell us how these posts work for you
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              <div className="flex items-center text-blue-600">
+                <Calendar className="h-4 w-4 mr-2" />
+                <span className="text-sm font-medium">Due Date:</span>
+              </div>
+              <div className="px-2 py-1.5 bg-white rounded-md border border-blue-200 text-sm">
+                {formatDate(dueDate)}
+              </div>
+              <p className="text-sm text-blue-700 mt-2">
+                Your feedback helps us improve content recommendations and ensures alignment with your SLI.
+              </p>
+            </div>
+          </CardContent>
+          <CardFooter>
+            <Button 
+              className="w-full" 
+              onClick={() => navigate("/monthly-check-in")}
+            >
+              <MessageSquare className="h-4 w-4 mr-2" />
+              Provide Feedback
+            </Button>
+          </CardFooter>
+        </Card>
+      </div>
+    </div>
+  );
+};
+
 const LinkedinContentDraftsPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState("post1");
   const [postingPostNumber, setPostingPostNumber] = useState<number | null>(null);
@@ -130,25 +419,6 @@ const LinkedinContentDraftsPage: React.FC = () => {
     },
   });
 
-  // Fetch share count for a post
-  const useShareCount = (draftId: number | undefined, postNumber: number) => {
-    return useQuery<{ shareCount: number; lastSharedAt: string | null }>({
-      queryKey: ["/api/linkedin-content-drafts", draftId, "shares", postNumber],
-      queryFn: async () => {
-        if (!draftId) {
-          throw new Error("Draft ID is required");
-        }
-        const response = await fetch(`/api/linkedin-content-drafts/${draftId}/shares/${postNumber}`);
-        if (!response.ok) {
-          throw new Error("Failed to fetch share count");
-        }
-        return response.json();
-      },
-      enabled: !!draftId,
-      refetchOnWindowFocus: false,
-    });
-  };
-
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text).then(() => {
       toast({
@@ -231,10 +501,6 @@ const LinkedinContentDraftsPage: React.FC = () => {
 
   const latestDraft = contentDrafts && contentDrafts.length > 0 ? contentDrafts[0] : null;
 
-  // Fetch share counts for both posts
-  const post1ShareData = useShareCount(latestDraft?.id, 1);
-  const post2ShareData = useShareCount(latestDraft?.id, 2);
-
   return (
     <div className="container mx-auto px-4">
       <NavBar />
@@ -267,245 +533,22 @@ const LinkedinContentDraftsPage: React.FC = () => {
       </div>
 
       {latestDraft ? (
-        // Two-column layout when content drafts exist
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-          {/* Left Column (75% width) */}
-          <div className="md:col-span-3">
-            <Card>
-              <CardHeader>
-                <CardTitle>Ready-to-Use LinkedIn Content</CardTitle>
-                <CardDescription>
-                  These posts are designed to enhance your professional brand and reinforce your SLI.
-                  Simply copy and paste directly to LinkedIn.
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-                  <TabsList className="grid w-full grid-cols-2">
-                    <TabsTrigger value="post1">
-                      Post 1: {latestDraft.post1Type}
-                    </TabsTrigger>
-                    <TabsTrigger value="post2">
-                      Post 2: {latestDraft.post2Type}
-                    </TabsTrigger>
-                  </TabsList>
-                  
-                  <TabsContent value="post1" className="mt-4">
-                    <Card>
-                      <CardHeader>
-                        <CardTitle className="text-lg">
-                          <div className="flex items-center justify-between">
-                            <span>Post Type: {latestDraft.post1Type}</span>
-                            <div className="flex items-center gap-2">
-                              <Button 
-                                variant="ghost" 
-                                size="sm" 
-                                onClick={() => copyToClipboard(formatFullPost(latestDraft.post1Content))}
-                                data-testid="button-copy-post-1"
-                              >
-                                <Copy className="h-4 w-4 mr-2" />
-                                Copy Full Post
-                              </Button>
-                              <Button 
-                                variant="default" 
-                                size="sm" 
-                                onClick={() => postToLinkedinMutation.mutate({
-                                  draftId: latestDraft.id,
-                                  postNumber: 1,
-                                  content: formatFullPost(latestDraft.post1Content)
-                                })}
-                                disabled={postingPostNumber === 1}
-                                data-testid="button-post-to-linkedin-1"
-                              >
-                                {postingPostNumber === 1 ? (
-                                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                                ) : (
-                                  <Linkedin className="h-4 w-4 mr-2" />
-                                )}
-                                Post to LinkedIn
-                              </Button>
-                            </div>
-                          </div>
-                        </CardTitle>
-                        <CardDescription className="flex items-center justify-between">
-                          <span>Created on {new Date(latestDraft.createdAt).toLocaleDateString()}</span>
-                          <span className="text-sm flex items-center gap-1" data-testid="text-share-count-1">
-                            <Share2 className="h-3 w-3" />
-                            {post1ShareData.isLoading ? (
-                              "Loading..."
-                            ) : post1ShareData.error ? (
-                              "Error loading count"
-                            ) : (
-                              `Posted ${post1ShareData.data?.shareCount || 0} ${post1ShareData.data?.shareCount === 1 ? 'time' : 'times'}`
-                            )}
-                          </span>
-                        </CardDescription>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="space-y-4">
-                          <div>
-                            <h3 className="font-medium text-sm mb-1">Hook</h3>
-                            <div className="p-3 rounded-md bg-muted/50">
-                              {latestDraft.post1Content.hook}
-                            </div>
-                          </div>
-                          
-                          <div>
-                            <h3 className="font-medium text-sm mb-1">Body</h3>
-                            <div className="p-3 rounded-md bg-muted/50 whitespace-pre-line">
-                              {latestDraft.post1Content.body}
-                            </div>
-                          </div>
-                          
-                          <div>
-                            <h3 className="font-medium text-sm mb-1">Closing</h3>
-                            <div className="p-3 rounded-md bg-muted/50">
-                              {latestDraft.post1Content.closing}
-                            </div>
-                          </div>
-                          
-                          <div>
-                            <h3 className="font-medium text-sm mb-1">Hashtags</h3>
-                            <div className="p-3 rounded-md bg-muted/50">
-                              {latestDraft.post1Content.hashtags}
-                            </div>
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  </TabsContent>
-                  
-                  <TabsContent value="post2" className="mt-4">
-                    <Card>
-                      <CardHeader>
-                        <CardTitle className="text-lg">
-                          <div className="flex items-center justify-between">
-                            <span>Post Type: {latestDraft.post2Type}</span>
-                            <div className="flex items-center gap-2">
-                              <Button 
-                                variant="ghost" 
-                                size="sm" 
-                                onClick={() => copyToClipboard(formatFullPost(latestDraft.post2Content))}
-                                data-testid="button-copy-post-2"
-                              >
-                                <Copy className="h-4 w-4 mr-2" />
-                                Copy Full Post
-                              </Button>
-                              <Button 
-                                variant="default" 
-                                size="sm" 
-                                onClick={() => postToLinkedinMutation.mutate({
-                                  draftId: latestDraft.id,
-                                  postNumber: 2,
-                                  content: formatFullPost(latestDraft.post2Content)
-                                })}
-                                disabled={postingPostNumber === 2}
-                                data-testid="button-post-to-linkedin-2"
-                              >
-                                {postingPostNumber === 2 ? (
-                                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                                ) : (
-                                  <Linkedin className="h-4 w-4 mr-2" />
-                                )}
-                                Post to LinkedIn
-                              </Button>
-                            </div>
-                          </div>
-                        </CardTitle>
-                        <CardDescription className="flex items-center justify-between">
-                          <span>Created on {new Date(latestDraft.createdAt).toLocaleDateString()}</span>
-                          <span className="text-sm flex items-center gap-1" data-testid="text-share-count-2">
-                            <Share2 className="h-3 w-3" />
-                            {post2ShareData.isLoading ? (
-                              "Loading..."
-                            ) : post2ShareData.error ? (
-                              "Error loading count"
-                            ) : (
-                              `Posted ${post2ShareData.data?.shareCount || 0} ${post2ShareData.data?.shareCount === 1 ? 'time' : 'times'}`
-                            )}
-                          </span>
-                        </CardDescription>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="space-y-4">
-                          <div>
-                            <h3 className="font-medium text-sm mb-1">Hook</h3>
-                            <div className="p-3 rounded-md bg-muted/50">
-                              {latestDraft.post2Content.hook}
-                            </div>
-                          </div>
-                          
-                          <div>
-                            <h3 className="font-medium text-sm mb-1">Body</h3>
-                            <div className="p-3 rounded-md bg-muted/50 whitespace-pre-line">
-                              {latestDraft.post2Content.body}
-                            </div>
-                          </div>
-                          
-                          <div>
-                            <h3 className="font-medium text-sm mb-1">Closing</h3>
-                            <div className="p-3 rounded-md bg-muted/50">
-                              {latestDraft.post2Content.closing}
-                            </div>
-                          </div>
-                          
-                          <div>
-                            <h3 className="font-medium text-sm mb-1">Hashtags</h3>
-                            <div className="p-3 rounded-md bg-muted/50">
-                              {latestDraft.post2Content.hashtags}
-                            </div>
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  </TabsContent>
-                </Tabs>
-              </CardContent>
-              <CardFooter className="flex justify-between">
-                <div className="text-sm text-muted-foreground">
-                  These posts are aligned with your SLI and professional goals.
-                </div>
-              </CardFooter>
-            </Card>
-          </div>
-          
-          {/* Right Column (25% width) - Feedback Widget */}
-          <div className="md:col-span-1">
-            <Card className="h-full bg-blue-50 border-blue-200">
-              <CardHeader className="pb-3">
-                <CardTitle className="text-lg text-blue-700">Provide Feedback</CardTitle>
-                <CardDescription>
-                  Tell us how these posts work for you
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  <div className="flex items-center text-blue-600">
-                    <Calendar className="h-4 w-4 mr-2" />
-                    <span className="text-sm font-medium">Due Date:</span>
-                  </div>
-                  <div className="px-2 py-1.5 bg-white rounded-md border border-blue-200 text-sm">
-                    {formatDate(dueDate)}
-                  </div>
-                  <p className="text-sm text-blue-700 mt-2">
-                    Your feedback helps us improve content recommendations and ensures alignment with your SLI.
-                  </p>
-                </div>
-              </CardContent>
-              <CardFooter>
-                <Button 
-                  className="w-full" 
-                  onClick={() => navigate("/monthly-check-in")}
-                >
-                  <MessageSquare className="h-4 w-4 mr-2" />
-                  Provide Feedback
-                </Button>
-              </CardFooter>
-            </Card>
-          </div>
-        </div>
+        <DraftDisplay 
+          draft={latestDraft} 
+          activeTab={activeTab}
+          setActiveTab={setActiveTab}
+          copyToClipboard={copyToClipboard}
+          formatFullPost={formatFullPost}
+          postToLinkedIn={(params) => {
+            setPostingPostNumber(params.postNumber);
+            postToLinkedinMutation.mutate(params);
+          }}
+          postingPostNumber={postingPostNumber}
+          dueDate={dueDate}
+          navigate={navigate}
+        />
       ) : (
-        // Single column layout when no content drafts exist
+        // No content drafts exist
         <Card className="mb-8">
           <CardHeader>
             <CardTitle>No Content Drafts Found</CardTitle>
