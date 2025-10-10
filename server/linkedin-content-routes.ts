@@ -346,4 +346,124 @@ export function registerLinkedinContentRoutes(app: Express) {
       res.status(500).json({ error: "Failed to generate LinkedIn content drafts" });
     }
   });
+
+  // Post content to LinkedIn
+  app.post("/api/linkedin-content-drafts/:draftId/post/:postNumber", isAuthenticated, async (req, res) => {
+    try {
+      const userId = req.user!.id;
+      const draftId = parseInt(req.params.draftId);
+      const postNumber = parseInt(req.params.postNumber);
+      const { content } = req.body;
+
+      if (isNaN(draftId) || isNaN(postNumber)) {
+        return res.status(400).json({ error: "Invalid draft ID or post number" });
+      }
+
+      if (postNumber !== 1 && postNumber !== 2) {
+        return res.status(400).json({ error: "Post number must be 1 or 2" });
+      }
+
+      if (!content) {
+        return res.status(400).json({ error: "Content is required" });
+      }
+
+      // Get the user to access their LinkedIn access token
+      const user = await storage.getUser(userId);
+      if (!user || !user.linkedinAccessToken) {
+        return res.status(400).json({ error: "LinkedIn not connected. Please authenticate with LinkedIn first." });
+      }
+
+      // Check if token is expired
+      if (user.linkedinTokenExpiry && new Date(user.linkedinTokenExpiry) < new Date()) {
+        return res.status(401).json({ error: "LinkedIn token expired. Please re-authenticate with LinkedIn." });
+      }
+
+      // Verify the content draft belongs to the user
+      const contentDraft = await storage.getLinkedinContentDraft(draftId);
+      if (!contentDraft || contentDraft.userId !== userId) {
+        return res.status(403).json({ error: "Not authorized to access this content draft" });
+      }
+
+      // Post to LinkedIn using the UGC Posts API
+      const linkedinResponse = await fetch("https://api.linkedin.com/v2/ugcPosts", {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${user.linkedinAccessToken}`,
+          "Content-Type": "application/json",
+          "X-Restli-Protocol-Version": "2.0.0"
+        },
+        body: JSON.stringify({
+          author: `urn:li:person:${user.linkedinId}`,
+          lifecycleState: "PUBLISHED",
+          specificContent: {
+            "com.linkedin.ugc.ShareContent": {
+              shareCommentary: {
+                text: content
+              },
+              shareMediaCategory: "NONE"
+            }
+          },
+          visibility: {
+            "com.linkedin.ugc.MemberNetworkVisibility": "PUBLIC"
+          }
+        })
+      });
+
+      if (!linkedinResponse.ok) {
+        const errorText = await linkedinResponse.text();
+        console.error("LinkedIn API error:", errorText);
+        return res.status(linkedinResponse.status).json({ 
+          error: "Failed to post to LinkedIn", 
+          details: errorText 
+        });
+      }
+
+      const linkedinData = await linkedinResponse.json();
+
+      // Increment share count
+      await storage.incrementLinkedinPostShare(draftId, postNumber);
+
+      res.json({ 
+        success: true, 
+        linkedinPostId: linkedinData.id,
+        message: "Posted to LinkedIn successfully" 
+      });
+    } catch (error) {
+      console.error("Error posting to LinkedIn:", error);
+      res.status(500).json({ error: "Failed to post to LinkedIn" });
+    }
+  });
+
+  // Get share count for a specific post
+  app.get("/api/linkedin-content-drafts/:draftId/shares/:postNumber", isAuthenticated, async (req, res) => {
+    try {
+      const userId = req.user!.id;
+      const draftId = parseInt(req.params.draftId);
+      const postNumber = parseInt(req.params.postNumber);
+
+      if (isNaN(draftId) || isNaN(postNumber)) {
+        return res.status(400).json({ error: "Invalid draft ID or post number" });
+      }
+
+      // Verify the content draft belongs to the user
+      const contentDraft = await storage.getLinkedinContentDraft(draftId);
+      if (!contentDraft) {
+        return res.status(404).json({ error: "Content draft not found" });
+      }
+      
+      if (contentDraft.userId !== userId) {
+        return res.status(403).json({ error: "Not authorized to access this content draft" });
+      }
+
+      const shareData = await storage.getLinkedinPostShare(draftId, postNumber);
+      
+      res.json({ 
+        shareCount: shareData?.shareCount || 0,
+        lastSharedAt: shareData?.lastSharedAt || null
+      });
+    } catch (error) {
+      console.error("Error fetching share count:", error);
+      res.status(500).json({ error: "Failed to fetch share count" });
+    }
+  });
 }

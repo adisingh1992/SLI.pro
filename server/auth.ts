@@ -146,6 +146,10 @@ export function setupAuth(app: Express) {
             });
           }
 
+          // Store LinkedIn tokens (params.expires_in is in seconds)
+          const expiresIn = params.expires_in || 5184000; // Default to 60 days if not provided
+          await storage.updateLinkedinTokens(user.id, accessToken, refreshToken, expiresIn);
+
           return done(null, user);
         } catch (err) {
           console.error('[LinkedIn OAuth] Error in verify callback:', err);
