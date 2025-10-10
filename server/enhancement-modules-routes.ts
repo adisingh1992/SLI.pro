@@ -18,6 +18,13 @@ const isAuthenticated = (req: Request, res: Response, next: NextFunction) => {
   res.status(401).json({ error: "Not authenticated" });
 };
 
+const isAdmin = (req: Request, res: Response, next: NextFunction) => {
+  if (req.isAuthenticated() && req.user?.isAdmin) {
+    return next();
+  }
+  res.status(403).json({ error: "Admin access required" });
+};
+
 // Get initial guidance message for each module
 function getInitialGuidanceMessage(moduleCode: string): string | null {
   switch (moduleCode) {
@@ -1066,6 +1073,27 @@ Industry: ${userProfile.experiences?.[0]?.company || "Not specified"}`
       } catch (error) {
         console.error("Error updating enhancement module:", error);
         res.status(500).json({ error: "Failed to update enhancement module" });
+      }
+    },
+  );
+
+  // Admin endpoint to get enhancement modules for a specific user
+  app.get(
+    "/api/admin/users/:userId/enhancement-modules",
+    isAdmin,
+    async (req: Request, res: Response) => {
+      try {
+        const userId = parseInt(req.params.userId);
+        
+        if (isNaN(userId)) {
+          return res.status(400).json({ error: "Invalid user ID" });
+        }
+
+        const modules = await storage.getEnhancementModulesForUser(userId);
+        res.json(modules);
+      } catch (error) {
+        console.error("Error fetching enhancement modules for user:", error);
+        res.status(500).json({ error: "Failed to fetch enhancement modules" });
       }
     },
   );
