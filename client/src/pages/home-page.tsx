@@ -569,19 +569,19 @@ export default function HomePage() {
 
           {/* Freshness Report Section */}
           <Card className={`overflow-hidden shadow-sm flex flex-col h-full ${
-            !userProfile?.questionnaire || userProfile.questionnaire.isDraft === true || !hasRequiredDocuments
+            !hasFoundationSessionsCompleted
               ? "border-gray-200 opacity-75"
               : "border-info/20"
           }`}>
             <CardHeader className={`pb-4 ${
-              !userProfile?.questionnaire || userProfile.questionnaire.isDraft === true || !hasRequiredDocuments
+              !hasFoundationSessionsCompleted
                 ? "bg-gray-50"
                 : "bg-green-50"
             }`}>
               <div className="flex items-center justify-between">
                 <div className="flex items-center">
                   <div className={`p-2 rounded-full mr-3 ${
-                    !userProfile?.questionnaire || userProfile.questionnaire.isDraft === true || !hasRequiredDocuments
+                    !hasFoundationSessionsCompleted
                       ? "bg-gray-100 text-gray-500"
                       : "bg-green-100 text-green-600"
                   }`}>
@@ -594,17 +594,15 @@ export default function HomePage() {
                 {freshnessReportBadge}
               </div>
               <CardDescription className="mt-2">
-                {!userProfile?.questionnaire || userProfile.questionnaire.isDraft === true
-                  ? "Complete the questionnaire to unlock freshness report"
-                  : !hasRequiredDocuments
-                    ? "Upload your documents to generate a freshness report"
-                    : latestFreshnessReport
-                      ? `Last report: ${new Date(latestFreshnessReport.createdAt).toLocaleDateString()}`
-                      : "Understand how your digital presence aligns with your career goals"}
+                {!hasFoundationSessionsCompleted
+                  ? "Complete at least one foundation session to unlock freshness report"
+                  : latestFreshnessReport
+                    ? `Last report: ${new Date(latestFreshnessReport.createdAt).toLocaleDateString()}`
+                    : "Understand how your digital presence aligns with your career goals"}
               </CardDescription>
             </CardHeader>
             <CardContent className="p-5 flex-grow">
-              <div className={`${!userProfile?.questionnaire || userProfile.questionnaire.isDraft === true || !hasRequiredDocuments ? "opacity-50" : ""}`}>
+              <div className={`${!hasFoundationSessionsCompleted ? "opacity-50" : ""}`}>
                 <ul className="space-y-3 text-sm">
                   <li className="flex items-center gap-2">
                     <span className={`mr-2 ${userProfile?.questionnaire && userProfile.questionnaire.isDraft !== true ? 'text-success' : 'text-muted-foreground/50'}`}>
@@ -622,6 +620,14 @@ export default function HomePage() {
                       Upload resume and LinkedIn profile
                     </span>
                   </li>
+                  <li className="flex items-center gap-2">
+                    <span className={`mr-2 ${hasFoundationSessionsCompleted ? 'text-success' : 'text-muted-foreground/50'}`}>
+                      {hasFoundationSessionsCompleted ? '✓' : '→'}
+                    </span>
+                    <span className={`${!hasFoundationSessionsCompleted ? "text-muted-foreground/50" : "text-muted-foreground"}`}>
+                      Complete at least one foundation session
+                    </span>
+                  </li>
                 </ul>
               </div>
             </CardContent>
@@ -629,17 +635,17 @@ export default function HomePage() {
               <Button
                 variant="outline"
                 className={`w-full ${
-                  !userProfile?.questionnaire || userProfile.questionnaire.isDraft === true || !hasRequiredDocuments
+                  !hasFoundationSessionsCompleted
                     ? "border-blue-500 text-blue-600 hover:bg-blue-50 cursor-not-allowed"
                     : "border-green-500 text-green-700 hover:bg-green-50"
                 }`}
                 onClick={() => {
-                  if (userProfile?.questionnaire && userProfile.questionnaire.isDraft !== true && hasRequiredDocuments) {
+                  if (hasFoundationSessionsCompleted) {
                     scrollToTop();
                     navigate("/freshness-report");
                   }
                 }}
-                disabled={!userProfile?.questionnaire || userProfile.questionnaire.isDraft === true || !hasRequiredDocuments}
+                disabled={!hasFoundationSessionsCompleted}
               >
                 {latestFreshnessReport ? "View Report" : "Generate Report"}
                 <ArrowRight className="ml-2 h-4 w-4" />
