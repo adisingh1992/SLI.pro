@@ -120,6 +120,50 @@ export default function HomePage() {
     retry: false,
   });
   
+  // Mutations for foundation sessions - MUST be before any early returns
+  const startSessionMutation = useMutation({
+    mutationFn: async (sessionNumber: number) => {
+      return await apiRequest('POST', `/api/foundation-sessions/${sessionNumber}/start`);
+    },
+    onSuccess: (data, sessionNumber) => {
+      queryClient.invalidateQueries({ queryKey: ['/api/foundation-sessions'] });
+      toast({
+        title: "Session Started",
+        description: `Foundation Session ${sessionNumber} has been started.`,
+      });
+      navigate(`/foundation/session/${sessionNumber}`);
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to start session",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Mutations for enhancement modules - MUST be before any early returns
+  const startModuleMutation = useMutation({
+    mutationFn: async (moduleCode: string) => {
+      return await apiRequest('POST', `/api/enhancement-modules/${moduleCode}/start`);
+    },
+    onSuccess: (data, moduleCode) => {
+      queryClient.invalidateQueries({ queryKey: ['/api/enhancement-modules'] });
+      toast({
+        title: "Module Started",
+        description: `Enhancement Module ${moduleCode} has been started.`,
+      });
+      navigate(`/enhancement-modules/${moduleCode}`);
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to start module",
+        variant: "destructive",
+      });
+    },
+  });
+
   // Check if user has uploaded the required documents (resume and linkedin profile)
   const hasRequiredDocuments = userProfile?.documents?.some(doc => doc.type === 'resume') &&
                                userProfile?.documents?.some(doc => doc.type === 'linkedin');
@@ -306,50 +350,6 @@ export default function HomePage() {
       </Badge>
     );
   };
-
-  // Mutations for foundation sessions
-  const startSessionMutation = useMutation({
-    mutationFn: async (sessionNumber: number) => {
-      return await apiRequest('POST', `/api/foundation-sessions/${sessionNumber}/start`);
-    },
-    onSuccess: (data, sessionNumber) => {
-      queryClient.invalidateQueries({ queryKey: ['/api/foundation-sessions'] });
-      toast({
-        title: "Session Started",
-        description: `Foundation Session ${sessionNumber} has been started.`,
-      });
-      navigate(`/foundation/session/${sessionNumber}`);
-    },
-    onError: (error: any) => {
-      toast({
-        title: "Error",
-        description: error.message || "Failed to start session",
-        variant: "destructive",
-      });
-    },
-  });
-
-  // Mutations for enhancement modules
-  const startModuleMutation = useMutation({
-    mutationFn: async (moduleCode: string) => {
-      return await apiRequest('POST', `/api/enhancement-modules/${moduleCode}/start`);
-    },
-    onSuccess: (data, moduleCode) => {
-      queryClient.invalidateQueries({ queryKey: ['/api/enhancement-modules'] });
-      toast({
-        title: "Module Started",
-        description: `Enhancement Module ${moduleCode} has been started.`,
-      });
-      navigate(`/enhancement-modules/${moduleCode}`);
-    },
-    onError: (error: any) => {
-      toast({
-        title: "Error",
-        description: error.message || "Failed to start module",
-        variant: "destructive",
-      });
-    },
-  });
 
   const handleSessionAction = (session: FoundationSession) => {
     if (session.status === 'available') {
