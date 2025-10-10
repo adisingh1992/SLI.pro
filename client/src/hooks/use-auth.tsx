@@ -53,7 +53,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     data: user,
     error,
     isLoading,
-  } = useQuery<User, Error>({
+  } = useQuery<User | undefined, Error>({
     queryKey: ["/api/user"],
     queryFn: async () => {
       try {
@@ -61,7 +61,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return response as User;
       } catch (error) {
         if (error instanceof Error && error.message.includes("401")) {
-          return undefined as unknown as User;
+          return undefined;
         }
         throw error;
       }
@@ -70,11 +70,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const loginMutation = useMutation({
     mutationFn: async (credentials: LoginData) => {
-      return await apiRequest({
+      return await apiRequest<User>({
         url: "/api/login",
         method: "POST",
         body: credentials
-      });
+      }) as User;
     },
     onSuccess: (userData: User) => {
       queryClient.setQueryData(["/api/user"], userData);
@@ -85,11 +85,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const registerMutation = useMutation({
     mutationFn: async (credentials: RegisterData) => {
-      return await apiRequest({
+      return await apiRequest<User>({
         url: "/api/register",
         method: "POST",
         body: credentials
-      });
+      }) as User;
     },
     onSuccess: (userData: User) => {
       queryClient.setQueryData(["/api/user"], userData);
