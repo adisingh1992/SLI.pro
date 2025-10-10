@@ -250,17 +250,17 @@ export default function HomePage() {
 
   const getSessionStatusBadge = (status: FoundationSession['status']) => {
     const variants = {
-      locked: { variant: "secondary" as const, icon: Lock, text: "Locked" },
-      available: { variant: "default" as const, icon: Play, text: "Available" },
-      in_progress: { variant: "outline" as const, icon: MessageSquare, text: "In Progress" },
-      completed: { variant: "destructive" as const, icon: CheckCircle, text: "Completed" }
+      locked: { variant: "secondary" as const, icon: Lock, text: "Locked", className: "" },
+      available: { variant: "default" as const, icon: Play, text: "Available", className: "" },
+      in_progress: { variant: "outline" as const, icon: MessageSquare, text: "In Progress", className: "" },
+      completed: { variant: "outline" as const, icon: CheckCircle, text: "Completed", className: "bg-green-50 text-green-700 border-green-200" }
     };
     
     const config = variants[status];
     const Icon = config.icon;
     
     return (
-      <Badge variant={config.variant} className="flex items-center gap-1">
+      <Badge variant={config.variant} className={`flex items-center gap-1 ${config.className}`}>
         <Icon className="h-3 w-3" />
         {config.text}
       </Badge>
@@ -291,16 +291,16 @@ export default function HomePage() {
 
   const getModuleStatusBadge = (status: EnhancementModule['status']) => {
     const variants = {
-      available: { variant: "default" as const, icon: Play, text: "Available" },
-      in_progress: { variant: "outline" as const, icon: MessageSquare, text: "In Progress" },
-      completed: { variant: "destructive" as const, icon: CheckCircle, text: "Completed" }
+      available: { variant: "default" as const, icon: Play, text: "Available", className: "" },
+      in_progress: { variant: "outline" as const, icon: MessageSquare, text: "In Progress", className: "" },
+      completed: { variant: "outline" as const, icon: CheckCircle, text: "Completed", className: "bg-green-50 text-green-700 border-green-200" }
     };
     
     const config = variants[status];
     const Icon = config.icon;
     
     return (
-      <Badge variant={config.variant} className="flex items-center gap-1">
+      <Badge variant={config.variant} className={`flex items-center gap-1 ${config.className}`}>
         <Icon className="h-3 w-3" />
         {config.text}
       </Badge>
@@ -366,6 +366,10 @@ export default function HomePage() {
       navigate(`/enhancement-modules/${module.moduleCode}`);
     }
   };
+
+  // Check if all enhancement modules are completed
+  const hasAllModulesCompleted = enhancementModules && enhancementModules.length > 0 && 
+    enhancementModules.every(module => module.status === 'completed');
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
@@ -621,7 +625,7 @@ export default function HomePage() {
                   <h3 className="text-lg font-semibold">Enhancement Modules (Optional)</h3>
                   {getStatusBadge(
                     !!hasFoundationSessionsCompleted,
-                    false
+                    !!hasAllModulesCompleted
                   )}
                 </div>
                 
