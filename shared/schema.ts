@@ -15,6 +15,9 @@ export const users = pgTable("users", {
   lastName: text("last_name").notNull(),
   phoneNumber: text("phone_number"),
   linkedinId: text("linkedin_id").unique(),
+  linkedinAccessToken: text("linkedin_access_token"),
+  linkedinRefreshToken: text("linkedin_refresh_token"),
+  linkedinTokenExpiry: timestamp("linkedin_token_expiry"),
   headline: text("headline"),
   bio: text("bio"),
   location: text("location"),
@@ -364,6 +367,22 @@ export const insertLinkedinContentDraftSchema = createInsertSchema(linkedinConte
 
 export type InsertLinkedinContentDraft = z.infer<typeof insertLinkedinContentDraftSchema>;
 export type LinkedinContentDraft = typeof linkedinContentDrafts.$inferSelect;
+
+// LinkedIn Post Shares tracking
+export const linkedinPostShares = pgTable("linkedin_post_shares", {
+  id: serial("id").primaryKey(),
+  draftId: integer("draft_id").notNull().references(() => linkedinContentDrafts.id, { onDelete: 'cascade' }),
+  postNumber: integer("post_number").notNull(), // 1 or 2
+  shareCount: integer("share_count").default(0).notNull(),
+  lastSharedAt: timestamp("last_shared_at"),
+});
+
+export const insertLinkedinPostShareSchema = createInsertSchema(linkedinPostShares).omit({
+  id: true,
+});
+
+export type InsertLinkedinPostShare = z.infer<typeof insertLinkedinPostShareSchema>;
+export type LinkedinPostShare = typeof linkedinPostShares.$inferSelect;
 
 // Coaching Notes schema
 export const coachingNotes = pgTable("coaching_notes", {
