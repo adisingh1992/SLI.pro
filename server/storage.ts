@@ -17,6 +17,7 @@ import {
   slis, type Sli, type InsertSli, type UpdateSli,
   linkedinOptimizations, type LinkedinOptimization, type InsertLinkedinOptimization,
   linkedinContentDrafts, type LinkedinContentDraft, type InsertLinkedinContentDraft,
+  linkedinPostShares, type LinkedinPostShare, type InsertLinkedinPostShare,
   homeworkAssignments, type HomeworkAssignment, type InsertHomeworkAssignment, type UpdateHomeworkAssignment,
   foundationSessions, type FoundationSession, type InsertFoundationSession, type UpdateFoundationSession,
   foundationSessionMessages, type FoundationSessionMessage, type InsertFoundationSessionMessage,
@@ -35,6 +36,7 @@ export interface IStorage {
   createUser(user: InsertUser): Promise<User>;
   updateUser(id: number, data: UpdateUser): Promise<User | undefined>;
   updateUserPassword(id: number, password: string): Promise<User | undefined>;
+  updateLinkedinTokens(userId: number, accessToken: string, refreshToken: string, expiresIn: number): Promise<User | undefined>;
   getNonAdminUsers(): Promise<User[]>; // New method to get only non-admin users
   
   // Experience operations
@@ -146,6 +148,11 @@ export interface IStorage {
   getLinkedinContentDraft(id: number): Promise<LinkedinContentDraft | undefined>;
   getLatestLinkedinContentDraft(userId: number): Promise<LinkedinContentDraft | undefined>;
   createLinkedinContentDraft(contentDraft: InsertLinkedinContentDraft): Promise<LinkedinContentDraft>;
+
+  // LinkedIn Post Shares operations
+  getLinkedinPostShare(draftId: number, postNumber: number): Promise<LinkedinPostShare | undefined>;
+  createLinkedinPostShare(postShare: InsertLinkedinPostShare): Promise<LinkedinPostShare>;
+  incrementLinkedinPostShare(draftId: number, postNumber: number): Promise<LinkedinPostShare>;
 
   // Homework Assignment operations
   getHomeworkAssignments(userId: number): Promise<HomeworkAssignment[]>;

@@ -17,6 +17,7 @@ import {
   slis, type Sli, type InsertSli, type UpdateSli,
   linkedinOptimizations, type LinkedinOptimization, type InsertLinkedinOptimization,
   linkedinContentDrafts, type LinkedinContentDraft, type InsertLinkedinContentDraft,
+  linkedinPostShares, type LinkedinPostShare, type InsertLinkedinPostShare,
   homeworkAssignments, type HomeworkAssignment, type InsertHomeworkAssignment, type UpdateHomeworkAssignment,
   foundationSessions, type FoundationSession, type InsertFoundationSession, type UpdateFoundationSession,
   foundationSessionMessages, type FoundationSessionMessage, type InsertFoundationSessionMessage,
@@ -84,6 +85,22 @@ export class DatabaseStorage implements IStorage {
 
   async getNonAdminUsers(): Promise<User[]> {
     return db.select().from(users).where(eq(users.isAdmin, false));
+  }
+
+  async updateLinkedinTokens(userId: number, accessToken: string, refreshToken: string, expiresIn: number): Promise<User | undefined> {
+    const expiryDate = new Date();
+    expiryDate.setSeconds(expiryDate.getSeconds() + expiresIn);
+    
+    const [updatedUser] = await db
+      .update(users)
+      .set({
+        linkedinAccessToken: accessToken,
+        linkedinRefreshToken: refreshToken,
+        linkedinTokenExpiry: expiryDate
+      })
+      .where(eq(users.id, userId))
+      .returning();
+    return updatedUser || undefined;
   }
 
   // Experience methods
@@ -711,6 +728,49 @@ export class DatabaseStorage implements IStorage {
       .values(contentDraft)
       .returning();
     return newContentDraft;
+  }
+
+  // LinkedIn Post Shares methods
+  async getLinkedinPostShare(draftId: number, postNumber: number): Promise<LinkedinPostShare | undefined> {
+    const [postShare] = await db
+      .select()
+      .from(linkedinPostShares)
+      .where(and(
+        eq(linkedinPostShares.draftId, draftId),
+        eq(linkedinPostShares.postNumber, postNumber)
+      ));
+    return postShare || undefined;
+  }
+
+  async createLinkedinPostShare(postShare: InsertLinkedinPostShare): Promise<LinkedinPostShare> {
+    const [newPostShare] = await db
+      .insert(linkedinPostShares)
+      .values(postShare)
+      .returning();
+    return newPostShare;
+  }
+
+  async incrementLinkedinPostShare(draftId: number, postNumber: number): Promise<LinkedinPostShare> {
+    const existingShare = await this.getLinkedinPostShare(draftId, postNumber);
+    
+    if (existingShare) {
+      const [updatedShare] = await db
+        .update(linkedinPostShares)
+        .set({
+          shareCount: existingShare.shareCount + 1,
+          lastSharedAt: new Date()
+        })
+        .where(eq(linkedinPostShares.id, existingShare.id))
+        .returning();
+      return updatedShare;
+    } else {
+      return this.createLinkedinPostShare({
+        draftId,
+        postNumber,
+        shareCount: 1,
+        lastSharedAt: new Date()
+      });
+    }
   }
 
   // Homework Assignment methods
