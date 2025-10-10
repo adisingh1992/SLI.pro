@@ -1,6 +1,17 @@
 import { useAuth } from "@/hooks/use-auth";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { apiRequest } from "@/lib/queryClient";
 import { FreshnessReport, LinkedinOptimization, Sli, UserProfile, ConversationSummary, HomeworkAssignment, FoundationSession } from "@shared/schema";
+
+type EnhancementModule = {
+  id: number;
+  userId: number;
+  moduleCode: string;
+  status: 'available' | 'in_progress' | 'completed';
+  startedAt?: string;
+  completedAt?: string;
+  timerElapsed?: number;
+};
 import { useToast } from "@/hooks/use-toast";
 import { useLocation } from "wouter";
 import {
@@ -16,6 +27,9 @@ import {
   Phone,
   PenTool,
   BookOpen,
+  Lock,
+  Play,
+  MessageSquare,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useEffect } from "react";
@@ -35,6 +49,7 @@ export default function HomePage() {
   const { user } = useAuth();
   const { toast } = useToast();
   const [_, navigate] = useLocation();
+  const queryClient = useQueryClient();
 
   // Fetch user profile data
   const {
@@ -87,6 +102,13 @@ export default function HomePage() {
   // Fetch foundation sessions to check completion status
   const { data: foundationSessions } = useQuery<FoundationSession[]>({
     queryKey: ["/api/foundation-sessions"],
+    enabled: !!user,
+    retry: false,
+  });
+  
+  // Fetch enhancement modules
+  const { data: enhancementModules } = useQuery<EnhancementModule[]>({
+    queryKey: ['/api/enhancement-modules'],
     enabled: !!user,
     retry: false,
   });
@@ -195,6 +217,155 @@ export default function HomePage() {
     !!hasFoundationSessionsCompleted,
     false // Always available once foundation sessions are completed
   );
+
+  // Helper functions for foundation sessions
+  const getSessionContent = (sessionNumber: number) => {
+    switch (sessionNumber) {
+      case 1:
+        return {
+          header: "Session 1",
+          title: "Functional Identity Mapping",
+          description: "Define your primary business function and positioning"
+        };
+      case 2:
+        return {
+          header: "Session 2",
+          title: "Professional Credibility Assessment",
+          description: "Identify measurable expertise and business impact"
+        };
+      case 3:
+        return {
+          header: "Session 3",
+          title: "Positioning Story Development",
+          description: "Extract compelling stories that prove your unique value"
+        };
+      default:
+        return {
+          header: `Session ${sessionNumber}`,
+          title: "",
+          description: ""
+        };
+    }
+  };
+
+  const getSessionStatusBadge = (status: FoundationSession['status']) => {
+    const variants = {
+      locked: { variant: "secondary" as const, icon: Lock, text: "Locked" },
+      available: { variant: "default" as const, icon: Play, text: "Available" },
+      in_progress: { variant: "outline" as const, icon: MessageSquare, text: "In Progress" },
+      completed: { variant: "destructive" as const, icon: CheckCircle, text: "Completed" }
+    };
+    
+    const config = variants[status];
+    const Icon = config.icon;
+    
+    return (
+      <Badge variant={config.variant} className="flex items-center gap-1">
+        <Icon className="h-3 w-3" />
+        {config.text}
+      </Badge>
+    );
+  };
+
+  // Helper functions for enhancement modules
+  const getModuleDetails = (moduleCode: string) => {
+    const details = {
+      'A': {
+        title: "Module A",
+        subtitle: "Digital Behavior Analysis",
+        description: "LinkedIn Presence & Content Strategy Assessment"
+      },
+      'B': {
+        title: "Module B",
+        subtitle: "Network Position Mapping",
+        description: "Strategic Relationship & Influence Analysis"
+      },
+      'C': {
+        title: "Module C",
+        subtitle: "Career Aspiration Alignment",
+        description: "Long-Term Goals & Positioning Refinement"
+      }
+    };
+    return details[moduleCode as keyof typeof details] || { title: `Module ${moduleCode}`, subtitle: "", description: "" };
+  };
+
+  const getModuleStatusBadge = (status: EnhancementModule['status']) => {
+    const variants = {
+      available: { variant: "default" as const, icon: Play, text: "Available" },
+      in_progress: { variant: "outline" as const, icon: MessageSquare, text: "In Progress" },
+      completed: { variant: "destructive" as const, icon: CheckCircle, text: "Completed" }
+    };
+    
+    const config = variants[status];
+    const Icon = config.icon;
+    
+    return (
+      <Badge variant={config.variant} className="flex items-center gap-1">
+        <Icon className="h-3 w-3" />
+        {config.text}
+      </Badge>
+    );
+  };
+
+  // Mutations for foundation sessions
+  const startSessionMutation = useMutation({
+    mutationFn: async (sessionNumber: number) => {
+      return await apiRequest('POST', `/api/foundation-sessions/${sessionNumber}/start`);
+    },
+    onSuccess: (data, sessionNumber) => {
+      queryClient.invalidateQueries({ queryKey: ['/api/foundation-sessions'] });
+      toast({
+        title: "Session Started",
+        description: `Foundation Session ${sessionNumber} has been started.`,
+      });
+      navigate(`/foundation/session/${sessionNumber}`);
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to start session",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Mutations for enhancement modules
+  const startModuleMutation = useMutation({
+    mutationFn: async (moduleCode: string) => {
+      return await apiRequest('POST', `/api/enhancement-modules/${moduleCode}/start`);
+    },
+    onSuccess: (data, moduleCode) => {
+      queryClient.invalidateQueries({ queryKey: ['/api/enhancement-modules'] });
+      toast({
+        title: "Module Started",
+        description: `Enhancement Module ${moduleCode} has been started.`,
+      });
+      navigate(`/enhancement-modules/${moduleCode}`);
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to start module",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleSessionAction = (session: FoundationSession) => {
+    if (session.status === 'available') {
+      startSessionMutation.mutate(session.sessionNumber);
+    } else if (session.status === 'in_progress' || session.status === 'completed') {
+      navigate(`/foundation/session/${session.sessionNumber}`);
+    }
+  };
+
+  const handleModuleAction = (module: EnhancementModule) => {
+    if (module.status === 'available') {
+      startModuleMutation.mutate(module.moduleCode);
+    } else if (module.status === 'in_progress' || module.status === 'completed') {
+      navigate(`/enhancement-modules/${module.moduleCode}`);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
