@@ -135,6 +135,9 @@ const LinkedinContentDraftsPage: React.FC = () => {
     return useQuery<{ shareCount: number; lastSharedAt: string | null }>({
       queryKey: ["/api/linkedin-content-drafts", draftId, "shares", postNumber],
       queryFn: async () => {
+        if (!draftId) {
+          throw new Error("Draft ID is required");
+        }
         const response = await fetch(`/api/linkedin-content-drafts/${draftId}/shares/${postNumber}`);
         if (!response.ok) {
           throw new Error("Failed to fetch share count");
