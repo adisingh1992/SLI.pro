@@ -2,14 +2,14 @@ import { useAuth } from '@/hooks/use-auth';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiRequest } from '@/lib/queryClient';
 import { useState, useRef, useEffect } from 'react';
-import { useLocation, useParams } from 'wouter';
+import { useLocation, useParams, Link } from 'wouter';
 import NavBar from "@/components/nav-bar";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import { Loader2, Send, ArrowLeft, Lock, CheckCircle, MessageSquare, AlertCircle } from "lucide-react";
+import { Loader2, Send, ArrowLeft, Lock, CheckCircle, MessageSquare, AlertCircle, FileText } from "lucide-react";
 import VoiceMicButton from "@/components/VoiceMicButton";
 import { useVoiceRecording } from "@/hooks/use-voice-recording";
 import { useToast } from "@/hooks/use-toast";
@@ -555,6 +555,22 @@ export default function FoundationSessionChatPage() {
                     </div>
                   )}
                 </div>
+              </div>
+            )}
+
+            {/* PDF Summary Link - Only show when completed */}
+            {session.status === 'completed' && (
+              <div className="pt-4 border-t">
+                <Link href="/summaries">
+                  <Button 
+                    variant="outline" 
+                    className="w-full text-sm justify-start"
+                    data-testid="button-view-pdf-summary"
+                  >
+                    <FileText className="h-4 w-4 mr-2" />
+                    View and Download a PDF summary of this conversation for your records
+                  </Button>
+                </Link>
               </div>
             )}
           </div>
