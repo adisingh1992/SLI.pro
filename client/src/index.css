@@ -51,24 +51,27 @@ html {
 }
 
 /* PDF Export Specific Styles */
-/* Force single column layout for all grids and preserve spacing */
+/* Force single column layout while preserving grid gap behavior */
 .pdf-export .grid {
-  display: block !important;
+  grid-template-columns: 1fr !important;
+  display: grid !important;
 }
 
-.pdf-export .md\:grid-cols-2,
-.pdf-export .grid-cols-1 {
-  display: block !important;
+/* Keep flex layouts but ensure they render properly */
+.pdf-export .flex.gap-1 {
+  gap: 0.25rem !important;
 }
 
-/* Replace grid gap with margins for linearized content */
-.pdf-export .grid.gap-6 > * + *,
-.pdf-export .grid.gap-4 > * + * {
-  margin-top: 1.5rem !important;
+.pdf-export .flex.gap-2 {
+  gap: 0.5rem !important;
 }
 
-.pdf-export .grid.gap-3 > * + * {
-  margin-top: 0.75rem !important;
+.pdf-export .flex.gap-3 {
+  gap: 0.75rem !important;
+}
+
+.pdf-export .flex.gap-4 {
+  gap: 1rem !important;
 }
 
 /* Prevent page breaks inside individual cards only (not sections) */
