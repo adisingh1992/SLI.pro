@@ -562,14 +562,13 @@ export default function FoundationSessionChatPage() {
             {session.status === 'completed' && (
               <div className="pt-4 border-t">
                 <Link href="/summaries">
-                  <Button 
-                    variant="outline" 
-                    className="w-full text-sm justify-start"
-                    data-testid="button-view-pdf-summary"
+                  <a 
+                    className="text-sm text-primary hover:underline flex items-start gap-2 cursor-pointer"
+                    data-testid="link-view-pdf-summary"
                   >
-                    <FileText className="h-4 w-4 mr-2" />
-                    View and Download a PDF summary of this conversation for your records
-                  </Button>
+                    <FileText className="h-4 w-4 mt-0.5 flex-shrink-0" />
+                    <span>View and Download a PDF summary of this conversation for your records</span>
+                  </a>
                 </Link>
               </div>
             )}
