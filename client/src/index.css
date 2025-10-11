@@ -50,141 +50,39 @@ html {
   zoom: 0.95;
 }
 
-/* PDF Export - Text Only Styles */
-/* Remove all visual styling for clean text-only PDF output */
+/* PDF Export - Simple Text Styles */
+/* Minimal styling changes for clean PDF - keep layout intact */
 
-/* Hide all icons and SVG elements */
+/* Hide icons */
 .pdf-export svg {
   display: none !important;
 }
 
-/* Remove all backgrounds, borders, and shadows */
-.pdf-export * {
-  background: white !important;
-  background-color: white !important;
-  border: none !important;
-  border-color: transparent !important;
-  box-shadow: none !important;
-}
-
-/* Convert all text to black */
-.pdf-export,
-.pdf-export * {
-  color: black !important;
-}
-
-/* Hide badges completely */
+/* Hide badges */
 .pdf-export [class*="badge"],
 .pdf-export [class*="Badge"] {
   display: none !important;
 }
 
-/* Flatten all layouts to simple block flow */
+/* Remove colors - use black text on white */
 .pdf-export * {
-  display: block !important;
+  color: black !important;
+  background-color: white !important;
+  border-color: #ddd !important;
 }
 
-/* Allow inline elements for text flow */
-.pdf-export span,
-.pdf-export strong,
-.pdf-export em,
-.pdf-export b,
-.pdf-export i {
-  display: inline !important;
+/* Keep borders subtle */
+.pdf-export [class*="border"] {
+  border-color: #ddd !important;
 }
 
-/* Reset all spacing to prevent overlap */
-.pdf-export * {
-  margin: 0 !important;
-  padding: 0 !important;
+/* Ensure cards have visible borders */
+.pdf-export [class*="Card"] {
+  border: 1px solid #ddd !important;
 }
 
-/* Add controlled spacing for readability */
-.pdf-export h1 {
-  font-size: 24px !important;
-  font-weight: bold !important;
-  margin-top: 24px !important;
-  margin-bottom: 12px !important;
-  display: block !important;
-}
-
-.pdf-export h2 {
-  font-size: 20px !important;
-  font-weight: bold !important;
-  margin-top: 20px !important;
-  margin-bottom: 10px !important;
-  display: block !important;
-}
-
-.pdf-export h3 {
-  font-size: 18px !important;
-  font-weight: bold !important;
-  margin-top: 16px !important;
-  margin-bottom: 8px !important;
-  display: block !important;
-}
-
-.pdf-export h4 {
-  font-size: 16px !important;
-  font-weight: 600 !important;
-  margin-top: 12px !important;
-  margin-bottom: 6px !important;
-  display: block !important;
-}
-
-.pdf-export h5 {
-  font-size: 14px !important;
-  font-weight: 600 !important;
-  margin-top: 10px !important;
-  margin-bottom: 6px !important;
-  display: block !important;
-}
-
-.pdf-export p {
-  font-size: 14px !important;
-  line-height: 1.8 !important;
-  margin-bottom: 8px !important;
-  display: block !important;
-}
-
-/* Lists with proper spacing */
-.pdf-export ul,
-.pdf-export ol {
-  margin-top: 8px !important;
-  margin-bottom: 12px !important;
-  margin-left: 24px !important;
-  display: block !important;
-}
-
-.pdf-export li {
-  font-size: 14px !important;
-  line-height: 1.8 !important;
-  margin-bottom: 4px !important;
-  display: list-item !important;
-}
-
-/* Section dividers */
-.pdf-export hr,
-.pdf-export .border-t,
-.pdf-export [class*="border-t"] {
-  border-top: 1px solid black !important;
-  margin-top: 20px !important;
-  margin-bottom: 20px !important;
-  display: block !important;
-  height: 0 !important;
-}
-
-/* Page break control */
-.pdf-export h1,
-.pdf-export h2,
-.pdf-export h3 {
-  page-break-after: avoid !important;
-  break-after: avoid !important;
-}
-
-.pdf-export p,
-.pdf-export ul,
-.pdf-export ol {
+/* Page break hints */
+.pdf-export [class*="Card"] {
   page-break-inside: avoid !important;
   break-inside: avoid !important;
 }
