@@ -50,111 +50,128 @@ html {
   zoom: 0.95;
 }
 
-/* PDF Export Specific Styles */
-/* Force single column layout while preserving grid gap behavior */
-.pdf-export .grid {
-  grid-template-columns: 1fr !important;
-  display: grid !important;
+/* PDF Export - Text Only Styles */
+/* Remove all visual styling for clean text-only PDF output */
+
+/* Hide all icons */
+.pdf-export svg,
+.pdf-export [class*="lucide"] {
+  display: none !important;
 }
 
-/* Keep flex layouts but ensure they render properly */
-.pdf-export .flex.gap-1 {
-  gap: 0.25rem !important;
+/* Remove all backgrounds and borders */
+.pdf-export * {
+  background: white !important;
+  border: none !important;
+  box-shadow: none !important;
 }
 
-.pdf-export .flex.gap-2 {
-  gap: 0.5rem !important;
+/* Convert all text to black */
+.pdf-export *,
+.pdf-export h1,
+.pdf-export h2,
+.pdf-export h3,
+.pdf-export h4,
+.pdf-export h5,
+.pdf-export p,
+.pdf-export span,
+.pdf-export div,
+.pdf-export li {
+  color: black !important;
 }
 
-.pdf-export .flex.gap-3 {
-  gap: 0.75rem !important;
+/* Hide badges and decorative elements */
+.pdf-export [class*="Badge"],
+.pdf-export [class*="badge"] {
+  display: none !important;
 }
 
-.pdf-export .flex.gap-4 {
-  gap: 1rem !important;
+/* Remove card styling - flatten to text */
+.pdf-export [class*="Card"],
+.pdf-export [class*="card"] {
+  background: white !important;
+  border: none !important;
+  padding: 0 !important;
+  margin-bottom: 1rem !important;
 }
 
-/* Prevent page breaks inside individual cards only (not sections) */
-.pdf-export [class*="border-blue"],
-.pdf-export [class*="border-green"],
-.pdf-export [class*="border-purple"],
-.pdf-export [class*="border-teal"],
-.pdf-export [class*="border-orange"],
-.pdf-export [class*="border-indigo"] {
-  page-break-inside: avoid;
-  break-inside: avoid;
-  margin-bottom: 1.5rem;
+/* Simplify headings to plain text hierarchy */
+.pdf-export h1 {
+  font-size: 24px !important;
+  font-weight: bold !important;
+  margin-bottom: 1rem !important;
+  margin-top: 1.5rem !important;
 }
 
-/* Fix transparent backgrounds for PDF */
-.pdf-export [class*="bg-blue-50/30"] {
-  background-color: rgb(239 246 255) !important;
+.pdf-export h2 {
+  font-size: 20px !important;
+  font-weight: bold !important;
+  margin-bottom: 0.75rem !important;
+  margin-top: 1.25rem !important;
 }
 
-.pdf-export [class*="bg-green-50/30"] {
-  background-color: rgb(240 253 244) !important;
-}
-
-.pdf-export [class*="bg-purple-50/30"] {
-  background-color: rgb(250 245 255) !important;
-}
-
-.pdf-export [class*="bg-teal-50/30"] {
-  background-color: rgb(240 253 250) !important;
-}
-
-.pdf-export [class*="bg-orange-50/30"] {
-  background-color: rgb(255 247 237) !important;
-}
-
-.pdf-export [class*="bg-indigo-50/30"] {
-  background-color: rgb(238 242 255) !important;
-}
-
-/* Fix semi-transparent header backgrounds */
-.pdf-export [class*="bg-blue-100/50"] {
-  background-color: rgb(219 234 254) !important;
-}
-
-.pdf-export [class*="bg-green-100/50"] {
-  background-color: rgb(220 252 231) !important;
-}
-
-.pdf-export [class*="bg-purple-100/50"] {
-  background-color: rgb(243 232 255) !important;
-}
-
-.pdf-export [class*="bg-teal-100/50"] {
-  background-color: rgb(204 251 241) !important;
-}
-
-.pdf-export [class*="bg-orange-100/50"] {
-  background-color: rgb(255 237 213) !important;
-}
-
-.pdf-export [class*="bg-indigo-100/50"] {
-  background-color: rgb(224 231 255) !important;
-}
-
-/* Maintain section spacing */
-.pdf-export .space-y-8 > * + * {
-  margin-top: 2rem !important;
-}
-
-.pdf-export .space-y-4 > * + * {
+.pdf-export h3 {
+  font-size: 18px !important;
+  font-weight: bold !important;
+  margin-bottom: 0.5rem !important;
   margin-top: 1rem !important;
 }
 
-/* Add spacing after section dividers */
-.pdf-export .border-t {
-  margin: 2rem 0 !important;
-}
-
-/* Ensure subsections within cards have proper spacing */
-.pdf-export .space-y-3 > * + * {
+.pdf-export h4 {
+  font-size: 16px !important;
+  font-weight: 600 !important;
+  margin-bottom: 0.5rem !important;
   margin-top: 0.75rem !important;
 }
 
-.pdf-export .space-y-2 > * + * {
-  margin-top: 0.5rem !important;
+.pdf-export h5 {
+  font-size: 14px !important;
+  font-weight: 600 !important;
+  margin-bottom: 0.5rem !important;
+}
+
+/* Paragraph spacing */
+.pdf-export p {
+  font-size: 14px !important;
+  line-height: 1.6 !important;
+  margin-bottom: 0.5rem !important;
+}
+
+/* List styling - simple bullets/numbers only */
+.pdf-export ul,
+.pdf-export ol {
+  margin-left: 1.5rem !important;
+  margin-bottom: 0.75rem !important;
+}
+
+.pdf-export li {
+  font-size: 14px !important;
+  line-height: 1.6 !important;
+  margin-bottom: 0.25rem !important;
+}
+
+/* Force single column layout */
+.pdf-export .grid {
+  display: block !important;
+}
+
+/* Section dividers as simple lines */
+.pdf-export .border-t {
+  border-top: 1px solid black !important;
+  margin: 1.5rem 0 !important;
+}
+
+/* Page break control */
+.pdf-export h1,
+.pdf-export h2,
+.pdf-export h3 {
+  page-break-after: avoid !important;
+  break-after: avoid !important;
+}
+
+.pdf-export p,
+.pdf-export ul,
+.pdf-export ol {
+  page-break-inside: avoid !important;
+  break-inside: avoid !important;
 }
