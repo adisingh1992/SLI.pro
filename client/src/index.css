@@ -50,39 +50,4 @@ html {
   zoom: 0.95;
 }
 
-/* PDF Export - Simple Text Styles */
-/* Minimal styling changes for clean PDF - keep layout intact */
-
-/* Hide icons */
-.pdf-export svg {
-  display: none !important;
-}
-
-/* Hide badges */
-.pdf-export [class*="badge"],
-.pdf-export [class*="Badge"] {
-  display: none !important;
-}
-
-/* Remove colors - use black text on white */
-.pdf-export * {
-  color: black !important;
-  background-color: white !important;
-  border-color: #ddd !important;
-}
-
-/* Keep borders subtle */
-.pdf-export [class*="border"] {
-  border-color: #ddd !important;
-}
-
-/* Ensure cards have visible borders */
-.pdf-export [class*="Card"] {
-  border: 1px solid #ddd !important;
-}
-
-/* Page break hints */
-.pdf-export [class*="Card"] {
-  page-break-inside: avoid !important;
-  break-inside: avoid !important;
-}
+/* PDF CSS no longer needed - using jsPDF programmatic approach */

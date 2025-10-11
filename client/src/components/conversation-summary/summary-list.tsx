@@ -25,7 +25,7 @@ import {
 } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { formatDistanceToNow } from 'date-fns';
-import html2pdf from 'html2pdf.js';
+import { jsPDF } from 'jspdf';
 
 interface SummaryListProps {
   userId?: number;
@@ -57,43 +57,367 @@ export default function SummaryList({ userId, isAdmin = false }: SummaryListProp
   const isLoading = sessionsLoading || modulesLoading;
   const isError = sessionsError || modulesError;
 
-  // PDF download handler
-  const handleDownloadPDF = async () => {
-    if (!summaryRef.current) return;
+  // PDF download handler - programmatic text-based approach
+  const handleDownloadPDF = () => {
+    const doc = new jsPDF({
+      orientation: 'portrait',
+      unit: 'mm',
+      format: 'letter'
+    });
 
-    // Add PDF-specific class for styling
-    summaryRef.current.classList.add('pdf-export');
-    
-    // Small delay to allow CSS to apply
-    await new Promise(resolve => setTimeout(resolve, 100));
+    let yPos = 20;
+    const lineHeight = 7;
+    const pageHeight = 279; // letter size in mm
+    const margin = 20;
+    const maxWidth = 170; // page width minus margins
 
-    const opt = {
-      margin: [0.5, 0.5, 0.5, 0.5] as [number, number, number, number],
-      filename: `SLI-Pro-Summary-${new Date().toISOString().split('T')[0]}.pdf`,
-      image: { type: 'jpeg' as const, quality: 0.95 },
-      html2canvas: { 
-        scale: 2,
-        useCORS: true,
-        logging: false,
-        letterRendering: true,
-        allowTaint: false,
-        backgroundColor: '#ffffff',
-        windowWidth: 1200
-      },
-      jsPDF: { 
-        unit: 'in', 
-        format: 'letter', 
-        orientation: 'portrait' as const
-      },
-      pagebreak: { mode: 'avoid-all' as const }
+    // Helper function to add text with page break handling
+    const addText = (text: string, fontSize: number = 12, isBold: boolean = false) => {
+      if (yPos > pageHeight - margin) {
+        doc.addPage();
+        yPos = margin;
+      }
+      doc.setFontSize(fontSize);
+      doc.setFont('helvetica', isBold ? 'bold' : 'normal');
+      
+      const lines = doc.splitTextToSize(text, maxWidth);
+      lines.forEach((line: string) => {
+        if (yPos > pageHeight - margin) {
+          doc.addPage();
+          yPos = margin;
+        }
+        doc.text(line, margin, yPos);
+        yPos += lineHeight;
+      });
     };
 
-    try {
-      await html2pdf().set(opt).from(summaryRef.current).save();
-    } finally {
-      // Remove PDF class after generation
-      summaryRef.current.classList.remove('pdf-export');
+    const addSpace = (amount: number = lineHeight) => {
+      yPos += amount;
+    };
+
+    // Title
+    addText('PROFESSIONAL DEVELOPMENT SUMMARY', 20, true);
+    addSpace(10);
+
+    // Organize sessions by session number
+    const sessionsByNumber = sessions?.reduce((acc, session) => {
+      acc[session.sessionNumber] = session;
+      return acc;
+    }, {} as Record<number, FoundationSession>) || {};
+
+    // Organize modules by module code
+    const modulesByCode = modules?.reduce((acc, module) => {
+      acc[module.moduleCode] = module;
+      return acc;
+    }, {} as Record<string, EnhancementModule>) || {};
+
+    // Foundation Session 1
+    addText('Foundation Session 1: Functional Identity Mapping', 16, true);
+    addSpace(5);
+    const session1 = sessionsByNumber[1];
+    if (session1?.status === 'completed' && session1.completionData) {
+      const data = session1.completionData;
+      addText(`Status: Completed ${session1.completedAt ? formatDistanceToNow(new Date(session1.completedAt), { addSuffix: true }) : ''}`);
+      addSpace(5);
+      
+      if (data.primaryFunction) {
+        addText(`Primary Function: ${data.primaryFunction}`, 12, true);
+      }
+      if (data.secondaryFunction) {
+        addText(`Secondary Function: ${data.secondaryFunction}`, 12, true);
+      }
+      if (data.functionalSplit) {
+        addText(`Functional Split: ${data.functionalSplit.primary}% Primary, ${data.functionalSplit.secondary}% Secondary`);
+      }
+      if (data.commitmentStatement) {
+        addSpace(5);
+        addText('Commitment Statement:', 12, true);
+        addText(`"${data.commitmentStatement}"`);
+      }
+      if (data.keyInsights && data.keyInsights.length > 0) {
+        addSpace(5);
+        addText('Key Insights:', 12, true);
+        data.keyInsights.forEach(insight => {
+          addText(`• ${insight}`);
+        });
+      }
+      if (data.confidence) {
+        addSpace(5);
+        addText(`Confidence Level: ${data.confidence}/10`);
+      }
+    } else {
+      addText('Status: Not Completed');
     }
+    addSpace(10);
+
+    // Foundation Session 2
+    addText('Foundation Session 2: Professional Credibility Assessment', 16, true);
+    addSpace(5);
+    const session2 = sessionsByNumber[2];
+    if (session2?.status === 'completed' && session2.completionData) {
+      const data = session2.completionData;
+      addText(`Status: Completed ${session2.completedAt ? formatDistanceToNow(new Date(session2.completedAt), { addSuffix: true }) : ''}`);
+      addSpace(5);
+      
+      if (data.credibilityTier) {
+        addText(`Credibility Tier: Tier ${data.credibilityTier}/5`, 12, true);
+      }
+      if (data.brandClaim) {
+        addSpace(5);
+        addText('Brand Claim:', 12, true);
+        addText(`"${data.brandClaim}"`);
+      }
+      if (data.checkWorthyReason) {
+        addSpace(5);
+        addText('Check-Worthy Reason:', 12, true);
+        addText(data.checkWorthyReason);
+      }
+      if (data.proofBullets && data.proofBullets.length > 0) {
+        addSpace(5);
+        addText('Proof Points:', 12, true);
+        data.proofBullets.forEach((bullet, index) => {
+          addText(`${index + 1}. ${bullet}`);
+        });
+      }
+      if (data.nextSteps && data.nextSteps.length > 0) {
+        addSpace(5);
+        addText('Next Steps:', 12, true);
+        data.nextSteps.forEach(step => {
+          addText(`→ ${step}`);
+        });
+      }
+    } else {
+      addText('Status: Not Completed');
+    }
+    addSpace(10);
+
+    // Foundation Session 3
+    addText('Foundation Session 3: Positioning Story Development', 16, true);
+    addSpace(5);
+    const session3 = sessionsByNumber[3];
+    if (session3?.status === 'completed' && session3.completionData) {
+      const data = session3.completionData;
+      addText(`Status: Completed ${session3.completedAt ? formatDistanceToNow(new Date(session3.completedAt), { addSuffix: true }) : ''}`);
+      addSpace(5);
+      
+      if (data.signatureStory) {
+        addText(`Signature Story: ${data.signatureStory.title}`, 12, true);
+        addSpace(5);
+        addText('Context:', 12, true);
+        addText(data.signatureStory.context);
+        addSpace(5);
+        addText('Challenge:', 12, true);
+        addText(data.signatureStory.challenge);
+        addSpace(5);
+        addText('Approach:', 12, true);
+        addText(data.signatureStory.approach);
+        addSpace(5);
+        addText('Outcome:', 12, true);
+        addText(data.signatureStory.outcome);
+        addSpace(5);
+        addText('Repeatability:', 12, true);
+        addText(data.signatureStory.repeatability);
+      }
+      if (data.contentAngles && data.contentAngles.length > 0) {
+        addSpace(5);
+        addText('Content Angles:', 12, true);
+        addText(data.contentAngles.join(', '));
+      }
+      if (data.methodology) {
+        addSpace(5);
+        addText('Methodology:', 12, true);
+        addText(data.methodology);
+      }
+    } else {
+      addText('Status: Not Completed');
+    }
+    addSpace(15);
+
+    // Enhancement Modules Section
+    addText('ENHANCEMENT MODULES', 18, true);
+    addSpace(10);
+
+    // Module A
+    addText('Module A: Digital Behavior & LinkedIn Content Strategy', 16, true);
+    addSpace(5);
+    const moduleA = modulesByCode['A'];
+    if (moduleA?.status === 'completed' && moduleA.completionData) {
+      const data = moduleA.completionData;
+      addText(`Status: Completed ${moduleA.completedAt ? formatDistanceToNow(new Date(moduleA.completedAt), { addSuffix: true }) : ''}`);
+      addSpace(5);
+      
+      if (data.brandClaim) {
+        addText('Brand Claim:', 12, true);
+        addText(`"${data.brandClaim}"`);
+        addSpace(5);
+      }
+      if (data.linkedinOptimization) {
+        addText('LinkedIn Profile Optimization:', 12, true);
+        if (data.linkedinOptimization.headline) {
+          addText(`Headline: ${data.linkedinOptimization.headline}`);
+        }
+        if (data.linkedinOptimization.profileScore) {
+          addText(`Profile Score: ${data.linkedinOptimization.profileScore}/10`);
+        }
+        if (data.linkedinOptimization.keyImprovements && data.linkedinOptimization.keyImprovements.length > 0) {
+          addText('Key Improvements:');
+          data.linkedinOptimization.keyImprovements.forEach((improvement: string) => {
+            addText(`→ ${improvement}`);
+          });
+        }
+        addSpace(5);
+      }
+      if (data.featuredArticleSeeds && data.featuredArticleSeeds.length > 0) {
+        addText('Featured Article Ideas:', 12, true);
+        addText(data.featuredArticleSeeds.join(', '));
+        addSpace(5);
+      }
+      if (data.contentStrategy) {
+        addText('Content Strategy:', 12, true);
+        if (data.contentStrategy.naturalFormats && data.contentStrategy.naturalFormats.length > 0) {
+          addText(`Natural Formats: ${data.contentStrategy.naturalFormats.join(', ')}`);
+        }
+        if (data.contentStrategy.behaviorChange) {
+          addText(`Behavior Change: ${data.contentStrategy.behaviorChange}`);
+        }
+        addSpace(5);
+      }
+      if (data.actionPlan && data.actionPlan.length > 0) {
+        addText('Action Plan:', 12, true);
+        data.actionPlan.forEach((action: string) => {
+          addText(`✓ ${action}`);
+        });
+        addSpace(5);
+      }
+      if (data.successMetrics && data.successMetrics.length > 0) {
+        addText('Success Metrics:', 12, true);
+        data.successMetrics.forEach((metric: string) => {
+          addText(`• ${metric}`);
+        });
+      }
+    } else {
+      addText('Status: Not Completed');
+    }
+    addSpace(10);
+
+    // Module B
+    addText('Module B: Network Position Mapping', 16, true);
+    addSpace(5);
+    const moduleB = modulesByCode['B'];
+    if (moduleB?.status === 'completed' && moduleB.completionData) {
+      const data = moduleB.completionData;
+      addText(`Status: Completed ${moduleB.completedAt ? formatDistanceToNow(new Date(moduleB.completedAt), { addSuffix: true }) : ''}`);
+      addSpace(5);
+      
+      if (data.networkAnalysis) {
+        addText('Network Analysis:', 12, true);
+        if (data.networkAnalysis.currentPosition) {
+          addText(`Current Position: ${data.networkAnalysis.currentPosition}`);
+        }
+        if (data.networkAnalysis.strategicGaps && data.networkAnalysis.strategicGaps.length > 0) {
+          addText('Strategic Gaps:');
+          data.networkAnalysis.strategicGaps.forEach((gap: string) => {
+            addText(`• ${gap}`);
+          });
+        }
+        addSpace(5);
+      }
+      if (data.valueProposition) {
+        addText('Value Proposition:', 12, true);
+        addText(data.valueProposition);
+        addSpace(5);
+      }
+      if (data.tier1Targets && data.tier1Targets.length > 0) {
+        addText('Tier 1 Targets:', 12, true);
+        addText(data.tier1Targets.join(', '));
+        addSpace(5);
+      }
+      if (data.tier2Targets && data.tier2Targets.length > 0) {
+        addText('Tier 2 Targets:', 12, true);
+        addText(data.tier2Targets.join(', '));
+        addSpace(5);
+      }
+      if (data.relationshipStrategy && data.relationshipStrategy.length > 0) {
+        addText('Relationship Strategy:', 12, true);
+        data.relationshipStrategy.forEach((strategy: string) => {
+          addText(`→ ${strategy}`);
+        });
+        addSpace(5);
+      }
+      if (data.thirtyDayPlan && data.thirtyDayPlan.length > 0) {
+        addText('30-Day Action Plan:', 12, true);
+        data.thirtyDayPlan.forEach((action: string, index: number) => {
+          addText(`${index + 1}. ${action}`);
+        });
+      }
+    } else {
+      addText('Status: Not Completed');
+    }
+    addSpace(10);
+
+    // Module C
+    addText('Module C: Career Aspiration Alignment', 16, true);
+    addSpace(5);
+    const moduleC = modulesByCode['C'];
+    if (moduleC?.status === 'completed' && moduleC.completionData) {
+      const data = moduleC.completionData;
+      addText(`Status: Completed ${moduleC.completedAt ? formatDistanceToNow(new Date(moduleC.completedAt), { addSuffix: true }) : ''}`);
+      addSpace(5);
+      
+      if (data.targetRole) {
+        addText('Target Role:', 12, true);
+        addText(data.targetRole);
+        addSpace(5);
+      }
+      if (data.tierClassification) {
+        addText(`Advancement Tier: ${data.tierClassification}`, 12, true);
+        addSpace(5);
+      }
+      if (data.currentPositioning) {
+        addText('Current Positioning:', 12, true);
+        addText(data.currentPositioning);
+        addSpace(5);
+      }
+      if (data.backwardsNarrative) {
+        addText('25-Year Aspiration Narrative:', 12, true);
+        addText(data.backwardsNarrative);
+        addSpace(5);
+      }
+      if (data.experienceGaps && data.experienceGaps.length > 0) {
+        addText('Experience Gaps:', 12, true);
+        data.experienceGaps.forEach((gap: string) => {
+          addText(`• ${gap}`);
+        });
+        addSpace(5);
+      }
+      if (data.immediateStep || data.intermediateStep || data.ultimateGoal) {
+        addText('Career Pathway:', 12, true);
+        if (data.immediateStep) {
+          addText('Immediate Step (6-12 months):');
+          addText(data.immediateStep);
+        }
+        if (data.intermediateStep) {
+          addText('Intermediate Step (2-3 years):');
+          addText(data.intermediateStep);
+        }
+        if (data.ultimateGoal) {
+          addText('Ultimate Goal (5+ years):');
+          addText(data.ultimateGoal);
+        }
+        addSpace(5);
+      }
+      if (data.thirtyDayActions && data.thirtyDayActions.length > 0) {
+        addText('30-Day Actions:', 12, true);
+        data.thirtyDayActions.forEach((action: string, index: number) => {
+          addText(`${index + 1}. ${action}`);
+        });
+      }
+    } else {
+      addText('Status: Not Completed');
+    }
+
+    // Save the PDF
+    doc.save(`SLI-Pro-Summary-${new Date().toISOString().split('T')[0]}.pdf`);
   };
 
   if (isLoading) {
