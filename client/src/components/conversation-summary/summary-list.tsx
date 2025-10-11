@@ -62,11 +62,24 @@ export default function SummaryList({ userId, isAdmin = false }: SummaryListProp
     if (!summaryRef.current) return;
 
     const opt = {
-      margin: 0.5,
+      margin: [0.5, 0.5, 0.5, 0.5] as [number, number, number, number],
       filename: `SLI-Pro-Summary-${new Date().toISOString().split('T')[0]}.pdf`,
-      image: { type: 'jpeg' as const, quality: 0.98 },
-      html2canvas: { scale: 2, useCORS: true },
-      jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' as const }
+      image: { type: 'jpeg' as const, quality: 0.95 },
+      html2canvas: { 
+        scale: 3,
+        useCORS: true,
+        logging: false,
+        letterRendering: true,
+        allowTaint: true,
+        backgroundColor: '#ffffff'
+      },
+      jsPDF: { 
+        unit: 'in', 
+        format: 'letter', 
+        orientation: 'portrait' as const,
+        compress: true
+      },
+      pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
     };
 
     html2pdf().set(opt).from(summaryRef.current).save();
