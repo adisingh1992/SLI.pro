@@ -562,7 +562,7 @@ export default function EnhancementModuleChatPage() {
               <div className="pt-4 border-t">
                 <Link href="/summaries">
                   <a 
-                    className="text-sm text-primary hover:underline flex items-start gap-2 cursor-pointer"
+                    className="text-sm text-foreground font-medium hover:text-primary hover:underline flex items-start gap-2 cursor-pointer"
                     data-testid="link-view-pdf-summary"
                   >
                     <FileText className="h-4 w-4 mt-0.5 flex-shrink-0" />
