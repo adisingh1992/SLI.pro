@@ -563,7 +563,7 @@ export default function FoundationSessionChatPage() {
               <div className="pt-4 border-t">
                 <Link href="/summaries">
                   <a 
-                    className="text-sm text-foreground font-medium hover:text-primary hover:underline flex items-start gap-2 cursor-pointer"
+                    className="text-sm text-green-700 dark:text-green-600 font-medium hover:text-green-800 dark:hover:text-green-500 hover:underline flex items-start gap-2 cursor-pointer"
                     data-testid="link-view-pdf-summary"
                   >
                     <FileText className="h-4 w-4 mt-0.5 flex-shrink-0" />
