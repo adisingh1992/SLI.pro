@@ -77,10 +77,23 @@ export default function SummaryList({ userId, isAdmin = false }: SummaryListProp
         doc.addPage();
         yPos = margin;
       }
+      
+      // Clean special characters to ensure consistent font rendering
+      const cleanText = text
+        .replace(/→/g, '->')
+        .replace(/✓/g, 'v')
+        .replace(/•/g, '*')
+        .replace(/'/g, "'")
+        .replace(/'/g, "'")
+        .replace(/"/g, '"')
+        .replace(/"/g, '"')
+        .replace(/–/g, '-')
+        .replace(/—/g, '-');
+      
       doc.setFontSize(fontSize);
       doc.setFont('helvetica', isBold ? 'bold' : 'normal');
       
-      const lines = doc.splitTextToSize(text, maxWidth);
+      const lines = doc.splitTextToSize(cleanText, maxWidth);
       lines.forEach((line: string) => {
         if (yPos > pageHeight - margin) {
           doc.addPage();
@@ -89,6 +102,9 @@ export default function SummaryList({ userId, isAdmin = false }: SummaryListProp
         doc.text(line, margin, yPos);
         yPos += lineHeight;
       });
+      
+      // Always reset to normal font after text
+      doc.setFont('helvetica', 'normal');
     };
 
     const addSpace = (amount: number = lineHeight) => {
