@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useRef } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -20,10 +20,12 @@ import {
   Star,
   Sparkles,
   Network,
-  Rocket
+  Rocket,
+  Download
 } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { formatDistanceToNow } from 'date-fns';
+import html2pdf from 'html2pdf.js';
 
 interface SummaryListProps {
   userId?: number;
@@ -31,6 +33,8 @@ interface SummaryListProps {
 }
 
 export default function SummaryList({ userId, isAdmin = false }: SummaryListProps = {}) {
+  const summaryRef = useRef<HTMLDivElement>(null);
+
   // Determine API endpoints based on admin access and userId
   const sessionsEndpoint = isAdmin && userId 
     ? `/api/admin/users/${userId}/foundation-sessions`
@@ -52,6 +56,21 @@ export default function SummaryList({ userId, isAdmin = false }: SummaryListProp
 
   const isLoading = sessionsLoading || modulesLoading;
   const isError = sessionsError || modulesError;
+
+  // PDF download handler
+  const handleDownloadPDF = () => {
+    if (!summaryRef.current) return;
+
+    const opt = {
+      margin: 0.5,
+      filename: `SLI-Pro-Summary-${new Date().toISOString().split('T')[0]}.pdf`,
+      image: { type: 'jpeg' as const, quality: 0.98 },
+      html2canvas: { scale: 2, useCORS: true },
+      jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' as const }
+    };
+
+    html2pdf().set(opt).from(summaryRef.current).save();
+  };
 
   if (isLoading) {
     return <FoundationSessionsSkeleton />;
@@ -86,11 +105,26 @@ export default function SummaryList({ userId, isAdmin = false }: SummaryListProp
 
   return (
     <div className="space-y-8">
-      {/* Header */}
+      {/* Header with Download Button */}
       <div className="text-center mb-8">
+        <div className="flex justify-between items-start mb-4">
+          <div className="flex-1"></div>
+          <Button
+            onClick={handleDownloadPDF}
+            variant="outline"
+            className="flex items-center gap-2"
+            data-testid="button-download-pdf"
+          >
+            <Download className="h-4 w-4" />
+            Download PDF
+          </Button>
+        </div>
         <h1 className="text-3xl font-bold mb-2">Professional Development Summary</h1>
         <p className="text-muted-foreground">Your comprehensive journey through foundation sessions and enhancement modules</p>
       </div>
+      
+      {/* Summaries Content - Wrapped in ref for PDF generation */}
+      <div ref={summaryRef}>
 
       {/* Session 1: Functional Identity Mapping */}
       <div className="space-y-4">
@@ -156,6 +190,7 @@ export default function SummaryList({ userId, isAdmin = false }: SummaryListProp
           <ModuleCCard module={modulesByCode['C']} />
         </div>
       </div>
+      </div> {/* Close ref div */}
     </div>
   );
 }
