@@ -58,31 +58,42 @@ export default function SummaryList({ userId, isAdmin = false }: SummaryListProp
   const isError = sessionsError || modulesError;
 
   // PDF download handler
-  const handleDownloadPDF = () => {
+  const handleDownloadPDF = async () => {
     if (!summaryRef.current) return;
+
+    // Add PDF-specific class for styling
+    summaryRef.current.classList.add('pdf-export');
+    
+    // Small delay to allow CSS to apply
+    await new Promise(resolve => setTimeout(resolve, 100));
 
     const opt = {
       margin: [0.5, 0.5, 0.5, 0.5] as [number, number, number, number],
       filename: `SLI-Pro-Summary-${new Date().toISOString().split('T')[0]}.pdf`,
       image: { type: 'jpeg' as const, quality: 0.95 },
       html2canvas: { 
-        scale: 3,
+        scale: 2,
         useCORS: true,
         logging: false,
         letterRendering: true,
-        allowTaint: true,
-        backgroundColor: '#ffffff'
+        allowTaint: false,
+        backgroundColor: '#ffffff',
+        windowWidth: 1200
       },
       jsPDF: { 
         unit: 'in', 
         format: 'letter', 
-        orientation: 'portrait' as const,
-        compress: true
+        orientation: 'portrait' as const
       },
-      pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
+      pagebreak: { mode: 'avoid-all' as const }
     };
 
-    html2pdf().set(opt).from(summaryRef.current).save();
+    try {
+      await html2pdf().set(opt).from(summaryRef.current).save();
+    } finally {
+      // Remove PDF class after generation
+      summaryRef.current.classList.remove('pdf-export');
+    }
   };
 
   if (isLoading) {
