@@ -75,6 +75,104 @@ ${nextStepsText}
   return '';
 }
 
+// Format questionnaire data into analysis context
+function formatQuestionnaireContext(questionnaire: any): string {
+  if (!questionnaire) {
+    return '';
+  }
+
+  return `
+═══════════════════════════════════════════════════════════════
+BACKGROUND CONTEXT: USER QUESTIONNAIRE
+═══════════════════════════════════════════════════════════════
+
+Industry: ${questionnaire.industry ?? 'Not specified'}
+Professional Background: ${questionnaire.background ?? 'Not provided'}
+Career Goals: ${questionnaire.goals ?? 'Not specified'}
+Aspirations: ${questionnaire.aspirations ?? 'Not provided'}
+Challenges: ${questionnaire.challenges ?? 'Not specified'}
+Interests: ${questionnaire.interests ?? 'Not provided'}
+Timeframe: ${questionnaire.timeframe ?? 'Not specified'}
+
+NOTE: This context was provided by the user in their initial questionnaire. The conversation transcript may reference this information without repeating it explicitly. Do not expect these details to be re-stated in the current conversation.
+═══════════════════════════════════════════════════════════════
+`;
+}
+
+// Format previous session context for analysis
+async function formatPreviousSessionsContext(userId: number, currentSessionNumber: number): Promise<string> {
+  try {
+    const sessions = await storage.getFoundationSessions(userId);
+    
+    if (!sessions || sessions.length === 0) {
+      return '';
+    }
+
+    let context = '';
+
+    // For Session 2, include Session 1 summary
+    if (currentSessionNumber === 2) {
+      const session1 = sessions.find(s => s.sessionNumber === 1 && s.status === 'completed');
+      if (session1?.completionData) {
+        const data = session1.completionData;
+        context += `
+═══════════════════════════════════════════════════════════════
+BACKGROUND CONTEXT: SESSION 1 (Functional Identity)
+═══════════════════════════════════════════════════════════════
+
+Primary Function: ${data.primaryFunction ?? 'Not determined'}
+Secondary Function: ${data.secondaryFunction ?? 'None'}
+Functional Split: ${data.functionalSplit ? `${data.functionalSplit.primary}% primary / ${data.functionalSplit.secondary}% secondary` : 'Not specified'}
+Commitment: ${data.commitmentStatement ?? 'Not made'}
+
+NOTE: The user has already established their functional identity in Session 1. The conversation may reference this without repeating the full exercise.
+═══════════════════════════════════════════════════════════════
+`;
+      }
+    }
+
+    // For Session 3, include Session 1 and 2 summaries
+    if (currentSessionNumber === 3) {
+      const session1 = sessions.find(s => s.sessionNumber === 1 && s.status === 'completed');
+      const session2 = sessions.find(s => s.sessionNumber === 2 && s.status === 'completed');
+      
+      if (session1?.completionData) {
+        const data = session1.completionData;
+        context += `
+═══════════════════════════════════════════════════════════════
+BACKGROUND CONTEXT: SESSION 1 (Functional Identity)
+═══════════════════════════════════════════════════════════════
+
+Primary Function: ${data.primaryFunction ?? 'Not determined'}
+Commitment: ${data.commitmentStatement ?? 'Not made'}
+`;
+      }
+
+      if (session2?.completionData) {
+        const data = session2.completionData;
+        const proofBulletsText = data.proofBullets?.slice(0, 3)?.map((bullet: string) => `• ${bullet}`)?.join('\n') ?? '';
+        
+        context += `
+SESSION 2 (Credibility & Proof)
+═══════════════════════════════════════════════════════════════
+
+Credibility Tier: ${data.credibilityTier ? `Tier ${data.credibilityTier}` : 'Not assessed'}
+Brand Claim: ${data.brandClaim ?? 'Not established'}
+${proofBulletsText ? `Top Proof Points:\n${proofBulletsText}` : ''}
+
+NOTE: The user has completed Sessions 1 & 2 covering functional identity and credibility proof. The conversation may build upon this foundation without repeating prior work.
+═══════════════════════════════════════════════════════════════
+`;
+      }
+    }
+
+    return context;
+  } catch (error) {
+    console.error('Error formatting previous sessions context:', error);
+    return '';
+  }
+}
+
 // Get initial guidance message for each session
 function getInitialGuidanceMessage(sessionNumber: number): string | null {
   switch (sessionNumber) {
@@ -90,7 +188,7 @@ function getInitialGuidanceMessage(sessionNumber: number): string | null {
 }
 
 // Check if a foundation session should be automatically completed
-async function checkSessionCompletion(sessionNumber: number, messages: any[], userProfile: any): Promise<{ shouldComplete: boolean; completionData?: any }> {
+async function checkSessionCompletion(userId: number, sessionNumber: number, messages: any[], userProfile: any): Promise<{ shouldComplete: boolean; completionData?: any }> {
   if (sessionNumber !== 1 && sessionNumber !== 2 && sessionNumber !== 3) {
     return { shouldComplete: false };
   }
@@ -101,11 +199,16 @@ async function checkSessionCompletion(sessionNumber: number, messages: any[], us
   }
 
   try {
+    // Fetch questionnaire and previous sessions context for analysis
+    const questionnaire = await storage.getQuestionnaire(userId);
+    const questionnaireContext = formatQuestionnaireContext(questionnaire);
+    const previousSessionsContext = await formatPreviousSessionsContext(userId, sessionNumber);
+
     let analysisPrompt = '';
     
     if (sessionNumber === 1) {
       // Session 1: Functional Identity Lock-In analysis
-      analysisPrompt = `You are evaluating a Session 1 "Functional Identity Lock-In" coaching conversation that must stay within the Five Functions framework: Finance, Operations, Sales, Marketing, Product. Use the conversation transcript and the following guardrails from our methodology to make a determination.
+      analysisPrompt = `${questionnaireContext}You are evaluating a Session 1 "Functional Identity Lock-In" coaching conversation that must stay within the Five Functions framework: Finance, Operations, Sales, Marketing, Product. Use the conversation transcript and the following guardrails from our methodology to make a determination.
 
     Conversation Messages:
 ${messages.map(msg => `${msg.role.toUpperCase()}: ${msg.content}`).join('\n\n')}
@@ -195,7 +298,7 @@ Edge handling:
     Return ONLY the JSON object, nothing else.`;
     } else if (sessionNumber === 2) {
       // Session 2: Professional Credibility Assessment analysis
-      analysisPrompt = `You are evaluating a Session 2 "Professional Credibility Assessment" coaching conversation focused on identifying measurable expertise and business impact. Use the conversation transcript to determine if the user has established credible proof of expertise within one of the five functions: Finance, Operations, Sales, Marketing, Product.
+      analysisPrompt = `${questionnaireContext}${previousSessionsContext}You are evaluating a Session 2 "Professional Credibility Assessment" coaching conversation focused on identifying measurable expertise and business impact. Use the conversation transcript to determine if the user has established credible proof of expertise within one of the five functions: Finance, Operations, Sales, Marketing, Product.
 
     Conversation Messages:
 ${messages.map(msg => `${msg.role.toUpperCase()}: ${msg.content}`).join('\n\n')}
@@ -269,7 +372,7 @@ Edge handling:
     Return ONLY the JSON object, nothing else.`;
     } else if (sessionNumber === 3) {
       // Session 3: Positioning Story Development analysis
-      analysisPrompt = `You are evaluating a Session 3 "Positioning Story Development" coaching conversation focused on extracting compelling stories that prove unique value. Use the conversation transcript to determine if the user has developed a complete, content-ready narrative with agency, methodology, vulnerability, specificity, and functional connection.
+      analysisPrompt = `${questionnaireContext}${previousSessionsContext}You are evaluating a Session 3 "Positioning Story Development" coaching conversation focused on extracting compelling stories that prove unique value. Use the conversation transcript to determine if the user has developed a complete, content-ready narrative with agency, methodology, vulnerability, specificity, and functional connection.
 
     Conversation Messages:
 ${messages.map(msg => `${msg.role.toUpperCase()}: ${msg.content}`).join('\n\n')}
