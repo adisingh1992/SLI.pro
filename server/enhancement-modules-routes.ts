@@ -250,8 +250,96 @@ CRITICAL: The user has completed foundation sessions covering functional identit
   }
 }
 
+// Format questionnaire data for analysis context (modules)
+function formatQuestionnaireAnalysisContext(questionnaire: any): string {
+  if (!questionnaire) {
+    return '';
+  }
+
+  return `
+═══════════════════════════════════════════════════════════════
+BACKGROUND CONTEXT: USER QUESTIONNAIRE
+═══════════════════════════════════════════════════════════════
+
+Industry: ${questionnaire.industry ?? 'Not specified'}
+Professional Background: ${questionnaire.background ?? 'Not provided'}
+Career Goals: ${questionnaire.goals ?? 'Not specified'}
+Aspirations: ${questionnaire.aspirations ?? 'Not provided'}
+Challenges: ${questionnaire.challenges ?? 'Not specified'}
+Interests: ${questionnaire.interests ?? 'Not provided'}
+Timeframe: ${questionnaire.timeframe ?? 'Not specified'}
+
+NOTE: This context was provided in the user's initial questionnaire. The conversation may reference this without repeating it.
+═══════════════════════════════════════════════════════════════
+`;
+}
+
+// Format previous module context for analysis
+async function formatPreviousModulesAnalysisContext(userId: number, currentModuleCode: string): Promise<string> {
+  try {
+    let context = '';
+
+    // For Module B, include Module A summary
+    if (currentModuleCode === "B") {
+      const moduleA = await storage.getEnhancementModule(userId, "A");
+      if (moduleA?.status === "completed" && moduleA.completionData) {
+        const data = moduleA.completionData;
+        context += `
+═══════════════════════════════════════════════════════════════
+BACKGROUND CONTEXT: MODULE A (Digital Behavior & LinkedIn)
+═══════════════════════════════════════════════════════════════
+
+Brand Claim: ${data.brandClaim ?? 'Not established'}
+LinkedIn Optimization: ${data.linkedinOptimization?.headline ?? 'Not provided'}
+Content Strategy: ${data.contentStrategy?.behaviorChange ?? 'Not defined'}
+
+NOTE: User completed Module A covering digital behavior and LinkedIn strategy. Conversation may build upon this.
+═══════════════════════════════════════════════════════════════
+`;
+      }
+    }
+
+    // For Module C, include Module A and B summaries
+    if (currentModuleCode === "C") {
+      const moduleA = await storage.getEnhancementModule(userId, "A");
+      const moduleB = await storage.getEnhancementModule(userId, "B");
+      
+      if (moduleA?.status === "completed" && moduleA.completionData) {
+        const data = moduleA.completionData;
+        context += `
+═══════════════════════════════════════════════════════════════
+BACKGROUND CONTEXT: MODULE A (Digital Behavior & LinkedIn)
+═══════════════════════════════════════════════════════════════
+
+Brand Claim: ${data.brandClaim ?? 'Not established'}
+`;
+      }
+
+      if (moduleB?.status === "completed" && moduleB.completionData) {
+        const data = moduleB.completionData;
+        context += `
+MODULE B (Network Position Mapping)
+═══════════════════════════════════════════════════════════════
+
+Functional Identity: ${data.functionalIdentity ?? 'Not established'}
+Value Proposition: ${data.valueProposition ?? 'Not articulated'}
+
+NOTE: User completed Modules A & B. Conversation may reference prior work without repeating it.
+═══════════════════════════════════════════════════════════════
+`;
+      }
+    }
+
+    return context;
+  } catch (error) {
+    console.error('Error formatting previous modules context:', error);
+    return '';
+  }
+}
+
 // Check if an enhancement module should be automatically completed
 async function checkModuleCompletion(
+  userId: number,
   moduleCode: string,
   messages: any[],
   userProfile: any,
@@ -267,11 +355,17 @@ async function checkModuleCompletion(
   }
 
   try {
+    // Fetch context for analysis
+    const questionnaire = await storage.getQuestionnaire(userId);
+    const questionnaireContext = formatQuestionnaireAnalysisContext(questionnaire);
+    const foundationSessionsContext = await formatFoundationSessionsSummary(userId);
+    const previousModulesContext = await formatPreviousModulesAnalysisContext(userId, moduleCode);
+
     let analysisPrompt = "";
 
     if (moduleCode === "A") {
       // Module A: Digital Behavior Analysis analysis based on the coaching framework
-      analysisPrompt = `You are evaluating a Module A "Digital Behavior & LinkedIn Content Strategy" coaching conversation. This follows a specific 12-step framework from profile scanning through action planning. Analyze the conversation transcript to determine if the module is complete.
+      analysisPrompt = `${questionnaireContext}${foundationSessionsContext}${previousModulesContext}You are evaluating a Module A "Digital Behavior & LinkedIn Content Strategy" coaching conversation. This follows a specific 12-step framework from profile scanning through action planning. Analyze the conversation transcript to determine if the module is complete.
 
 Conversation Messages:
 ${messages.map((msg) => `${msg.role.toUpperCase()}: ${msg.content}`).join("\n\n")}
@@ -334,7 +428,7 @@ Rules for completion (ALL must be satisfied for shouldComplete=true):
 If these criteria aren't fully met, set shouldComplete=false and indicate what's missing in reasoning.`;
     } else if (moduleCode === "B") {
       // Module B: Network Position Mapping analysis
-      analysisPrompt = `You are evaluating a Network Positioning & Relationship Strategy coaching conversation aligned to the “Personal Brand & Network Positioning Coach” system prompt (LinkedIn + strategic network positioning). Analyze the transcript to determine if the module is complete.
+      analysisPrompt = `${questionnaireContext}${foundationSessionsContext}${previousModulesContext}You are evaluating a Network Positioning & Relationship Strategy coaching conversation aligned to the “Personal Brand & Network Positioning Coach” system prompt (LinkedIn + strategic network positioning). Analyze the transcript to determine if the module is complete.
 
 Conversation Messages:
 ${messages.map((msg) => `${msg.role.toUpperCase()}: ${msg.content}`).join("\n\n")}
@@ -428,7 +522,7 @@ Action plan includes a concrete 30-day plan (weekly steps) AND measurable 30/60/
 If any criterion is missing, set shouldComplete=false and use reasoning to state exactly what’s missing.`;
     } else if (moduleCode === "C") {
       // Module C: Career Aspiration Alignment comprehensive analysis
-      analysisPrompt = `You are evaluating a Module C "Career Aspiration Alignment Framework" coaching conversation. This module guides clients from 25-year aspiration through realistic progression pathways with gap analysis and actionable plans.
+      analysisPrompt = `${questionnaireContext}${foundationSessionsContext}${previousModulesContext}You are evaluating a Module C "Career Aspiration Alignment Framework" coaching conversation. This module guides clients from 25-year aspiration through realistic progression pathways with gap analysis and actionable plans.
 
 Conversation Messages:
 ${messages.map((msg) => `${msg.role.toUpperCase()}: ${msg.content}`).join("\n\n")}
@@ -1135,6 +1229,7 @@ Industry: ${userProfile.experiences?.[0]?.company || "Not specified"}`
             module.id,
           );
           const completionCheck = await checkModuleCompletion(
+            userId,
             moduleCode,
             allMessages,
             userProfile,
@@ -1264,6 +1359,7 @@ Industry: ${userProfile.experiences?.[0]?.company || "Not specified"}`
           module.id,
         );
         const completionCheck = await checkModuleCompletion(
+          req.user!.id,
           moduleCode,
           allMessages,
           userProfile,
