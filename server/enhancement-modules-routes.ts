@@ -884,7 +884,30 @@ Current role: ${userProfile.experiences?.[0]?.title || "Not specified"} at ${use
 LinkedIn: Not available in profile
 Industry focus: ${userProfile.experiences?.[0]?.description?.substring(0, 50) || "Not specified"}`
     : "Limited profile information available"
-}`;
+}
+
+CRITICAL COMPLETION INSTRUCTION:
+Do NOT end this module prematurely. The module is ONLY complete when ALL 12 steps are covered AND all required deliverables are documented:
+1. Profile scan result and "Starbucks line" clarity
+2. Digital presence audit (activity, connections, content history, comfort level)
+3. Psychological barrier identified with specific intervention
+4. Featured articles strategy (2-3 specific articles identified)
+5. Content strategy with 2-4 minute ideation process and natural formats
+6. LinkedIn profile optimization checklist completed
+7. Personality-based behavior change plan
+8. Content psychology insights (reactions, held-back topics, expertise triggers)
+9. Network position analysis completed
+10. Engagement framework with specific cadence
+11. Success metrics defined for 30/60/90-day check-ins
+12. Action plan locked with red flags vs success indicators
+
+If ANY required data is missing or the user has given vague/incomplete answers:
+- Ask the specific question again in a different way
+- Provide concrete examples to clarify what you need
+- Push for specificity (numbers, exact formats, specific barriers)
+- Do NOT provide final deliverables until ALL steps are complete
+
+Only when ALL 12 steps are thoroughly covered should you provide final deliverables and end naturally.`;
         };
 
         // Generate Module B-specific system prompt with Personal Brand & Network Positioning coaching
