@@ -86,7 +86,7 @@ ${successMetricsText}
 
 Confidence Level: ${completionData.confidence ?? 'N/A'}%
 
-CRITICAL: Do not repeat questions about digital behavior, LinkedIn content strategy, featured articles, or profile optimization. Build upon this foundation.
+CRITICAL: Do not repeat questions about digital behavior, LinkedIn content strategy, featured articles, or profile optimization, instead mention the answers in the chat and confirm from the user again. Build upon this foundation.
 ═══════════════════════════════════════════════════════════════
 `;
   }
