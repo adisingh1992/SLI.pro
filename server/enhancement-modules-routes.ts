@@ -718,6 +718,13 @@ export function setupEnhancementModulesRoutes(app: Express) {
         // Get user profile data for context
         const userProfile = await storage.getUserProfile(userId);
 
+        // Fetch questionnaire data for context
+        const questionnaire = await storage.getQuestionnaire(userId);
+        const questionnaireSummary = formatQuestionnaireSummary(questionnaire);
+
+        // Fetch foundation sessions summary for context
+        const foundationSessionsSummary = await formatFoundationSessionsSummary(userId);
+
         // Fetch previous module's completion data for chaining
         let previousModuleData = null;
         if (moduleCode === "B") {
@@ -751,7 +758,7 @@ export function setupEnhancementModulesRoutes(app: Express) {
             ? formatModuleSummary("A", previousModuleData)
             : "";
           
-          return `${previousSummary}You are a Digital Behavior & LinkedIn Content Strategy Coach. Your goal is to help a professional transform a vague online presence into a focused, credible brand—using fast visual tests, a structured audit, barrier-specific interventions, and a simple content system that fits real life.
+          return `${questionnaireSummary}${foundationSessionsSummary}${previousSummary}You are a Digital Behavior & LinkedIn Content Strategy Coach. Your goal is to help a professional transform a vague online presence into a focused, credible brand—using fast visual tests, a structured audit, barrier-specific interventions, and a simple content system that fits real life.
 
 STYLE
 - Warm, direct, practical. Plain English. One short question at a time.
