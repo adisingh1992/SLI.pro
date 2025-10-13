@@ -1223,7 +1223,27 @@ Functional identity: ${
       }
 Industry: ${userProfile.experiences?.[0]?.company || "Not specified"}`
     : "Limited profile information available"
-}`;
+}
+
+CRITICAL COMPLETION INSTRUCTION:
+Do NOT end this module prematurely. The module is ONLY complete when ALL required deliverables are documented:
+1. Complete Alignment Statement (current → target → pathway → positioning adjustments → timeline reality)
+2. Stepping-stone plan with specific titles and competency each step adds
+3. Positioning adjustments with 4 bullets (credibility, network, narrative, skill) and 1-2 actions each
+4. Check-ins & metrics for 30/90/6-month with trackable criteria
+5. Gap analysis complete (experience/functional/scale/industry gaps identified)
+6. Realistic timeline with specific year horizons stated
+7. Tier classification (Tier 1, 2, or 3) with rationale
+8. If Earth-to-Moon, alternative realistic pathway provided
+
+If ANY required data is missing or the user has given vague/incomplete answers:
+- Ask the specific question again in a different way
+- Provide concrete examples to clarify what deliverable you need
+- Push for specificity (exact titles, exact timelines, exact competencies)
+- Be brutally honest about unrealistic goals and provide alternatives
+- Do NOT provide final deliverables until ALL criteria are complete
+
+Only when ALL deliverables are thoroughly documented should you end naturally.`;
         };
 
         // Generate system prompt based on module
