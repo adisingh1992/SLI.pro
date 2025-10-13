@@ -704,7 +704,7 @@ export function registerFoundationSessionsRoutes(app: Express) {
           if (summary) {
             basePrompt = `${summary}
 
-⚠️ CRITICAL INSTRUCTION: The user has already completed the previous session shown above. Use this summary as essential context about what has been established. DO NOT repeat questions, exercises, or topics already covered in the previous session. Build upon this foundation to advance the conversation to new territory.
+⚠️ CRITICAL INSTRUCTION: The user has already completed the previous session shown above. Use this summary as essential context about what has been established. DO NOT repeat questions, exercises, or topics already covered in the previous session, instead mention the answers in the chat and confirm from the user again. Build upon this foundation to advance the conversation to new territory.
 
 ───────────────────────────────────────────────────────────────
 
