@@ -1047,7 +1047,28 @@ Functional identity: ${
       }
 Industry: ${userProfile.experiences?.[0]?.company || "Not specified"}`
     : "Limited profile information available"
-}`;
+}
+
+CRITICAL COMPLETION INSTRUCTION:
+Do NOT end this module prematurely. The module is ONLY complete when ALL required deliverables are documented:
+1. One-line brand claim with function, mechanism, and outcome
+2. Top-10/Tier-1 target list with two intro blurbs (why they, why you)
+3. Two Featured-article seeds (titles + 3-bullet outlines) reinforcing SLI
+4. 2-week micro-plan (exact comment/share counts, two post topics, first outreach batch)
+5. Date for first 30-day check-in with quantitative metrics defined
+6. Functional identity locked and validated
+7. Value proposition clearly articulated
+8. Network repositioning strategy with specific targets
+9. Relationship strategy with tiered priorities (10/20/20)
+10. Content as networking phased plan
+
+If ANY required data is missing or the user has given vague/incomplete answers:
+- Ask the specific question again in a different way
+- Provide concrete examples to clarify what deliverable you need
+- Push for specificity (exact titles, exact companies, exact metrics)
+- Do NOT provide final summary until ALL deliverables are complete
+
+Only when ALL deliverables are thoroughly documented should you end naturally.`;
         };
 
         // Generate Module C-specific system prompt with Career Aspiration Alignment coaching
