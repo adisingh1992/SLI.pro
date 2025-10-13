@@ -15,6 +15,61 @@ const isAuthenticated = (req: Request, res: Response, next: NextFunction) => {
   res.status(401).json({ error: "Not authenticated" });
 };
 
+// Format session completion data into a readable summary
+function formatSessionSummary(sessionNumber: number, completionData: any): string {
+  if (sessionNumber === 1 && completionData) {
+    const functionalSplitText = completionData.functionalSplit 
+      ? `${completionData.functionalSplit.primary}% primary / ${completionData.functionalSplit.secondary}% secondary`
+      : 'Not specified';
+    
+    return `
+═══════════════════════════════════════════════════════════════
+PREVIOUS SESSION SUMMARY (Session 1: Functional Identity Lock-In)
+═══════════════════════════════════════════════════════════════
+
+PRIMARY FUNCTION: ${completionData.primaryFunction || 'Not determined'}
+SECONDARY FUNCTION: ${completionData.secondaryFunction || 'None'}
+FUNCTIONAL SPLIT: ${functionalSplitText}
+CONFIDENCE LEVEL: ${completionData.confidence || 0}%
+
+KEY INSIGHTS:
+${completionData.keyInsights?.map((insight: string) => `• ${insight}`).join('\n') || '• None captured'}
+
+REASONING:
+${completionData.reasoning || 'No reasoning provided'}
+
+═══════════════════════════════════════════════════════════════
+`;
+  }
+  
+  if (sessionNumber === 2 && completionData) {
+    return `
+═══════════════════════════════════════════════════════════════
+PREVIOUS SESSION SUMMARY (Session 2: Professional Credibility Assessment)
+═══════════════════════════════════════════════════════════════
+
+PRIMARY FUNCTION: ${completionData.primaryFunction || 'Not determined'}
+CREDIBILITY TIER: ${completionData.credibilityTier || 'Not assessed'} (1 is strongest, 5 is weakest)
+
+BRAND CLAIM:
+${completionData.brandClaim || 'Not established'}
+
+PROOF POINTS:
+${completionData.proofBullets?.map((bullet: string) => `• ${bullet}`).join('\n') || '• None captured'}
+
+CHECK-WORTHY REASON (Why an investor/hiring manager would bet on them):
+${completionData.checkWorthyReason || 'Not established'}
+
+NEXT STEPS IDENTIFIED:
+${completionData.nextSteps?.map((step: string) => `• ${step}`).join('\n') || '• None identified'}
+
+═══════════════════════════════════════════════════════════════
+`;
+  }
+  
+  return '';
+}
+
 // Get initial guidance message for each session
 function getInitialGuidanceMessage(sessionNumber: number): string | null {
   switch (sessionNumber) {
@@ -614,6 +669,15 @@ export function registerFoundationSessionsRoutes(app: Express) {
       // Get user profile data for context
       const userProfile = await storage.getUserProfile(userId);
 
+      // Get previous session's completion data if available
+      let previousSessionData = null;
+      if (sessionNumber > 1) {
+        const previousSession = await storage.getFoundationSession(userId, sessionNumber - 1);
+        if (previousSession?.status === 'completed' && previousSession.completionData) {
+          previousSessionData = previousSession.completionData;
+        }
+      }
+
       // Set up SSE headers
       res.setHeader('Content-Type', 'text/event-stream');
       res.setHeader('Cache-Control', 'no-cache');
@@ -626,9 +690,25 @@ export function registerFoundationSessionsRoutes(app: Express) {
       let assistantContent = '';
 
       // Generate Foundation Session-specific system prompt
-      const getFoundationSessionSystemPrompt = () => {
+      const getFoundationSessionSystemPrompt = (previousSessionData?: any) => {
+        let basePrompt = '';
+        
+        // Add previous session summary if available
+        if (previousSessionData) {
+          const summary = formatSessionSummary(sessionNumber - 1, previousSessionData);
+          if (summary) {
+            basePrompt = `${summary}
+
+⚠️ CRITICAL INSTRUCTION: The user has already completed the previous session shown above. Use this summary as essential context about what has been established. DO NOT repeat questions, exercises, or topics already covered in the previous session. Build upon this foundation to advance the conversation to new territory.
+
+───────────────────────────────────────────────────────────────
+
+`;
+          }
+        }
+        
         if (sessionNumber === 1) {
-          return `You are a Functional Identity Lock-In coach for professionals working on personal brand building.
+          return basePrompt + `You are a Functional Identity Lock-In coach for professionals working on personal brand building.
 
 STYLE
 - Speak in simple, everyday language.
@@ -1063,7 +1143,7 @@ Once you have a complete story with all required elements (agency + methodology 
       };
 
       // Generate streaming response using Foundation Session-specific Claude integration
-      const systemPrompt = getFoundationSessionSystemPrompt();
+      const systemPrompt = getFoundationSessionSystemPrompt(previousSessionData);
       
       const response = await anthropic.messages.create({
         model: CLAUDE_MODEL,
