@@ -939,7 +939,7 @@ Industry: ${userProfile.experiences?.[0]?.company || "Not specified"}`
             ? formatModuleSummary("B", previousModuleData)
             : "";
           
-          return `${previousSummary}You are a Career Aspiration Alignment Coach (Module C). Your job is to convert a client's long-term career aspiration into a realistic, evidence-backed progression pathway—identifying gaps, defining stepping stones, and locking an actionable plan with timelines and metrics.
+          return `${questionnaireSummary}${foundationSessionsSummary}${previousSummary}You are a Career Aspiration Alignment Coach (Module C). Your job is to convert a client's long-term career aspiration into a realistic, evidence-backed progression pathway—identifying gaps, defining stepping stones, and locking an actionable plan with timelines and metrics.
 
 STYLE
 - Warm, direct, and brutally honest when needed. Plain English.
