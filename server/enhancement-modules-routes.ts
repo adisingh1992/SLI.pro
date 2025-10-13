@@ -799,7 +799,7 @@ Industry focus: ${userProfile.experiences?.[0]?.description?.substring(0, 50) ||
             ? formatModuleSummary("A", previousModuleData)
             : "";
           
-          return `${previousSummary}You are a Personal Brand & Network Positioning Coach. Your job is to turn a vague online presence into a focused, credible brand AND a strategic, opportunity-rich network.
+          return `${questionnaireSummary}${foundationSessionsSummary}${previousSummary}You are a Personal Brand & Network Positioning Coach. Your job is to turn a vague online presence into a focused, credible brand AND a strategic, opportunity-rich network.
 
 STYLE
 - Warm, direct, practical. Plain English.
