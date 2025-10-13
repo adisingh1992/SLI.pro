@@ -68,6 +68,7 @@ export default function EnhancementModuleChatPage() {
   const [currentMessage, setCurrentMessage] = useState('');
   const [isStreaming, setIsStreaming] = useState(false);
   const [streamingResponse, setStreamingResponse] = useState('');
+  const [optimisticMessage, setOptimisticMessage] = useState<EnhancementModuleMessage | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messageInputRef = useRef<HTMLTextAreaElement>(null);
 
@@ -137,6 +138,9 @@ export default function EnhancementModuleChatPage() {
     setIsStreaming(true);
     setStreamingResponse('');
     
+    // Store the message content for optimistic display
+    const messageContent = content.trim();
+    
     try {
       // Use fetch directly for streaming
       const response = await fetch(`/api/enhancement-modules/${moduleCode}/messages/stream`, {
@@ -144,7 +148,7 @@ export default function EnhancementModuleChatPage() {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ content: content.trim() }),
+        body: JSON.stringify({ content: messageContent }),
         credentials: 'include'
       });
 
@@ -181,11 +185,20 @@ export default function EnhancementModuleChatPage() {
             try {
               const eventData = JSON.parse(line.substring(6));
 
-              if (eventData.type === 'chunk') {
+              if (eventData.type === 'user_message') {
+                // Optimistically display user message immediately
+                setOptimisticMessage({
+                  id: eventData.id,
+                  moduleId: moduleData?.module.id || 0,
+                  role: 'user',
+                  content: messageContent,
+                  createdAt: new Date()
+                });
+              } else if (eventData.type === 'chunk') {
                 setStreamingResponse(prev => prev + eventData.content);
               } else if (eventData.type === 'complete') {
                 console.log('Stream completed');
-                // Refresh data after completion
+                // Refresh data after completion (optimistic message will be cleared in finally block)
                 queryClient.invalidateQueries({ queryKey: ['/api/enhancement-modules', moduleCode] });
                 queryClient.invalidateQueries({ queryKey: ['/api/enhancement-modules'] });
               } else if (eventData.type === 'module_completed') {
@@ -235,6 +248,7 @@ export default function EnhancementModuleChatPage() {
       setIsStreaming(false);
       setStreamingResponse('');
       setCurrentMessage('');
+      // Note: optimisticMessage is cleared by useEffect when real message appears
       // Refocus the input after clearing the message
       setTimeout(() => {
         messageInputRef.current?.focus();
@@ -242,10 +256,20 @@ export default function EnhancementModuleChatPage() {
     }
   };
 
+  // Clear optimistic message when real message appears in fetched data
+  useEffect(() => {
+    if (optimisticMessage && moduleData?.messages) {
+      const messageExists = moduleData.messages.some(msg => msg.id === optimisticMessage.id);
+      if (messageExists) {
+        setOptimisticMessage(null);
+      }
+    }
+  }, [moduleData?.messages, optimisticMessage]);
+
   // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [moduleData?.messages, streamingResponse]);
+  }, [moduleData?.messages, streamingResponse, optimisticMessage]);
 
   // Handle message submission
   const handleSendMessage = async (e: React.FormEvent) => {
@@ -419,6 +443,26 @@ export default function EnhancementModuleChatPage() {
                     </div>
                   </div>
                 ))}
+
+                {/* Optimistic user message (shown immediately when sent) */}
+                {optimisticMessage && (
+                  <div 
+                    className="flex gap-3 flex-row-reverse"
+                    data-testid="message-optimistic"
+                  >
+                    <div className="w-8 h-8 rounded-full flex items-center justify-center bg-primary text-primary-foreground">
+                      U
+                    </div>
+                    <div className="flex-1 max-w-[calc(100%-6rem)]">
+                      <div className="rounded-lg p-4 break-words bg-primary text-primary-foreground ml-8">
+                        <p className="text-sm whitespace-pre-wrap break-words">{optimisticMessage.content}</p>
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-1 text-right">
+                        You • {new Date(optimisticMessage.createdAt).toLocaleTimeString()}
+                      </p>
+                    </div>
+                  </div>
+                )}
 
                 {/* Streaming response */}
                 {streamingResponse && (
