@@ -1281,7 +1281,7 @@ Once you have a complete story with all required elements (agency + methodology 
 
       // Check if session should be automatically completed
       const allMessages = await storage.getFoundationSessionMessages(session.id);
-      const completionCheck = await checkSessionCompletion(sessionNumber, allMessages, userProfile);
+      const completionCheck = await checkSessionCompletion(userId, sessionNumber, allMessages, userProfile);
       
       if (completionCheck.shouldComplete) {
         // Automatically complete the session with the extracted data
