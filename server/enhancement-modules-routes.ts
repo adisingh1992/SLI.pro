@@ -139,7 +139,7 @@ ${thirtyDayPlanText}
 
 Confidence Level: ${completionData.confidence ?? 'N/A'}%
 
-CRITICAL: Do not repeat questions about functional identity, network composition, relationship tiering, or outreach strategies. Build upon this foundation.
+CRITICAL: Do not repeat questions about functional identity, network composition, relationship tiering, or outreach strategies, instead mention the answers in the chat and confirm from the user again. Build upon this foundation.
 ═══════════════════════════════════════════════════════════════
 `;
   }
@@ -166,7 +166,7 @@ Challenges: ${questionnaire.challenges ?? 'Not specified'}
 Interests: ${questionnaire.interests ?? 'Not provided'}
 Timeframe: ${questionnaire.timeframe ?? 'Not specified'}
 
-CRITICAL: The user has already provided this information in their questionnaire. Do not ask these questions again. Reference this context naturally in your coaching.
+CRITICAL: The user has already provided this information in their questionnaire. Do not ask these questions again. Reference this context naturally in your coaching, instead mention the answers in the chat and confirm from the user again.
 ═══════════════════════════════════════════════════════════════
 `;
 }
@@ -239,7 +239,7 @@ ${contentAnglesText ? `Content Angles:\n${contentAnglesText}` : ''}
     }
 
     summary += `
-CRITICAL: The user has completed foundation sessions covering functional identity, credibility proof, and signature story. Do not repeat these exercises. Reference this foundation and build upon it for advanced positioning work.
+CRITICAL: The user has completed foundation sessions covering functional identity, credibility proof, and signature story. Do not repeat these exercises, instead mention the answers in the chat and confirm from the user again. Reference this foundation and build upon it for advanced positioning work.
 ═══════════════════════════════════════════════════════════════
 `;
 
@@ -269,7 +269,7 @@ Challenges: ${questionnaire.challenges ?? 'Not specified'}
 Interests: ${questionnaire.interests ?? 'Not provided'}
 Timeframe: ${questionnaire.timeframe ?? 'Not specified'}
 
-NOTE: This context was provided in the user's initial questionnaire. The conversation may reference this without repeating it.
+NOTE: This context was provided in the user's initial questionnaire. The conversation may reference this without repeating it, instead mention the answers in the chat and confirm from the user again.
 ═══════════════════════════════════════════════════════════════
 `;
 }
