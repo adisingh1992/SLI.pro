@@ -22,6 +22,8 @@ function formatSessionSummary(sessionNumber: number, completionData: any): strin
       ? `${completionData.functionalSplit.primary}% primary / ${completionData.functionalSplit.secondary}% secondary`
       : 'Not specified';
     
+    const keyInsightsText = completionData.keyInsights?.map((insight: string) => `• ${insight}`)?.join('\n') ?? '• None captured';
+    
     return `
 ═══════════════════════════════════════════════════════════════
 PREVIOUS SESSION SUMMARY (Session 1: Functional Identity Lock-In)
@@ -30,10 +32,10 @@ PREVIOUS SESSION SUMMARY (Session 1: Functional Identity Lock-In)
 PRIMARY FUNCTION: ${completionData.primaryFunction || 'Not determined'}
 SECONDARY FUNCTION: ${completionData.secondaryFunction || 'None'}
 FUNCTIONAL SPLIT: ${functionalSplitText}
-CONFIDENCE LEVEL: ${completionData.confidence || 0}%
+CONFIDENCE LEVEL: ${completionData.confidence ?? 0}%
 
 KEY INSIGHTS:
-${completionData.keyInsights?.map((insight: string) => `• ${insight}`).join('\n') || '• None captured'}
+${keyInsightsText}
 
 REASONING:
 ${completionData.reasoning || 'No reasoning provided'}
@@ -43,6 +45,9 @@ ${completionData.reasoning || 'No reasoning provided'}
   }
   
   if (sessionNumber === 2 && completionData) {
+    const proofBulletsText = completionData.proofBullets?.map((bullet: string) => `• ${bullet}`)?.join('\n') ?? '• None captured';
+    const nextStepsText = completionData.nextSteps?.map((step: string) => `• ${step}`)?.join('\n') ?? '• None identified';
+    
     return `
 ═══════════════════════════════════════════════════════════════
 PREVIOUS SESSION SUMMARY (Session 2: Professional Credibility Assessment)
@@ -55,13 +60,13 @@ BRAND CLAIM:
 ${completionData.brandClaim || 'Not established'}
 
 PROOF POINTS:
-${completionData.proofBullets?.map((bullet: string) => `• ${bullet}`).join('\n') || '• None captured'}
+${proofBulletsText}
 
 CHECK-WORTHY REASON (Why an investor/hiring manager would bet on them):
 ${completionData.checkWorthyReason || 'Not established'}
 
 NEXT STEPS IDENTIFIED:
-${completionData.nextSteps?.map((step: string) => `• ${step}`).join('\n') || '• None identified'}
+${nextStepsText}
 
 ═══════════════════════════════════════════════════════════════
 `;
