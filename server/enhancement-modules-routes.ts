@@ -39,6 +39,114 @@ function getInitialGuidanceMessage(moduleCode: string): string | null {
   }
 }
 
+// Format previous module's completion data into a summary for the next module's system prompt
+function formatModuleSummary(moduleCode: string, completionData: any): string {
+  if (moduleCode === "A") {
+    const featuredArticlesText = completionData.featuredArticleSeeds?.map((article: string) => `• ${article}`)?.join('\n') ?? '• None developed';
+    const naturalFormatsText = completionData.contentStrategy?.naturalFormats?.map((format: string) => `• ${format}`)?.join('\n') ?? '• None identified';
+    const phasedPlanText = completionData.contentStrategy?.phasedPlan?.map((step: string) => `• ${step}`)?.join('\n') ?? '• No plan created';
+    const barriersText = completionData.contentStrategy?.barriers?.map((barrier: string) => `• ${barrier}`)?.join('\n') ?? '• None identified';
+    const keyImprovementsText = completionData.linkedinOptimization?.keyImprovements?.map((improvement: string) => `• ${improvement}`)?.join('\n') ?? '• None specified';
+    const actionPlanText = completionData.actionPlan?.map((step: string) => `• ${step}`)?.join('\n') ?? '• No action plan';
+    const successMetricsText = completionData.successMetrics?.map((metric: string) => `• ${metric}`)?.join('\n') ?? '• No metrics defined';
+    
+    return `
+═══════════════════════════════════════════════════════════════
+PREVIOUS MODULE SUMMARY (Module A: Digital Behavior & LinkedIn)
+═══════════════════════════════════════════════════════════════
+
+Brand Claim: ${completionData.brandClaim ?? 'Not established'}
+
+Featured Article Ideas:
+${featuredArticlesText}
+
+Content Strategy:
+  Natural Formats:
+${naturalFormatsText}
+  
+  Phased Plan:
+${phasedPlanText}
+  
+  Barriers Addressed:
+${barriersText}
+  
+  Behavior Change Approach: ${completionData.contentStrategy?.behaviorChange ?? 'Not defined'}
+
+LinkedIn Optimization:
+  Headline Suggestion: ${completionData.linkedinOptimization?.headline ?? 'Not provided'}
+  Profile Score: ${completionData.linkedinOptimization?.profileScore ?? 'N/A'}/10
+  Key Improvements:
+${keyImprovementsText}
+
+Action Plan:
+${actionPlanText}
+
+Success Metrics:
+${successMetricsText}
+
+Confidence Level: ${completionData.confidence ?? 'N/A'}%
+
+CRITICAL: Do not repeat questions about digital behavior, LinkedIn content strategy, featured articles, or profile optimization. Build upon this foundation.
+═══════════════════════════════════════════════════════════════
+`;
+  }
+
+  if (moduleCode === "B") {
+    const strategicGapsText = completionData.strategicGaps?.map((gap: string) => `• ${gap}`)?.join('\n') ?? '• None identified';
+    const tier1TargetsText = completionData.tier1Targets?.map((target: string) => `• ${target}`)?.join('\n') ?? '• None defined';
+    const tier2TargetsText = completionData.tier2Targets?.map((target: string) => `• ${target}`)?.join('\n') ?? '• None defined';
+    const outreachTemplatesText = completionData.outreachTemplates?.map((template: string) => `• ${template}`)?.join('\n') ?? '• None created';
+    const profileOptimizationText = completionData.profileOptimization?.map((item: string) => `• ${item}`)?.join('\n') ?? '• None specified';
+    const thirtyDayPlanText = completionData.thirtyDayPlan?.map((step: string) => `• ${step}`)?.join('\n') ?? '• No plan created';
+    const psychologicalBarriersText = completionData.psychologicalBarriers?.map((barrier: string) => `• ${barrier}`)?.join('\n') ?? '• None identified';
+    
+    return `
+═══════════════════════════════════════════════════════════════
+PREVIOUS MODULE SUMMARY (Module B: Network Position Mapping)
+═══════════════════════════════════════════════════════════════
+
+Functional Identity: ${completionData.functionalIdentity ?? 'Not established'}
+
+Psychological Barriers:
+${psychologicalBarriersText}
+
+Digital Presence Audit: ${completionData.digitalPresenceAudit ?? 'Not completed'}
+
+Network Analysis:
+  Current Position: ${completionData.networkAuditSummary ?? 'Not assessed'}
+  Positioning Gap: ${completionData.positioningGap ?? 'Not identified'}
+  
+Strategic Gaps:
+${strategicGapsText}
+
+Relationship Strategy:
+  Tier 1 Targets (Top 10 decision-makers):
+${tier1TargetsText}
+  
+  Tier 2 Targets (Next 20 influencers/referrers):
+${tier2TargetsText}
+  
+  Value Proposition: ${completionData.valueProposition ?? 'Not articulated'}
+
+Outreach Approaches:
+${outreachTemplatesText}
+
+Profile Optimization Recommendations:
+${profileOptimizationText}
+
+30-Day Network Repositioning Plan:
+${thirtyDayPlanText}
+
+Confidence Level: ${completionData.confidence ?? 'N/A'}%
+
+CRITICAL: Do not repeat questions about functional identity, network composition, relationship tiering, or outreach strategies. Build upon this foundation.
+═══════════════════════════════════════════════════════════════
+`;
+  }
+
+  return '';
+}
+
 // Check if an enhancement module should be automatically completed
 async function checkModuleCompletion(
   moduleCode: string,
@@ -507,6 +615,20 @@ export function setupEnhancementModulesRoutes(app: Express) {
         // Get user profile data for context
         const userProfile = await storage.getUserProfile(userId);
 
+        // Fetch previous module's completion data for chaining
+        let previousModuleData = null;
+        if (moduleCode === "B") {
+          const moduleA = await storage.getEnhancementModule(userId, "A");
+          if (moduleA?.status === "completed" && moduleA.completionData) {
+            previousModuleData = moduleA.completionData;
+          }
+        } else if (moduleCode === "C") {
+          const moduleB = await storage.getEnhancementModule(userId, "B");
+          if (moduleB?.status === "completed" && moduleB.completionData) {
+            previousModuleData = moduleB.completionData;
+          }
+        }
+
         // Set up SSE headers
         res.setHeader("Content-Type", "text/event-stream");
         res.setHeader("Cache-Control", "no-cache");
@@ -521,8 +643,12 @@ export function setupEnhancementModulesRoutes(app: Express) {
         let assistantContent = "";
 
         // Generate Module A-specific system prompt with the attached coaching prompt
-        const getModuleASystemPrompt = () => {
-          return `You are a Digital Behavior & LinkedIn Content Strategy Coach. Your goal is to help a professional transform a vague online presence into a focused, credible brand—using fast visual tests, a structured audit, barrier-specific interventions, and a simple content system that fits real life.
+        const getModuleASystemPrompt = (previousModuleData?: any) => {
+          const previousSummary = previousModuleData 
+            ? formatModuleSummary("A", previousModuleData)
+            : "";
+          
+          return `${previousSummary}You are a Digital Behavior & LinkedIn Content Strategy Coach. Your goal is to help a professional transform a vague online presence into a focused, credible brand—using fast visual tests, a structured audit, barrier-specific interventions, and a simple content system that fits real life.
 
 STYLE
 - Warm, direct, practical. Plain English. One short question at a time.
@@ -558,8 +684,12 @@ Industry focus: ${userProfile.experiences?.[0]?.description?.substring(0, 50) ||
         };
 
         // Generate Module B-specific system prompt with Personal Brand & Network Positioning coaching
-        const getModuleBSystemPrompt = () => {
-          return `You are a Personal Brand & Network Positioning Coach. Your job is to turn a vague online presence into a focused, credible brand AND a strategic, opportunity-rich network.
+        const getModuleBSystemPrompt = (previousModuleData?: any) => {
+          const previousSummary = previousModuleData 
+            ? formatModuleSummary("A", previousModuleData)
+            : "";
+          
+          return `${previousSummary}You are a Personal Brand & Network Positioning Coach. Your job is to turn a vague online presence into a focused, credible brand AND a strategic, opportunity-rich network.
 
 STYLE
 - Warm, direct, practical. Plain English.
@@ -694,8 +824,12 @@ Industry: ${userProfile.experiences?.[0]?.company || "Not specified"}`
         };
 
         // Generate Module C-specific system prompt with Career Aspiration Alignment coaching
-        const getModuleCSystemPrompt = () => {
-          return `You are a Career Aspiration Alignment Coach (Module C). Your job is to convert a client's long-term career aspiration into a realistic, evidence-backed progression pathway—identifying gaps, defining stepping stones, and locking an actionable plan with timelines and metrics.
+        const getModuleCSystemPrompt = (previousModuleData?: any) => {
+          const previousSummary = previousModuleData 
+            ? formatModuleSummary("B", previousModuleData)
+            : "";
+          
+          return `${previousSummary}You are a Career Aspiration Alignment Coach (Module C). Your job is to convert a client's long-term career aspiration into a realistic, evidence-backed progression pathway—identifying gaps, defining stepping stones, and locking an actionable plan with timelines and metrics.
 
 STYLE
 - Warm, direct, and brutally honest when needed. Plain English.
@@ -847,11 +981,11 @@ Industry: ${userProfile.experiences?.[0]?.company || "Not specified"}`
         // Generate system prompt based on module
         const systemPrompt =
           moduleCode === "A"
-            ? getModuleASystemPrompt()
+            ? getModuleASystemPrompt() // Module A has no previous module
             : moduleCode === "B"
-              ? getModuleBSystemPrompt()
+              ? getModuleBSystemPrompt(previousModuleData) // Module B receives Module A's data
               : moduleCode === "C"
-                ? getModuleCSystemPrompt()
+                ? getModuleCSystemPrompt(previousModuleData) // Module C receives Module B's data
                 : `You are a professional coaching assistant for Enhancement Module ${moduleCode}. Provide thoughtful, actionable guidance.`;
 
         try {
