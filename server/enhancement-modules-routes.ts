@@ -147,6 +147,109 @@ CRITICAL: Do not repeat questions about functional identity, network composition
   return '';
 }
 
+// Format questionnaire data into a summary for system prompt context
+function formatQuestionnaireSummary(questionnaire: any): string {
+  if (!questionnaire) {
+    return '';
+  }
+
+  return `
+═══════════════════════════════════════════════════════════════
+USER QUESTIONNAIRE SUMMARY
+═══════════════════════════════════════════════════════════════
+
+Industry: ${questionnaire.industry ?? 'Not specified'}
+Professional Background: ${questionnaire.background ?? 'Not provided'}
+Career Goals: ${questionnaire.goals ?? 'Not specified'}
+Aspirations: ${questionnaire.aspirations ?? 'Not provided'}
+Challenges: ${questionnaire.challenges ?? 'Not specified'}
+Interests: ${questionnaire.interests ?? 'Not provided'}
+Timeframe: ${questionnaire.timeframe ?? 'Not specified'}
+
+CRITICAL: The user has already provided this information in their questionnaire. Do not ask these questions again. Reference this context naturally in your coaching.
+═══════════════════════════════════════════════════════════════
+`;
+}
+
+// Format foundation sessions 1, 2, 3 data into a concise combined summary
+async function formatFoundationSessionsSummary(userId: number): Promise<string> {
+  try {
+    // Fetch all foundation sessions for the user
+    const sessions = await storage.getFoundationSessions(userId);
+    
+    if (!sessions || sessions.length === 0) {
+      return '';
+    }
+
+    // Find completed sessions
+    const session1 = sessions.find(s => s.sessionNumber === 1 && s.status === 'completed');
+    const session2 = sessions.find(s => s.sessionNumber === 2 && s.status === 'completed');
+    const session3 = sessions.find(s => s.sessionNumber === 3 && s.status === 'completed');
+
+    if (!session1 && !session2 && !session3) {
+      return '';
+    }
+
+    let summary = `
+═══════════════════════════════════════════════════════════════
+FOUNDATION SESSIONS SUMMARY (Sessions 1, 2, 3)
+═══════════════════════════════════════════════════════════════
+`;
+
+    // Session 1: Functional Identity
+    if (session1?.completionData) {
+      const data = session1.completionData;
+      const functionalExamplesText = data.functionalLanguageExamples?.map((ex: string) => `• ${ex}`)?.join('\n') ?? '';
+      
+      summary += `
+SESSION 1: FUNCTIONAL IDENTITY
+Primary Function: ${data.primaryFunction ?? 'Not determined'}
+Secondary Function: ${data.secondaryFunction ? `${data.secondaryFunction} (${data.functionalSplit?.secondary ?? 0}%)` : 'None'}
+Anti-Generalist Commitment: ${data.commitmentStatement ?? 'Not made'}
+${functionalExamplesText ? `Functional Language Examples:\n${functionalExamplesText}` : ''}
+`;
+    }
+
+    // Session 2: Credibility & Proof
+    if (session2?.completionData) {
+      const data = session2.completionData;
+      const proofBulletsText = data.proofBullets?.slice(0, 3)?.map((bullet: string) => `• ${bullet}`)?.join('\n') ?? '';
+      
+      summary += `
+SESSION 2: CREDIBILITY & PROOF
+Credibility Tier: ${data.credibilityTier ? `Tier ${data.credibilityTier}` : 'Not assessed'}
+Brand Claim: ${data.brandClaim ?? 'Not established'}
+${proofBulletsText ? `Top Proof Points:\n${proofBulletsText}` : ''}
+`;
+    }
+
+    // Session 3: Signature Story
+    if (session3?.completionData) {
+      const data = session3.completionData;
+      const contentAnglesText = data.contentAngles?.slice(0, 3)?.map((angle: string) => `• ${angle}`)?.join('\n') ?? '';
+      
+      summary += `
+SESSION 3: SIGNATURE STORY & METHODOLOGY
+${data.signatureStory?.title ? `Story Title: ${data.signatureStory.title}` : ''}
+${data.signatureStory?.challenge ? `Challenge Solved: ${data.signatureStory.challenge}` : ''}
+${data.signatureStory?.outcome ? `Key Outcome: ${data.signatureStory.outcome}` : ''}
+${data.methodology ? `Methodology: ${data.methodology}` : ''}
+${contentAnglesText ? `Content Angles:\n${contentAnglesText}` : ''}
+`;
+    }
+
+    summary += `
+CRITICAL: The user has completed foundation sessions covering functional identity, credibility proof, and signature story. Do not repeat these exercises. Reference this foundation and build upon it for advanced positioning work.
+═══════════════════════════════════════════════════════════════
+`;
+
+    return summary;
+  } catch (error) {
+    console.error('Error formatting foundation sessions summary:', error);
+    return '';
+  }
+}
+
 // Check if an enhancement module should be automatically completed
 async function checkModuleCompletion(
   moduleCode: string,
