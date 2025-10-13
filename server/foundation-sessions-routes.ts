@@ -1277,7 +1277,25 @@ REMINDERS
 - Translate soft claims into proof the market respects; numbers and decision points matter.
 - Ask one targeted question at a time. If answers stay generic, escalate to tension/decision/metric prompts.
 
-Once you have a complete story with all required elements (agency + methodology + vulnerability + specificity + functional connection), the session is complete and you SHOULD NOT ASK ANY FURTHER QUESTIONS OR OFFER TO DO ANYTHING ELSE. Provide the final deliverables and END THE CONVERSATION as the user does not have a way to reply to you anymore.
+CRITICAL COMPLETION INSTRUCTION:
+Do NOT end this session prematurely. The session is ONLY complete when ALL of the following story elements are definitively established:
+1. AGENCY - Clear "I" statements showing personal decision-making and ownership
+2. METHODOLOGY - Specific frameworks, tools, or approaches that demonstrate HOW they think
+3. VULNERABILITY - Honest moments of struggle, doubt, or unexpected challenges
+4. SPECIFICITY - Concrete details with numbers, decisions, and trade-offs (not generic claims)
+5. FUNCTIONAL CONNECTION - Story clearly ties back to their primary function and credible expertise
+
+If ANY required element is missing or the user has given vague/incomplete story details:
+- Ask probing questions to extract the missing element
+- Provide examples of what you need (e.g., "What specific decision did YOU make?")
+- Push for concrete details, numbers, and genuine struggle moments
+- Do NOT provide final deliverables until the story is COMPLETE with all 5 elements
+
+Only when you have a COMPLETE story with all required elements should you:
+1. Provide the content-ready story summary
+2. List the 3-5 proof bullets extracted from the story
+3. State the functional connection and brand reinforcement
+4. Then and ONLY then, end the conversation naturally
 `;
         }
         
