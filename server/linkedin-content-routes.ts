@@ -99,6 +99,10 @@ async function generateLinkedinContentDrafts(userId: number) {
       new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
     )[0];
     
+    // Get foundation session 3 data
+    const foundationSession3 = await storage.getFoundationSession(userId, 3);
+    const session3Data = foundationSession3?.completionData;
+    
     // Format context for Claude
     let context = "";
     
