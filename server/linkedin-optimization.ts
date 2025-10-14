@@ -1,5 +1,6 @@
 import Anthropic from "@anthropic-ai/sdk";
 import type { Document, FreshnessReport, Sli } from "@shared/schema";
+import { storage } from "./storage";
 
 // Initialize Anthropic client
 const apiKey = process.env.ANTHROPIC_API_KEY;
@@ -43,9 +44,10 @@ async function callWithRetry<T>(
 }
 
 /**
- * Generate LinkedIn optimization recommendations based on resume, LinkedIn, SLI, and freshness report
+ * Generate LinkedIn optimization recommendations based on resume, LinkedIn, SLI, freshness report, and foundation sessions
  */
 export async function generateLinkedInOptimization(
+  userId: number,
   resumeDocument: Document, 
   linkedinDocument: Document,
   sli: Sli,
