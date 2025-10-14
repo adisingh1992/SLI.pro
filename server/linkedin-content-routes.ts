@@ -211,6 +211,12 @@ Choose topics based on:
 2. News or trends (from the last 2 weeks) in their industry
 3. SLI-aligned aspirational themes
 4. Relevant experience from their background
+5. Their signature story and content angles from Foundation Session 3 (if available)
+
+When Foundation Session 3 content is available, leverage:
+- The signature story's narrative elements to create compelling posts
+- The content angles to identify relevant topics and perspectives
+- The methodology to understand their preferred content approach
 
 Stay optimistic, insightful, and grounded—avoiding political or divisive topics. Each post must pass the "SLI reinforcement test": Would this strengthen the reader's understanding of the client's professional identity?`;
 
