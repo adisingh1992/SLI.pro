@@ -38,6 +38,7 @@ export interface IStorage {
   updateUserPassword(id: number, password: string): Promise<User | undefined>;
   updateLinkedinTokens(userId: number, accessToken: string, refreshToken: string, expiresIn: number): Promise<User | undefined>;
   getNonAdminUsers(): Promise<User[]>; // New method to get only non-admin users
+  getAllUsers(): Promise<User[]>; // Get all users including admins
   
   // Experience operations
   getExperiences(userId: number): Promise<Experience[]>;
@@ -566,6 +567,11 @@ export class MemStorage implements IStorage {
   async getNonAdminUsers(): Promise<User[]> {
     // Return only users that are NOT marked as admin
     return Array.from(this.users.values()).filter(user => user.isAdmin !== true);
+  }
+  
+  async getAllUsers(): Promise<User[]> {
+    // Return all users including admins
+    return Array.from(this.users.values());
   }
   
   async createPasswordReset(passwordReset: InsertPasswordReset): Promise<PasswordReset> {

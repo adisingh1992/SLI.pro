@@ -87,6 +87,10 @@ export class DatabaseStorage implements IStorage {
     return db.select().from(users).where(eq(users.isAdmin, false));
   }
 
+  async getAllUsers(): Promise<User[]> {
+    return db.select().from(users);
+  }
+
   async updateLinkedinTokens(userId: number, accessToken: string, refreshToken: string, expiresIn: number): Promise<User | undefined> {
     const expiryDate = new Date();
     expiryDate.setSeconds(expiryDate.getSeconds() + expiresIn);

@@ -765,23 +765,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   async function getAllUsers(excludeAdmins: boolean = false): Promise<User[]> {
     // If we need to exclude admins, use the storage method directly
     if (excludeAdmins) {
-      const nonAdminUsers = await storage.getNonAdminUsers();
-
-      return nonAdminUsers;
+      return await storage.getNonAdminUsers();
     }
     
-    // Otherwise get all users
-    const users: User[] = [];
-    let id = 1;
-    let user = await storage.getUser(id);
-    
-    while (user) {
-      users.push(user);
-      id++;
-      user = await storage.getUser(id);
-    }
-
-    return users;
+    // Otherwise get all users using the proper storage method
+    return await storage.getAllUsers();
   }
 
   // Helper function to determine user status
