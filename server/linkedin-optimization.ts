@@ -86,6 +86,12 @@ export async function generateLinkedInOptimization(
      sli.selectedSliIndex === 3 ? sli.statement3 : 
      sli.customSliText);
 
+  // Fetch foundation sessions 1 & 2
+  const session1 = await storage.getFoundationSession(userId, 1);
+  const session2 = await storage.getFoundationSession(userId, 2);
+  const session1Data = session1?.completionData;
+  const session2Data = session2?.completionData;
+
   // Building system prompt
   const systemPrompt = `You are a professional branding expert for SLI.pro, providing specific recommendations to optimize a client's LinkedIn profile based on their finalized Single Lasting Impression (SLI). Create actionable profile enhancement recommendations that will strengthen their professional narrative.
 
