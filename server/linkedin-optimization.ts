@@ -127,14 +127,68 @@ Structure your response in the following format:
 }`;
 
   // Preparing user prompt
-  const userPrompt = `I need comprehensive LinkedIn optimization recommendations for a client based on their finalized Single Lasting Impression (SLI).
+  let userPrompt = `I need comprehensive LinkedIn optimization recommendations for a client based on their finalized Single Lasting Impression (SLI).
 
 Resume content:
 ${resumeDocument.analysisContent || resumeDocument.fileData}
 
 LinkedIn content:
 ${linkedinDocument.analysisContent || linkedinDocument.fileData}
+`;
 
+  // Add foundation session 1 context if available
+  if (session1Data) {
+    userPrompt += `
+Foundation Session 1 - Functional Focus:
+`;
+    if (session1Data.primaryFunction) {
+      userPrompt += `Primary Function: ${session1Data.primaryFunction}\n`;
+    }
+    if (session1Data.secondaryFunction) {
+      userPrompt += `Secondary Function: ${session1Data.secondaryFunction}\n`;
+    }
+    if (session1Data.functionalSplit && typeof session1Data.functionalSplit.primary === 'number' && typeof session1Data.functionalSplit.secondary === 'number') {
+      userPrompt += `Functional Split: ${session1Data.functionalSplit.primary}% primary, ${session1Data.functionalSplit.secondary}% secondary\n`;
+    }
+    if (session1Data.antiGeneralistCommitment !== undefined) {
+      userPrompt += `Anti-Generalist Commitment: ${session1Data.antiGeneralistCommitment ? 'Yes' : 'No'}\n`;
+    }
+    if (session1Data.commitmentStatement) {
+      userPrompt += `Commitment Statement: ${session1Data.commitmentStatement}\n`;
+    }
+    if (Array.isArray(session1Data.functionalLanguageExamples) && session1Data.functionalLanguageExamples.length > 0) {
+      userPrompt += `Functional Language Examples:\n${session1Data.functionalLanguageExamples.map(ex => `- ${ex}`).join('\n')}\n`;
+    }
+    if (Array.isArray(session1Data.keyInsights) && session1Data.keyInsights.length > 0) {
+      userPrompt += `Key Insights:\n${session1Data.keyInsights.map(insight => `- ${insight}`).join('\n')}\n`;
+    }
+    userPrompt += '\n';
+  }
+
+  // Add foundation session 2 context if available
+  if (session2Data) {
+    userPrompt += `
+Foundation Session 2 - Credibility Framework:
+`;
+    if (session2Data.credibilityTier) {
+      userPrompt += `Credibility Tier: ${session2Data.credibilityTier} out of 5\n`;
+    }
+    if (session2Data.brandClaim) {
+      userPrompt += `Brand Claim: ${session2Data.brandClaim}\n`;
+    }
+    if (Array.isArray(session2Data.proofBullets) && session2Data.proofBullets.length > 0) {
+      userPrompt += `Proof Points:\n${session2Data.proofBullets.map(bullet => `- ${bullet}`).join('\n')}\n`;
+    }
+    if (session2Data.checkWorthyReason) {
+      userPrompt += `Check-Worthy Reason: ${session2Data.checkWorthyReason}\n`;
+    }
+    if (Array.isArray(session2Data.nextSteps) && session2Data.nextSteps.length > 0) {
+      userPrompt += `Next Steps:\n${session2Data.nextSteps.map(step => `- ${step}`).join('\n')}\n`;
+    }
+    userPrompt += '\n';
+  }
+
+  userPrompt += `
 SLI:
 ${sliText}
 

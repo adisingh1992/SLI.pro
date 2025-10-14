@@ -122,6 +122,7 @@ export function registerLinkedinOptimizationRoutes(app: Express) {
         // Try to generate the LinkedIn optimization with Claude
         console.log(`[LinkedIn Optimization] Attempting to call Claude API...`);
         optimizationData = await generateLinkedInOptimization(
+          userId,
           resumeDoc,
           linkedinDoc,
           selectedSli,
