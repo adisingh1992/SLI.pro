@@ -132,6 +132,38 @@ async function generateLinkedinContentDrafts(userId: number) {
       context += `## Latest Coaching Note\n${latestCoachingNote.content}\n\n`;
     }
     
+    // Add foundation session 3 context if available
+    if (session3Data) {
+      context += `## Foundation Session 3: Content Strategy\n`;
+      
+      // Add signature story if available
+      if (session3Data.signatureStory) {
+        const story = session3Data.signatureStory;
+        context += `\n### Signature Story\n`;
+        context += `**Title:** ${story.title}\n`;
+        context += `**Context:** ${story.context}\n`;
+        context += `**Challenge:** ${story.challenge}\n`;
+        context += `**Approach:** ${story.approach}\n`;
+        context += `**Tension:** ${story.tension}\n`;
+        context += `**Outcome:** ${story.outcome}\n`;
+        context += `**Repeatability:** ${story.repeatability}\n\n`;
+      }
+      
+      // Add content angles if available
+      if (session3Data.contentAngles && session3Data.contentAngles.length > 0) {
+        context += `### Content Angles\n`;
+        session3Data.contentAngles.forEach((angle, index) => {
+          context += `${index + 1}. ${angle}\n`;
+        });
+        context += `\n`;
+      }
+      
+      // Add methodology if available
+      if (session3Data.methodology) {
+        context += `### Methodology\n${session3Data.methodology}\n\n`;
+      }
+    }
+    
     context += `## SLI (Single Lasting Impression)\n${sliText}\n\n`;
     
     // Define Claude system prompt
