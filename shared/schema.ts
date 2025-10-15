@@ -10,6 +10,7 @@ export const messageRoleEnum = pgEnum("message_role", ["user", "assistant"]);
 // Enums for Subscription Tiers
 export const subscriptionTierEnum = pgEnum("subscription_tier", ["free", "premium", "subscription"]);
 export const subscriptionStatusEnum = pgEnum("subscription_status", ["active", "expired", "canceled"]);
+export const paymentStatusEnum = pgEnum("payment_status", ["pending", "succeeded", "failed", "refunded"]);
 
 export const users = pgTable("users", {
   id: serial("id").primaryKey(),
@@ -77,6 +78,20 @@ export const profiles = pgTable("profiles", {
   isComplete: boolean("is_complete").default(false),
 });
 
+// Transactions table for payment history
+export const transactions = pgTable("transactions", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().references(() => users.id),
+  stripePaymentId: text("stripe_payment_id"),
+  stripeSessionId: text("stripe_session_id"),
+  amount: integer("amount").notNull(), // Amount in cents
+  currency: text("currency").default("usd").notNull(),
+  tier: subscriptionTierEnum("tier").notNull(),
+  status: paymentStatusEnum("status").default("pending").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
 // Base insert schema with all fields optional to support both form registration and OAuth
 export const insertUserSchema = z.object({
   username: z.string(),
@@ -108,6 +123,12 @@ export const insertProfileSchema = createInsertSchema(profiles).omit({
   id: true,
 });
 
+export const insertTransactionSchema = createInsertSchema(transactions).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
 export const updateUserSchema = createInsertSchema(users).omit({
   id: true,
   password: true,
@@ -128,6 +149,7 @@ export type InsertEducation = z.infer<typeof insertEducationSchema>;
 export type InsertSkill = z.infer<typeof insertSkillSchema>;
 export type InsertLanguage = z.infer<typeof insertLanguageSchema>;
 export type InsertProfile = z.infer<typeof insertProfileSchema>;
+export type InsertTransaction = z.infer<typeof insertTransactionSchema>;
 export type UpdateUser = z.infer<typeof updateUserSchema>;
 export type UpdateProfile = z.infer<typeof updateProfileSchema>;
 
@@ -137,6 +159,7 @@ export type Education = typeof education.$inferSelect;
 export type Skill = typeof skills.$inferSelect;
 export type Language = typeof languages.$inferSelect;
 export type Profile = typeof profiles.$inferSelect;
+export type Transaction = typeof transactions.$inferSelect;
 
 // Documents schema for storing PDF files
 export const documents = pgTable("documents", {
