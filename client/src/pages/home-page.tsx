@@ -32,7 +32,7 @@ import {
   MessageSquare,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import NavBar from "@/components/nav-bar";
 import { scrollToTop } from "@/lib/utils";
 import { 
@@ -44,12 +44,15 @@ import {
   CardTitle 
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { PaymentModal } from "@/components/payment-modal";
+import { Crown } from "lucide-react";
 
 export default function HomePage() {
   const { user } = useAuth();
   const { toast } = useToast();
   const [_, navigate] = useLocation();
   const queryClient = useQueryClient();
+  const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
 
   // Fetch user profile data
   const {
@@ -117,6 +120,18 @@ export default function HomePage() {
   const { data: homeworkData } = useQuery<HomeworkAssignment[]>({
     queryKey: ["/api/user/homework"],
     enabled: !!user && !user.isAdmin,
+    retry: false,
+  });
+
+  // Fetch subscription status
+  const { data: subscriptionStatus } = useQuery<{
+    tier: 'free' | 'premium' | 'subscription';
+    status: 'active' | 'expired' | 'canceled';
+    expiresAt?: Date;
+    premiumPurchasedAt?: Date;
+  }>({
+    queryKey: ["/api/payments/subscription-status"],
+    enabled: !!user,
     retry: false,
   });
   
@@ -371,17 +386,83 @@ export default function HomePage() {
   const hasAllModulesCompleted = enhancementModules && enhancementModules.length > 0 && 
     enhancementModules.every(module => module.status === 'completed');
 
+  // Helper function to get subscription tier display name and style
+  const getSubscriptionTierDisplay = () => {
+    const tier = subscriptionStatus?.tier || 'free';
+    const status = subscriptionStatus?.status || 'active';
+
+    const tierConfig: Record<string, { name: string; variant: any; icon: any }> = {
+      free: { name: 'Free Tier', variant: 'outline', icon: User },
+      premium: { name: 'Premium Tier', variant: 'default', icon: Crown },
+      subscription: { name: 'Subscription Tier', variant: 'default', icon: Crown },
+    };
+
+    const config = tierConfig[tier] || tierConfig.free;
+
+    return {
+      ...config,
+      isExpired: tier === 'subscription' && status === 'expired',
+    };
+  };
+
+  // Helper function to determine upgrade button text and visibility
+  const getUpgradeButtonConfig = () => {
+    const tier = subscriptionStatus?.tier || 'free';
+    const status = subscriptionStatus?.status || 'active';
+
+    if (tier === 'free') {
+      return { show: true, text: 'Upgrade to Premium' };
+    } else if (tier === 'premium') {
+      return { show: true, text: 'Upgrade to Subscription' };
+    } else if (tier === 'subscription' && status === 'expired') {
+      return { show: true, text: 'Renew Subscription' };
+    }
+    
+    return { show: false, text: '' };
+  };
+
+  const subscriptionDisplay = getSubscriptionTierDisplay();
+  const upgradeConfig = getUpgradeButtonConfig();
+
   return (
     <div className="min-h-screen bg-background flex flex-col">
       <NavBar />
       <main className="flex-1 max-w-7xl mx-auto px-4 sm:px-6 py-8">
-        <div className="mb-6">
-          <h1 className="text-2xl font-semibold text-foreground">
-            Welcome, {user?.firstName}!
-          </h1>
-          <p className="text-muted-foreground mt-2">
-            Congratulations on joining SLI.pro! Your professional brand journey starts with few key actions
-          </p>
+        <div className="mb-6 flex items-center justify-between">
+          <div className="flex-1">
+            <h1 className="text-2xl font-semibold text-foreground">
+              Welcome, {user?.firstName}!
+            </h1>
+            <p className="text-muted-foreground mt-2">
+              Congratulations on joining SLI.pro! Your professional brand journey starts with few key actions
+            </p>
+          </div>
+          
+          <div className="flex items-center gap-3">
+            <Badge 
+              variant={subscriptionDisplay.variant}
+              className={`flex items-center gap-1.5 px-3 py-1 ${
+                subscriptionDisplay.isExpired ? 'border-destructive text-destructive' : ''
+              }`}
+              data-testid="badge-subscription-tier"
+            >
+              <subscriptionDisplay.icon className="h-4 w-4" />
+              {subscriptionDisplay.name}
+              {subscriptionDisplay.isExpired && <span className="ml-1">(Expired)</span>}
+            </Badge>
+            
+            {upgradeConfig.show && (
+              <Button 
+                onClick={() => setIsPaymentModalOpen(true)}
+                variant="default"
+                size="sm"
+                data-testid="button-upgrade"
+              >
+                <Crown className="h-4 w-4 mr-2" />
+                {upgradeConfig.text}
+              </Button>
+            )}
+          </div>
         </div>
         
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -1218,6 +1299,12 @@ export default function HomePage() {
 
         </div>
       </main>
+      
+      <PaymentModal
+        open={isPaymentModalOpen}
+        onOpenChange={setIsPaymentModalOpen}
+        currentTier={subscriptionStatus?.tier || 'free'}
+      />
     </div>
   );
 }
