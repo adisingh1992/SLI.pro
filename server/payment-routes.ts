@@ -1,4 +1,5 @@
 import type { Express, Request, Response } from "express";
+import express from "express";
 import Stripe from "stripe";
 import { storage } from "./storage";
 import QRCode from "qrcode";
@@ -8,7 +9,7 @@ if (!process.env.STRIPE_SECRET_KEY) {
 }
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
-  apiVersion: "2024-11-20.acacia",
+  apiVersion: "2024-11-20",
 });
 
 // Middleware to check if user is authenticated
@@ -20,6 +21,72 @@ const isAuthenticated = (req: Request, res: Response, next: Function) => {
 };
 
 export function registerPaymentRoutes(app: Express) {
+  // Stripe webhook handler - MUST be registered with raw body before other routes
+  app.post(
+    "/api/payments/webhook",
+    express.raw({ type: "application/json" }),
+    async (req, res) => {
+      const sig = req.headers['stripe-signature'];
+
+      if (!sig) {
+        return res.status(400).send('Missing stripe signature');
+      }
+
+      let event: Stripe.Event;
+
+      try {
+        // Verify webhook signature for security
+        const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
+        
+        if (webhookSecret) {
+          // In production: verify the signature using the webhook secret and raw body
+          event = stripe.webhooks.constructEvent(
+            req.body, // This is the raw buffer when using express.raw()
+            sig,
+            webhookSecret
+          );
+        } else {
+          // Development mode: parse without verification (NOT SECURE for production)
+          console.warn('WARNING: Webhook signature verification skipped. Set STRIPE_WEBHOOK_SECRET for production.');
+          // Parse the raw buffer to JSON
+          event = JSON.parse(req.body.toString());
+        }
+
+        // Handle the event
+        switch (event.type) {
+          case 'checkout.session.completed':
+            const session = event.data.object as Stripe.Checkout.Session;
+            await handleCheckoutCompleted(session);
+            break;
+
+          case 'customer.subscription.updated':
+          case 'customer.subscription.deleted':
+            const subscription = event.data.object as Stripe.Subscription;
+            await handleSubscriptionUpdate(subscription);
+            break;
+
+          case 'invoice.payment_succeeded':
+            const invoice = event.data.object as Stripe.Invoice;
+            await handleInvoicePaymentSucceeded(invoice);
+            break;
+
+          case 'invoice.payment_failed':
+            const failedInvoice = event.data.object as Stripe.Invoice;
+            await handleInvoicePaymentFailed(failedInvoice);
+            break;
+
+          default:
+            console.log(`Unhandled event type ${event.type}`);
+        }
+
+        res.json({ received: true });
+      } catch (err) {
+        console.error('Webhook error:', err);
+        return res.status(400).send(`Webhook Error: ${err}`);
+      }
+    }
+  );
+
   // Create checkout session for tier upgrade
   app.post("/api/payments/create-checkout-session", isAuthenticated, async (req, res, next) => {
     try {
@@ -148,67 +215,6 @@ export function registerPaymentRoutes(app: Express) {
     } catch (error) {
       console.error('Error creating checkout session:', error);
       next(error);
-    }
-  });
-
-  // Stripe webhook handler
-  app.post("/api/payments/webhook", async (req, res) => {
-    const sig = req.headers['stripe-signature'];
-
-    if (!sig) {
-      return res.status(400).send('Missing stripe signature');
-    }
-
-    let event: Stripe.Event;
-
-    try {
-      // Verify webhook signature for security
-      const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
-      
-      if (webhookSecret) {
-        // In production: verify the signature using the webhook secret
-        event = stripe.webhooks.constructEvent(
-          req.body,
-          sig,
-          webhookSecret
-        );
-      } else {
-        // Development mode: parse without verification (NOT SECURE for production)
-        console.warn('WARNING: Webhook signature verification skipped. Set STRIPE_WEBHOOK_SECRET for production.');
-        event = req.body;
-      }
-
-      // Handle the event
-      switch (event.type) {
-        case 'checkout.session.completed':
-          const session = event.data.object as Stripe.Checkout.Session;
-          await handleCheckoutCompleted(session);
-          break;
-
-        case 'customer.subscription.updated':
-        case 'customer.subscription.deleted':
-          const subscription = event.data.object as Stripe.Subscription;
-          await handleSubscriptionUpdate(subscription);
-          break;
-
-        case 'invoice.payment_succeeded':
-          const invoice = event.data.object as Stripe.Invoice;
-          await handleInvoicePaymentSucceeded(invoice);
-          break;
-
-        case 'invoice.payment_failed':
-          const failedInvoice = event.data.object as Stripe.Invoice;
-          await handleInvoicePaymentFailed(failedInvoice);
-          break;
-
-        default:
-          console.log(`Unhandled event type ${event.type}`);
-      }
-
-      res.json({ received: true });
-    } catch (err) {
-      console.error('Webhook error:', err);
-      return res.status(400).send(`Webhook Error: ${err}`);
     }
   });
 
