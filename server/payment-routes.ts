@@ -21,10 +21,9 @@ const isAuthenticated = (req: Request, res: Response, next: Function) => {
 };
 
 export function registerPaymentRoutes(app: Express) {
-  // Stripe webhook handler - MUST be registered with raw body before other routes
+  // Stripe webhook handler - raw body is handled in server/index.ts
   app.post(
     "/api/payments/webhook",
-    express.raw({ type: "application/json" }),
     async (req, res) => {
       const sig = req.headers['stripe-signature'];
 

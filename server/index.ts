@@ -3,6 +3,10 @@ import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 
 const app = express();
+
+// Special handling for Stripe webhook - must parse as raw before JSON parsing
+app.use('/api/payments/webhook', express.raw({ type: 'application/json' }));
+
 // Increase JSON body size limit to 10MB for document uploads
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: false, limit: '10mb' }));
