@@ -8,7 +8,7 @@ if (!process.env.STRIPE_SECRET_KEY) {
 }
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
-  apiVersion: "2025-09-30.clover",
+  apiVersion: "2024-11-20.acacia",
 });
 
 // Middleware to check if user is authenticated
@@ -115,6 +115,11 @@ export function registerPaymentRoutes(app: Express) {
           mode: 'subscription',
           success_url: `${baseUrl}/?payment=success`,
           cancel_url: `${baseUrl}/?payment=canceled`,
+          subscription_data: {
+            metadata: {
+              userId: user.id.toString(),
+            },
+          },
           metadata: {
             userId: user.id.toString(),
             tier: tier,
@@ -157,9 +162,21 @@ export function registerPaymentRoutes(app: Express) {
     let event: Stripe.Event;
 
     try {
-      // Note: In production, you should set up a webhook secret in Stripe dashboard
-      // and verify the signature. For now, we'll just parse the event.
-      event = req.body;
+      // Verify webhook signature for security
+      const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
+      
+      if (webhookSecret) {
+        // In production: verify the signature using the webhook secret
+        event = stripe.webhooks.constructEvent(
+          req.body,
+          sig,
+          webhookSecret
+        );
+      } else {
+        // Development mode: parse without verification (NOT SECURE for production)
+        console.warn('WARNING: Webhook signature verification skipped. Set STRIPE_WEBHOOK_SECRET for production.');
+        event = req.body;
+      }
 
       // Handle the event
       switch (event.type) {
@@ -310,7 +327,7 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
 }
 
 async function handleSubscriptionUpdate(subscription: Stripe.Subscription) {
-  const userId = parseInt(subscription.metadata?.userId || '0');
+  let userId = parseInt(subscription.metadata?.userId || '0');
   if (!userId) {
     // Try to find user by customer ID
     const customer = await stripe.customers.retrieve(subscription.customer as string);
@@ -318,6 +335,7 @@ async function handleSubscriptionUpdate(subscription: Stripe.Subscription) {
       console.error('Cannot find user for subscription update');
       return;
     }
+    userId = parseInt(customer.metadata.userId);
   }
 
   const user = await storage.getUser(userId);
