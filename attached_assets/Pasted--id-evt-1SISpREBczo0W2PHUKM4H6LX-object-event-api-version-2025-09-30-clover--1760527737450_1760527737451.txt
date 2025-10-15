@@ -1,0 +1,135 @@
+{
+  "id": "evt_1SISpREBczo0W2PHUKM4H6LX",
+  "object": "event",
+  "api_version": "2025-09-30.clover",
+  "created": 1760527513,
+  "data": {
+    "object": {
+      "id": "cs_test_a1yiecst0ri2SVLGbfHG1OaJe1rZ5Lzt7DycfaFZ63cbnOAucYdw8ZiuAE",
+      "object": "checkout.session",
+      "adaptive_pricing": {
+        "enabled": false
+      },
+      "after_expiration": null,
+      "allow_promotion_codes": null,
+      "amount_subtotal": 500,
+      "amount_total": 500,
+      "automatic_tax": {
+        "enabled": false,
+        "liability": null,
+        "provider": null,
+        "status": null
+      },
+      "billing_address_collection": null,
+      "branding_settings": {
+        "background_color": "#ffffff",
+        "border_style": "rounded",
+        "button_color": "#0074d4",
+        "display_name": "New business sandbox",
+        "font_family": "default",
+        "icon": null,
+        "logo": null
+      },
+      "cancel_url": "https://912ec8dc-192d-4b90-a53e-2e184c3f1aeb-00-2t3s5fxe9go6f.spock.replit.dev/?payment=canceled",
+      "client_reference_id": null,
+      "client_secret": null,
+      "collected_information": {
+        "business_name": null,
+        "individual_name": null,
+        "shipping_details": null
+      },
+      "consent": null,
+      "consent_collection": null,
+      "created": 1760527461,
+      "currency": "usd",
+      "currency_conversion": null,
+      "custom_fields": [],
+      "custom_text": {
+        "after_submit": null,
+        "shipping_address": null,
+        "submit": null,
+        "terms_of_service_acceptance": null
+      },
+      "customer": "cus_TEw3C9sGyEvcTX",
+      "customer_creation": null,
+      "customer_details": {
+        "address": {
+          "city": null,
+          "country": "IN",
+          "line1": null,
+          "line2": null,
+          "postal_code": null,
+          "state": null
+        },
+        "business_name": null,
+        "email": "aditya@cooeyhealth.com",
+        "individual_name": null,
+        "name": "Aditya Singh",
+        "phone": null,
+        "tax_exempt": "none",
+        "tax_ids": []
+      },
+      "customer_email": null,
+      "discounts": [],
+      "expires_at": 1760613861,
+      "invoice": "in_1SISpOEBczo0W2PHhrDhVx8H",
+      "invoice_creation": null,
+      "livemode": false,
+      "locale": null,
+      "metadata": {
+        "tier": "subscription",
+        "userId": "2"
+      },
+      "mode": "subscription",
+      "origin_context": null,
+      "payment_intent": null,
+      "payment_link": null,
+      "payment_method_collection": "always",
+      "payment_method_configuration_details": null,
+      "payment_method_options": {
+        "card": {
+          "request_three_d_secure": "automatic"
+        }
+      },
+      "payment_method_types": [
+        "card"
+      ],
+      "payment_status": "paid",
+      "permissions": null,
+      "phone_number_collection": {
+        "enabled": false
+      },
+      "recovered_from": null,
+      "saved_payment_method_options": {
+        "allow_redisplay_filters": [
+          "always"
+        ],
+        "payment_method_remove": "disabled",
+        "payment_method_save": null
+      },
+      "setup_intent": null,
+      "shipping_address_collection": null,
+      "shipping_cost": null,
+      "shipping_options": [],
+      "status": "complete",
+      "submit_type": null,
+      "subscription": "sub_1SISpPEBczo0W2PHcs8AOeQt",
+      "success_url": "https://912ec8dc-192d-4b90-a53e-2e184c3f1aeb-00-2t3s5fxe9go6f.spock.replit.dev/?payment=success",
+      "total_details": {
+        "amount_discount": 0,
+        "amount_shipping": 0,
+        "amount_tax": 0
+      },
+      "ui_mode": "hosted",
+      "url": null,
+      "wallet_options": null
+    }
+  },
+  "livemode": false,
+  "pending_webhooks": 1,
+  "request": {
+    "id": null,
+    "idempotency_key": null
+  },
+  "type": "checkout.session.completed"
+}

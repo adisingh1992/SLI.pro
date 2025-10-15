@@ -322,7 +322,16 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
     const subscriptionId = session.subscription as string;
     const subscription = await stripe.subscriptions.retrieve(subscriptionId);
     
-    const expiresAt = new Date((subscription as any).current_period_end * 1000);
+    // Safely handle the current_period_end timestamp
+    let expiresAt: Date | undefined;
+    const periodEnd = (subscription as any).current_period_end;
+    if (periodEnd) {
+      expiresAt = new Date(periodEnd * 1000);
+      if (isNaN(expiresAt.getTime())) {
+        console.error('Invalid current_period_end timestamp:', periodEnd);
+        expiresAt = undefined;
+      }
+    }
 
     await storage.updateUser(userId, {
       subscriptionTier: 'subscription',
@@ -348,7 +357,16 @@ async function handleSubscriptionUpdate(subscription: Stripe.Subscription) {
   const user = await storage.getUser(userId);
   if (!user) return;
 
-  const expiresAt = new Date((subscription as any).current_period_end * 1000);
+  // Safely handle the current_period_end timestamp
+  let expiresAt: Date | undefined;
+  const periodEnd = (subscription as any).current_period_end;
+  if (periodEnd) {
+    expiresAt = new Date(periodEnd * 1000);
+    if (isNaN(expiresAt.getTime())) {
+      console.error('Invalid current_period_end timestamp:', periodEnd);
+      expiresAt = undefined;
+    }
+  }
   
   if (subscription.status === 'active') {
     await storage.updateUser(userId, {
@@ -371,7 +389,16 @@ async function handleInvoicePaymentSucceeded(invoice: Stripe.Invoice) {
   
   if (!userId) return;
 
-  const expiresAt = new Date((subscription as any).current_period_end * 1000);
+  // Safely handle the current_period_end timestamp
+  let expiresAt: Date | undefined;
+  const periodEnd = (subscription as any).current_period_end;
+  if (periodEnd) {
+    expiresAt = new Date(periodEnd * 1000);
+    if (isNaN(expiresAt.getTime())) {
+      console.error('Invalid current_period_end timestamp:', periodEnd);
+      expiresAt = undefined;
+    }
+  }
   
   await storage.updateUser(userId, {
     subscriptionStatus: 'active',
