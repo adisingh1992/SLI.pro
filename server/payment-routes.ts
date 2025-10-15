@@ -98,10 +98,14 @@ export function registerPaymentRoutes(app: Express) {
         return res.status(400).json({ message: "Invalid tier specified" });
       }
 
-      // Check if user already has this tier or higher
-      if (user.subscriptionTier === tier || 
-          (user.subscriptionTier === 'premium' && tier === 'subscription' && user.subscriptionStatus === 'active')) {
-        return res.status(400).json({ message: "User already has this tier or higher" });
+      // Check if user already has this tier
+      if (user.subscriptionTier === tier) {
+        return res.status(400).json({ message: "You already have this tier" });
+      }
+
+      // Prevent downgrade from subscription to premium
+      if (user.subscriptionTier === 'subscription' && tier === 'premium' && user.subscriptionStatus === 'active') {
+        return res.status(400).json({ message: "Cannot downgrade from Subscription to Premium. Please cancel your subscription first." });
       }
 
       // Determine price and mode based on tier
