@@ -23,6 +23,7 @@ import {
   foundationSessionMessages, type FoundationSessionMessage, type InsertFoundationSessionMessage,
   enhancementModules, type EnhancementModule, type InsertEnhancementModule, type UpdateEnhancementModule,
   enhancementModuleMessages, type EnhancementModuleMessage, type InsertEnhancementModuleMessage,
+  transactions, type Transaction, type InsertTransaction,
   type UpdateUser, type UpdateProfile, type UserProfile
 } from "@shared/schema";
 import session from "express-session";
@@ -957,5 +958,42 @@ export class DatabaseStorage implements IStorage {
       .values(messageData)
       .returning();
     return newMessage;
+  }
+
+  // Transaction methods
+  async getTransactions(userId: number): Promise<Transaction[]> {
+    return db
+      .select()
+      .from(transactions)
+      .where(eq(transactions.userId, userId))
+      .orderBy(desc(transactions.createdAt));
+  }
+
+  async getTransaction(id: number): Promise<Transaction | undefined> {
+    const [transaction] = await db
+      .select()
+      .from(transactions)
+      .where(eq(transactions.id, id));
+    return transaction || undefined;
+  }
+
+  async createTransaction(transactionData: InsertTransaction): Promise<Transaction> {
+    const [newTransaction] = await db
+      .insert(transactions)
+      .values(transactionData)
+      .returning();
+    return newTransaction;
+  }
+
+  async updateTransaction(id: number, data: Partial<InsertTransaction>): Promise<Transaction | undefined> {
+    const [updatedTransaction] = await db
+      .update(transactions)
+      .set({
+        ...data,
+        updatedAt: new Date()
+      })
+      .where(eq(transactions.id, id))
+      .returning();
+    return updatedTransaction || undefined;
   }
 }

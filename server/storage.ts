@@ -23,6 +23,7 @@ import {
   foundationSessionMessages, type FoundationSessionMessage, type InsertFoundationSessionMessage,
   enhancementModules, type EnhancementModule, type InsertEnhancementModule, type UpdateEnhancementModule,
   enhancementModuleMessages, type EnhancementModuleMessage, type InsertEnhancementModuleMessage,
+  transactions, type Transaction, type InsertTransaction,
   type UpdateUser, type UpdateProfile, type UserProfile
 } from "@shared/schema";
 import session from "express-session";
@@ -182,6 +183,12 @@ export interface IStorage {
   // Enhancement Module Messages operations
   getEnhancementModuleMessages(moduleId: number): Promise<EnhancementModuleMessage[]>;
   createEnhancementModuleMessage(message: InsertEnhancementModuleMessage): Promise<EnhancementModuleMessage>;
+
+  // Transaction operations
+  getTransactions(userId: number): Promise<Transaction[]>;
+  getTransaction(id: number): Promise<Transaction | undefined>;
+  createTransaction(transaction: InsertTransaction): Promise<Transaction>;
+  updateTransaction(id: number, data: Partial<InsertTransaction>): Promise<Transaction | undefined>;
 
   // Session store
   sessionStore: session.Store;
