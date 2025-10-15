@@ -13,6 +13,7 @@ import { registerLinkedinContentRoutes } from "./linkedin-content-routes";
 import { registerFoundationSessionsRoutes } from "./foundation-sessions-routes";
 import { setupEnhancementModulesRoutes } from "./enhancement-modules-routes";
 import { setupWebSocketServer } from "./realtime/websocket-handler";
+import { registerPaymentRoutes } from "./payment-routes";
 import {
   insertExperienceSchema,
   insertEducationSchema,
@@ -48,6 +49,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   registerHomeworkRoutes(app, storage);
   registerFoundationSessionsRoutes(app);
   setupEnhancementModulesRoutes(app);
+  registerPaymentRoutes(app);
 
   // Middleware to check if user is authenticated
   const isAuthenticated = (req: Request, res: Response, next: NextFunction) => {
