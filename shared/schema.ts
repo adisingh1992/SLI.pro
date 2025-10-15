@@ -7,6 +7,10 @@ import { z } from "zod";
 export const sessionStatusEnum = pgEnum("session_status", ["locked", "available", "in_progress", "completed"]);
 export const messageRoleEnum = pgEnum("message_role", ["user", "assistant"]);
 
+// Enums for Subscription Tiers
+export const subscriptionTierEnum = pgEnum("subscription_tier", ["free", "premium", "subscription"]);
+export const subscriptionStatusEnum = pgEnum("subscription_status", ["active", "expired", "canceled"]);
+
 export const users = pgTable("users", {
   id: serial("id").primaryKey(),
   username: text("username").notNull().unique(),
@@ -23,6 +27,13 @@ export const users = pgTable("users", {
   location: text("location"),
   isAdmin: boolean("is_admin").default(false).notNull(),
   lastLoginAt: timestamp("last_login_at"),
+  // Stripe and Subscription fields
+  subscriptionTier: subscriptionTierEnum("subscription_tier").default("free").notNull(),
+  subscriptionStatus: subscriptionStatusEnum("subscription_status").default("active"),
+  stripeCustomerId: text("stripe_customer_id"),
+  stripeSubscriptionId: text("stripe_subscription_id"),
+  subscriptionExpiresAt: timestamp("subscription_expires_at"),
+  premiumPurchasedAt: timestamp("premium_purchased_at"),
 });
 
 export const experiences = pgTable("experiences", {
