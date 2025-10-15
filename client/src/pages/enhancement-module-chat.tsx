@@ -8,7 +8,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { Progress } from "@/components/ui/progress";
 import { Loader2, Send, ArrowLeft, Lock, CheckCircle, MessageSquare, AlertCircle, FileText } from "lucide-react";
 import VoiceMicButton from "@/components/VoiceMicButton";
 import { useVoiceRecording } from "@/hooks/use-voice-recording";
@@ -395,17 +394,6 @@ export default function EnhancementModuleChatPage() {
       <div className="flex h-[calc(100vh-140px)]">
         {/* Left Column - Chat Interface (75%) */}
         <div className="w-full lg:w-3/4 flex flex-col">
-          {/* Module Progress - based on message count */}
-          {module.status === 'in_progress' && messages.length > 0 && (
-            <div className="px-4 py-3 border-b bg-background/50">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-sm font-medium">Module Progress</span>
-                <span className="text-sm text-muted-foreground">{Math.min(Math.floor((messages.length / 20) * 100), 100)}%</span>
-              </div>
-              <Progress value={Math.min(Math.floor((messages.length / 20) * 100), 100)} className="h-2" data-testid="progress-module" />
-            </div>
-          )}
-
           {/* Chat Interface */}
           <Card className="flex-1 flex flex-col overflow-hidden m-0 rounded-none">       
           <CardContent className="flex-1 min-h-0 flex flex-col p-0 overflow-hidden py-2">
