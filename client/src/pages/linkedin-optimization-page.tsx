@@ -86,14 +86,14 @@ export default function LinkedinOptimizationPage() {
             Back to Home
           </Button>
           
-          <Button
+          {/* <Button
             onClick={() => navigate("/linkedin-content-drafts")}
             className="flex items-center"
           >
             <FileText className="mr-2 h-4 w-4" />
             Pre-Drafted Content
             <ArrowRight className="ml-2 h-4 w-4" />
-          </Button>
+          </Button> */}
         </div>
 
         <div className="bg-white shadow-card rounded-lg overflow-hidden mb-8">
