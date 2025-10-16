@@ -216,6 +216,24 @@ export default function HomePage() {
     );
   }
 
+  // Helper function to check if a feature is allowed based on payment tier (first layer validation)
+  const isTierAllowed = (feature: string): boolean => {
+    const tier = subscriptionStatus?.tier || 'free';
+    
+    // Free tier: Only Step 1, Step 2, and Foundation Session 1 allowed
+    if (tier === 'free') {
+      return ['step1', 'step2', 'session1'].includes(feature);
+    }
+    
+    // Premium tier: Everything except Step 8
+    if (tier === 'premium') {
+      return feature !== 'step8';
+    }
+    
+    // Subscription tier: Everything allowed
+    return true;
+  };
+
   const getStatusBadge = (isActive: boolean, isComplete: boolean) => {
     if (!isActive) {
       return (
@@ -237,27 +255,27 @@ export default function HomePage() {
   };
 
   const questionnaireBadge = getStatusBadge(
-    true, 
+    isTierAllowed('step1'), 
     !!userProfile?.questionnaire && userProfile.questionnaire.isDraft !== true
   );
   
   const documentsBadge = getStatusBadge(
-    !!userProfile?.questionnaire && userProfile.questionnaire.isDraft !== true,
+    isTierAllowed('step2') && !!userProfile?.questionnaire && userProfile.questionnaire.isDraft !== true,
     !!hasRequiredDocuments
   );
   
   const freshnessReportBadge = getStatusBadge(
-    !!hasRequiredDocuments && !!userProfile?.questionnaire && userProfile.questionnaire.isDraft !== true,
+    isTierAllowed('step5') && !!hasRequiredDocuments && !!userProfile?.questionnaire && userProfile.questionnaire.isDraft !== true,
     !!latestFreshnessReport
   );
   
   const sliBadge = getStatusBadge(
-    !!hasSliSelected || !!hasSliRefined,
+    isTierAllowed('step6') && (!!hasSliSelected || !!hasSliRefined),
     !!hasSliSelected || !!hasSliRefined
   );
   
   const linkedInBadge = getStatusBadge(
-    !!canGenerateLinkedInOptimization,
+    isTierAllowed('step7') && !!canGenerateLinkedInOptimization,
     !!latestLinkedinOptimization
   );
   
@@ -268,12 +286,12 @@ export default function HomePage() {
   const hasFoundationSessionsCompleted = foundationSessions && foundationSessions.some(session => session.status === 'completed');
   
   const foundationSessionsBadge = getStatusBadge(
-    !!userProfile?.questionnaire && userProfile.questionnaire.isDraft !== true && !!hasRequiredDocuments,
+    isTierAllowed('step3') && !!userProfile?.questionnaire && userProfile.questionnaire.isDraft !== true && !!hasRequiredDocuments,
     !!hasFoundationSessionsCompleted
   );
   
   const liveCoachingBadge = getStatusBadge(
-    !!hasFoundationSessionsCompleted,
+    isTierAllowed('step4') && !!hasFoundationSessionsCompleted,
     false // Always available once foundation sessions are completed
   );
 
@@ -673,24 +691,31 @@ export default function HomePage() {
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     {foundationSessions?.slice(0, 3).map((session) => {
                       const content = getSessionContent(session.sessionNumber);
+                      // Check tier access for sessions 2 and 3
+                      const isTierLocked = session.sessionNumber >= 2 && !isTierAllowed(`session${session.sessionNumber}`);
+                      const displayStatus = isTierLocked ? 'locked' as const : session.status;
+                      const isClickable = !isTierLocked && session.status !== 'locked';
+                      
                       return (
                         <Card 
                           key={session.id} 
-                          className={`cursor-pointer transition-all hover:shadow-md ${
-                            session.status === 'locked' ? 'opacity-60' : ''
+                          className={`transition-all ${
+                            isClickable ? 'cursor-pointer hover:shadow-md' : 'opacity-60 cursor-not-allowed'
                           }`}
-                          onClick={() => session.status !== 'locked' && handleSessionAction(session)}
+                          onClick={() => isClickable && handleSessionAction(session)}
                           data-testid={`card-foundation-session-${session.sessionNumber}`}
                         >
                           <CardHeader className="pb-3">
                             <div className="flex items-center justify-between mb-2">
                               <span className="text-sm font-medium text-muted-foreground">{content.header}</span>
-                              {getSessionStatusBadge(session.status)}
+                              {getSessionStatusBadge(displayStatus)}
                             </div>
                             <CardTitle className="text-base">{content.title}</CardTitle>
                           </CardHeader>
                           <CardContent>
-                            <p className="text-sm text-muted-foreground">{content.description}</p>
+                            <p className="text-sm text-muted-foreground">
+                              {isTierLocked ? "Upgrade to Premium to unlock" : content.description}
+                            </p>
                           </CardContent>
                         </Card>
                       );
@@ -713,6 +738,10 @@ export default function HomePage() {
                 {!hasFoundationSessionsCompleted ? (
                   <div className="p-4 bg-muted/50 rounded-lg text-muted-foreground">
                     You must complete at least one foundation session first
+                  </div>
+                ) : !isTierAllowed('moduleA') ? (
+                  <div className="p-4 bg-muted/50 rounded-lg text-muted-foreground">
+                    Upgrade to Premium to unlock Enhancement Modules
                   </div>
                 ) : (
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -748,19 +777,19 @@ export default function HomePage() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
           {/* Step 4: Schedule Live Coaching Call */}
           <Card className={`overflow-hidden shadow-sm flex flex-col h-full ${
-            !hasFoundationSessionsCompleted
+            !isTierAllowed('step4') || !hasFoundationSessionsCompleted
               ? "border-gray-200 opacity-75"
               : "border-green-200"
           }`}>
             <CardHeader className={`pb-4 ${
-              !hasFoundationSessionsCompleted
+              !isTierAllowed('step4') || !hasFoundationSessionsCompleted
                 ? "bg-gray-50"
                 : "bg-green-50"
             }`}>
               <div className="flex items-center justify-between">
                 <div className="flex items-center">
                   <div className={`p-2 rounded-full mr-3 ${
-                    !hasFoundationSessionsCompleted
+                    !isTierAllowed('step4') || !hasFoundationSessionsCompleted
                       ? "bg-gray-100 text-gray-500"
                       : "bg-green-100 text-green-600"
                   }`}>
@@ -773,32 +802,36 @@ export default function HomePage() {
                 {liveCoachingBadge}
               </div>
               <CardDescription className="mt-2">
-                {!hasFoundationSessionsCompleted
-                  ? "Complete your AI-guided foundation sessions to unlock live coaching"
-                  : "Book your 30-minute session with an SLI.pro expert to refine your professional positioning"}
+                {!isTierAllowed('step4')
+                  ? "Upgrade to Premium to unlock live coaching"
+                  : !hasFoundationSessionsCompleted
+                    ? "Complete your AI-guided foundation sessions to unlock live coaching"
+                    : "Book your 30-minute session with an SLI.pro expert to refine your professional positioning"}
               </CardDescription>
             </CardHeader>
             <CardContent className="p-5 flex-grow">
-              <p className={`text-sm ${!hasFoundationSessionsCompleted ? "text-muted-foreground/70" : "text-muted-foreground"}`}>
-                {!hasFoundationSessionsCompleted
-                  ? "You must complete at least one foundation session first"
-                  : "Work directly with our experts to polish your Single Lasting Impression and create a powerful professional presence."}
+              <p className={`text-sm ${!isTierAllowed('step4') || !hasFoundationSessionsCompleted ? "text-muted-foreground/70" : "text-muted-foreground"}`}>
+                {!isTierAllowed('step4')
+                  ? "Upgrade your account to access live coaching sessions"
+                  : !hasFoundationSessionsCompleted
+                    ? "You must complete at least one foundation session first"
+                    : "Work directly with our experts to polish your Single Lasting Impression and create a powerful professional presence."}
               </p>
             </CardContent>
             <CardFooter className="bg-gray-50 py-3 px-5 mt-auto">
               <Button
                 variant="outline"
                 className={`w-full ${
-                  !hasFoundationSessionsCompleted
+                  !isTierAllowed('step4') || !hasFoundationSessionsCompleted
                     ? "border-gray-300 text-gray-500 cursor-not-allowed"
                     : "border-green-500 text-green-600 hover:bg-green-50"
                 }`}
                 onClick={() => {
-                  if (hasFoundationSessionsCompleted) {
+                  if (isTierAllowed('step4') && hasFoundationSessionsCompleted) {
                     window.open("https://calendly.com/dcara-sli/haas", "_blank");
                   }
                 }}
-                disabled={!hasFoundationSessionsCompleted}
+                disabled={!isTierAllowed('step4') || !hasFoundationSessionsCompleted}
               >
                 Schedule Now
                 <ArrowRight className="ml-2 h-4 w-4" />
@@ -808,19 +841,19 @@ export default function HomePage() {
 
           {/* Freshness Report Section */}
           <Card className={`overflow-hidden shadow-sm flex flex-col h-full ${
-            !hasFoundationSessionsCompleted
+            !isTierAllowed('step5') || !hasFoundationSessionsCompleted
               ? "border-gray-200 opacity-75"
               : "border-info/20"
           }`}>
             <CardHeader className={`pb-4 ${
-              !hasFoundationSessionsCompleted
+              !isTierAllowed('step5') || !hasFoundationSessionsCompleted
                 ? "bg-gray-50"
                 : "bg-green-50"
             }`}>
               <div className="flex items-center justify-between">
                 <div className="flex items-center">
                   <div className={`p-2 rounded-full mr-3 ${
-                    !hasFoundationSessionsCompleted
+                    !isTierAllowed('step5') || !hasFoundationSessionsCompleted
                       ? "bg-gray-100 text-gray-500"
                       : "bg-green-100 text-green-600"
                   }`}>
@@ -833,15 +866,17 @@ export default function HomePage() {
                 {freshnessReportBadge}
               </div>
               <CardDescription className="mt-2">
-                {!hasFoundationSessionsCompleted
-                  ? "Complete at least one foundation session to unlock freshness report"
-                  : latestFreshnessReport
-                    ? `Last report: ${new Date(latestFreshnessReport.createdAt).toLocaleDateString()}`
-                    : "Understand how your digital presence aligns with your career goals"}
+                {!isTierAllowed('step5')
+                  ? "Upgrade to Premium to unlock Brand Intelligence Report"
+                  : !hasFoundationSessionsCompleted
+                    ? "Complete at least one foundation session to unlock freshness report"
+                    : latestFreshnessReport
+                      ? `Last report: ${new Date(latestFreshnessReport.createdAt).toLocaleDateString()}`
+                      : "Understand how your digital presence aligns with your career goals"}
               </CardDescription>
             </CardHeader>
             <CardContent className="p-5 flex-grow">
-              <div className={`${!hasFoundationSessionsCompleted ? "opacity-50" : ""}`}>
+              <div className={`${!isTierAllowed('step5') || !hasFoundationSessionsCompleted ? "opacity-50" : ""}`}>
                 <ul className="space-y-3 text-sm">
                   <li className="flex items-center gap-2">
                     <span className={`mr-2 ${userProfile?.questionnaire && userProfile.questionnaire.isDraft !== true ? 'text-success' : 'text-muted-foreground/50'}`}>
@@ -874,17 +909,17 @@ export default function HomePage() {
               <Button
                 variant="outline"
                 className={`w-full ${
-                  !hasFoundationSessionsCompleted
+                  !isTierAllowed('step5') || !hasFoundationSessionsCompleted
                     ? "border-blue-500 text-blue-600 hover:bg-blue-50 cursor-not-allowed"
                     : "border-green-500 text-green-700 hover:bg-green-50"
                 }`}
                 onClick={() => {
-                  if (hasFoundationSessionsCompleted) {
+                  if (isTierAllowed('step5') && hasFoundationSessionsCompleted) {
                     scrollToTop();
                     navigate("/freshness-report");
                   }
                 }}
-                disabled={!hasFoundationSessionsCompleted}
+                disabled={!isTierAllowed('step5') || !hasFoundationSessionsCompleted}
               >
                 {latestFreshnessReport ? "View Report" : "Generate Report"}
                 <ArrowRight className="ml-2 h-4 w-4" />
@@ -894,19 +929,19 @@ export default function HomePage() {
           
           {/* SLI Section */}
           <Card className={`overflow-hidden shadow-sm ${
-            !hasSli
+            !isTierAllowed('step6') || !hasSli
               ? "border-gray-200 opacity-75"
               : "border-primary/20"
           }`}>
             <CardHeader className={`pb-4 ${
-              !hasSli
+              !isTierAllowed('step6') || !hasSli
                 ? "bg-gray-50"
                 : "bg-green-50"
             }`}>
               <div className="flex items-center justify-between">
                 <div className="flex items-center">
                   <div className={`p-2 rounded-full mr-3 ${
-                    !hasSli
+                    !isTierAllowed('step6') || !hasSli
                       ? "bg-gray-100 text-gray-500"
                       : "bg-green-100 text-green-600"
                   }`}>
@@ -919,13 +954,15 @@ export default function HomePage() {
                 {sliBadge}
               </div>
               <CardDescription className="mt-2">
-                {!hasSli
-                  ? "Review coach-generated SLI options that capture your professional essence"
-                  : hasSliRefined
-                    ? "Your SLI has been refined and is ready to use"
-                    : hasSliSelected
-                      ? "You've selected your SLI, consider refining it"
-                      : "Select your preferred SLI option"}
+                {!isTierAllowed('step6')
+                  ? "Upgrade to Premium to unlock SLI discovery"
+                  : !hasSli
+                    ? "Review coach-generated SLI options that capture your professional essence"
+                    : hasSliRefined
+                      ? "Your SLI has been refined and is ready to use"
+                      : hasSliSelected
+                        ? "You've selected your SLI, consider refining it"
+                        : "Select your preferred SLI option"}
               </CardDescription>
             </CardHeader>
             <CardContent className="p-5">
@@ -958,23 +995,23 @@ export default function HomePage() {
               <div className="w-full grid grid-cols-1 gap-2">
                 <Button
                   className={`w-full ${
-                    !hasSli
+                    !isTierAllowed('step6') || !hasSli
                       ? "bg-gray-100 text-gray-500 cursor-not-allowed"
                       : "bg-primary hover:bg-primary/90"
                   }`}
                   onClick={() => {
-                    if (hasSli) {
+                    if (isTierAllowed('step6') && hasSli) {
                       scrollToTop();
                       navigate("/sli-selection");
                     }
                   }}
-                  disabled={!hasSli}
+                  disabled={!isTierAllowed('step6') || !hasSli}
                 >
                   {hasSliSelected ? "View Selected SLI" : "Select Your SLI"}
                   <ArrowRight className="ml-2 h-4 w-4" />
                 </Button>
                 
-                {hasSliSelected && (
+                {isTierAllowed('step6') && hasSliSelected && (
                   <Button
                     variant="outline"
                     className={`w-full border-green-500 text-green-700 hover:bg-green-50`}
@@ -993,19 +1030,19 @@ export default function HomePage() {
           
           {/* LinkedIn Optimization Section */}
           <Card className={`overflow-hidden shadow-sm ${
-            !canGenerateLinkedInOptimization
+            !isTierAllowed('step7') || !canGenerateLinkedInOptimization
               ? "border-gray-200 opacity-75"
               : "border-blue-200"
           }`}>
             <CardHeader className={`pb-4 ${
-              !canGenerateLinkedInOptimization
+              !isTierAllowed('step7') || !canGenerateLinkedInOptimization
                 ? "bg-gray-50"
                 : "bg-green-50"
             }`}>
               <div className="flex items-center justify-between">
                 <div className="flex items-center">
                   <div className={`p-2 rounded-full mr-3 ${
-                    !canGenerateLinkedInOptimization
+                    !isTierAllowed('step7') || !canGenerateLinkedInOptimization
                       ? "bg-gray-100 text-gray-500"
                       : "bg-green-100 text-green-600"
                   }`}>
@@ -1020,11 +1057,13 @@ export default function HomePage() {
                 {linkedInBadge}
               </div>
               <CardDescription className="mt-2">
-                {!canGenerateLinkedInOptimization
-                  ? getLinkedInRequirementsMessage(hasRequiredDocuments || false, Boolean(hasSliSelected || hasSliRefined), latestFreshnessReport !== undefined)
-                  : latestLinkedinOptimization !== undefined
-                    ? `Generated ${formatTimeAgo(latestLinkedinOptimization.createdAt)}`
-                    : "Apply your SLI to enhance your professional presence"}
+                {!isTierAllowed('step7')
+                  ? "Upgrade to Premium to unlock LinkedIn optimization"
+                  : !canGenerateLinkedInOptimization
+                    ? getLinkedInRequirementsMessage(hasRequiredDocuments || false, Boolean(hasSliSelected || hasSliRefined), latestFreshnessReport !== undefined)
+                    : latestLinkedinOptimization !== undefined
+                      ? `Generated ${formatTimeAgo(latestLinkedinOptimization.createdAt)}`
+                      : "Apply your SLI to enhance your professional presence"}
               </CardDescription>
             </CardHeader>
             <CardContent className="p-5">
@@ -1067,7 +1106,7 @@ export default function HomePage() {
             <CardFooter className="bg-gray-50 py-3 px-5">
               <Button
                 className={`w-full ${
-                  !canGenerateLinkedInOptimization
+                  !isTierAllowed('step7') || !canGenerateLinkedInOptimization
                     ? "border-gray-300 text-gray-500 cursor-not-allowed"
                     : latestLinkedinOptimization
                       ? "border-green-500 text-green-700 hover:bg-green-50"
@@ -1075,14 +1114,14 @@ export default function HomePage() {
                 }`}
                 variant={latestLinkedinOptimization ? "outline" : "outline"}
                 onClick={() => {
-                  if (canGenerateLinkedInOptimization) {
+                  if (isTierAllowed('step7') && canGenerateLinkedInOptimization) {
                     scrollToTop();
                     navigate(latestLinkedinOptimization 
                       ? `/linkedin-optimization/${latestLinkedinOptimization.id}` 
                       : "/linkedin-optimization/generate");
                   }
                 }}
-                disabled={!canGenerateLinkedInOptimization}
+                disabled={!isTierAllowed('step7') || !canGenerateLinkedInOptimization}
               >
                 {latestLinkedinOptimization ? "View Optimization" : "Generate Optimization"}
                 <ArrowRight className="ml-2 h-4 w-4" />
@@ -1092,19 +1131,19 @@ export default function HomePage() {
 
           {/* Step 8: Generate Strategic Content */}
           <Card className={`overflow-hidden shadow-sm flex flex-col h-full ${
-            !canGenerateLinkedInOptimization
+            !isTierAllowed('step8') || !canGenerateLinkedInOptimization
               ? "border-gray-200 opacity-75"
               : "border-emerald-200"
           }`}>
             <CardHeader className={`pb-4 ${
-              !canGenerateLinkedInOptimization
+              !isTierAllowed('step8') || !canGenerateLinkedInOptimization
                 ? "bg-gray-50"
                 : "bg-emerald-50"
             }`}>
               <div className="flex items-center justify-between">
                 <div className="flex items-center">
                   <div className={`p-2 rounded-full mr-3 ${
-                    !canGenerateLinkedInOptimization
+                    !isTierAllowed('step8') || !canGenerateLinkedInOptimization
                       ? "bg-gray-100 text-gray-500"
                       : "bg-emerald-100 text-emerald-600"
                   }`}>
@@ -1115,17 +1154,19 @@ export default function HomePage() {
                   </CardTitle>
                 </div>
                 <Badge variant="outline" className={`${
-                  !canGenerateLinkedInOptimization
+                  !isTierAllowed('step8') || !canGenerateLinkedInOptimization
                     ? "bg-muted text-muted-foreground border-muted"
                     : "bg-emerald-50 text-emerald-700 border-emerald-200"
                 }`}>
-                  {!canGenerateLinkedInOptimization ? "Locked" : "Available"}
+                  {!isTierAllowed('step8') || !canGenerateLinkedInOptimization ? "Locked" : "Available"}
                 </Badge>
               </div>
               <CardDescription className="mt-2">
-                {!canGenerateLinkedInOptimization
-                  ? getLinkedInRequirementsMessage(hasRequiredDocuments || false, Boolean(hasSliSelected || hasSliRefined), latestFreshnessReport !== undefined)
-                  : "Create thought leadership content aligned with your SLI"}
+                {!isTierAllowed('step8')
+                  ? "Upgrade to Subscription to unlock Content Generation"
+                  : !canGenerateLinkedInOptimization
+                    ? getLinkedInRequirementsMessage(hasRequiredDocuments || false, Boolean(hasSliSelected || hasSliRefined), latestFreshnessReport !== undefined)
+                    : "Create thought leadership content aligned with your SLI"}
               </CardDescription>
             </CardHeader>
             <CardContent className="p-5 flex-grow">
@@ -1153,18 +1194,18 @@ export default function HomePage() {
             <CardFooter className="bg-gray-50 py-3 px-5 mt-auto">
               <Button
                 className={`w-full ${
-                  !canGenerateLinkedInOptimization
+                  !isTierAllowed('step8') || !canGenerateLinkedInOptimization
                     ? "border-gray-300 text-gray-500 cursor-not-allowed"
                     : "border-emerald-500 text-emerald-700 hover:bg-emerald-50"
                 }`}
                 variant="outline"
                 onClick={() => {
-                  if (canGenerateLinkedInOptimization) {
+                  if (isTierAllowed('step8') && canGenerateLinkedInOptimization) {
                     scrollToTop();
                     navigate("/linkedin-content-drafts");
                   }
                 }}
-                disabled={!canGenerateLinkedInOptimization}
+                disabled={!isTierAllowed('step8') || !canGenerateLinkedInOptimization}
               >
                 Generate Content
                 <ArrowRight className="ml-2 h-4 w-4" />
@@ -1174,19 +1215,19 @@ export default function HomePage() {
 
           {/* Step 9: Schedule Follow-Up Coaching */}
           <Card className={`overflow-hidden shadow-sm flex flex-col h-full ${
-            !hasConversationSummaries
+            !isTierAllowed('step9') || !hasConversationSummaries
               ? "border-gray-200 opacity-75"
               : "border-green-200"
           }`}>
             <CardHeader className={`pb-4 ${
-              !hasConversationSummaries
+              !isTierAllowed('step9') || !hasConversationSummaries
                 ? "bg-gray-50"
                 : "bg-green-50"
             }`}>
               <div className="flex items-center justify-between">
                 <div className="flex items-center">
                   <div className={`p-2 rounded-full mr-3 ${
-                    !hasConversationSummaries
+                    !isTierAllowed('step9') || !hasConversationSummaries
                       ? "bg-gray-100 text-gray-500"
                       : "bg-green-100 text-green-600"
                   }`}>
@@ -1199,32 +1240,36 @@ export default function HomePage() {
                 {liveCoachingBadge}
               </div>
               <CardDescription className="mt-2">
-                {!hasConversationSummaries
-                  ? "Complete your AI-guided discovery conversations to unlock live coaching"
-                  : "Refine your approach and measure progress"}
+                {!isTierAllowed('step9')
+                  ? "Upgrade to Premium to unlock Follow-Up Coaching"
+                  : !hasConversationSummaries
+                    ? "Complete your AI-guided discovery conversations to unlock live coaching"
+                    : "Refine your approach and measure progress"}
               </CardDescription>
             </CardHeader>
             <CardContent className="p-5 flex-grow">
-              <p className={`text-sm ${!hasConversationSummaries ? "text-muted-foreground/70" : "text-muted-foreground"}`}>
-                {!hasConversationSummaries
-                  ? "You must complete at least one AI coaching conversation first"
-                  : "Refine your approach and measure progress"}
+              <p className={`text-sm ${!isTierAllowed('step9') || !hasConversationSummaries ? "text-muted-foreground/70" : "text-muted-foreground"}`}>
+                {!isTierAllowed('step9')
+                  ? "Upgrade your account to access follow-up coaching sessions"
+                  : !hasConversationSummaries
+                    ? "You must complete at least one AI coaching conversation first"
+                    : "Refine your approach and measure progress"}
               </p>
             </CardContent>
             <CardFooter className="bg-gray-50 py-3 px-5 mt-auto">
               <Button
                 variant="outline"
                 className={`w-full ${
-                  !hasFoundationSessionsCompleted
+                  !isTierAllowed('step9') || !hasFoundationSessionsCompleted
                     ? "border-gray-300 text-gray-500 cursor-not-allowed"
                     : "border-green-500 text-green-600 hover:bg-green-50"
                 }`}
                 onClick={() => {
-                  if (hasFoundationSessionsCompleted) {
+                  if (isTierAllowed('step9') && hasFoundationSessionsCompleted) {
                     window.open("https://calendly.com/dcara-sli/haas", "_blank");
                   }
                 }}
-                disabled={!hasFoundationSessionsCompleted}
+                disabled={!isTierAllowed('step9') || !hasFoundationSessionsCompleted}
               >
                 Schedule Now
                 <ArrowRight className="ml-2 h-4 w-4" />
