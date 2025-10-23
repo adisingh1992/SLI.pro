@@ -440,8 +440,10 @@ export function useVoiceRecording(config: VoiceRecordingConfig) {
       const audioChunks: Blob[] = [];
 
       mediaRecorder.ondataavailable = (event) => {
+        console.log('[Voice] Data available, size:', event.data.size);
         if (event.data.size > 0) {
           audioChunks.push(event.data);
+          console.log('[Voice] Chunk added, total chunks:', audioChunks.length);
         }
       };
 
@@ -496,6 +498,7 @@ export function useVoiceRecording(config: VoiceRecordingConfig) {
 
       // Request data chunks every 100ms for better audio capture
       mediaRecorder.start(100);
+      console.log('[Voice] MediaRecorder started with timeslice 100ms, state:', mediaRecorder.state);
       
       setState(prev => ({
         ...prev,
@@ -532,7 +535,9 @@ export function useVoiceRecording(config: VoiceRecordingConfig) {
 
   // Stop recording
   const stopRecording = useCallback(() => {
+    console.log('[Voice] stopRecording called, recorder state:', mediaRecorderRef.current?.state);
     if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+      console.log('[Voice] Stopping MediaRecorder...');
       mediaRecorderRef.current.stop();
     }
 
