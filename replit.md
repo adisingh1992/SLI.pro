@@ -46,6 +46,16 @@ Preferred communication style: Simple, everyday language.
   - SLI generation based on user data and documents
   - Content draft creation for LinkedIn posts
 
+## Voice-to-Text Integration
+- **Frontend**: Custom `useVoiceRecording` hook with MediaRecorder API for audio capture
+- **Backend**: WebSocket server for real-time audio streaming to OpenAI Whisper API
+- **Retry Logic**: Exponential backoff retry mechanism (1s, 2s, 3s delays) for processing failures
+- **Resilience**: 3-attempt retry limit with fallback UI messaging after unsuccessful retries
+- **Error Handling**: Categorized error messages for connection, API, and validation failures
+- **Processing Timeout**: 30-second timeout protection with automatic retry on timeout
+- **Audio Storage**: Recorded audio cached in memory for retry attempts without re-recording
+- **Pages**: Available on Foundation Session and Enhancement Module chat pages
+
 ## File Upload and Document Management
 - **Storage**: Base64 encoding for document content storage in PostgreSQL
 - **Supported Types**: PDF documents, images, and text files up to 10MB
