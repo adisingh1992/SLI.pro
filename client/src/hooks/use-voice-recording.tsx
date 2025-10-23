@@ -440,17 +440,22 @@ export function useVoiceRecording(config: VoiceRecordingConfig) {
       const audioChunks: Blob[] = [];
 
       mediaRecorder.ondataavailable = (event) => {
+        console.log('[Voice] ondataavailable fired, chunk size:', event.data.size);
         if (event.data.size > 0) {
           audioChunks.push(event.data);
+          console.log('[Voice] Total chunks so far:', audioChunks.length);
         }
       };
 
       mediaRecorder.onstop = async () => {
+        console.log('[Voice] onstop fired, audioChunks count:', audioChunks.length);
         if (audioChunks.length > 0) {
           const audioBlob = new Blob(audioChunks, { type: mimeType });
+          console.log('[Voice] Audio blob created - size:', audioBlob.size, 'bytes, chunks:', audioChunks.length);
           
           // Check if audio is too small (likely just container header)
-          if (audioBlob.size < 1000) {
+          if (audioBlob.size < 500) {
+            console.warn('[Voice] Audio too small:', audioBlob.size, 'bytes (threshold: 500)');
             setState(prev => ({
               ...prev,
               isProcessing: false,
@@ -466,6 +471,8 @@ export function useVoiceRecording(config: VoiceRecordingConfig) {
             closeWebSocket();
             return;
           }
+          
+          console.log('[Voice] Audio blob valid, storing for transcription');
           
           // Store recorded audio for potential retries
           recordedAudioRef.current = { blob: audioBlob, mimeType };
@@ -531,6 +538,7 @@ export function useVoiceRecording(config: VoiceRecordingConfig) {
   // Stop recording
   const stopRecording = useCallback(() => {
     if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+      console.log('[Voice] Stopping recording, requesting data flush...');
       // Request data to flush the buffer before stopping
       // This ensures ondataavailable fires with all buffered audio
       try {
@@ -539,12 +547,13 @@ export function useVoiceRecording(config: VoiceRecordingConfig) {
         console.warn('[Voice] Error flushing audio buffer:', e);
       }
       
-      // Give a brief moment for ondataavailable to fire, then stop
+      // Give browsers time for ondataavailable to fire (300ms for better compatibility)
       setTimeout(() => {
         if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+          console.log('[Voice] Now calling stop() on MediaRecorder');
           mediaRecorderRef.current.stop();
         }
-      }, 100);
+      }, 300);
     }
 
     if (streamRef.current) {
