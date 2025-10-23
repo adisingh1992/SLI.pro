@@ -38,12 +38,32 @@ export class OpenAIRealtimeSession {
 
   async sendAudio(audioBase64: string, mimeType?: string) {
     if (!this.isConnected) {
-      throw new Error('Not connected');
+      const errorMsg = 'Session not connected. Please try again.';
+      log(`[OpenAI Voice] ${errorMsg}`);
+      this.config.onError(errorMsg);
+      throw new Error(errorMsg);
     }
 
     try {
       // Convert base64 to buffer - this is now the complete audio file
       const audioBuffer = Buffer.from(audioBase64, 'base64');
+      
+      // Validate audio size
+      if (audioBuffer.length === 0) {
+        const errorMsg = 'No audio data received';
+        log(`[OpenAI Voice] ${errorMsg}`);
+        this.config.onError(errorMsg);
+        throw new Error(errorMsg);
+      }
+      
+      // Check if audio is too large (OpenAI has a 25MB limit)
+      const maxSize = 25 * 1024 * 1024; // 25MB
+      if (audioBuffer.length > maxSize) {
+        const errorMsg = 'Audio recording too long. Please record a shorter message.';
+        log(`[OpenAI Voice] ${errorMsg} (${audioBuffer.length} bytes)`);
+        this.config.onError(errorMsg);
+        throw new Error(errorMsg);
+      }
       
       // Store as complete audio (replacing any previous chunks)
       this.audioChunks = [audioBuffer];
@@ -51,12 +71,24 @@ export class OpenAIRealtimeSession {
       log(`[OpenAI Voice] Received complete audio: ${audioBuffer.length} bytes, type: ${mimeType || 'unknown'}`);
     } catch (error) {
       log(`[OpenAI Voice] Error receiving audio: ${error}`);
-      throw error;
+      if (error instanceof Error && error.message.includes('Audio recording too long')) {
+        throw error;
+      }
+      const errorMsg = 'Failed to process audio data. Please try again.';
+      this.config.onError(errorMsg);
+      throw new Error(errorMsg);
     }
   }
 
   async stopAudio() {
-    if (!this.isConnected || this.audioChunks.length === 0) {
+    if (!this.isConnected) {
+      log('[OpenAI Voice] Cannot stop audio - session not connected');
+      return;
+    }
+    
+    if (this.audioChunks.length === 0) {
+      log('[OpenAI Voice] Cannot transcribe - no audio data');
+      this.config.onError('No audio data to transcribe');
       return;
     }
 
@@ -67,6 +99,15 @@ export class OpenAIRealtimeSession {
       
       // Combine all audio chunks
       const completeAudio = Buffer.concat(this.audioChunks);
+      
+      // Validate audio size again
+      if (completeAudio.length < 100) {
+        const errorMsg = 'Audio too short. Please speak for at least a second.';
+        log(`[OpenAI Voice] ${errorMsg}`);
+        this.config.onError(errorMsg);
+        this.audioChunks = [];
+        return;
+      }
       
       // Create a temporary file with .webm extension
       const timestamp = Date.now();
@@ -87,6 +128,15 @@ export class OpenAIRealtimeSession {
 
       const transcriptText = transcription.text;
       
+      // Validate transcription result
+      if (!transcriptText || transcriptText.trim().length === 0) {
+        const errorMsg = 'No speech detected. Please try speaking more clearly.';
+        log(`[OpenAI Voice] ${errorMsg}`);
+        this.config.onError(errorMsg);
+        this.audioChunks = [];
+        return;
+      }
+      
       log(`[OpenAI Voice] Transcription complete: ${transcriptText.substring(0, 50)}...`);
       
       // Send complete transcription
@@ -94,9 +144,33 @@ export class OpenAIRealtimeSession {
       
       // Clear chunks for next recording
       this.audioChunks = [];
-    } catch (error) {
+    } catch (error: any) {
       log(`[OpenAI Voice] Transcription error: ${error}`);
-      this.config.onError(error instanceof Error ? error.message : 'Transcription failed');
+      
+      // Categorize error for better user feedback
+      let userErrorMessage = 'Voice processing failed. Please try again.';
+      
+      if (error?.error?.type === 'invalid_request_error') {
+        userErrorMessage = 'Invalid audio format. Please check your microphone and try again.';
+      } else if (error?.status === 429) {
+        userErrorMessage = 'API rate limit reached. Please try again in a moment.';
+      } else if (error?.status === 503 || error?.status === 502) {
+        userErrorMessage = 'API temporary unavailable. Please try again.';
+      } else if (error?.code === 'ECONNREFUSED' || error?.code === 'ETIMEDOUT') {
+        userErrorMessage = 'API connection timeout. Please check your internet and try again.';
+      } else if (error instanceof Error) {
+        // Check for specific known error messages
+        if (error.message.includes('timeout')) {
+          userErrorMessage = 'API request timeout. Please try again.';
+        } else if (error.message.includes('network')) {
+          userErrorMessage = 'Network error. Please check your connection and try again.';
+        } else if (error.message.includes('Audio too short') || error.message.includes('No speech detected')) {
+          userErrorMessage = error.message;
+        }
+      }
+      
+      this.config.onError(userErrorMessage);
+      this.audioChunks = [];
     } finally {
       // Clean up temporary file
       if (tempFilePath) {
