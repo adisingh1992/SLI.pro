@@ -440,10 +440,8 @@ export function useVoiceRecording(config: VoiceRecordingConfig) {
       const audioChunks: Blob[] = [];
 
       mediaRecorder.ondataavailable = (event) => {
-        console.log('[Voice] Data available, size:', event.data.size);
         if (event.data.size > 0) {
           audioChunks.push(event.data);
-          console.log('[Voice] Chunk added, total chunks:', audioChunks.length);
         }
       };
 
@@ -451,11 +449,8 @@ export function useVoiceRecording(config: VoiceRecordingConfig) {
         if (audioChunks.length > 0) {
           const audioBlob = new Blob(audioChunks, { type: mimeType });
           
-          console.log('[Voice] Recording stopped, audio blob size:', audioBlob.size, 'bytes');
-          
           // Check if audio is too small (likely just container header)
           if (audioBlob.size < 1000) {
-            console.warn('[Voice] Audio too small, likely no actual audio data captured');
             setState(prev => ({
               ...prev,
               isProcessing: false,
@@ -496,9 +491,9 @@ export function useVoiceRecording(config: VoiceRecordingConfig) {
         }
       };
 
-      // Request data chunks every 100ms for better audio capture
-      mediaRecorder.start(100);
-      console.log('[Voice] MediaRecorder started with timeslice 100ms, state:', mediaRecorder.state);
+      // Start recording without timeslice - let browser buffer all audio
+      // We'll flush it with requestData() when stopping
+      mediaRecorder.start();
       
       setState(prev => ({
         ...prev,
@@ -535,10 +530,21 @@ export function useVoiceRecording(config: VoiceRecordingConfig) {
 
   // Stop recording
   const stopRecording = useCallback(() => {
-    console.log('[Voice] stopRecording called, recorder state:', mediaRecorderRef.current?.state);
     if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
-      console.log('[Voice] Stopping MediaRecorder...');
-      mediaRecorderRef.current.stop();
+      // Request data to flush the buffer before stopping
+      // This ensures ondataavailable fires with all buffered audio
+      try {
+        mediaRecorderRef.current.requestData();
+      } catch (e) {
+        console.warn('[Voice] Error flushing audio buffer:', e);
+      }
+      
+      // Give a brief moment for ondataavailable to fire, then stop
+      setTimeout(() => {
+        if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+          mediaRecorderRef.current.stop();
+        }
+      }, 100);
     }
 
     if (streamRef.current) {
