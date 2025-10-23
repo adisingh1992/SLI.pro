@@ -21,31 +21,47 @@ export function PaymentModal({ open, onOpenChange, currentTier }: PaymentModalPr
 
   const tiers = [
     {
+      id: 'free' as const,
+      name: 'Free Tier',
+      price: '$0',
+      description: 'Current Plan',
+      features: [
+        'Brand assessment survey completion',
+        'Document upload capability (resume, LinkedIn PDF, personality assessments)',
+        'Session 1 with SLI AI Coach: Functional Identity Mapping',
+        'Basic positioning insights and progress tracking'
+      ],
+      disabled: true,
+      isCurrent: currentTier === 'free'
+    },
+    {
       id: 'premium' as const,
       name: 'Premium Tier',
-      price: '$15',
+      price: '$129',
       description: 'One-time payment',
       features: [
-        'All free features',
-        'Premium support',
-        'Advanced analytics',
-        'Priority access'
+        'Complete micro-session trilogy (Sessions 1-3)',
+        'Optional enhancement modules (A, B, C)',
+        'SLI generation with multiple options',
+        'LinkedIn optimization and posting',
+        'PDF conversation downloads'
       ],
-      disabled: currentTier === 'premium' || currentTier === 'subscription'
+      disabled: currentTier === 'premium' || currentTier === 'subscription',
+      isCurrent: currentTier === 'premium'
     },
     {
       id: 'subscription' as const,
       name: 'Subscription Tier',
-      price: '$5',
+      price: '$39',
       period: 'per month',
       description: 'Monthly subscription',
       features: [
-        'All premium features',
-        'Unlimited access',
-        'Monthly updates',
-        'Cancel anytime'
+        'Advanced LinkedIn optimization and ongoing pre-drafted content generation',
+        'Resume and cover letter alignment per job description',
+        'Content refresh and platform access'
       ],
-      disabled: currentTier === 'subscription'
+      disabled: currentTier === 'subscription',
+      isCurrent: currentTier === 'subscription'
     }
   ];
 
@@ -88,42 +104,51 @@ export function PaymentModal({ open, onOpenChange, currentTier }: PaymentModalPr
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[600px]" data-testid="dialog-payment">
+      <DialogContent className="sm:max-w-[700px] max-h-[90vh]" data-testid="dialog-payment">
         <DialogHeader>
           <DialogTitle data-testid="text-payment-title">
-            {selectedTier ? 'Complete Your Purchase' : 'Upgrade Your Plan'}
+            {selectedTier ? 'Complete Your Purchase' : 'Choose Your Plan'}
           </DialogTitle>
           <DialogDescription data-testid="text-payment-description">
             {selectedTier 
               ? 'Scan the QR code with your mobile device or click the button below to proceed'
-              : 'Choose the plan that works best for you'
+              : 'Select the tier that best fits your professional branding needs'
             }
           </DialogDescription>
         </DialogHeader>
 
         {!selectedTier ? (
-          <div className="grid gap-4 py-4">
+          <div className="grid gap-4 py-4 max-h-[70vh] overflow-y-auto">
             {tiers.map((tier) => (
               <Card
                 key={tier.id}
-                className={`p-6 cursor-pointer transition-all border-2 ${
-                  tier.disabled 
-                    ? 'opacity-50 cursor-not-allowed' 
-                    : 'hover:border-primary'
+                className={`p-4 sm:p-6 transition-all border-2 ${
+                  tier.id === 'free'
+                    ? 'border-muted bg-muted/20 cursor-default'
+                    : tier.disabled 
+                      ? 'opacity-60 cursor-not-allowed border-muted' 
+                      : 'cursor-pointer hover:border-primary hover:shadow-md'
                 }`}
-                onClick={() => !tier.disabled && handleTierSelect(tier.id)}
+                onClick={() => tier.id !== 'free' && !tier.disabled && handleTierSelect(tier.id)}
                 data-testid={`card-tier-${tier.id}`}
               >
-                <div className="flex justify-between items-start mb-4">
-                  <div>
-                    <h3 className="text-lg font-semibold" data-testid={`text-tier-name-${tier.id}`}>
-                      {tier.name}
-                    </h3>
+                <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-3 mb-4">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 mb-1">
+                      <h3 className="text-lg font-semibold" data-testid={`text-tier-name-${tier.id}`}>
+                        {tier.name}
+                      </h3>
+                      {tier.isCurrent && (
+                        <span className="px-2 py-0.5 bg-primary/10 text-primary text-xs font-medium rounded-full">
+                          Current
+                        </span>
+                      )}
+                    </div>
                     <p className="text-sm text-muted-foreground" data-testid={`text-tier-description-${tier.id}`}>
                       {tier.description}
                     </p>
                   </div>
-                  <div className="text-right">
+                  <div className="text-left sm:text-right">
                     <div className="text-2xl font-bold" data-testid={`text-tier-price-${tier.id}`}>
                       {tier.price}
                     </div>
@@ -136,15 +161,15 @@ export function PaymentModal({ open, onOpenChange, currentTier }: PaymentModalPr
                 </div>
                 <ul className="space-y-2">
                   {tier.features.map((feature, index) => (
-                    <li key={index} className="flex items-center text-sm" data-testid={`text-feature-${tier.id}-${index}`}>
-                      <Check className="h-4 w-4 mr-2 text-primary" />
-                      {feature}
+                    <li key={index} className="flex items-start text-sm" data-testid={`text-feature-${tier.id}-${index}`}>
+                      <Check className="h-4 w-4 mr-2 mt-0.5 text-primary flex-shrink-0" />
+                      <span>{feature}</span>
                     </li>
                   ))}
                 </ul>
-                {tier.disabled && (
+                {tier.disabled && tier.id !== 'free' && !tier.isCurrent && (
                   <div className="mt-4 text-sm text-muted-foreground text-center" data-testid={`text-tier-status-${tier.id}`}>
-                    {currentTier === tier.id ? 'Current Plan' : 'Already Subscribed'}
+                    Already Subscribed
                   </div>
                 )}
               </Card>
