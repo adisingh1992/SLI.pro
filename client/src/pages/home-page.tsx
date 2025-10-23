@@ -782,19 +782,19 @@ export default function HomePage() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
           {/* Step 4: Schedule Live Coaching Call */}
           <Card className={`overflow-hidden shadow-sm flex flex-col h-full ${
-            !isTierAllowed('step4') || !hasFoundationSessionsCompleted
+            !isTierAllowed('step4') || !allFoundationSessionsCompleted
               ? "border-gray-200 opacity-75"
               : "border-green-200"
           }`}>
             <CardHeader className={`pb-4 ${
-              !isTierAllowed('step4') || !hasFoundationSessionsCompleted
+              !isTierAllowed('step4') || !allFoundationSessionsCompleted
                 ? "bg-gray-50"
                 : "bg-green-50"
             }`}>
               <div className="flex items-center justify-between">
                 <div className="flex items-center">
                   <div className={`p-2 rounded-full mr-3 ${
-                    !isTierAllowed('step4') || !hasFoundationSessionsCompleted
+                    !isTierAllowed('step4') || !allFoundationSessionsCompleted
                       ? "bg-gray-100 text-gray-500"
                       : "bg-green-100 text-green-600"
                   }`}>
@@ -809,17 +809,17 @@ export default function HomePage() {
               <CardDescription className="mt-2">
                 {!isTierAllowed('step4')
                   ? "Upgrade to Premium to unlock live coaching"
-                  : !hasFoundationSessionsCompleted
-                    ? "Complete your AI-guided foundation sessions to unlock live coaching"
+                  : !allFoundationSessionsCompleted
+                    ? "Complete all 3 foundation sessions to unlock live coaching"
                     : "Book your 30-minute session with an SLI.pro expert to refine your professional positioning"}
               </CardDescription>
             </CardHeader>
             <CardContent className="p-5 flex-grow">
-              <p className={`text-sm ${!isTierAllowed('step4') || !hasFoundationSessionsCompleted ? "text-muted-foreground/70" : "text-muted-foreground"}`}>
+              <p className={`text-sm ${!isTierAllowed('step4') || !allFoundationSessionsCompleted ? "text-muted-foreground/70" : "text-muted-foreground"}`}>
                 {!isTierAllowed('step4')
                   ? "Upgrade your account to access live coaching sessions"
-                  : !hasFoundationSessionsCompleted
-                    ? "You must complete at least one foundation session first"
+                  : !allFoundationSessionsCompleted
+                    ? "You must complete all 3 foundation sessions first"
                     : "Work directly with our experts to polish your Single Lasting Impression and create a powerful professional presence."}
               </p>
             </CardContent>
@@ -827,16 +827,16 @@ export default function HomePage() {
               <Button
                 variant="outline"
                 className={`w-full ${
-                  !isTierAllowed('step4') || !hasFoundationSessionsCompleted
+                  !isTierAllowed('step4') || !allFoundationSessionsCompleted
                     ? "border-gray-300 text-gray-500 cursor-not-allowed"
                     : "border-green-500 text-green-600 hover:bg-green-50"
                 }`}
                 onClick={() => {
-                  if (isTierAllowed('step4') && hasFoundationSessionsCompleted) {
+                  if (isTierAllowed('step4') && allFoundationSessionsCompleted) {
                     window.open("https://calendly.com/dcara-sli/haas", "_blank");
                   }
                 }}
-                disabled={!isTierAllowed('step4') || !hasFoundationSessionsCompleted}
+                disabled={!isTierAllowed('step4') || !allFoundationSessionsCompleted}
               >
                 Schedule Now
                 <ArrowRight className="ml-2 h-4 w-4" />
