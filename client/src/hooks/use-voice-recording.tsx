@@ -449,6 +449,27 @@ export function useVoiceRecording(config: VoiceRecordingConfig) {
         if (audioChunks.length > 0) {
           const audioBlob = new Blob(audioChunks, { type: mimeType });
           
+          console.log('[Voice] Recording stopped, audio blob size:', audioBlob.size, 'bytes');
+          
+          // Check if audio is too small (likely just container header)
+          if (audioBlob.size < 1000) {
+            console.warn('[Voice] Audio too small, likely no actual audio data captured');
+            setState(prev => ({
+              ...prev,
+              isProcessing: false,
+              isRecording: false,
+              error: 'Recording too short'
+            }));
+            toast({
+              title: "Recording Too Short",
+              description: "Please hold the microphone button and speak for at least a second.",
+              variant: "destructive"
+            });
+            cleanupResources();
+            closeWebSocket();
+            return;
+          }
+          
           // Store recorded audio for potential retries
           recordedAudioRef.current = { blob: audioBlob, mimeType };
           
@@ -473,7 +494,8 @@ export function useVoiceRecording(config: VoiceRecordingConfig) {
         }
       };
 
-      mediaRecorder.start();
+      // Request data chunks every 100ms for better audio capture
+      mediaRecorder.start(100);
       
       setState(prev => ({
         ...prev,
