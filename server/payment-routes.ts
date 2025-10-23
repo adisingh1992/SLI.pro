@@ -109,7 +109,7 @@ export function registerPaymentRoutes(app: Express) {
       }
 
       // Determine price and mode based on tier
-      const amount = tier === 'premium' ? 1500 : 500; // $15 for premium, $5 for subscription (in cents)
+      const amount = tier === 'premium' ? 12900 : 3900; // $129 for premium, $39 for subscription (in cents)
       const mode = tier === 'premium' ? 'payment' : 'subscription';
 
       // Create Stripe customer if not exists
