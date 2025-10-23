@@ -2,20 +2,9 @@ import { WebSocketServer, WebSocket } from 'ws';
 import { Server } from 'http';
 import { IncomingMessage } from 'http';
 import { parse } from 'url';
-import { parse as parseCookie } from 'cookie';
 import session from 'express-session';
 import { storage } from '../storage';
 import { OpenAIRealtimeSession } from './openai-realtime';
-
-interface VoiceSession {
-  userId: number;
-  sessionNumber?: number;
-  moduleCode?: string;
-  ws: WebSocket;
-  openaiSession: OpenAIRealtimeSession | null;
-}
-
-const activeSessions = new Map<string, VoiceSession>();
 
 // Get session from request
 async function getSessionFromRequest(request: IncomingMessage): Promise<any> {
@@ -32,7 +21,6 @@ async function getSessionFromRequest(request: IncomingMessage): Promise<any> {
 
     const sessionMiddleware = session(sessionSettings);
     
-    // Create mock response object
     const mockRes: any = {
       getHeader: () => {},
       setHeader: () => {},
@@ -61,7 +49,6 @@ export function setupWebSocketServer(server: Server) {
     
     if (pathname === '/ws/voice') {
       try {
-        // Authenticate the WebSocket connection
         const userId = await getSessionFromRequest(request);
         
         if (!userId) {
@@ -70,7 +57,6 @@ export function setupWebSocketServer(server: Server) {
           return;
         }
 
-        // Store userId on request for later use
         (request as any).userId = userId;
 
         wss.handleUpgrade(request, socket, head, (ws) => {
@@ -86,131 +72,69 @@ export function setupWebSocketServer(server: Server) {
     }
   });
 
-  wss.on('connection', async (ws: WebSocket, request: IncomingMessage) => {
-    const authenticatedUserId = (request as any).userId;
-    console.log(`[WebSocket] New voice connection for user ${authenticatedUserId}`);
+  wss.on('connection', (ws: WebSocket, request: IncomingMessage) => {
+    const userId = (request as any).userId;
+    console.log(`[WebSocket] Voice connection opened for user ${userId}`);
     
-    let sessionKey: string | null = null;
-    let voiceSession: VoiceSession | null = null;
+    let openaiSession: OpenAIRealtimeSession | null = null;
 
     ws.on('message', async (data: Buffer) => {
       try {
         const message = JSON.parse(data.toString());
         
-        switch (message.type) {
-          case 'start':
-            // Validate that the requested userId matches the authenticated user
-            const { userId, sessionNumber, moduleCode } = message;
-            
-            if (userId !== authenticatedUserId) {
+        if (message.type === 'start') {
+          console.log(`[WebSocket] Starting voice session for user ${userId}`);
+          
+          // Create OpenAI session
+          openaiSession = new OpenAIRealtimeSession({
+            onTranscriptionComplete: (text: string) => {
+              ws.send(JSON.stringify({
+                type: 'transcription_complete',
+                text
+              }));
+            },
+            onError: (error: string) => {
               ws.send(JSON.stringify({
                 type: 'error',
-                message: 'Unauthorized: User ID mismatch'
+                error
               }));
-              ws.close();
-              return;
             }
-
-            // Create session key based on type (foundation session or enhancement module)
-            sessionKey = sessionNumber 
-              ? `session-${userId}-${sessionNumber}`
-              : `module-${userId}-${moduleCode}`;
-            
-            const sessionType = sessionNumber ? `session ${sessionNumber}` : `module ${moduleCode}`;
-            console.log(`[WebSocket] Starting voice ${sessionType} for user ${userId}`);
-            
-            // Create OpenAI Realtime session
-            const openaiSession = new OpenAIRealtimeSession({
-              onTranscriptionDelta: (text: string) => {
-                ws.send(JSON.stringify({
-                  type: 'transcription_delta',
-                  text
-                }));
-              },
-              onTranscriptionComplete: (text: string) => {
-                ws.send(JSON.stringify({
-                  type: 'transcription_complete',
-                  text
-                }));
-              },
-              onError: (error: string) => {
-                ws.send(JSON.stringify({
-                  type: 'error',
-                  message: error
-                }));
-              }
-            });
-
-            await openaiSession.connect();
-            
-            const newVoiceSession: VoiceSession = {
-              userId,
-              ...(sessionNumber && { sessionNumber }),
-              ...(moduleCode && { moduleCode }),
-              ws,
-              openaiSession
-            };
-            
-            voiceSession = newVoiceSession;
-            activeSessions.set(sessionKey, newVoiceSession);
-            
+          });
+          
+          ws.send(JSON.stringify({ type: 'ready' }));
+          
+        } else if (message.type === 'audio_data') {
+          console.log(`[WebSocket] Received audio data from user ${userId}`);
+          
+          if (!openaiSession) {
             ws.send(JSON.stringify({
-              type: 'session_started',
-              sessionKey
+              type: 'error',
+              error: 'Session not initialized'
             }));
-            break;
-
-          case 'audio':
-            // Forward complete audio to OpenAI
-            if (voiceSession?.openaiSession) {
-              await voiceSession.openaiSession.sendAudio(message.data, message.mimeType);
-            } else {
-              ws.send(JSON.stringify({
-                type: 'error',
-                message: 'No active voice session'
-              }));
-            }
-            break;
-
-          case 'stop':
-            // Stop recording and finalize transcription
-            if (voiceSession?.openaiSession) {
-              await voiceSession.openaiSession.stopAudio();
-            }
-            break;
-
-          case 'end':
-            // End the session
-            if (sessionKey && voiceSession?.openaiSession) {
-              await voiceSession.openaiSession.disconnect();
-              activeSessions.delete(sessionKey);
-              console.log(`[WebSocket] Voice session ended for ${sessionKey}`);
-            }
-            break;
+            return;
+          }
+          
+          // Transcribe the audio
+          await openaiSession.transcribeAudio(message.data, message.mimeType || 'audio/webm');
         }
+        
       } catch (error) {
-        console.error('[WebSocket] Error processing message:', error);
+        console.error('[WebSocket] Error:', error);
         ws.send(JSON.stringify({
           type: 'error',
-          message: error instanceof Error ? error.message : 'Unknown error'
+          error: error instanceof Error ? error.message : 'Unknown error'
         }));
       }
     });
 
-    ws.on('close', async () => {
-      console.log(`[WebSocket] Connection closed for user ${authenticatedUserId}`);
-      if (sessionKey && voiceSession?.openaiSession) {
-        await voiceSession.openaiSession.disconnect();
-        activeSessions.delete(sessionKey);
-      }
+    ws.on('close', () => {
+      console.log(`[WebSocket] Connection closed for user ${userId}`);
+      openaiSession = null;
     });
 
     ws.on('error', (error) => {
-      console.error('[WebSocket] WebSocket error:', error);
-      if (sessionKey && voiceSession?.openaiSession) {
-        voiceSession.openaiSession.disconnect();
-        activeSessions.delete(sessionKey);
-      }
+      console.error('[WebSocket] Error:', error);
+      openaiSession = null;
     });
   });
 

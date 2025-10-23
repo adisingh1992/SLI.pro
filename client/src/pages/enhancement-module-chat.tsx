@@ -479,10 +479,8 @@ export default function EnhancementModuleChatPage() {
                     <VoiceMicButton
                       isRecording={voiceRecording.isRecording}
                       isProcessing={voiceRecording.isProcessing}
-                      isRetryLimitReached={voiceRecording.isRetryLimitReached}
                       disabled={isStreaming}
                       onClick={voiceRecording.toggleRecording}
-                      onResetRetry={voiceRecording.resetRetryLimit}
                     />
                     <Textarea
                       ref={messageInputRef}

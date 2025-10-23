@@ -8,47 +8,16 @@ interface VoiceRecordingConfig {
   onTranscriptionComplete: (text: string) => void;
 }
 
-interface VoiceRecordingState {
-  isRecording: boolean;
-  isProcessing: boolean;
-  transcriptionPreview: string;
-  error: string | null;
-  retryCount: number;
-  isRetryLimitReached: boolean;
-}
-
-const MAX_RETRIES = 3;
-const PROCESSING_TIMEOUT = 30000; // 30 seconds
-const RETRY_DELAYS = [1000, 2000, 3000]; // Exponential backoff in ms
+type RecordingState = 'idle' | 'recording' | 'processing';
 
 export function useVoiceRecording(config: VoiceRecordingConfig) {
   const { toast } = useToast();
-  const [state, setState] = useState<VoiceRecordingState>({
-    isRecording: false,
-    isProcessing: false,
-    transcriptionPreview: '',
-    error: null,
-    retryCount: 0,
-    isRetryLimitReached: false
-  });
-
+  const [state, setState] = useState<RecordingState>('idle');
+  
   const wsRef = useRef<WebSocket | null>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
-  const processingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const retryTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const isRecordingRef = useRef(false);
-  const isProcessingRef = useRef(false);
-  const currentRetryCountRef = useRef(0);
-  const recordedAudioRef = useRef<{blob: Blob, mimeType: string} | null>(null);
-  const isRecorderReadyRef = useRef(false); // Track when MediaRecorder has actually started
-
-  // Sync refs with state
-  useEffect(() => {
-    isRecordingRef.current = state.isRecording;
-    isProcessingRef.current = state.isProcessing;
-    currentRetryCountRef.current = state.retryCount;
-  }, [state.isRecording, state.isProcessing, state.retryCount]);
+  const audioChunksRef = useRef<Blob[]>([]);
 
   // Get supported MIME type for cross-browser compatibility
   const getSupportedMimeType = useCallback(() => {
@@ -56,577 +25,230 @@ export function useVoiceRecording(config: VoiceRecordingConfig) {
       'audio/webm;codecs=opus',
       'audio/webm',
       'audio/ogg;codecs=opus',
-      'audio/mp4',
-      'audio/wav'
+      'audio/mp4'
     ];
     return types.find(type => MediaRecorder.isTypeSupported(type)) || 'audio/webm';
   }, []);
 
   // Clean up resources
-  const cleanupResources = useCallback(() => {
+  const cleanup = useCallback(() => {
     if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
-      try {
-        mediaRecorderRef.current.stop();
-      } catch (e) {
-        console.warn('[Voice] Error stopping media recorder:', e);
-      }
+      mediaRecorderRef.current.stop();
     }
     if (streamRef.current) {
       streamRef.current.getTracks().forEach(track => track.stop());
       streamRef.current = null;
     }
-    if (processingTimeoutRef.current) {
-      clearTimeout(processingTimeoutRef.current);
-      processingTimeoutRef.current = null;
-    }
-  }, []);
-
-  // Close WebSocket connection
-  const closeWebSocket = useCallback(() => {
     if (wsRef.current) {
-      try {
-        if (wsRef.current.readyState === WebSocket.OPEN) {
-          wsRef.current.send(JSON.stringify({ type: 'end' }));
-        }
-        wsRef.current.close();
-      } catch (e) {
-        console.warn('[Voice] Error closing WebSocket:', e);
-      }
+      wsRef.current.close();
       wsRef.current = null;
     }
+    audioChunksRef.current = [];
   }, []);
 
-  // Send audio for transcription
-  const sendAudioForTranscription = useCallback((ws: WebSocket) => {
-    const audioData = recordedAudioRef.current;
-    if (!audioData || ws.readyState !== WebSocket.OPEN) {
-      console.error('[Voice] Cannot send audio - no data or websocket not ready');
-      return false;
-    }
-
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      try {
-        const base64 = reader.result as string;
-        const audioDataStr = base64.split(',')[1];
-        
-        if (ws.readyState === WebSocket.OPEN) {
-          ws.send(JSON.stringify({
-            type: 'audio',
-            data: audioDataStr,
-            mimeType: audioData.mimeType
-          }));
-          
-          ws.send(JSON.stringify({ type: 'stop' }));
-          
-          // Clear any existing processing timeout before setting a new one
-          if (processingTimeoutRef.current) {
-            clearTimeout(processingTimeoutRef.current);
-            processingTimeoutRef.current = null;
-          }
-          
-          // Set processing timeout
-          processingTimeoutRef.current = setTimeout(() => {
-            console.warn('[Voice] Processing timeout');
-            if (isProcessingRef.current) {
-              handleRetry('processing');
-            }
-          }, PROCESSING_TIMEOUT);
-        } else {
-          console.warn('[Voice] WebSocket closed before sending audio');
-          handleRetry('connection');
-        }
-      } catch (error) {
-        console.error('[Voice] Error sending audio:', error);
-        handleRetry('connection');
-      }
-    };
-    reader.onerror = () => {
-      console.error('[Voice] Error reading audio blob');
-      handleRetry('processing');
-    };
-    reader.readAsDataURL(audioData.blob);
-    return true;
-  }, []);
-
-  // Handle retry logic
-  const handleRetry = useCallback((errorType: 'connection' | 'processing') => {
-    const newRetryCount = currentRetryCountRef.current + 1;
-    
-    if (newRetryCount > MAX_RETRIES) {
-      console.log('[Voice] Max retries reached');
-      setState(prev => ({
-        ...prev,
-        isRecording: false,
-        isProcessing: false,
-        retryCount: newRetryCount,
-        isRetryLimitReached: true,
-        error: 'retry_limit_reached'
-      }));
-      
-      toast({
-        title: "Voice Recognition Unavailable",
-        description: "Voice recognition temporarily unavailable. Please type your response or try the microphone again in a moment.",
-        variant: "destructive",
-        duration: 6000
-      });
-      
-      cleanupResources();
-      closeWebSocket();
-      recordedAudioRef.current = null;
-      return;
-    }
-
-    const delay = RETRY_DELAYS[newRetryCount - 1] || 3000;
-    
-    setState(prev => ({
-      ...prev,
-      retryCount: newRetryCount,
-      isRecording: false,
-      isProcessing: true
-    }));
-
-    toast({
-      title: "Retrying...",
-      description: `Connection issue detected. Retry ${newRetryCount}/${MAX_RETRIES}...`,
-      duration: 2000
-    });
-
-    // Clean up current WebSocket
-    closeWebSocket();
-
-    // Schedule retry - reconnect and resend audio
-    retryTimeoutRef.current = setTimeout(() => {
-      console.log(`[Voice] Retry attempt ${newRetryCount}/${MAX_RETRIES} - reconnecting...`);
-      
-      // Only retry if we have recorded audio
-      if (recordedAudioRef.current) {
-        const ws = connectWebSocket();
-        
-        // Wait for WebSocket to be ready, then send audio
-        const checkConnection = setInterval(() => {
-          if (ws.readyState === WebSocket.OPEN) {
-            clearInterval(checkConnection);
-            sendAudioForTranscription(ws);
-          } else if (ws.readyState === WebSocket.CLOSED || ws.readyState === WebSocket.CLOSING) {
-            clearInterval(checkConnection);
-            handleRetry(errorType);
-          }
-        }, 100);
-        
-        // Timeout for connection check
-        setTimeout(() => {
-          clearInterval(checkConnection);
-          if (ws.readyState !== WebSocket.OPEN) {
-            console.error('[Voice] Retry connection timeout');
-            handleRetry('connection');
-          }
-        }, 5000);
-      } else {
-        // No audio to retry, just reset
-        setState(prev => ({
-          ...prev,
-          isProcessing: false,
-          error: 'No audio to process'
-        }));
-      }
-    }, delay);
-  }, [cleanupResources, closeWebSocket, toast, sendAudioForTranscription]);
-
-  // Initialize WebSocket connection
+  // Connect WebSocket
   const connectWebSocket = useCallback(() => {
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const wsUrl = `${protocol}//${window.location.host}/ws/voice`;
+    const wsUrl = `${protocol}//${window.location.host}/ws/voice?userId=${config.userId}${config.sessionNumber ? `&sessionNumber=${config.sessionNumber}` : ''}${config.moduleCode ? `&moduleCode=${config.moduleCode}` : ''}`;
     
     const ws = new WebSocket(wsUrl);
-    let sessionStarted = false;
-    
+
     ws.onopen = () => {
       console.log('[Voice] WebSocket connected');
-      try {
-        ws.send(JSON.stringify({
-          type: 'start',
-          userId: config.userId,
-          ...(config.sessionNumber && { sessionNumber: config.sessionNumber }),
-          ...(config.moduleCode && { moduleCode: config.moduleCode })
-        }));
-      } catch (error) {
-        console.error('[Voice] Error sending start message:', error);
-        if (isProcessingRef.current && recordedAudioRef.current) {
-          handleRetry('connection');
-        }
-      }
+      ws.send(JSON.stringify({ type: 'start' }));
     };
 
     ws.onmessage = (event) => {
       try {
         const message = JSON.parse(event.data);
         
-        switch (message.type) {
-          case 'session_started':
-            console.log('[Voice] Session started');
-            sessionStarted = true;
-            // Only clear error, don't reset retry count here (it resets on successful transcription)
-            setState(prev => ({
-              ...prev,
-              error: null
-            }));
-            break;
-            
-          case 'transcription_delta':
-            setState(prev => ({
-              ...prev,
-              transcriptionPreview: prev.transcriptionPreview + message.text
-            }));
-            break;
-            
-          case 'transcription_complete':
-            console.log('[Voice] Transcription complete:', message.text);
-            
-            // Clear processing timeout
-            if (processingTimeoutRef.current) {
-              clearTimeout(processingTimeoutRef.current);
-              processingTimeoutRef.current = null;
-            }
-            
-            setState(prev => ({
-              ...prev,
-              isProcessing: false,
-              transcriptionPreview: '',
-              retryCount: 0,
-              error: null
-            }));
-            
-            // Clear recorded audio after successful transcription
-            recordedAudioRef.current = null;
-            
-            config.onTranscriptionComplete(message.text);
-            break;
-            
-          case 'error':
-            console.error('[Voice] Server error:', message.message);
-            
-            // Clear processing timeout
-            if (processingTimeoutRef.current) {
-              clearTimeout(processingTimeoutRef.current);
-              processingTimeoutRef.current = null;
-            }
-            
-            // Determine if error is recoverable
-            const isRecoverable = message.message.includes('API') || 
-                                 message.message.includes('timeout') ||
-                                 message.message.includes('temporary') ||
-                                 message.message.includes('unavailable') ||
-                                 message.message.includes('rate limit');
-            
-            if (isRecoverable && recordedAudioRef.current) {
-              handleRetry('processing');
-            } else {
-              setState(prev => ({
-                ...prev,
-                error: message.message,
-                isRecording: false,
-                isProcessing: false
-              }));
-              
-              recordedAudioRef.current = null;
-              
-              toast({
-                title: "Voice Error",
-                description: message.message,
-                variant: "destructive"
-              });
-            }
-            break;
+        if (message.type === 'transcription_complete') {
+          console.log('[Voice] Transcription:', message.text);
+          config.onTranscriptionComplete(message.text);
+          setState('idle');
+          cleanup();
+        } else if (message.type === 'error') {
+          console.error('[Voice] Error:', message.error);
+          toast({
+            title: "Voice Error",
+            description: message.error || "Failed to process voice recording",
+            variant: "destructive"
+          });
+          setState('idle');
+          cleanup();
         }
       } catch (error) {
-        console.error('[Voice] Error parsing message:', error);
+        console.error('[Voice] Failed to parse message:', error);
       }
     };
 
     ws.onerror = (error) => {
       console.error('[Voice] WebSocket error:', error);
-      
-      // Only trigger retry if we were actively processing recorded audio
-      if (isProcessingRef.current && recordedAudioRef.current) {
-        handleRetry('connection');
-      } else if (isRecordingRef.current || isProcessingRef.current) {
-        setState(prev => ({
-          ...prev,
-          error: 'Connection error',
-          isRecording: false,
-          isProcessing: false
-        }));
-        cleanupResources();
-      }
+      toast({
+        title: "Connection Error",
+        description: "Failed to connect to voice service",
+        variant: "destructive"
+      });
+      setState('idle');
+      cleanup();
     };
 
-    ws.onclose = (event) => {
-      console.log('[Voice] WebSocket closed', event.code, event.reason);
-      
-      // Only handle unexpected closures during active processing
-      if (event.code !== 1000 && isProcessingRef.current && recordedAudioRef.current) {
-        // If session never started, it's a connection issue
-        if (!sessionStarted) {
-          handleRetry('connection');
-        } else {
-          // Session was active, this is unexpected
-          handleRetry('connection');
-        }
-      } else if (event.code !== 1000 && (isRecordingRef.current || isProcessingRef.current)) {
-        cleanupResources();
-      }
+    ws.onclose = () => {
+      console.log('[Voice] WebSocket closed');
     };
 
     wsRef.current = ws;
     return ws;
-  }, [config, cleanupResources, handleRetry, toast]);
+  }, [config, cleanup, toast]);
 
   // Start recording
   const startRecording = useCallback(async () => {
-    // Check if retry limit reached
-    if (state.isRetryLimitReached) {
-      toast({
-        title: "Voice Recognition Unavailable",
-        description: "Voice recognition temporarily unavailable. Please type your response or try the microphone again in a moment.",
-        variant: "destructive",
-        duration: 6000
-      });
-      return;
-    }
-
     try {
+      console.log('[Voice] Starting recording...');
+      
       // Request microphone permission
       const stream = await navigator.mediaDevices.getUserMedia({ 
         audio: {
           channelCount: 1,
-          sampleRate: 24000,
+          sampleRate: 16000,
           echoCancellation: true,
-          noiseSuppression: true,
-          autoGainControl: true
+          noiseSuppression: true
         } 
       });
 
       streamRef.current = stream;
-      
-      // Connect WebSocket
-      const ws = connectWebSocket();
-      
-      // Wait a bit for WebSocket to be ready
-      await new Promise(resolve => setTimeout(resolve, 300));
-      
-      if (ws.readyState !== WebSocket.OPEN) {
-        console.warn('[Voice] WebSocket not ready, waiting...');
-        // Wait up to 2 seconds for connection
-        const maxWait = 2000;
-        const startTime = Date.now();
-        while (ws.readyState !== WebSocket.OPEN && Date.now() - startTime < maxWait) {
-          await new Promise(resolve => setTimeout(resolve, 100));
-        }
-        
-        if (ws.readyState !== WebSocket.OPEN) {
-          throw new Error('WebSocket connection timeout');
-        }
-      }
+      audioChunksRef.current = [];
       
       // Set up MediaRecorder
       const mimeType = getSupportedMimeType();
-      const mediaRecorder = new MediaRecorder(stream, {
-        mimeType
-      });
-
+      const mediaRecorder = new MediaRecorder(stream, { mimeType });
       mediaRecorderRef.current = mediaRecorder;
-      
-      // Collect all audio chunks
-      const audioChunks: Blob[] = [];
 
-      mediaRecorder.onstart = () => {
-        console.log('[Voice] MediaRecorder actually started, ready to record');
-        isRecorderReadyRef.current = true;
-      };
-
+      // Collect audio chunks
       mediaRecorder.ondataavailable = (event) => {
-        console.log('[Voice] ondataavailable fired, chunk size:', event.data.size);
         if (event.data.size > 0) {
-          audioChunks.push(event.data);
-          console.log('[Voice] Total chunks so far:', audioChunks.length);
+          audioChunksRef.current.push(event.data);
+          console.log('[Voice] Chunk received:', event.data.size, 'bytes');
         }
       };
 
-      mediaRecorder.onstop = async () => {
-        isRecorderReadyRef.current = false; // Reset for next recording
-        console.log('[Voice] onstop fired, audioChunks count:', audioChunks.length);
-        if (audioChunks.length > 0) {
-          const audioBlob = new Blob(audioChunks, { type: mimeType });
-          console.log('[Voice] Audio blob created - size:', audioBlob.size, 'bytes, chunks:', audioChunks.length);
-          
-          // Check if audio is too small (likely just container header)
-          if (audioBlob.size < 500) {
-            console.warn('[Voice] Audio too small:', audioBlob.size, 'bytes (threshold: 500)');
-            setState(prev => ({
-              ...prev,
-              isProcessing: false,
-              isRecording: false,
-              error: 'Recording too short'
-            }));
-            toast({
-              title: "Recording Too Short",
-              description: "Click the microphone to start speaking, then click again after at least 2 seconds to stop.",
-              variant: "destructive"
-            });
-            cleanupResources();
-            closeWebSocket();
-            return;
-          }
-          
-          console.log('[Voice] Audio blob valid, storing for transcription');
-          
-          // Store recorded audio for potential retries
-          recordedAudioRef.current = { blob: audioBlob, mimeType };
-          
-          // Send for transcription
-          if (ws.readyState === WebSocket.OPEN) {
-            sendAudioForTranscription(ws);
-          } else {
-            console.warn('[Voice] WebSocket closed, initiating retry');
-            handleRetry('connection');
-          }
-        } else {
-          setState(prev => ({
-            ...prev,
-            isProcessing: false,
-            error: 'No audio recorded'
-          }));
+      // Handle recording stop
+      mediaRecorder.onstop = () => {
+        console.log('[Voice] Recording stopped, total chunks:', audioChunksRef.current.length);
+        
+        if (audioChunksRef.current.length === 0) {
           toast({
-            title: "No Audio Detected",
-            description: "Please try speaking again and ensure your microphone is working.",
+            title: "No Audio",
+            description: "No audio was recorded. Please try again.",
             variant: "destructive"
           });
+          setState('idle');
+          cleanup();
+          return;
         }
+
+        // Create audio blob and send to backend
+        const audioBlob = new Blob(audioChunksRef.current, { type: mimeType });
+        console.log('[Voice] Audio blob size:', audioBlob.size, 'bytes');
+
+        if (audioBlob.size < 100) {
+          toast({
+            title: "Recording Too Short",
+            description: "Please speak for at least 2 seconds and try again.",
+            variant: "destructive"
+          });
+          setState('idle');
+          cleanup();
+          return;
+        }
+
+        // Send audio via WebSocket
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          const base64 = reader.result as string;
+          const audioData = base64.split(',')[1];
+          
+          if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+            console.log('[Voice] Sending audio to backend...');
+            wsRef.current.send(JSON.stringify({
+              type: 'audio_data',
+              data: audioData,
+              mimeType
+            }));
+          } else {
+            toast({
+              title: "Connection Error",
+              description: "Lost connection to voice service",
+              variant: "destructive"
+            });
+            setState('idle');
+            cleanup();
+          }
+        };
+        reader.readAsDataURL(audioBlob);
       };
 
-      // Start recording without timeslice - let browser buffer all audio
-      // We'll flush it with requestData() when stopping
+      // Connect WebSocket and start recording
+      connectWebSocket();
       mediaRecorder.start();
+      setState('recording');
       
-      setState(prev => ({
-        ...prev,
-        isRecording: true,
-        error: null,
-        transcriptionPreview: ''
-      }));
-
       if ('vibrate' in navigator) {
         navigator.vibrate(50);
       }
 
     } catch (error) {
       console.error('[Voice] Error starting recording:', error);
-      const errorMessage = error instanceof Error ? error.message : 'Failed to access microphone';
-      
-      // Microphone permission errors are not retryable
-      setState(prev => ({
-        ...prev,
-        error: errorMessage,
-        isRecording: false
-      }));
-      
       toast({
         title: "Microphone Error",
-        description: errorMessage,
+        description: error instanceof Error ? error.message : "Failed to access microphone",
         variant: "destructive"
       });
-      
-      cleanupResources();
-      closeWebSocket();
+      cleanup();
     }
-  }, [state.isRetryLimitReached, connectWebSocket, getSupportedMimeType, toast, handleRetry, cleanupResources, closeWebSocket, sendAudioForTranscription]);
+  }, [getSupportedMimeType, connectWebSocket, cleanup, toast]);
 
   // Stop recording
   const stopRecording = useCallback(() => {
-    // Only stop if recorder has actually started (transitioned to "recording" state)
-    if (!isRecorderReadyRef.current) {
-      console.warn('[Voice] Recorder not ready yet, ignoring stop request');
-      toast({
-        title: "Recording Starting",
-        description: "Please wait a moment for recording to begin, then click again to stop.",
-        duration: 2000
-      });
-      return;
-    }
+    console.log('[Voice] Stopping recording...');
     
     if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
-      console.log('[Voice] Stopping recording, requesting data flush...');
-      // Request data to flush the buffer before stopping
-      // This ensures ondataavailable fires with all buffered audio
-      try {
-        mediaRecorderRef.current.requestData();
-      } catch (e) {
-        console.warn('[Voice] Error flushing audio buffer:', e);
-      }
+      mediaRecorderRef.current.stop();
+      setState('processing');
       
-      // Give browsers time for ondataavailable to fire (300ms for better compatibility)
-      setTimeout(() => {
-        if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
-          console.log('[Voice] Now calling stop() on MediaRecorder');
-          mediaRecorderRef.current.stop();
-        }
-      }, 300);
+      if ('vibrate' in navigator) {
+        navigator.vibrate(50);
+      }
     }
-
+    
+    // Stop microphone stream
     if (streamRef.current) {
       streamRef.current.getTracks().forEach(track => track.stop());
       streamRef.current = null;
     }
-
-    setState(prev => ({
-      ...prev,
-      isRecording: false,
-      isProcessing: true
-    }));
-
-    if ('vibrate' in navigator) {
-      navigator.vibrate(50);
-    }
-  }, [toast]);
+  }, []);
 
   // Toggle recording
   const toggleRecording = useCallback(() => {
-    if (state.isRecording) {
+    if (state === 'recording') {
       stopRecording();
-    } else {
+    } else if (state === 'idle') {
       startRecording();
     }
-  }, [state.isRecording, startRecording, stopRecording]);
-
-  // Reset retry limit (allow user to try again after some time)
-  const resetRetryLimit = useCallback(() => {
-    setState(prev => ({
-      ...prev,
-      retryCount: 0,
-      isRetryLimitReached: false,
-      error: null
-    }));
-    recordedAudioRef.current = null;
-  }, []);
+  }, [state, startRecording, stopRecording]);
 
   // Cleanup on unmount
   useEffect(() => {
     return () => {
-      if (retryTimeoutRef.current) {
-        clearTimeout(retryTimeoutRef.current);
-      }
-      cleanupResources();
-      closeWebSocket();
-      recordedAudioRef.current = null;
+      cleanup();
     };
-  }, [cleanupResources, closeWebSocket]);
+  }, [cleanup]);
 
   return {
-    ...state,
-    startRecording,
-    stopRecording,
+    isRecording: state === 'recording',
+    isProcessing: state === 'processing',
     toggleRecording,
-    resetRetryLimit
+    startRecording,
+    stopRecording
   };
 }
