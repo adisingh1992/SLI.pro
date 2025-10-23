@@ -41,6 +41,7 @@ export function useVoiceRecording(config: VoiceRecordingConfig) {
   const isProcessingRef = useRef(false);
   const currentRetryCountRef = useRef(0);
   const recordedAudioRef = useRef<{blob: Blob, mimeType: string} | null>(null);
+  const isRecorderReadyRef = useRef(false); // Track when MediaRecorder has actually started
 
   // Sync refs with state
   useEffect(() => {
@@ -439,6 +440,11 @@ export function useVoiceRecording(config: VoiceRecordingConfig) {
       // Collect all audio chunks
       const audioChunks: Blob[] = [];
 
+      mediaRecorder.onstart = () => {
+        console.log('[Voice] MediaRecorder actually started, ready to record');
+        isRecorderReadyRef.current = true;
+      };
+
       mediaRecorder.ondataavailable = (event) => {
         console.log('[Voice] ondataavailable fired, chunk size:', event.data.size);
         if (event.data.size > 0) {
@@ -448,6 +454,7 @@ export function useVoiceRecording(config: VoiceRecordingConfig) {
       };
 
       mediaRecorder.onstop = async () => {
+        isRecorderReadyRef.current = false; // Reset for next recording
         console.log('[Voice] onstop fired, audioChunks count:', audioChunks.length);
         if (audioChunks.length > 0) {
           const audioBlob = new Blob(audioChunks, { type: mimeType });
@@ -464,7 +471,7 @@ export function useVoiceRecording(config: VoiceRecordingConfig) {
             }));
             toast({
               title: "Recording Too Short",
-              description: "Please hold the microphone button and speak for at least a second.",
+              description: "Click the microphone to start speaking, then click again after at least 2 seconds to stop.",
               variant: "destructive"
             });
             cleanupResources();
@@ -537,7 +544,18 @@ export function useVoiceRecording(config: VoiceRecordingConfig) {
 
   // Stop recording
   const stopRecording = useCallback(() => {
-    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+    // Only stop if recorder has actually started (transitioned to "recording" state)
+    if (!isRecorderReadyRef.current) {
+      console.warn('[Voice] Recorder not ready yet, ignoring stop request');
+      toast({
+        title: "Recording Starting",
+        description: "Please wait a moment for recording to begin, then click again to stop.",
+        duration: 2000
+      });
+      return;
+    }
+    
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
       console.log('[Voice] Stopping recording, requesting data flush...');
       // Request data to flush the buffer before stopping
       // This ensures ondataavailable fires with all buffered audio
@@ -549,7 +567,7 @@ export function useVoiceRecording(config: VoiceRecordingConfig) {
       
       // Give browsers time for ondataavailable to fire (300ms for better compatibility)
       setTimeout(() => {
-        if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+        if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
           console.log('[Voice] Now calling stop() on MediaRecorder');
           mediaRecorderRef.current.stop();
         }
@@ -570,7 +588,7 @@ export function useVoiceRecording(config: VoiceRecordingConfig) {
     if ('vibrate' in navigator) {
       navigator.vibrate(50);
     }
-  }, []);
+  }, [toast]);
 
   // Toggle recording
   const toggleRecording = useCallback(() => {
