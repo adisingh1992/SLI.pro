@@ -285,14 +285,19 @@ export default function HomePage() {
   // Check if any foundation sessions are completed
   const hasFoundationSessionsCompleted = foundationSessions && foundationSessions.some(session => session.status === 'completed');
   
+  // Check if all 3 foundation sessions are completed
+  const allFoundationSessionsCompleted = foundationSessions && 
+    foundationSessions.length >= 3 && 
+    foundationSessions.filter(session => session.status === 'completed').length === 3;
+  
   const foundationSessionsBadge = getStatusBadge(
     isTierAllowed('step3') && !!userProfile?.questionnaire && userProfile.questionnaire.isDraft !== true && !!hasRequiredDocuments,
     !!hasFoundationSessionsCompleted
   );
   
   const liveCoachingBadge = getStatusBadge(
-    isTierAllowed('step4') && !!hasFoundationSessionsCompleted,
-    false // Always available once foundation sessions are completed
+    isTierAllowed('step4') && !!allFoundationSessionsCompleted,
+    false // Always available once all 3 foundation sessions are completed
   );
 
   // Helper functions for foundation sessions
