@@ -846,19 +846,19 @@ export default function HomePage() {
 
           {/* Freshness Report Section */}
           <Card className={`overflow-hidden shadow-sm flex flex-col h-full ${
-            !isTierAllowed('step5') || !hasFoundationSessionsCompleted
+            !isTierAllowed('step5') || !allFoundationSessionsCompleted
               ? "border-gray-200 opacity-75"
               : "border-info/20"
           }`}>
             <CardHeader className={`pb-4 ${
-              !isTierAllowed('step5') || !hasFoundationSessionsCompleted
+              !isTierAllowed('step5') || !allFoundationSessionsCompleted
                 ? "bg-gray-50"
                 : "bg-green-50"
             }`}>
               <div className="flex items-center justify-between">
                 <div className="flex items-center">
                   <div className={`p-2 rounded-full mr-3 ${
-                    !isTierAllowed('step5') || !hasFoundationSessionsCompleted
+                    !isTierAllowed('step5') || !allFoundationSessionsCompleted
                       ? "bg-gray-100 text-gray-500"
                       : "bg-green-100 text-green-600"
                   }`}>
@@ -873,15 +873,15 @@ export default function HomePage() {
               <CardDescription className="mt-2">
                 {!isTierAllowed('step5')
                   ? "Upgrade to Premium to unlock Brand Intelligence Report"
-                  : !hasFoundationSessionsCompleted
-                    ? "Complete at least one foundation session to unlock freshness report"
+                  : !allFoundationSessionsCompleted
+                    ? "Complete all 3 foundation sessions to unlock freshness report"
                     : latestFreshnessReport
                       ? `Last report: ${new Date(latestFreshnessReport.createdAt).toLocaleDateString()}`
                       : "Understand how your digital presence aligns with your career goals"}
               </CardDescription>
             </CardHeader>
             <CardContent className="p-5 flex-grow">
-              <div className={`${!isTierAllowed('step5') || !hasFoundationSessionsCompleted ? "opacity-50" : ""}`}>
+              <div className={`${!isTierAllowed('step5') || !allFoundationSessionsCompleted ? "opacity-50" : ""}`}>
                 <ul className="space-y-3 text-sm">
                   <li className="flex items-center gap-2">
                     <span className={`mr-2 ${userProfile?.questionnaire && userProfile.questionnaire.isDraft !== true ? 'text-success' : 'text-muted-foreground/50'}`}>
@@ -900,11 +900,11 @@ export default function HomePage() {
                     </span>
                   </li>
                   <li className="flex items-center gap-2">
-                    <span className={`mr-2 ${hasFoundationSessionsCompleted ? 'text-success' : 'text-muted-foreground/50'}`}>
-                      {hasFoundationSessionsCompleted ? '✓' : '→'}
+                    <span className={`mr-2 ${allFoundationSessionsCompleted ? 'text-success' : 'text-muted-foreground/50'}`}>
+                      {allFoundationSessionsCompleted ? '✓' : '→'}
                     </span>
-                    <span className={`${!hasFoundationSessionsCompleted ? "text-muted-foreground/50" : "text-muted-foreground"}`}>
-                      Complete at least one foundation session
+                    <span className={`${!allFoundationSessionsCompleted ? "text-muted-foreground/50" : "text-muted-foreground"}`}>
+                      Complete all 3 foundation sessions
                     </span>
                   </li>
                 </ul>
@@ -914,17 +914,17 @@ export default function HomePage() {
               <Button
                 variant="outline"
                 className={`w-full ${
-                  !isTierAllowed('step5') || !hasFoundationSessionsCompleted
+                  !isTierAllowed('step5') || !allFoundationSessionsCompleted
                     ? "border-blue-500 text-blue-600 hover:bg-blue-50 cursor-not-allowed"
                     : "border-green-500 text-green-700 hover:bg-green-50"
                 }`}
                 onClick={() => {
-                  if (isTierAllowed('step5') && hasFoundationSessionsCompleted) {
+                  if (isTierAllowed('step5') && allFoundationSessionsCompleted) {
                     scrollToTop();
                     navigate("/freshness-report");
                   }
                 }}
-                disabled={!isTierAllowed('step5') || !hasFoundationSessionsCompleted}
+                disabled={!isTierAllowed('step5') || !allFoundationSessionsCompleted}
               >
                 {latestFreshnessReport ? "View Report" : "Generate Report"}
                 <ArrowRight className="ml-2 h-4 w-4" />
