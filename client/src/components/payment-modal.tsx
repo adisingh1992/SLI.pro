@@ -104,7 +104,7 @@ export function PaymentModal({ open, onOpenChange, currentTier }: PaymentModalPr
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[700px] max-h-[90vh]" data-testid="dialog-payment">
+      <DialogContent className="max-w-[95vw] sm:max-w-[900px]" data-testid="dialog-payment">
         <DialogHeader>
           <DialogTitle data-testid="text-payment-title">
             {selectedTier ? 'Complete Your Purchase' : 'Choose Your Plan'}
@@ -118,11 +118,11 @@ export function PaymentModal({ open, onOpenChange, currentTier }: PaymentModalPr
         </DialogHeader>
 
         {!selectedTier ? (
-          <div className="grid gap-4 py-4 max-h-[70vh] overflow-y-auto">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3 py-3">
             {tiers.map((tier) => (
               <Card
                 key={tier.id}
-                className={`p-4 sm:p-6 transition-all border-2 ${
+                className={`p-3 transition-all border-2 flex flex-col ${
                   tier.id === 'free'
                     ? 'border-muted bg-muted/20 cursor-default'
                     : tier.disabled 
@@ -132,43 +132,41 @@ export function PaymentModal({ open, onOpenChange, currentTier }: PaymentModalPr
                 onClick={() => tier.id !== 'free' && !tier.disabled && handleTierSelect(tier.id)}
                 data-testid={`card-tier-${tier.id}`}
               >
-                <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-3 mb-4">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-1">
-                      <h3 className="text-lg font-semibold" data-testid={`text-tier-name-${tier.id}`}>
-                        {tier.name}
-                      </h3>
-                      {tier.isCurrent && (
-                        <span className="px-2 py-0.5 bg-primary/10 text-primary text-xs font-medium rounded-full">
-                          Current
-                        </span>
-                      )}
-                    </div>
-                    <p className="text-sm text-muted-foreground" data-testid={`text-tier-description-${tier.id}`}>
-                      {tier.description}
-                    </p>
+                <div className="mb-3">
+                  <div className="flex items-center gap-1.5 mb-1">
+                    <h3 className="text-base font-semibold" data-testid={`text-tier-name-${tier.id}`}>
+                      {tier.name}
+                    </h3>
+                    {tier.isCurrent && (
+                      <span className="px-1.5 py-0.5 bg-primary/10 text-primary text-[10px] font-medium rounded-full">
+                        Current
+                      </span>
+                    )}
                   </div>
-                  <div className="text-left sm:text-right">
-                    <div className="text-2xl font-bold" data-testid={`text-tier-price-${tier.id}`}>
+                  <p className="text-xs text-muted-foreground mb-2" data-testid={`text-tier-description-${tier.id}`}>
+                    {tier.description}
+                  </p>
+                  <div className="mb-2">
+                    <div className="text-xl font-bold" data-testid={`text-tier-price-${tier.id}`}>
                       {tier.price}
                     </div>
                     {tier.period && (
-                      <div className="text-sm text-muted-foreground">
+                      <div className="text-xs text-muted-foreground">
                         {tier.period}
                       </div>
                     )}
                   </div>
                 </div>
-                <ul className="space-y-2">
+                <ul className="space-y-1.5 flex-grow">
                   {tier.features.map((feature, index) => (
-                    <li key={index} className="flex items-start text-sm" data-testid={`text-feature-${tier.id}-${index}`}>
-                      <Check className="h-4 w-4 mr-2 mt-0.5 text-primary flex-shrink-0" />
+                    <li key={index} className="flex items-start text-xs leading-tight" data-testid={`text-feature-${tier.id}-${index}`}>
+                      <Check className="h-3 w-3 mr-1.5 mt-0.5 text-primary flex-shrink-0" />
                       <span>{feature}</span>
                     </li>
                   ))}
                 </ul>
                 {tier.disabled && tier.id !== 'free' && !tier.isCurrent && (
-                  <div className="mt-4 text-sm text-muted-foreground text-center" data-testid={`text-tier-status-${tier.id}`}>
+                  <div className="mt-3 text-xs text-muted-foreground text-center" data-testid={`text-tier-status-${tier.id}`}>
                     Already Subscribed
                   </div>
                 )}
