@@ -68,6 +68,7 @@ export default function EnhancementModuleChatPage() {
   const [isStreaming, setIsStreaming] = useState(false);
   const [streamingResponse, setStreamingResponse] = useState('');
   const [optimisticMessage, setOptimisticMessage] = useState<EnhancementModuleMessage | null>(null);
+  const [allowContinue, setAllowContinue] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messageInputRef = useRef<HTMLTextAreaElement>(null);
   const messageCountBeforeStreamRef = useRef<number>(0);
@@ -489,7 +490,7 @@ export default function EnhancementModuleChatPage() {
             </ScrollArea>
 
             {/* Message Input */}
-            {module.status === 'in_progress' && (
+            {(module.status === 'in_progress' || (module.status === 'completed' && allowContinue)) && (
               <div className="border-t p-6">
                 <form onSubmit={handleSendMessage}>
                   <div className="flex gap-2">
@@ -547,13 +548,23 @@ export default function EnhancementModuleChatPage() {
               </div>
             )}
 
-            {/* Completed module message */}
-            {module.status === 'completed' && (
-              <div className="border-t p-6 text-center">
-                <CheckCircle className="h-6 w-6 text-green-600 mx-auto mb-2" />
-                <p className="text-sm text-muted-foreground">
-                  This module has been completed. You can review the conversation above.
-                </p>
+            {/* Completed module message with Continue option */}
+            {module.status === 'completed' && !allowContinue && (
+              <div className="border-t p-6 text-center space-y-4">
+                <div>
+                  <CheckCircle className="h-6 w-6 text-green-600 mx-auto mb-2" />
+                  <p className="text-sm text-muted-foreground">
+                    This module has been completed. You can review the conversation above.
+                  </p>
+                </div>
+                <Button 
+                  onClick={() => setAllowContinue(true)}
+                  variant="outline"
+                  data-testid="button-continue-chat"
+                >
+                  <MessageSquare className="h-4 w-4 mr-2" />
+                  Continue the chat
+                </Button>
               </div>
             )}
           </CardContent>
