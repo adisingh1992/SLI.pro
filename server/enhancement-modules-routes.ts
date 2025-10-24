@@ -782,10 +782,10 @@ export function setupEnhancementModulesRoutes(app: Express) {
           return res.status(404).json({ error: "Module not found" });
         }
 
-        if (module.status !== "in_progress") {
+        if (module.status !== "in_progress" && module.status !== "completed") {
           return res
             .status(400)
-            .json({ error: "Module must be in progress to send messages" });
+            .json({ error: "Module must be in progress or completed to send messages" });
         }
 
         const { content } = req.body;
