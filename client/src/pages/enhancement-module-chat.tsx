@@ -460,7 +460,7 @@ export default function EnhancementModuleChatPage() {
                     </div>
                     <div className="flex-1 max-w-[calc(100%-6rem)]">
                       <div className="bg-muted rounded-lg p-4 mr-8 break-words">
-                        <p className="text-sm break-words">{streamingResponse}</p>
+                        <p className="text-sm whitespace-pre-wrap break-words">{streamingResponse}</p>
                       </div>
                       <p className="text-xs text-muted-foreground mt-1">SLI • typing...</p>
                     </div>
