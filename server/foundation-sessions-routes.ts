@@ -177,7 +177,7 @@ NOTE: The user has completed Sessions 1 & 2 covering functional identity and cre
 function getInitialGuidanceMessage(sessionNumber: number): string | null {
   switch (sessionNumber) {
     case 1:
-      return "Hello, I'm here to help you identify your primary business function (Finance, Operations, Sales, Marketing, or Product). Let's start by discussing your current role and what energizes you most about work.";
+      return "Welcome to your first foundation session. Over the next 8-10 minutes, this conversation will identify the primary business function that defines how executives perceive and value the work being done. This functional clarity is essential for building a credible professional brand.\n\nTip: Click the microphone icon to speak responses naturally. Voice input creates a more conversational experience and allows for less filtered thinking. The system will transcribe automatically.";
     case 2:
       return "If I'm writing you a $1M check because you're credible, what SPECIFIC expertise am I investing in? Think like a ruthless, revenue-only investor: what would they throw $1M at YOU to do?";
     case 3:
