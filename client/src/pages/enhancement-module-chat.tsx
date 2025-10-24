@@ -413,7 +413,7 @@ export default function EnhancementModuleChatPage() {
                         ? 'bg-primary text-primary-foreground' 
                         : 'bg-muted text-muted-foreground'
                     }`}>
-                      {message.role === 'user' ? 'U' : 'S'}
+                      {message.role === 'user' ? (user?.firstName?.[0]?.toUpperCase() || 'U') : 'S'}
                     </div>
                     <div className={`flex-1 ${message.role === 'user' ? 'max-w-[calc(100%-6rem)]' : 'max-w-[calc(100%-6rem)]'}`}>
                       <div className={`rounded-lg p-4 break-words ${
@@ -439,7 +439,7 @@ export default function EnhancementModuleChatPage() {
                     data-testid="message-optimistic"
                   >
                     <div className="w-8 h-8 rounded-full flex items-center justify-center bg-primary text-primary-foreground">
-                      U
+                      {user?.firstName?.[0]?.toUpperCase() || 'U'}
                     </div>
                     <div className="flex-1 max-w-[calc(100%-6rem)]">
                       <div className="rounded-lg p-4 break-words bg-primary text-primary-foreground ml-8">
