@@ -36,6 +36,7 @@ export default function FoundationSessionChatPage() {
   const [optimisticMessage, setOptimisticMessage] = useState<FoundationSessionMessage | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messageInputRef = useRef<HTMLTextAreaElement>(null);
+  const messageCountBeforeStreamRef = useRef<number>(0);
 
   // Voice recording hook
   const voiceRecording = useVoiceRecording({
@@ -92,6 +93,9 @@ export default function FoundationSessionChatPage() {
 
     setIsStreaming(true);
     setStreamingResponse('');
+    
+    // Track message count before streaming starts
+    messageCountBeforeStreamRef.current = sessionData?.messages?.length || 0;
     
     // Store the message content for optimistic display
     const messageContent = content.trim();
@@ -201,9 +205,9 @@ export default function FoundationSessionChatPage() {
       });
     } finally {
       setIsStreaming(false);
-      setStreamingResponse('');
+      // Don't clear streamingResponse here - let useEffect handle it when real message appears
       setCurrentMessage('');
-      // Note: optimisticMessage is cleared by useEffect when real message appears
+      // Note: optimisticMessage and streamingResponse are cleared by useEffect when real messages appear
       // Refocus the input after clearing the message
       setTimeout(() => {
         messageInputRef.current?.focus();
@@ -211,7 +215,7 @@ export default function FoundationSessionChatPage() {
     }
   };
 
-  // Clear optimistic message when real message appears in fetched data
+  // Clear optimistic message and streaming response when real messages appear in fetched data
   useEffect(() => {
     if (optimisticMessage && sessionData?.messages) {
       const messageExists = sessionData.messages.some(msg => msg.id === optimisticMessage.id);
@@ -219,7 +223,20 @@ export default function FoundationSessionChatPage() {
         setOptimisticMessage(null);
       }
     }
-  }, [sessionData?.messages, optimisticMessage]);
+    
+    // Clear streaming response when new assistant message appears
+    if (streamingResponse && sessionData?.messages) {
+      // Check if we have more messages than before streaming started
+      const currentMessageCount = sessionData.messages.length;
+      if (currentMessageCount > messageCountBeforeStreamRef.current) {
+        const lastMessage = sessionData.messages[sessionData.messages.length - 1];
+        // If the last message is from assistant, the stream has been saved
+        if (lastMessage.role === 'assistant') {
+          setStreamingResponse('');
+        }
+      }
+    }
+  }, [sessionData?.messages, optimisticMessage, streamingResponse]);
 
   // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
