@@ -34,6 +34,7 @@ export default function FoundationSessionChatPage() {
   const [isStreaming, setIsStreaming] = useState(false);
   const [streamingResponse, setStreamingResponse] = useState('');
   const [optimisticMessage, setOptimisticMessage] = useState<FoundationSessionMessage | null>(null);
+  const [allowContinue, setAllowContinue] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messageInputRef = useRef<HTMLTextAreaElement>(null);
   const messageCountBeforeStreamRef = useRef<number>(0);
@@ -478,7 +479,7 @@ export default function FoundationSessionChatPage() {
             </ScrollArea>
 
             {/* Message Input */}
-            {session.status === 'in_progress' && (
+            {(session.status === 'in_progress' || (session.status === 'completed' && allowContinue)) && (
               <div className="border-t p-6">
                 <form onSubmit={handleSendMessage}>
                   <div className="flex gap-2">
@@ -536,13 +537,23 @@ export default function FoundationSessionChatPage() {
               </div>
             )}
 
-            {/* Completed session message */}
-            {session.status === 'completed' && (
-              <div className="border-t p-6 text-center">
-                <CheckCircle className="h-6 w-6 text-green-600 mx-auto mb-2" />
-                <p className="text-sm text-muted-foreground">
-                  This session has been completed. You can review the conversation above.
-                </p>
+            {/* Completed session message with Continue option */}
+            {session.status === 'completed' && !allowContinue && (
+              <div className="border-t p-6 text-center space-y-4">
+                <div>
+                  <CheckCircle className="h-6 w-6 text-green-600 mx-auto mb-2" />
+                  <p className="text-sm text-muted-foreground">
+                    This session has been completed. You can review the conversation above.
+                  </p>
+                </div>
+                <Button 
+                  onClick={() => setAllowContinue(true)}
+                  variant="outline"
+                  data-testid="button-continue-chat"
+                >
+                  <MessageSquare className="h-4 w-4 mr-2" />
+                  Continue the chat
+                </Button>
               </div>
             )}
           </CardContent>
