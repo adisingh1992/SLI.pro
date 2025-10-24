@@ -179,7 +179,7 @@ function getInitialGuidanceMessage(sessionNumber: number): string | null {
     case 1:
       return "Welcome to your first foundation session. Over the next 8-10 minutes, this conversation will identify the primary business function that defines how executives perceive and value the work being done. This functional clarity is essential for building a credible professional brand.\n\nTip: Click the microphone icon to speak responses naturally. Voice input creates a more conversational experience and allows for less filtered thinking. The system will transcribe automatically.";
     case 2:
-      return "If I'm writing you a $1M check because you're credible, what SPECIFIC expertise am I investing in? Think like a ruthless, revenue-only investor: what would they throw $1M at YOU to do?";
+      return "Building on the functional identity established in Session 1, this session assesses professional credibility through a rigorous investor lens. The questions may feel challenging—that's intentional. This 'ruthless revenue investor' framework forces specificity and reveals gaps between generic claims and measurable proof.\n\nOver the next 8-10 minutes, expect pushback on vague responses. The goal is extracting concrete evidence that validates expertise and justifies premium positioning.\n\nIf I'm writing you a $1M check because you're credible, what SPECIFIC expertise am I investing in? Think like a ruthless, revenue-only investor: what would they throw $1M at YOU to do?";
     case 3:
       return "'I led cross-functional teams' means nothing by itself. We'll excavate the HOW, WHY, STRUGGLE, and INSIGHT so your stories prove credibility and fuel your brand.";
     default:
