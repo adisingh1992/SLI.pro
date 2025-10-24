@@ -171,6 +171,40 @@ CRITICAL: The user has already provided this information in their questionnaire.
 `;
 }
 
+// Format resume documents into a summary for system prompt context
+async function formatResumeSummary(userId: number): Promise<string> {
+  try {
+    const documents = await storage.getDocuments(userId);
+    const resumeDocuments = documents.filter(doc => doc.type === 'resume');
+    
+    if (!resumeDocuments || resumeDocuments.length === 0) {
+      return '';
+    }
+
+    // Use the most recent resume (last uploaded)
+    const resume = resumeDocuments[resumeDocuments.length - 1];
+    
+    if (!resume.analysisContent && !resume.name) {
+      return '';
+    }
+
+    return `
+═══════════════════════════════════════════════════════════════
+USER RESUME SUMMARY
+═══════════════════════════════════════════════════════════════
+
+Document Name: ${resume.name}
+${resume.analysisContent ? `\nResume Content Analysis:\n${resume.analysisContent}` : ''}
+
+CRITICAL: The user has already uploaded their resume. Use this information to provide personalized coaching based on their actual experience and background. Reference specific details from their resume naturally in your guidance.
+═══════════════════════════════════════════════════════════════
+`;
+  } catch (error) {
+    console.error('Error formatting resume summary:', error);
+    return '';
+  }
+}
+
 // Format foundation sessions 1, 2, 3 data into a concise combined summary
 async function formatFoundationSessionsSummary(userId: number): Promise<string> {
   try {
@@ -816,6 +850,9 @@ export function setupEnhancementModulesRoutes(app: Express) {
         const questionnaire = await storage.getQuestionnaire(userId);
         const questionnaireSummary = formatQuestionnaireSummary(questionnaire);
 
+        // Fetch resume summary for context
+        const resumeSummary = await formatResumeSummary(userId);
+
         // Fetch foundation sessions summary for context
         const foundationSessionsSummary = await formatFoundationSessionsSummary(userId);
 
@@ -852,7 +889,7 @@ export function setupEnhancementModulesRoutes(app: Express) {
             ? formatModuleSummary("A", previousModuleData)
             : "";
           
-          return `${questionnaireSummary}${foundationSessionsSummary}${previousSummary}You are a Digital Behavior & LinkedIn Content Strategy Coach. Your goal is to help a professional transform a vague online presence into a focused, credible brand—using fast visual tests, a structured audit, barrier-specific interventions, and a simple content system that fits real life.
+          return `${resumeSummary}${questionnaireSummary}${foundationSessionsSummary}${previousSummary}You are a Digital Behavior & LinkedIn Content Strategy Coach. Your goal is to help a professional transform a vague online presence into a focused, credible brand—using fast visual tests, a structured audit, barrier-specific interventions, and a simple content system that fits real life.
 
 STYLE
 - Warm, direct, practical. Plain English. One short question at a time.
@@ -916,7 +953,7 @@ Only when ALL 12 steps are thoroughly covered should you provide final deliverab
             ? formatModuleSummary("A", previousModuleData)
             : "";
           
-          return `${questionnaireSummary}${foundationSessionsSummary}${previousSummary}You are a Personal Brand & Network Positioning Coach. Your job is to turn a vague online presence into a focused, credible brand AND a strategic, opportunity-rich network.
+          return `${resumeSummary}${questionnaireSummary}${foundationSessionsSummary}${previousSummary}You are a Personal Brand & Network Positioning Coach. Your job is to turn a vague online presence into a focused, credible brand AND a strategic, opportunity-rich network.
 
 STYLE
 - Warm, direct, practical. Plain English.
@@ -1077,7 +1114,7 @@ Only when ALL deliverables are thoroughly documented should you end naturally.`;
             ? formatModuleSummary("B", previousModuleData)
             : "";
           
-          return `${questionnaireSummary}${foundationSessionsSummary}${previousSummary}You are a Career Aspiration Alignment Coach (Module C). Your job is to convert a client's long-term career aspiration into a realistic, evidence-backed progression pathway—identifying gaps, defining stepping stones, and locking an actionable plan with timelines and metrics.
+          return `${resumeSummary}${questionnaireSummary}${foundationSessionsSummary}${previousSummary}You are a Career Aspiration Alignment Coach (Module C). Your job is to convert a client's long-term career aspiration into a realistic, evidence-backed progression pathway—identifying gaps, defining stepping stones, and locking an actionable plan with timelines and metrics.
 
 STYLE
 - Warm, direct, and brutally honest when needed. Plain English.

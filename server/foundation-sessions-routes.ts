@@ -75,6 +75,40 @@ ${nextStepsText}
   return '';
 }
 
+// Format resume documents into a summary for system prompt context
+async function formatResumeSummary(userId: number): Promise<string> {
+  try {
+    const documents = await storage.getDocuments(userId);
+    const resumeDocuments = documents.filter(doc => doc.type === 'resume');
+    
+    if (!resumeDocuments || resumeDocuments.length === 0) {
+      return '';
+    }
+
+    // Use the most recent resume (last uploaded)
+    const resume = resumeDocuments[resumeDocuments.length - 1];
+    
+    if (!resume.analysisContent && !resume.name) {
+      return '';
+    }
+
+    return `
+═══════════════════════════════════════════════════════════════
+USER RESUME SUMMARY
+═══════════════════════════════════════════════════════════════
+
+Document Name: ${resume.name}
+${resume.analysisContent ? `\nResume Content Analysis:\n${resume.analysisContent}` : ''}
+
+CRITICAL: The user has already uploaded their resume. Use this information to provide personalized coaching based on their actual experience and background. Reference specific details from their resume naturally in your guidance.
+═══════════════════════════════════════════════════════════════
+`;
+  } catch (error) {
+    console.error('Error formatting resume summary:', error);
+    return '';
+  }
+}
+
 // Format questionnaire data into analysis context
 function formatQuestionnaireContext(questionnaire: any): string {
   if (!questionnaire) {
@@ -777,6 +811,9 @@ export function registerFoundationSessionsRoutes(app: Express) {
       // Get user profile data for context
       const userProfile = await storage.getUserProfile(userId);
 
+      // Get resume summary for context
+      const resumeSummary = await formatResumeSummary(userId);
+
       // Get previous session's completion data if available
       let previousSessionData = null;
       if (sessionNumber > 1) {
@@ -798,14 +835,19 @@ export function registerFoundationSessionsRoutes(app: Express) {
       let assistantContent = '';
 
       // Generate Foundation Session-specific system prompt
-      const getFoundationSessionSystemPrompt = (previousSessionData?: any) => {
+      const getFoundationSessionSystemPrompt = (previousSessionData?: any, resumeSummary?: string) => {
         let basePrompt = '';
+        
+        // Add resume summary if available
+        if (resumeSummary) {
+          basePrompt += resumeSummary + '\n';
+        }
         
         // Add previous session summary if available
         if (previousSessionData) {
           const summary = formatSessionSummary(sessionNumber - 1, previousSessionData);
           if (summary) {
-            basePrompt = `${summary}
+            basePrompt += `${summary}
 
 ⚠️ CRITICAL INSTRUCTION: The user has already completed the previous session shown above. Use this summary as essential context about what has been established. DO NOT repeat questions, exercises, or topics already covered in the previous session, instead mention the answers in the chat and confirm from the user again. Build upon this foundation to advance the conversation to new territory.
 
@@ -1309,7 +1351,7 @@ Only when you have a COMPLETE story with all required elements should you:
       };
 
       // Generate streaming response using Foundation Session-specific Claude integration
-      const systemPrompt = getFoundationSessionSystemPrompt(previousSessionData);
+      const systemPrompt = getFoundationSessionSystemPrompt(previousSessionData, resumeSummary);
       
       const response = await anthropic.messages.create({
         model: CLAUDE_MODEL,
