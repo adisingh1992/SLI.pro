@@ -627,8 +627,8 @@ export function registerFoundationSessionsRoutes(app: Express) {
         return res.status(404).json({ error: "Session not found" });
       }
 
-      if (session.status !== "in_progress") {
-        return res.status(400).json({ error: "Session must be in progress to add messages" });
+      if (session.status !== "in_progress" && session.status !== "completed") {
+        return res.status(400).json({ error: "Session must be in progress or completed to add messages" });
       }
 
       // Validate message data
@@ -749,8 +749,8 @@ export function registerFoundationSessionsRoutes(app: Express) {
         return res.status(404).json({ error: "Session not found" });
       }
 
-      if (session.status !== 'in_progress') {
-        return res.status(400).json({ error: "Session must be in progress to send messages" });
+      if (session.status !== 'in_progress' && session.status !== 'completed') {
+        return res.status(400).json({ error: "Session must be in progress or completed to send messages" });
       }
 
       const { content } = req.body;
