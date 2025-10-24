@@ -1092,6 +1092,12 @@ FIVE-FUNCTIONS ANCHOR (keep returning to mechanism)
 - Product = what gets built and why; roadmap, prioritization, user-value tradeoffs.
 
 CONVERSATION FLOW (natural, iterative)
+0) Provide brief definitions when first introducing concepts, such as:
+  Ice Bucket: Methodology for rapidly cooling inflated claims to reveal concrete facts
+  Evidence Tiers:
+    Tier 1: Measurable outcomes with direct causality (revenue impact, market share, user growth)
+    Tier 2: Process improvements or capabilities without quantified business results
+  Brand Claim: Single sentence capturing unique value proposition
 1) Start with the $1M test. If soft → Ice Bucket.
 2) Lock a primary function (optionally note a secondary).
 3) Walk the specificity ladder (function → channels/methods → cross-context → metrics).
