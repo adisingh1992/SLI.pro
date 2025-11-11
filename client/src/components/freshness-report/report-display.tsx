@@ -8,6 +8,7 @@ import {
   ChevronRight, ClipboardCheck, Dice5, FileText, Globe, 
   Lightbulb, ListChecks, Target, TrendingUp, UserCircle 
 } from 'lucide-react';
+import { getGradeDisplay, getBadgeColorClass, type Grade, type MetricType } from './gradeMappings';
 
 interface FreshnessReportProps {
   report: {
@@ -121,6 +122,9 @@ const ReportDisplay: React.FC<FreshnessReportProps> = ({ report, userName }) => 
   const freshnessGrade = calculateFreshnessGrade({...report, finalSynthesis: processedSynthesis});
   const freshnessScore = calculateFreshnessScore(freshnessGrade);
   const progressColor = getProgressColor(freshnessScore);
+  
+  // Get overall grade display using the profileContentQuality mapping
+  const overallGradeDisplay = getGradeDisplay('profileContentQuality', freshnessGrade as Grade);
 
   // Initialize with default empty values
   let brandAudit: any = {
@@ -236,9 +240,12 @@ const ReportDisplay: React.FC<FreshnessReportProps> = ({ report, userName }) => 
                 Comprehensive analysis of {userName || 'your'} current professional brand positioning
               </CardDescription>
             </div>
-            <div className="flex flex-col items-center justify-center bg-muted rounded-md p-3 w-24 h-24">
-              <span className="text-4xl font-bold">{freshnessGrade}</span>
-              <span className="text-xs text-muted-foreground">Freshness Grade</span>
+            <div className="flex flex-col items-center justify-center rounded-md p-4 min-w-[140px]">
+              <span className={`text-sm font-semibold px-3 py-1.5 rounded mb-2 ${getBadgeColorClass(overallGradeDisplay.badgeVariant)}`}>
+                {overallGradeDisplay.label}
+              </span>
+              <span className="text-2xl font-bold">{overallGradeDisplay.progressPercent}%</span>
+              <span className="text-xs text-muted-foreground mt-1">Overall Score</span>
             </div>
           </div>
         </CardHeader>
@@ -319,51 +326,56 @@ const ReportDisplay: React.FC<FreshnessReportProps> = ({ report, userName }) => 
             
             {/* Profile Content Quality - Active Metric */}
             {detailedMetrics?.profileContentQuality && (
-              <div className="mb-5 p-4 bg-muted/50 rounded-md border">
-                <div className="flex items-center justify-between mb-2">
-                  <h4 className="text-sm font-semibold">Profile Content Quality</h4>
-                  <div className="flex items-center gap-1">
-                    <span className="text-xs text-muted-foreground">Grade:</span>
-                    <span className={`text-sm font-bold px-2 py-0.5 rounded ${
-                      detailedMetrics.profileContentQuality.grade === 'A' ? 'bg-green-100 text-green-700' :
-                      detailedMetrics.profileContentQuality.grade === 'B' ? 'bg-blue-100 text-blue-700' :
-                      detailedMetrics.profileContentQuality.grade === 'C' ? 'bg-yellow-100 text-yellow-700' :
-                      detailedMetrics.profileContentQuality.grade === 'D' ? 'bg-orange-100 text-orange-700' :
-                      'bg-red-100 text-red-700'
-                    }`}>
-                      {detailedMetrics.profileContentQuality.grade}
-                    </span>
+              (() => {
+                const gradeDisplay = getGradeDisplay('profileContentQuality', detailedMetrics.profileContentQuality.grade as Grade);
+                return (
+                  <div className="mb-5 p-4 bg-muted/50 rounded-md border">
+                    <div className="flex items-center justify-between mb-3">
+                      <h4 className="text-sm font-semibold">Profile Content Quality</h4>
+                      <span className={`text-sm font-semibold px-3 py-1 rounded ${getBadgeColorClass(gradeDisplay.badgeVariant)}`}>
+                        {gradeDisplay.label}
+                      </span>
+                    </div>
+                    <div className="mb-3">
+                      <Progress value={gradeDisplay.progressPercent} className="h-2" />
+                      <div className="flex justify-between mt-1">
+                        <span className="text-xs text-muted-foreground">Progress</span>
+                        <span className="text-xs text-muted-foreground">{gradeDisplay.progressPercent}%</span>
+                      </div>
+                    </div>
+                    <p className="text-sm text-muted-foreground">
+                      {detailedMetrics.profileContentQuality.explanation}
+                    </p>
                   </div>
-                </div>
-                <p className="text-sm text-muted-foreground">
-                  {detailedMetrics.profileContentQuality.explanation}
-                </p>
-              </div>
+                );
+              })()
             )}
             
             {/* SLI Clarity */}
             {detailedMetrics?.sliClarity ? (
-              <div className="mb-4 p-4 bg-muted/50 rounded-md border">
-                <div className="flex items-center justify-between mb-2">
-                  <h4 className="text-sm font-semibold">SLI Clarity</h4>
-                  <div className="flex items-center gap-1">
-                    <span className="text-xs text-muted-foreground">Grade:</span>
-                    <span className={`text-sm font-bold px-2 py-0.5 rounded ${
-                      detailedMetrics.sliClarity.grade === 'A' ? 'bg-green-100 text-green-700' :
-                      detailedMetrics.sliClarity.grade === 'B' ? 'bg-blue-100 text-blue-700' :
-                      detailedMetrics.sliClarity.grade === 'C' ? 'bg-yellow-100 text-yellow-700' :
-                      detailedMetrics.sliClarity.grade === 'D' ? 'bg-orange-100 text-orange-700' :
-                      detailedMetrics.sliClarity.grade === 'N/A' ? 'bg-gray-100 text-gray-700' :
-                      'bg-red-100 text-red-700'
-                    }`}>
-                      {detailedMetrics.sliClarity.grade}
-                    </span>
+              (() => {
+                const gradeDisplay = getGradeDisplay('sliClarity', detailedMetrics.sliClarity.grade as Grade);
+                return (
+                  <div className="mb-4 p-4 bg-muted/50 rounded-md border">
+                    <div className="flex items-center justify-between mb-3">
+                      <h4 className="text-sm font-semibold">SLI Clarity</h4>
+                      <span className={`text-sm font-semibold px-3 py-1 rounded ${getBadgeColorClass(gradeDisplay.badgeVariant)}`}>
+                        {gradeDisplay.label}
+                      </span>
+                    </div>
+                    <div className="mb-3">
+                      <Progress value={gradeDisplay.progressPercent} className="h-2" />
+                      <div className="flex justify-between mt-1">
+                        <span className="text-xs text-muted-foreground">Progress</span>
+                        <span className="text-xs text-muted-foreground">{gradeDisplay.progressPercent}%</span>
+                      </div>
+                    </div>
+                    <p className="text-sm text-muted-foreground">
+                      {detailedMetrics.sliClarity.explanation}
+                    </p>
                   </div>
-                </div>
-                <p className="text-sm text-muted-foreground">
-                  {detailedMetrics.sliClarity.explanation}
-                </p>
-              </div>
+                );
+              })()
             ) : (
               <div className="mb-4 p-3 bg-muted/30 rounded-md border border-dashed">
                 <div className="flex items-center justify-between mb-1 opacity-60">
@@ -381,26 +393,29 @@ const ReportDisplay: React.FC<FreshnessReportProps> = ({ report, userName }) => 
             
             {/* Narrative Consistency */}
             {detailedMetrics?.narrativeConsistency ? (
-              <div className="mb-4 p-4 bg-muted/50 rounded-md border">
-                <div className="flex items-center justify-between mb-2">
-                  <h4 className="text-sm font-semibold">Narrative Consistency</h4>
-                  <div className="flex items-center gap-1">
-                    <span className="text-xs text-muted-foreground">Grade:</span>
-                    <span className={`text-sm font-bold px-2 py-0.5 rounded ${
-                      detailedMetrics.narrativeConsistency.grade === 'A' ? 'bg-green-100 text-green-700' :
-                      detailedMetrics.narrativeConsistency.grade === 'B' ? 'bg-blue-100 text-blue-700' :
-                      detailedMetrics.narrativeConsistency.grade === 'C' ? 'bg-yellow-100 text-yellow-700' :
-                      detailedMetrics.narrativeConsistency.grade === 'D' ? 'bg-orange-100 text-orange-700' :
-                      'bg-red-100 text-red-700'
-                    }`}>
-                      {detailedMetrics.narrativeConsistency.grade}
-                    </span>
+              (() => {
+                const gradeDisplay = getGradeDisplay('narrativeConsistency', detailedMetrics.narrativeConsistency.grade as Grade);
+                return (
+                  <div className="mb-4 p-4 bg-muted/50 rounded-md border">
+                    <div className="flex items-center justify-between mb-3">
+                      <h4 className="text-sm font-semibold">Narrative Consistency</h4>
+                      <span className={`text-sm font-semibold px-3 py-1 rounded ${getBadgeColorClass(gradeDisplay.badgeVariant)}`}>
+                        {gradeDisplay.label}
+                      </span>
+                    </div>
+                    <div className="mb-3">
+                      <Progress value={gradeDisplay.progressPercent} className="h-2" />
+                      <div className="flex justify-between mt-1">
+                        <span className="text-xs text-muted-foreground">Progress</span>
+                        <span className="text-xs text-muted-foreground">{gradeDisplay.progressPercent}%</span>
+                      </div>
+                    </div>
+                    <p className="text-sm text-muted-foreground">
+                      {detailedMetrics.narrativeConsistency.explanation}
+                    </p>
                   </div>
-                </div>
-                <p className="text-sm text-muted-foreground">
-                  {detailedMetrics.narrativeConsistency.explanation}
-                </p>
-              </div>
+                );
+              })()
             ) : (
               <div className="mb-4 p-3 bg-muted/30 rounded-md border border-dashed">
                 <div className="flex items-center justify-between mb-1 opacity-60">
@@ -418,26 +433,29 @@ const ReportDisplay: React.FC<FreshnessReportProps> = ({ report, userName }) => 
             
             {/* Content Creation Activity */}
             {detailedMetrics?.contentCreationActivity ? (
-              <div className="mb-4 p-4 bg-muted/50 rounded-md border">
-                <div className="flex items-center justify-between mb-2">
-                  <h4 className="text-sm font-semibold">Content Creation Activity</h4>
-                  <div className="flex items-center gap-1">
-                    <span className="text-xs text-muted-foreground">Grade:</span>
-                    <span className={`text-sm font-bold px-2 py-0.5 rounded ${
-                      detailedMetrics.contentCreationActivity.grade === 'A' ? 'bg-green-100 text-green-700' :
-                      detailedMetrics.contentCreationActivity.grade === 'B' ? 'bg-blue-100 text-blue-700' :
-                      detailedMetrics.contentCreationActivity.grade === 'C' ? 'bg-yellow-100 text-yellow-700' :
-                      detailedMetrics.contentCreationActivity.grade === 'D' ? 'bg-orange-100 text-orange-700' :
-                      'bg-red-100 text-red-700'
-                    }`}>
-                      {detailedMetrics.contentCreationActivity.grade}
-                    </span>
+              (() => {
+                const gradeDisplay = getGradeDisplay('contentCreationActivity', detailedMetrics.contentCreationActivity.grade as Grade);
+                return (
+                  <div className="mb-4 p-4 bg-muted/50 rounded-md border">
+                    <div className="flex items-center justify-between mb-3">
+                      <h4 className="text-sm font-semibold">Content Creation Activity</h4>
+                      <span className={`text-sm font-semibold px-3 py-1 rounded ${getBadgeColorClass(gradeDisplay.badgeVariant)}`}>
+                        {gradeDisplay.label}
+                      </span>
+                    </div>
+                    <div className="mb-3">
+                      <Progress value={gradeDisplay.progressPercent} className="h-2" />
+                      <div className="flex justify-between mt-1">
+                        <span className="text-xs text-muted-foreground">Progress</span>
+                        <span className="text-xs text-muted-foreground">{gradeDisplay.progressPercent}%</span>
+                      </div>
+                    </div>
+                    <p className="text-sm text-muted-foreground">
+                      {detailedMetrics.contentCreationActivity.explanation}
+                    </p>
                   </div>
-                </div>
-                <p className="text-sm text-muted-foreground">
-                  {detailedMetrics.contentCreationActivity.explanation}
-                </p>
-              </div>
+                );
+              })()
             ) : (
               <div className="mb-4 p-3 bg-muted/30 rounded-md border border-dashed">
                 <div className="flex items-center justify-between mb-1 opacity-60">
@@ -455,26 +473,29 @@ const ReportDisplay: React.FC<FreshnessReportProps> = ({ report, userName }) => 
             
             {/* Engagement Activity */}
             {detailedMetrics?.engagementActivity ? (
-              <div className="mb-4 p-4 bg-muted/50 rounded-md border">
-                <div className="flex items-center justify-between mb-2">
-                  <h4 className="text-sm font-semibold">Engagement Activity</h4>
-                  <div className="flex items-center gap-1">
-                    <span className="text-xs text-muted-foreground">Grade:</span>
-                    <span className={`text-sm font-bold px-2 py-0.5 rounded ${
-                      detailedMetrics.engagementActivity.grade === 'A' ? 'bg-green-100 text-green-700' :
-                      detailedMetrics.engagementActivity.grade === 'B' ? 'bg-blue-100 text-blue-700' :
-                      detailedMetrics.engagementActivity.grade === 'C' ? 'bg-yellow-100 text-yellow-700' :
-                      detailedMetrics.engagementActivity.grade === 'D' ? 'bg-orange-100 text-orange-700' :
-                      'bg-red-100 text-red-700'
-                    }`}>
-                      {detailedMetrics.engagementActivity.grade}
-                    </span>
+              (() => {
+                const gradeDisplay = getGradeDisplay('engagementActivity', detailedMetrics.engagementActivity.grade as Grade);
+                return (
+                  <div className="mb-4 p-4 bg-muted/50 rounded-md border">
+                    <div className="flex items-center justify-between mb-3">
+                      <h4 className="text-sm font-semibold">Engagement Activity</h4>
+                      <span className={`text-sm font-semibold px-3 py-1 rounded ${getBadgeColorClass(gradeDisplay.badgeVariant)}`}>
+                        {gradeDisplay.label}
+                      </span>
+                    </div>
+                    <div className="mb-3">
+                      <Progress value={gradeDisplay.progressPercent} className="h-2" />
+                      <div className="flex justify-between mt-1">
+                        <span className="text-xs text-muted-foreground">Progress</span>
+                        <span className="text-xs text-muted-foreground">{gradeDisplay.progressPercent}%</span>
+                      </div>
+                    </div>
+                    <p className="text-sm text-muted-foreground">
+                      {detailedMetrics.engagementActivity.explanation}
+                    </p>
                   </div>
-                </div>
-                <p className="text-sm text-muted-foreground">
-                  {detailedMetrics.engagementActivity.explanation}
-                </p>
-              </div>
+                );
+              })()
             ) : (
               <div className="mb-4 p-3 bg-muted/30 rounded-md border border-dashed">
                 <div className="flex items-center justify-between mb-1 opacity-60">
@@ -491,28 +512,30 @@ const ReportDisplay: React.FC<FreshnessReportProps> = ({ report, userName }) => 
             )}
             
             {/* Implementation of Recommendations */}
-            {detailedMetrics?.recommendationImplementation && detailedMetrics.recommendationImplementation.grade !== 'N/A' ? (
-              <div className="p-4 bg-muted/50 rounded-md border">
-                <div className="flex items-center justify-between mb-2">
-                  <h4 className="text-sm font-semibold">Implementation of Recommendations</h4>
-                  <div className="flex items-center gap-1">
-                    <span className="text-xs text-muted-foreground">Grade:</span>
-                    <span className={`text-sm font-bold px-2 py-0.5 rounded ${
-                      detailedMetrics.recommendationImplementation.grade === 'A' ? 'bg-green-100 text-green-700' :
-                      detailedMetrics.recommendationImplementation.grade === 'B' ? 'bg-blue-100 text-blue-700' :
-                      detailedMetrics.recommendationImplementation.grade === 'C' ? 'bg-yellow-100 text-yellow-700' :
-                      detailedMetrics.recommendationImplementation.grade === 'D' ? 'bg-orange-100 text-orange-700' :
-                      detailedMetrics.recommendationImplementation.grade === 'F' ? 'bg-red-100 text-red-700' :
-                      'bg-gray-100 text-gray-700'
-                    }`}>
-                      {detailedMetrics.recommendationImplementation.grade}
-                    </span>
+            {detailedMetrics?.recommendationImplementation ? (
+              (() => {
+                const gradeDisplay = getGradeDisplay('recommendationImplementation', detailedMetrics.recommendationImplementation.grade as Grade);
+                return (
+                  <div className="p-4 bg-muted/50 rounded-md border">
+                    <div className="flex items-center justify-between mb-3">
+                      <h4 className="text-sm font-semibold">Implementation of Recommendations</h4>
+                      <span className={`text-sm font-semibold px-3 py-1 rounded ${getBadgeColorClass(gradeDisplay.badgeVariant)}`}>
+                        {gradeDisplay.label}
+                      </span>
+                    </div>
+                    <div className="mb-3">
+                      <Progress value={gradeDisplay.progressPercent} className="h-2" />
+                      <div className="flex justify-between mt-1">
+                        <span className="text-xs text-muted-foreground">Progress</span>
+                        <span className="text-xs text-muted-foreground">{gradeDisplay.progressPercent}%</span>
+                      </div>
+                    </div>
+                    <p className="text-sm text-muted-foreground">
+                      {detailedMetrics.recommendationImplementation.explanation}
+                    </p>
                   </div>
-                </div>
-                <p className="text-sm text-muted-foreground">
-                  {detailedMetrics.recommendationImplementation.explanation}
-                </p>
-              </div>
+                );
+              })()
             ) : (
               <div className="p-3 bg-muted/30 rounded-md border border-dashed">
                 <div className="flex items-center justify-between mb-1 opacity-60">
