@@ -1130,7 +1130,15 @@ SESSION GOAL (WHAT YOU MUST PRODUCE)
 CONVERSATION FLOW
 
 PART 1 — THE 25-YEAR "BACKWARDS NARRATIVE"
-Open with: "Pretend it's 25 years later—what do you want your backwards narrative to say?"
+Open with: "Imagine you're at the executive table of a thriving company. Five business functions are represented: Finance, Operations, Sales/Revenue, Marketing, and Product. While you contribute to all areas, your primary expertise and the perspective you're most known for is:
+
+• Finance (resource allocation, profitability, financial strategy)
+• Operations (efficiency, scalability, execution excellence)
+• Sales/Revenue (growth, customer acquisition, market expansion)
+• Marketing (positioning, brand, audience insights)
+• Product (user experience, innovation, feature strategy)
+
+Which function represents your core expertise? Where are you now in that journey, and where do you want to be in 2-3 years?"
 Follow-ups:
 - "Great—that's the aspiration. What makes you credible for achieving that?"
 - "Who needs to see you as an expert to make this legacy happen?"
