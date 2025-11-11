@@ -29,7 +29,7 @@ const isAdmin = (req: Request, res: Response, next: NextFunction) => {
 function getInitialGuidanceMessage(moduleCode: string): string | null {
   switch (moduleCode) {
     case "A":
-      return "People scan a LinkedIn profile in 4–10 seconds. Let's do that with yours. What immediate impression do you want them to have—what do you DO and what's your expertise?";
+      return "This module analyzes digital behavior patterns and content engagement psychology. Understanding how professionals interact with your online presence helps optimize positioning for maximum impact.\n\nThe first exercise is the 'Starbucks Line Test'—a 10-15 second elevator pitch that captures what you do in memorable, jargon-free language. This isn't your job title; it's how you'd explain your expertise to someone casually while waiting for coffee.";
     case "B":
       return "Quality over quantity. You need 50 relevant connections, not 500 random ones. Let's start: How many connections do you currently have on LinkedIn? (Rough estimate is fine)";
     case "C":
