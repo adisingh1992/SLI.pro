@@ -1,9 +1,12 @@
 import { Express, Request, Response, NextFunction } from "express";
 import { storage } from "./storage";
-import { insertFoundationSessionMessageSchema, updateFoundationSessionSchema } from "../shared/schema";
+import {
+  insertFoundationSessionMessageSchema,
+  updateFoundationSessionSchema,
+} from "../shared/schema";
 import Anthropic from "@anthropic-ai/sdk";
 
-const CLAUDE_MODEL = process.env.CLAUDE_MODEL || 'claude-3-7-sonnet-20250219';
+const CLAUDE_MODEL = process.env.CLAUDE_MODEL || "claude-3-7-sonnet-20250219";
 const anthropic = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY,
 });
@@ -16,21 +19,27 @@ const isAuthenticated = (req: Request, res: Response, next: NextFunction) => {
 };
 
 // Format session completion data into a readable summary
-function formatSessionSummary(sessionNumber: number, completionData: any): string {
+function formatSessionSummary(
+  sessionNumber: number,
+  completionData: any,
+): string {
   if (sessionNumber === 1 && completionData) {
-    const functionalSplitText = completionData.functionalSplit 
+    const functionalSplitText = completionData.functionalSplit
       ? `${completionData.functionalSplit.primary}% primary / ${completionData.functionalSplit.secondary}% secondary`
-      : 'Not specified';
-    
-    const keyInsightsText = completionData.keyInsights?.map((insight: string) => `• ${insight}`)?.join('\n') ?? '• None captured';
-    
+      : "Not specified";
+
+    const keyInsightsText =
+      completionData.keyInsights
+        ?.map((insight: string) => `• ${insight}`)
+        ?.join("\n") ?? "• None captured";
+
     return `
 ═══════════════════════════════════════════════════════════════
 PREVIOUS SESSION SUMMARY (Session 1: Functional Identity Lock-In)
 ═══════════════════════════════════════════════════════════════
 
-PRIMARY FUNCTION: ${completionData.primaryFunction || 'Not determined'}
-SECONDARY FUNCTION: ${completionData.secondaryFunction || 'None'}
+PRIMARY FUNCTION: ${completionData.primaryFunction || "Not determined"}
+SECONDARY FUNCTION: ${completionData.secondaryFunction || "None"}
 FUNCTIONAL SPLIT: ${functionalSplitText}
 CONFIDENCE LEVEL: ${completionData.confidence ?? 0}%
 
@@ -38,32 +47,38 @@ KEY INSIGHTS:
 ${keyInsightsText}
 
 REASONING:
-${completionData.reasoning || 'No reasoning provided'}
+${completionData.reasoning || "No reasoning provided"}
 
 ═══════════════════════════════════════════════════════════════
 `;
   }
-  
+
   if (sessionNumber === 2 && completionData) {
-    const proofBulletsText = completionData.proofBullets?.map((bullet: string) => `• ${bullet}`)?.join('\n') ?? '• None captured';
-    const nextStepsText = completionData.nextSteps?.map((step: string) => `• ${step}`)?.join('\n') ?? '• None identified';
-    
+    const proofBulletsText =
+      completionData.proofBullets
+        ?.map((bullet: string) => `• ${bullet}`)
+        ?.join("\n") ?? "• None captured";
+    const nextStepsText =
+      completionData.nextSteps
+        ?.map((step: string) => `• ${step}`)
+        ?.join("\n") ?? "• None identified";
+
     return `
 ═══════════════════════════════════════════════════════════════
 PREVIOUS SESSION SUMMARY (Session 2: Professional Credibility Assessment)
 ═══════════════════════════════════════════════════════════════
 
-PRIMARY FUNCTION: ${completionData.primaryFunction || 'Not determined'}
-CREDIBILITY TIER: ${completionData.credibilityTier || 'Not assessed'} (1 is strongest, 5 is weakest)
+PRIMARY FUNCTION: ${completionData.primaryFunction || "Not determined"}
+CREDIBILITY TIER: ${completionData.credibilityTier || "Not assessed"} (1 is strongest, 5 is weakest)
 
 BRAND CLAIM:
-${completionData.brandClaim || 'Not established'}
+${completionData.brandClaim || "Not established"}
 
 PROOF POINTS:
 ${proofBulletsText}
 
 CHECK-WORTHY REASON (Why an investor/hiring manager would bet on them):
-${completionData.checkWorthyReason || 'Not established'}
+${completionData.checkWorthyReason || "Not established"}
 
 NEXT STEPS IDENTIFIED:
 ${nextStepsText}
@@ -71,25 +86,25 @@ ${nextStepsText}
 ═══════════════════════════════════════════════════════════════
 `;
   }
-  
-  return '';
+
+  return "";
 }
 
 // Format resume documents into a summary for system prompt context
 async function formatResumeSummary(userId: number): Promise<string> {
   try {
     const documents = await storage.getDocuments(userId);
-    const resumeDocuments = documents.filter(doc => doc.type === 'resume');
-    
+    const resumeDocuments = documents.filter((doc) => doc.type === "resume");
+
     if (!resumeDocuments || resumeDocuments.length === 0) {
-      return '';
+      return "";
     }
 
     // Use the most recent resume (last uploaded)
     const resume = resumeDocuments[resumeDocuments.length - 1];
-    
+
     if (!resume.analysisContent && !resume.name) {
-      return '';
+      return "";
     }
 
     return `
@@ -98,21 +113,21 @@ USER RESUME SUMMARY
 ═══════════════════════════════════════════════════════════════
 
 Document Name: ${resume.name}
-${resume.analysisContent ? `\nResume Content Analysis:\n${resume.analysisContent}` : ''}
+${resume.analysisContent ? `\nResume Content Analysis:\n${resume.analysisContent}` : ""}
 
 CRITICAL: The user has already uploaded their resume. Use this information to provide personalized coaching based on their actual experience and background. Reference specific details from their resume naturally in your guidance.
 ═══════════════════════════════════════════════════════════════
 `;
   } catch (error) {
-    console.error('Error formatting resume summary:', error);
-    return '';
+    console.error("Error formatting resume summary:", error);
+    return "";
   }
 }
 
 // Format questionnaire data into analysis context
 function formatQuestionnaireContext(questionnaire: any): string {
   if (!questionnaire) {
-    return '';
+    return "";
   }
 
   return `
@@ -120,13 +135,13 @@ function formatQuestionnaireContext(questionnaire: any): string {
 BACKGROUND CONTEXT: USER QUESTIONNAIRE
 ═══════════════════════════════════════════════════════════════
 
-Industry: ${questionnaire.industry ?? 'Not specified'}
-Professional Background: ${questionnaire.background ?? 'Not provided'}
-Career Goals: ${questionnaire.goals ?? 'Not specified'}
-Aspirations: ${questionnaire.aspirations ?? 'Not provided'}
-Challenges: ${questionnaire.challenges ?? 'Not specified'}
-Interests: ${questionnaire.interests ?? 'Not provided'}
-Timeframe: ${questionnaire.timeframe ?? 'Not specified'}
+Industry: ${questionnaire.industry ?? "Not specified"}
+Professional Background: ${questionnaire.background ?? "Not provided"}
+Career Goals: ${questionnaire.goals ?? "Not specified"}
+Aspirations: ${questionnaire.aspirations ?? "Not provided"}
+Challenges: ${questionnaire.challenges ?? "Not specified"}
+Interests: ${questionnaire.interests ?? "Not provided"}
+Timeframe: ${questionnaire.timeframe ?? "Not specified"}
 
 NOTE: This context was provided by the user in their initial questionnaire. The conversation transcript may reference this information without repeating it explicitly. Do not expect these details to be re-stated in the current conversation.
 ═══════════════════════════════════════════════════════════════
@@ -134,19 +149,24 @@ NOTE: This context was provided by the user in their initial questionnaire. The 
 }
 
 // Format previous session context for analysis
-async function formatPreviousSessionsContext(userId: number, currentSessionNumber: number): Promise<string> {
+async function formatPreviousSessionsContext(
+  userId: number,
+  currentSessionNumber: number,
+): Promise<string> {
   try {
     const sessions = await storage.getFoundationSessions(userId);
-    
+
     if (!sessions || sessions.length === 0) {
-      return '';
+      return "";
     }
 
-    let context = '';
+    let context = "";
 
     // For Session 2, include Session 1 summary
     if (currentSessionNumber === 2) {
-      const session1 = sessions.find(s => s.sessionNumber === 1 && s.status === 'completed');
+      const session1 = sessions.find(
+        (s) => s.sessionNumber === 1 && s.status === "completed",
+      );
       if (session1?.completionData) {
         const data = session1.completionData;
         context += `
@@ -154,10 +174,10 @@ async function formatPreviousSessionsContext(userId: number, currentSessionNumbe
 BACKGROUND CONTEXT: SESSION 1 (Functional Identity)
 ═══════════════════════════════════════════════════════════════
 
-Primary Function: ${data.primaryFunction ?? 'Not determined'}
-Secondary Function: ${data.secondaryFunction ?? 'None'}
-Functional Split: ${data.functionalSplit ? `${data.functionalSplit.primary}% primary / ${data.functionalSplit.secondary}% secondary` : 'Not specified'}
-Commitment: ${data.commitmentStatement ?? 'Not made'}
+Primary Function: ${data.primaryFunction ?? "Not determined"}
+Secondary Function: ${data.secondaryFunction ?? "None"}
+Functional Split: ${data.functionalSplit ? `${data.functionalSplit.primary}% primary / ${data.functionalSplit.secondary}% secondary` : "Not specified"}
+Commitment: ${data.commitmentStatement ?? "Not made"}
 
 NOTE: The user has already established their functional identity in Session 1. The conversation may reference this without repeating the full exercise.
 ═══════════════════════════════════════════════════════════════
@@ -167,9 +187,13 @@ NOTE: The user has already established their functional identity in Session 1. T
 
     // For Session 3, include Session 1 and 2 summaries
     if (currentSessionNumber === 3) {
-      const session1 = sessions.find(s => s.sessionNumber === 1 && s.status === 'completed');
-      const session2 = sessions.find(s => s.sessionNumber === 2 && s.status === 'completed');
-      
+      const session1 = sessions.find(
+        (s) => s.sessionNumber === 1 && s.status === "completed",
+      );
+      const session2 = sessions.find(
+        (s) => s.sessionNumber === 2 && s.status === "completed",
+      );
+
       if (session1?.completionData) {
         const data = session1.completionData;
         context += `
@@ -177,22 +201,26 @@ NOTE: The user has already established their functional identity in Session 1. T
 BACKGROUND CONTEXT: SESSION 1 (Functional Identity)
 ═══════════════════════════════════════════════════════════════
 
-Primary Function: ${data.primaryFunction ?? 'Not determined'}
-Commitment: ${data.commitmentStatement ?? 'Not made'}
+Primary Function: ${data.primaryFunction ?? "Not determined"}
+Commitment: ${data.commitmentStatement ?? "Not made"}
 `;
       }
 
       if (session2?.completionData) {
         const data = session2.completionData;
-        const proofBulletsText = data.proofBullets?.slice(0, 3)?.map((bullet: string) => `• ${bullet}`)?.join('\n') ?? '';
-        
+        const proofBulletsText =
+          data.proofBullets
+            ?.slice(0, 3)
+            ?.map((bullet: string) => `• ${bullet}`)
+            ?.join("\n") ?? "";
+
         context += `
 SESSION 2 (Credibility & Proof)
 ═══════════════════════════════════════════════════════════════
 
-Credibility Tier: ${data.credibilityTier ? `Tier ${data.credibilityTier}` : 'Not assessed'}
-Brand Claim: ${data.brandClaim ?? 'Not established'}
-${proofBulletsText ? `Top Proof Points:\n${proofBulletsText}` : ''}
+Credibility Tier: ${data.credibilityTier ? `Tier ${data.credibilityTier}` : "Not assessed"}
+Brand Claim: ${data.brandClaim ?? "Not established"}
+${proofBulletsText ? `Top Proof Points:\n${proofBulletsText}` : ""}
 
 NOTE: The user has completed Sessions 1 & 2 covering functional identity and credibility proof. The conversation may build upon this foundation without repeating prior work.
 ═══════════════════════════════════════════════════════════════
@@ -202,8 +230,8 @@ NOTE: The user has completed Sessions 1 & 2 covering functional identity and cre
 
     return context;
   } catch (error) {
-    console.error('Error formatting previous sessions context:', error);
-    return '';
+    console.error("Error formatting previous sessions context:", error);
+    return "";
   }
 }
 
@@ -222,13 +250,19 @@ function getInitialGuidanceMessage(sessionNumber: number): string | null {
 }
 
 // Check if a foundation session should be automatically completed
-async function checkSessionCompletion(userId: number, sessionNumber: number, messages: any[], userProfile: any): Promise<{ shouldComplete: boolean; completionData?: any }> {
+async function checkSessionCompletion(
+  userId: number,
+  sessionNumber: number,
+  messages: any[],
+  userProfile: any,
+): Promise<{ shouldComplete: boolean; completionData?: any }> {
   if (sessionNumber !== 1 && sessionNumber !== 2 && sessionNumber !== 3) {
     return { shouldComplete: false };
   }
 
   // Check if we have enough conversation for meaningful analysis
-  if (messages.length < 10) { // Need at least 5 back-and-forth exchanges for a complete conversation
+  if (messages.length < 10) {
+    // Need at least 5 back-and-forth exchanges for a complete conversation
     return { shouldComplete: false };
   }
 
@@ -236,16 +270,19 @@ async function checkSessionCompletion(userId: number, sessionNumber: number, mes
     // Fetch questionnaire and previous sessions context for analysis
     const questionnaire = await storage.getQuestionnaire(userId);
     const questionnaireContext = formatQuestionnaireContext(questionnaire);
-    const previousSessionsContext = await formatPreviousSessionsContext(userId, sessionNumber);
+    const previousSessionsContext = await formatPreviousSessionsContext(
+      userId,
+      sessionNumber,
+    );
 
-    let analysisPrompt = '';
-    
+    let analysisPrompt = "";
+
     if (sessionNumber === 1) {
       // Session 1: Functional Identity Lock-In analysis
       analysisPrompt = `${questionnaireContext}You are evaluating a Session 1 "Functional Identity Lock-In" coaching conversation that must stay within the Five Functions framework: Finance, Operations, Sales, Marketing, Product. Use the conversation transcript and the following guardrails from our methodology to make a determination.
 
     Conversation Messages:
-${messages.map(msg => `${msg.role.toUpperCase()}: ${msg.content}`).join('\n\n')}
+${messages.map((msg) => `${msg.role.toUpperCase()}: ${msg.content}`).join("\n\n")}
 
 Use this methodology to analyze the transcript:
 
@@ -332,120 +369,129 @@ Edge handling:
     Return ONLY the JSON object, nothing else.`;
     } else if (sessionNumber === 2) {
       // Session 2: Professional Credibility Assessment analysis
-      analysisPrompt = `${questionnaireContext}${previousSessionsContext}You are evaluating a Session 2 "Professional Credibility Assessment" coaching conversation focused on identifying measurable expertise and business impact. Use the conversation transcript to determine if the user has established credible proof of expertise within one of the five functions: Finance, Operations, Sales, Marketing, Product.
+      analysisPrompt = `${questionnaireContext}${previousSessionsContext}You are evaluating a Session 2 "Professional Credibility Assessment" coaching conversation focused on validating measurable expertise and business impact WITHIN a claimed functional domain. Use the conversation transcript to determine whether the user has established credible, check-worthy proof of expertise in one of the five functions: Finance, Operations, Sales, Marketing, Product.
 
-    Conversation Messages:
-${messages.map(msg => `${msg.role.toUpperCase()}: ${msg.content}`).join('\n\n')}
+        IMPORTANT:
+        - Session 1 is responsible for functional identity lock-in.
+        - Session 2 does NOT perform broad functional discovery or generalist policing.
+        - Session 2 evaluates the strength, repeatability, and measurability of proof within the function evidenced in the transcript.
+        - If no clear function is evidenced in the transcript, primaryFunction may be null.
 
-Use this methodology to analyze the transcript:
+        Conversation Messages:
+           ${messages.map((msg) => `${msg.role.toUpperCase()}: ${msg.content}`).join("\n\n")}
 
-1) Evidence Quality Assessment
-   - Tier 1: Measurable business outcomes (saved $ / grew revenue / % improvements / shipped usage & retention)
-   - Tier 2: Channel-specific execution with clear levers and playbooks
-   - Tier 3: Systems thinking WITH results (frameworks + concrete outcomes)
-   - Tier 4: Intentionality without metrics (story is coherent but lacks numbers)
-   - Tier 5: Soft skills & aspirations (no proof)
+        Use this methodology to analyze the transcript:
 
-2) Credibility Proof Validation
-   - Cross-context repeatability (proven at multiple companies/contexts)
-   - Specific channels, methods, and decision criteria
-   - Quantifiable results with numbers, percentages, dollar amounts
-   - Strong opinions and principled stances on when to use different approaches
+        1) Evidence Quality Assessment
+           - Tier 1: Measurable business outcomes (saved $ / grew revenue / % improvements / shipped usage & retention)
+           - Tier 2: Channel-specific execution with clear levers and playbooks AND results
+           - Tier 3: Systems thinking WITH results (frameworks + concrete outcomes)
+           - Tier 4: Intentionality or experience WITHOUT metrics (coherent story, weak proof)
+           - Tier 5: Soft skills, aspirations, or hypothetical capability (no proof)
 
-3) Function-Specific Credibility Markers
-   - FINANCE: ROI decisions, budget allocation, resource optimization with measurable impact
-   - OPERATIONS: Process improvements, efficiency gains, cost reductions with quantified outcomes
-   - MARKETING: Demand generation, perception shifts, positioning with measurable results
-   - SALES: Revenue generation, pipeline ownership, deal closure with specific numbers
-   - PRODUCT: Product decisions, roadmap judgment, user value creation with shipped outcomes
+        2) Credibility Proof Validation
+           - Cross-context repeatability (evidence across multiple teams, companies, or materially different scenarios)
+           - Specific channels, methods, and decision criteria used
+           - Quantifiable results with numbers, percentages, or dollar amounts
+           - Strong opinions and principled stances on when and why different approaches are used
 
-4) Hard vs Soft Claims Detection
-   - Flag aspirational language ("I want to," "I would be good at," "I could do")
-   - Identify school-only examples or theoretical knowledge without practical application
-   - Convert vague claims into specific functional mechanisms with proof
+        3) Function-Specific Credibility Markers
+           - FINANCE: ROI decisions, budget allocation, resource optimization with measurable impact
+           - OPERATIONS: Process improvements, efficiency gains, cost reductions with quantified outcomes
+           - MARKETING: Demand generation, perception shifts, positioning with measurable results
+           - SALES: Revenue generation, pipeline ownership, deal closure with specific numbers
+           - PRODUCT: Product decisions, roadmap judgment, user value creation with shipped outcomes
 
-5) Completion Criteria
-   - Clear functional expertise established with Tier 1-2 evidence
-   - Measurable business impact demonstrated across contexts
-   - Strong opinions and decision frameworks articulated
-   - Credible proof that an investor/hiring manager would bet budget on
+        4) Hard vs Soft Claims Detection
+           - Flag aspirational or hypothetical language ("I want to," "I would be good at," "I could do")
+           - Flag school-only, theoretical, or training-only examples without real-world application
+           - Claims lacking concrete metrics, decisions, or outcomes should be downgraded to Tier 4 or 5 rather than translated or inferred
 
-Respond in STRICT JSON only (no prose, no code fences) with EXACTLY this schema and keys:
+        5) Completion Criteria
+           - Clear functional credibility demonstrated with Tier 1 or Tier 2 evidence
+           - Measurable business impact demonstrated in more than one context or scenario
+           - Strong opinions and decision frameworks articulated
+           - Proof quality sufficient that an investor or hiring manager would rationally stake budget or role scope
 
-{
-  "isComplete": boolean,
-  "primaryFunction": "Finance" | "Operations" | "Sales" | "Marketing" | "Product" | null,
-  "confidence": number, // 0-100
-  "reasoning": string,  // brief explanation grounded in transcript evidence
-  "credibilityTier": 1 | 2 | 3 | 4 | 5, // Evidence tier achieved (1 is strongest)
-  "proofBullets": string[], // 3-5 specific proof points with numbers/context
-  "brandClaim": string, // One-line brand claim: "[Function] pro who [mechanism] to drive [measurable outcome]"
-  "checkWorthyReason": string, // Why an investor/hiring manager would bet budget on them
-  "nextSteps": string[] // If gaps remain: specific artifacts to build or proofs to gather
-}
+        Respond in STRICT JSON only (no prose, no code fences) with EXACTLY this schema and keys:
 
-Rules for setting fields:
-- primaryFunction: set ONLY if clear functional expertise is established with strong evidence
-- credibilityTier: assess the strongest tier of evidence provided (prefer conservative rating)
-- proofBullets: include only concrete, measurable evidence with numbers and context
-- brandClaim: create only if strong functional identity and proof are established
-- isComplete: true only if credibilityTier is 1 or 2 AND strong functional expertise is proven
+        {
+          "isComplete": boolean,
+          "primaryFunction": "Finance" | "Operations" | "Sales" | "Marketing" | "Product" | null,
+          "confidence": number, // 0-100
+          "reasoning": string,  // brief explanation grounded in transcript evidence
+          "credibilityTier": 1 | 2 | 3 | 4 | 5, // Evidence tier achieved (1 is strongest)
+          "proofBullets": string[], // 3-5 specific proof points with numbers and context
+          "brandClaim": string, // One-line brand claim: "[Function] pro who [mechanism] to drive [measurable outcome]"
+          "checkWorthyReason": string, // Why an investor/hiring manager would bet budget on them
+          "nextSteps": string[] // If gaps remain: specific artifacts to build or proofs to gather
+        }
 
-Keep the isComplete flow EXACTLY as follows (all must be satisfied to set isComplete=true):
-- Credibility tier 1 or 2 evidence has been established
-- A primary function has been clearly identified with strong proof
-- Measurable business impact has been demonstrated across contexts
-- The user has strong opinions and decision frameworks
-- The conversation has established check-worthy credibility for investors/hiring managers
+        Rules for setting fields:
+        - primaryFunction: set ONLY if strong functional evidence is present in the transcript; otherwise null
+        - credibilityTier: assign conservatively based on the strongest verifiable evidence
+        - proofBullets: include ONLY concrete, measurable evidence explicitly stated in the transcript
+        - brandClaim: create ONLY if strong functional credibility and measurable proof exist
+        - isComplete: true ONLY if credibilityTier is 1 or 2 AND strong functional credibility is clearly demonstrated
 
-Edge handling:
-- If only aspirational or theoretical claims exist, keep isComplete=false
-- If evidence is school-only or single-context, prefer lower credibility tier
-- If no clear functional expertise is established, set primaryFunction to null
+        Keep the isComplete flow EXACTLY as follows (all must be satisfied to set isComplete=true):
+        - Credibility tier 1 or 2 evidence has been established
+        - A primary function is supported by strong, measurable proof
+        - Measurable business impact is demonstrated across contexts or scenarios
+        - The user expresses clear opinions and decision frameworks
+        - The conversation establishes check-worthy credibility for investors or hiring managers
 
-    Return ONLY the JSON object, nothing else.`;
+        Edge handling:
+        - If claims are aspirational, hypothetical, or unmeasured, keep isComplete=false
+        - If evidence is single-context or anecdotal, prefer Tier 3 or lower
+        - If no clear functional proof exists, set primaryFunction to null
+
+        Return ONLY the JSON object, nothing else.`;
     } else if (sessionNumber === 3) {
       // Session 3: Positioning Story Development analysis
-      analysisPrompt = `${questionnaireContext}${previousSessionsContext}You are evaluating a Session 3 "Positioning Story Development" coaching conversation focused on extracting compelling stories that prove unique value. Use the conversation transcript to determine if the user has developed a complete, content-ready narrative with agency, methodology, vulnerability, specificity, and functional connection.
+      analysisPrompt = `${questionnaireContext}${previousSessionsContext}
+You are evaluating a Session 3 "Positioning Story Development" coaching conversation focused on extracting a compelling, content-ready narrative that demonstrates unique value THROUGH story. This session assumes functional identity and credibility groundwork have been addressed in prior sessions and focuses on narrative expression, clarity, and transferability.
 
-    Conversation Messages:
-${messages.map(msg => `${msg.role.toUpperCase()}: ${msg.content}`).join('\n\n')}
+Use the conversation transcript to determine whether the user has developed a complete positioning story with personal agency, clear methodology, vulnerability, specificity, and an explicit connection to their established functional credibility.
+
+Conversation Messages:
+${messages.map((msg) => `${msg.role.toUpperCase()}: ${msg.content}`).join("\n\n")}
 
 Use this methodology to analyze the transcript:
 
 1) Story Completeness Assessment (Green Lights)
    - Personal agency is explicit ("I did" vs "we did")
-   - Thinking process visible (frameworks, contrarian insight, system lens)
-   - Vulnerability present (tension, discomfort, growth)
-   - Specificity achieved (numbers, before/after, unique approach)
-   - Functional connection made (ties back to their primary function/credibility)
+   - Thinking process is visible (frameworks, contrarian insight, system lens)
+   - Vulnerability present (tension, discomfort, learning, or growth)
+   - Specificity achieved (numbers, before/after states, concrete decisions)
+   - Functional connection made (story clearly ties to their credible functional expertise)
 
 2) Story Quality Indicators
-   - Signature story with clear context, stakes, challenge, approach, tension, outcome
-   - Mechanisms and frameworks explicitly described
-   - Decision points and trade-offs clearly articulated
-   - Measurable outcomes with specific numbers or qualitative results
-   - Repeatability demonstrated or implied
+   - A signature story emerges with clear context, stakes, challenge, approach, tension, and outcome
+   - Mechanisms and frameworks are explicitly described
+   - Decision points and trade-offs are clearly articulated
+   - Outcomes are concrete (quantitative or clearly bounded qualitative results)
+   - Repeatability is demonstrated or plausibly implied
 
 3) Content-Ready Elements
-   - One-line brand claim established
-   - 3-5 content post ideas derived from the story
-   - Clear methodology that can be applied elsewhere
-   - Contrarian insights or unique perspective surfaced
+   - One-line brand claim naturally emerges from the story
+   - 3–5 content post angles can be derived directly from the narrative
+   - A clear methodology or approach is articulated that could be reused elsewhere
+   - Contrarian insight, unique perspective, or non-obvious lesson is surfaced
 
 4) Red Flags to Detect
-   - Too generic / could be anyone; soft skills only
-   - Team win without agency; participation, not ownership
-   - No vulnerability; success sounds effortless
-   - Outcomes with no "how they think"
-   - Vague claims without specific mechanisms
+   - Story is generic or interchangeable (could apply to many professionals)
+   - Team win without personal agency (participation rather than ownership)
+   - No vulnerability; success appears effortless or frictionless
+   - Outcomes presented without insight into how decisions were made
+   - Vague claims without concrete mechanisms or examples
 
 5) Completion Criteria
-   - Complete signature story with all required elements
-   - Clear personal agency and methodology established
-   - Vulnerability and growth demonstrated
-   - Content angles and brand positioning extracted
-   - Functional connection to their credible expertise
+   - A complete signature story is articulated with all required elements
+   - Personal agency and thinking process are explicit
+   - Vulnerability and growth are demonstrated
+   - Content angles and brand positioning are extractable
+   - The story clearly reinforces their functional credibility rather than re-defining it
 
 Respond in STRICT JSON only (no prose, no code fences) with EXACTLY this schema and keys:
 
@@ -464,44 +510,47 @@ Respond in STRICT JSON only (no prose, no code fences) with EXACTLY this schema 
     "repeatability": string
   } | null,
   "brandClaim": string, // "[Function] professional who [mechanism/approach] to achieve [measurable outcome]"
-  "contentAngles": string[], // 3-5 content post ideas from the story
+  "contentAngles": string[], // 3-5 content post ideas derived from the story
   "methodology": string, // Core framework or approach that makes them unique
   "nextSteps": string[] // If gaps remain: specific elements to develop or clarify
 }
 
 Rules for setting fields:
-- primaryFunction: set ONLY if clear functional expertise connects to the story
-- signatureStory: create only if all story elements (agency + methodology + vulnerability + specificity) are present
-- brandClaim: create only if strong functional identity and story proof are established
-- contentAngles: include only angles that emerge naturally from the conversation
-- isComplete: true only if signature story is complete AND functional connection is clear
+- primaryFunction: set ONLY if the story clearly reinforces a specific functional expertise already evidenced in the transcript; otherwise null
+- signatureStory: create ONLY if all required story elements are present (agency, methodology, vulnerability, specificity)
+- brandClaim: create ONLY if the story credibly supports a functional positioning
+- contentAngles: include ONLY angles that emerge directly from the narrative
+- isComplete: true ONLY if the signature story is complete AND functional connection is clear
 
 Keep the isComplete flow EXACTLY as follows (all must be satisfied to set isComplete=true):
-- Personal agency explicitly established in the story
-- Methodology and thinking process clearly articulated
-- Vulnerability and growth demonstrated
-- Specific outcomes with numbers or measurable results
-- Functional connection to their credible expertise established
-- Content angles and brand positioning extracted
+- Personal agency is explicitly established
+- Methodology and thinking process are clearly articulated
+- Vulnerability and growth are demonstrated
+- Specific outcomes with numbers or bounded results are present
+- Functional connection to credible expertise is reinforced
+- Content angles and brand positioning are extractable
 
 Edge handling:
-- If story lacks personal agency or is too generic, keep isComplete=false
-- If no clear methodology or thinking process, set signatureStory to null
-- If no functional connection established, prefer null for primaryFunction
-- If conversation incomplete, provide specific nextSteps for what's missing
+- If the story lacks personal agency or is overly generic, keep isComplete=false
+- If no clear methodology or thinking process is present, set signatureStory to null
+- If no functional connection is reinforced, set primaryFunction to null
+- If the conversation is incomplete, provide specific nextSteps identifying missing elements
 
-    Return ONLY the JSON object, nothing else.`;
+Return ONLY the JSON object, nothing else.
+`;
     }
 
     const response = await anthropic.messages.create({
       model: CLAUDE_MODEL,
-      system: "You are an expert at analyzing coaching conversations. Always respond with valid JSON only.",
-      messages: [{ role: 'user', content: analysisPrompt }],
+      system:
+        "You are an expert at analyzing coaching conversations. Always respond with valid JSON only.",
+      messages: [{ role: "user", content: analysisPrompt }],
       max_tokens: 1000,
       temperature: 0.1,
     });
 
-    const analysisContent = response.content[0].type === 'text' ? response.content[0].text : '';
+    const analysisContent =
+      response.content[0].type === "text" ? response.content[0].text : "";
     const analysis = JSON.parse(analysisContent);
 
     if (analysis.isComplete && analysis.primaryFunction) {
@@ -509,7 +558,7 @@ Edge handling:
         primaryFunction: analysis.primaryFunction,
         confidence: analysis.confidence,
         reasoning: analysis.reasoning,
-        completedAt: new Date().toISOString()
+        completedAt: new Date().toISOString(),
       };
 
       if (sessionNumber === 1) {
@@ -535,330 +584,425 @@ Edge handling:
 
       return {
         shouldComplete: true,
-        completionData
+        completionData,
       };
     }
 
     return { shouldComplete: false };
   } catch (error) {
-    console.error('Error checking session completion:', error);
+    console.error("Error checking session completion:", error);
     return { shouldComplete: false };
   }
 }
 
 export function registerFoundationSessionsRoutes(app: Express) {
   // Get all foundation sessions for the current user
-  app.get("/api/foundation-sessions", isAuthenticated, async (req: Request, res: Response, next: NextFunction) => {
-    try {
-      const userId = req.user!.id;
-      
-      // Initialize foundation sessions for the user if they don't exist
-      await initializeFoundationSessions(userId);
-      
-      const sessions = await storage.getFoundationSessions(userId);
-      res.json(sessions);
-    } catch (error) {
-      console.error("Error fetching foundation sessions:", error);
-      next(error);
-    }
-  });
+  app.get(
+    "/api/foundation-sessions",
+    isAuthenticated,
+    async (req: Request, res: Response, next: NextFunction) => {
+      try {
+        const userId = req.user!.id;
+
+        // Initialize foundation sessions for the user if they don't exist
+        await initializeFoundationSessions(userId);
+
+        const sessions = await storage.getFoundationSessions(userId);
+        res.json(sessions);
+      } catch (error) {
+        console.error("Error fetching foundation sessions:", error);
+        next(error);
+      }
+    },
+  );
 
   // Get a specific foundation session with messages
-  app.get("/api/foundation-sessions/:sessionNumber", isAuthenticated, async (req: Request, res: Response, next: NextFunction) => {
-    try {
-      const sessionNumber = parseInt(req.params.sessionNumber);
-      const userId = req.user!.id;
+  app.get(
+    "/api/foundation-sessions/:sessionNumber",
+    isAuthenticated,
+    async (req: Request, res: Response, next: NextFunction) => {
+      try {
+        const sessionNumber = parseInt(req.params.sessionNumber);
+        const userId = req.user!.id;
 
-      if (isNaN(sessionNumber) || sessionNumber < 1 || sessionNumber > 3) {
-        return res.status(400).json({ error: "Invalid session number. Must be 1, 2, or 3" });
+        if (isNaN(sessionNumber) || sessionNumber < 1 || sessionNumber > 3) {
+          return res
+            .status(400)
+            .json({ error: "Invalid session number. Must be 1, 2, or 3" });
+        }
+
+        // Initialize foundation sessions for the user if they don't exist
+        await initializeFoundationSessions(userId);
+
+        const session = await storage.getFoundationSession(
+          userId,
+          sessionNumber,
+        );
+        if (!session) {
+          return res.status(404).json({ error: "Session not found" });
+        }
+
+        const messages = await storage.getFoundationSessionMessages(session.id);
+
+        res.json({
+          session,
+          messages,
+        });
+      } catch (error) {
+        console.error("Error fetching foundation session:", error);
+        next(error);
       }
-
-      // Initialize foundation sessions for the user if they don't exist
-      await initializeFoundationSessions(userId);
-
-      const session = await storage.getFoundationSession(userId, sessionNumber);
-      if (!session) {
-        return res.status(404).json({ error: "Session not found" });
-      }
-
-      const messages = await storage.getFoundationSessionMessages(session.id);
-      
-      res.json({
-        session,
-        messages
-      });
-    } catch (error) {
-      console.error("Error fetching foundation session:", error);
-      next(error);
-    }
-  });
+    },
+  );
 
   // Start a foundation session
-  app.post("/api/foundation-sessions/:sessionNumber/start", isAuthenticated, async (req: Request, res: Response, next: NextFunction) => {
-    try {
-      const sessionNumber = parseInt(req.params.sessionNumber);
-      const userId = req.user!.id;
+  app.post(
+    "/api/foundation-sessions/:sessionNumber/start",
+    isAuthenticated,
+    async (req: Request, res: Response, next: NextFunction) => {
+      try {
+        const sessionNumber = parseInt(req.params.sessionNumber);
+        const userId = req.user!.id;
 
-      if (isNaN(sessionNumber) || sessionNumber < 1 || sessionNumber > 3) {
-        return res.status(400).json({ error: "Invalid session number. Must be 1, 2, or 3" });
-      }
+        if (isNaN(sessionNumber) || sessionNumber < 1 || sessionNumber > 3) {
+          return res
+            .status(400)
+            .json({ error: "Invalid session number. Must be 1, 2, or 3" });
+        }
 
-      // Initialize foundation sessions for the user if they don't exist
-      await initializeFoundationSessions(userId);
+        // Initialize foundation sessions for the user if they don't exist
+        await initializeFoundationSessions(userId);
 
-      const session = await storage.getFoundationSession(userId, sessionNumber);
-      if (!session) {
-        return res.status(404).json({ error: "Session not found" });
-      }
+        const session = await storage.getFoundationSession(
+          userId,
+          sessionNumber,
+        );
+        if (!session) {
+          return res.status(404).json({ error: "Session not found" });
+        }
 
-      // Check if session can be started
-      if (session.status === "locked") {
-        return res.status(403).json({ error: "Session is locked. Complete previous sessions first" });
-      }
-
-      if (session.status === "completed") {
-        return res.status(400).json({ error: "Session is already completed" });
-      }
-
-      // Update session status to in_progress and set startedAt
-      const updatedSession = await storage.updateFoundationSession(session.id, {
-        status: "in_progress" as const,
-        startedAt: new Date()
-      });
-
-      // Create initial guidance message for the session (only if no messages exist)
-      const existingMessages = await storage.getFoundationSessionMessages(session.id);
-      if (existingMessages.length === 0) {
-        const initialMessage = getInitialGuidanceMessage(sessionNumber);
-        if (initialMessage) {
-          await storage.createFoundationSessionMessage({
-            sessionId: session.id,
-            role: "assistant",
-            content: initialMessage
+        // Check if session can be started
+        if (session.status === "locked") {
+          return res.status(403).json({
+            error: "Session is locked. Complete previous sessions first",
           });
         }
-      }
 
-      res.json(updatedSession);
-    } catch (error) {
-      console.error("Error starting foundation session:", error);
-      next(error);
-    }
-  });
+        if (session.status === "completed") {
+          return res
+            .status(400)
+            .json({ error: "Session is already completed" });
+        }
+
+        // Update session status to in_progress and set startedAt
+        const updatedSession = await storage.updateFoundationSession(
+          session.id,
+          {
+            status: "in_progress" as const,
+            startedAt: new Date(),
+          },
+        );
+
+        // Create initial guidance message for the session (only if no messages exist)
+        const existingMessages = await storage.getFoundationSessionMessages(
+          session.id,
+        );
+        if (existingMessages.length === 0) {
+          const initialMessage = getInitialGuidanceMessage(sessionNumber);
+          if (initialMessage) {
+            await storage.createFoundationSessionMessage({
+              sessionId: session.id,
+              role: "assistant",
+              content: initialMessage,
+            });
+          }
+        }
+
+        res.json(updatedSession);
+      } catch (error) {
+        console.error("Error starting foundation session:", error);
+        next(error);
+      }
+    },
+  );
 
   // Add a message to a foundation session
-  app.post("/api/foundation-sessions/:sessionNumber/messages", isAuthenticated, async (req: Request, res: Response, next: NextFunction) => {
-    try {
-      const sessionNumber = parseInt(req.params.sessionNumber);
-      const userId = req.user!.id;
+  app.post(
+    "/api/foundation-sessions/:sessionNumber/messages",
+    isAuthenticated,
+    async (req: Request, res: Response, next: NextFunction) => {
+      try {
+        const sessionNumber = parseInt(req.params.sessionNumber);
+        const userId = req.user!.id;
 
-      if (isNaN(sessionNumber) || sessionNumber < 1 || sessionNumber > 3) {
-        return res.status(400).json({ error: "Invalid session number. Must be 1, 2, or 3" });
-      }
+        if (isNaN(sessionNumber) || sessionNumber < 1 || sessionNumber > 3) {
+          return res
+            .status(400)
+            .json({ error: "Invalid session number. Must be 1, 2, or 3" });
+        }
 
-      const session = await storage.getFoundationSession(userId, sessionNumber);
-      if (!session) {
-        return res.status(404).json({ error: "Session not found" });
-      }
+        const session = await storage.getFoundationSession(
+          userId,
+          sessionNumber,
+        );
+        if (!session) {
+          return res.status(404).json({ error: "Session not found" });
+        }
 
-      if (session.status !== "in_progress" && session.status !== "completed") {
-        return res.status(400).json({ error: "Session must be in progress or completed to add messages" });
-      }
-
-      // Validate message data
-      const messageValidation = insertFoundationSessionMessageSchema.safeParse({
-        ...req.body,
-        sessionId: session.id
-      });
-
-      if (!messageValidation.success) {
-        return res.status(400).json({
-          error: "Validation failed",
-          details: messageValidation.error.errors
-        });
-      }
-
-      const message = await storage.createFoundationSessionMessage(messageValidation.data);
-      res.status(201).json(message);
-    } catch (error) {
-      console.error("Error adding foundation session message:", error);
-      next(error);
-    }
-  });
-
-  // Update foundation session (for completion and progress tracking)
-  app.patch("/api/foundation-sessions/:sessionNumber", isAuthenticated, async (req: Request, res: Response, next: NextFunction) => {
-    try {
-      const sessionNumber = parseInt(req.params.sessionNumber);
-      const userId = req.user!.id;
-
-      if (isNaN(sessionNumber) || sessionNumber < 1 || sessionNumber > 3) {
-        return res.status(400).json({ error: "Invalid session number. Must be 1, 2, or 3" });
-      }
-
-      const session = await storage.getFoundationSession(userId, sessionNumber);
-      if (!session) {
-        return res.status(404).json({ error: "Session not found" });
-      }
-
-      // Validate update data
-      const updateValidation = updateFoundationSessionSchema.safeParse(req.body);
-      if (!updateValidation.success) {
-        return res.status(400).json({
-          error: "Validation failed",
-          details: updateValidation.error.errors
-        });
-      }
-
-      const updateData = updateValidation.data;
-
-      // Enforce valid state transitions - prevent bypassing sequential unlocking
-      // Locked sessions cannot be updated at all
-      if (session.status === "locked") {
-        return res.status(403).json({ 
-          error: "Cannot update locked session. Complete previous sessions first" 
-        });
-      }
-
-      if (updateData.status) {
-
-        // Only allow specific status transitions
-        if (updateData.status === "completed") {
-          // Only sessions that are in_progress can be marked as completed
-          if (session.status !== "in_progress") {
-            return res.status(400).json({ 
-              error: "Session must be in progress to mark as completed" 
-            });
-          }
-        } else if (updateData.status === "in_progress") {
-          // Only available sessions can be started
-          if (session.status !== "available") {
-            return res.status(400).json({ 
-              error: "Session must be available to start" 
-            });
-          }
-        } else {
-          // Disallow other arbitrary status changes
-          return res.status(400).json({ 
-            error: "Invalid status transition. Use the appropriate endpoints to start or complete sessions" 
+        if (
+          session.status !== "in_progress" &&
+          session.status !== "completed"
+        ) {
+          return res.status(400).json({
+            error: "Session must be in progress or completed to add messages",
           });
         }
-      }
 
-      // If marking as completed, set completedAt and unlock next session
-      if (updateData.status === "completed") {
-        updateData.completedAt = new Date();
-        
-        // Unlock next session if it exists (atomic operation would be better)
-        if (sessionNumber < 3) {
-          const nextSession = await storage.getFoundationSession(userId, sessionNumber + 1);
-          if (nextSession && nextSession.status === "locked") {
-            await storage.updateFoundationSession(nextSession.id, {
-              status: "available"
+        // Validate message data
+        const messageValidation =
+          insertFoundationSessionMessageSchema.safeParse({
+            ...req.body,
+            sessionId: session.id,
+          });
+
+        if (!messageValidation.success) {
+          return res.status(400).json({
+            error: "Validation failed",
+            details: messageValidation.error.errors,
+          });
+        }
+
+        const message = await storage.createFoundationSessionMessage(
+          messageValidation.data,
+        );
+        res.status(201).json(message);
+      } catch (error) {
+        console.error("Error adding foundation session message:", error);
+        next(error);
+      }
+    },
+  );
+
+  // Update foundation session (for completion and progress tracking)
+  app.patch(
+    "/api/foundation-sessions/:sessionNumber",
+    isAuthenticated,
+    async (req: Request, res: Response, next: NextFunction) => {
+      try {
+        const sessionNumber = parseInt(req.params.sessionNumber);
+        const userId = req.user!.id;
+
+        if (isNaN(sessionNumber) || sessionNumber < 1 || sessionNumber > 3) {
+          return res
+            .status(400)
+            .json({ error: "Invalid session number. Must be 1, 2, or 3" });
+        }
+
+        const session = await storage.getFoundationSession(
+          userId,
+          sessionNumber,
+        );
+        if (!session) {
+          return res.status(404).json({ error: "Session not found" });
+        }
+
+        // Validate update data
+        const updateValidation = updateFoundationSessionSchema.safeParse(
+          req.body,
+        );
+        if (!updateValidation.success) {
+          return res.status(400).json({
+            error: "Validation failed",
+            details: updateValidation.error.errors,
+          });
+        }
+
+        const updateData = updateValidation.data;
+
+        // Enforce valid state transitions - prevent bypassing sequential unlocking
+        // Locked sessions cannot be updated at all
+        if (session.status === "locked") {
+          return res.status(403).json({
+            error:
+              "Cannot update locked session. Complete previous sessions first",
+          });
+        }
+
+        if (updateData.status) {
+          // Only allow specific status transitions
+          if (updateData.status === "completed") {
+            // Only sessions that are in_progress can be marked as completed
+            if (session.status !== "in_progress") {
+              return res.status(400).json({
+                error: "Session must be in progress to mark as completed",
+              });
+            }
+          } else if (updateData.status === "in_progress") {
+            // Only available sessions can be started
+            if (session.status !== "available") {
+              return res.status(400).json({
+                error: "Session must be available to start",
+              });
+            }
+          } else {
+            // Disallow other arbitrary status changes
+            return res.status(400).json({
+              error:
+                "Invalid status transition. Use the appropriate endpoints to start or complete sessions",
             });
           }
         }
-      }
 
-      const updatedSession = await storage.updateFoundationSession(session.id, updateData);
-      res.json(updatedSession);
-    } catch (error) {
-      console.error("Error updating foundation session:", error);
-      next(error);
-    }
-  });
+        // If marking as completed, set completedAt and unlock next session
+        if (updateData.status === "completed") {
+          updateData.completedAt = new Date();
+
+          // Unlock next session if it exists (atomic operation would be better)
+          if (sessionNumber < 3) {
+            const nextSession = await storage.getFoundationSession(
+              userId,
+              sessionNumber + 1,
+            );
+            if (nextSession && nextSession.status === "locked") {
+              await storage.updateFoundationSession(nextSession.id, {
+                status: "available",
+              });
+            }
+          }
+        }
+
+        const updatedSession = await storage.updateFoundationSession(
+          session.id,
+          updateData,
+        );
+        res.json(updatedSession);
+      } catch (error) {
+        console.error("Error updating foundation session:", error);
+        next(error);
+      }
+    },
+  );
 
   // Streaming chat endpoint for Foundation Sessions with Claude integration
-  app.post("/api/foundation-sessions/:sessionNumber/messages/stream", isAuthenticated, async (req: Request, res: Response, next: NextFunction) => {
-    try {
-      const sessionNumber = parseInt(req.params.sessionNumber);
-      const userId = req.user!.id;
+  app.post(
+    "/api/foundation-sessions/:sessionNumber/messages/stream",
+    isAuthenticated,
+    async (req: Request, res: Response, next: NextFunction) => {
+      try {
+        const sessionNumber = parseInt(req.params.sessionNumber);
+        const userId = req.user!.id;
 
-      if (isNaN(sessionNumber) || sessionNumber < 1 || sessionNumber > 3) {
-        return res.status(400).json({ error: "Invalid session number. Must be 1, 2, or 3" });
-      }
-
-      const session = await storage.getFoundationSession(userId, sessionNumber);
-      if (!session) {
-        return res.status(404).json({ error: "Session not found" });
-      }
-
-      if (session.status !== 'in_progress' && session.status !== 'completed') {
-        return res.status(400).json({ error: "Session must be in progress or completed to send messages" });
-      }
-
-      const { content } = req.body;
-      if (!content || typeof content !== 'string') {
-        return res.status(400).json({ error: "Message content is required" });
-      }
-
-      // Save user message
-      const userMessage = await storage.createFoundationSessionMessage({
-        sessionId: session.id,
-        role: 'user',
-        content: content.trim()
-      });
-
-      // Get all messages from this session for context
-      const messages = await storage.getFoundationSessionMessages(session.id);
-      
-      // Format messages for Claude API
-      const formattedMessages = messages.map(msg => ({
-        role: msg.role as 'user' | 'assistant',
-        content: msg.content
-      }));
-
-      // Get user profile data for context
-      const userProfile = await storage.getUserProfile(userId);
-
-      // Get resume summary for context
-      const resumeSummary = await formatResumeSummary(userId);
-
-      // Get previous session's completion data if available
-      let previousSessionData = null;
-      if (sessionNumber > 1) {
-        const previousSession = await storage.getFoundationSession(userId, sessionNumber - 1);
-        if (previousSession?.status === 'completed' && previousSession.completionData) {
-          previousSessionData = previousSession.completionData;
+        if (isNaN(sessionNumber) || sessionNumber < 1 || sessionNumber > 3) {
+          return res
+            .status(400)
+            .json({ error: "Invalid session number. Must be 1, 2, or 3" });
         }
-      }
 
-      // Set up SSE headers
-      res.setHeader('Content-Type', 'text/event-stream');
-      res.setHeader('Cache-Control', 'no-cache');
-      res.setHeader('Connection', 'keep-alive');
-
-      // Send user message ID first
-      res.write(`data: ${JSON.stringify({ type: 'user_message', id: userMessage.id })}\n\n`);
-
-      // Initialize empty assistant content for accumulation
-      let assistantContent = '';
-
-      // Generate Foundation Session-specific system prompt
-      const getFoundationSessionSystemPrompt = (previousSessionData?: any, resumeSummary?: string) => {
-        let basePrompt = '';
-        
-        // Add resume summary if available
-        if (resumeSummary) {
-          basePrompt += resumeSummary + '\n';
+        const session = await storage.getFoundationSession(
+          userId,
+          sessionNumber,
+        );
+        if (!session) {
+          return res.status(404).json({ error: "Session not found" });
         }
-        
-        // Add previous session summary if available
-        if (previousSessionData) {
-          const summary = formatSessionSummary(sessionNumber - 1, previousSessionData);
-          if (summary) {
-            basePrompt += `${summary}
+
+        if (
+          session.status !== "in_progress" &&
+          session.status !== "completed"
+        ) {
+          return res.status(400).json({
+            error: "Session must be in progress or completed to send messages",
+          });
+        }
+
+        const { content } = req.body;
+        if (!content || typeof content !== "string") {
+          return res.status(400).json({ error: "Message content is required" });
+        }
+
+        // Save user message
+        const userMessage = await storage.createFoundationSessionMessage({
+          sessionId: session.id,
+          role: "user",
+          content: content.trim(),
+        });
+
+        // Get all messages from this session for context
+        const messages = await storage.getFoundationSessionMessages(session.id);
+
+        // Format messages for Claude API
+        const formattedMessages = messages.map((msg) => ({
+          role: msg.role as "user" | "assistant",
+          content: msg.content,
+        }));
+
+        // Get user profile data for context
+        const userProfile = await storage.getUserProfile(userId);
+
+        // Get resume summary for context
+        const resumeSummary = await formatResumeSummary(userId);
+
+        // Get previous session's completion data if available
+        let previousSessionData = null;
+        if (sessionNumber > 1) {
+          const previousSession = await storage.getFoundationSession(
+            userId,
+            sessionNumber - 1,
+          );
+          if (
+            previousSession?.status === "completed" &&
+            previousSession.completionData
+          ) {
+            previousSessionData = previousSession.completionData;
+          }
+        }
+
+        // Set up SSE headers
+        res.setHeader("Content-Type", "text/event-stream");
+        res.setHeader("Cache-Control", "no-cache");
+        res.setHeader("Connection", "keep-alive");
+
+        // Send user message ID first
+        res.write(
+          `data: ${JSON.stringify({ type: "user_message", id: userMessage.id })}\n\n`,
+        );
+
+        // Initialize empty assistant content for accumulation
+        let assistantContent = "";
+
+        // Generate Foundation Session-specific system prompt
+        const getFoundationSessionSystemPrompt = (
+          previousSessionData?: any,
+          resumeSummary?: string,
+        ) => {
+          let basePrompt = "";
+
+          // Add resume summary if available
+          if (resumeSummary) {
+            basePrompt += resumeSummary + "\n";
+          }
+
+          // Add previous session summary if available
+          if (previousSessionData) {
+            const summary = formatSessionSummary(
+              sessionNumber - 1,
+              previousSessionData,
+            );
+            if (summary) {
+              basePrompt += `${summary}
 
 ⚠️ CRITICAL INSTRUCTION: The user has already completed the previous session shown above. Use this summary as essential context about what has been established. DO NOT repeat questions, exercises, or topics already covered in the previous session, instead mention the answers in the chat and confirm from the user again. Build upon this foundation to advance the conversation to new territory.
 
 ───────────────────────────────────────────────────────────────
 
 `;
+            }
           }
-        }
-        
-        if (sessionNumber === 1) {
-          return basePrompt + `You are a Functional Identity Lock-In coach for professionals working on personal brand building.
+
+          if (sessionNumber === 1) {
+            return (
+              basePrompt +
+              `You are a Functional Identity Lock-In coach for professionals working on personal brand building.
 
 STYLE
 - Speak in simple, everyday language.
@@ -1055,9 +1199,10 @@ Only when the functional identity is COMPLETELY locked in with all required data
 1. Say the lock-in line: "Locked in: You're a [PRIMARY FUNCTION] professional who [specific value creation], with [SECONDARY] as a 20% complement."
 2. Provide the two next steps aligned to brand building
 3. Then and ONLY then, end the conversation naturally
-`;
-        } else if (sessionNumber === 2) {
-          return `You are a VC-style Credibility Coach for professionals working on personal brand building.
+`
+            );
+          } else if (sessionNumber === 2) {
+            return `You are a VC-style Credibility Coach for professionals working on personal brand building.
 
 STYLE & TONE
 - Be warm, direct, and "tough-love" when needed. Conversational, plain English.
@@ -1066,7 +1211,7 @@ STYLE & TONE
 
 CORE PROBLEM TO SOLVE
 - Most clients speak in aspirations; VCs/hiring managers care about proof and ROI.
-- Your job: convert soft claims into hard, cross-context, measurable evidence—and lock the brand to a credible function (Marketing, Sales, Product, Operations, Finance).
+- Your job: extract hard, cross-context, measurable evidence that proves credibility WITHIN a function already discussed in prior sessions.
 
 OPENING MOVE — THE $1M VC TEST (with alternative framings)
 - Ask: "If I'm writing you a $1M check because you're credible, what SPECIFIC expertise am I investing in?"
@@ -1077,8 +1222,8 @@ OPENING MOVE — THE $1M VC TEST (with alternative framings)
 
 THE "ICE BUCKET" INTERVENTION (signature move)
 - When you hear soft claims ("lead strategy," "impact the business," "world-class at X," "I'm intentional," "I brainstorm well"):
-  • Say: "A VC doesn't care about that. What will they find you CREDIBLE for—in Marketing, Sales, Product, Operations, or Finance?"
-  • Keep pressing until the user names a function and a mechanism of value creation.
+  • Say: "A VC doesn't care about that. What will they find you CREDIBLE for, with proof?"
+  • Keep pressing until the user names a concrete mechanism of value creation with evidence.
 
 WEAK VS HARD-KNOCKS — CLAIM DETECTION
 - Flag weak/squishy: brainstorming, insights, intentionality, "world-class," "I could do it," school projects, "eyes closed."
@@ -1086,8 +1231,8 @@ WEAK VS HARD-KNOCKS — CLAIM DETECTION
 
 SPECIFICITY ESCALATION LADDER (Level 1→4)
 - L1 (Soft response): "Your coworkers may enjoy that story; investors won't. What's the ROI-credible skill?"
-- L2 (Function): "Which function owns this? Marketing, Sales, Product, Operations, or Finance?"
-- L3 (Channel/method): "Which channels/methods? What did you do, precisely? When do you choose A vs B?"
+- L2 (Mechanism): "What exact lever did you pull to create value?"
+- L3 (Channel/method): "Which channels or methods? What did you do, precisely? When do you choose A vs B?"
 - L4 (Cross-context): "Where did you repeat this—Company A and Company B? Show it's not one-off luck."
 
 ASPIRATION ↔ ACHIEVEMENT GAP (name it fast)
@@ -1099,374 +1244,388 @@ ASPIRATION ↔ ACHIEVEMENT GAP (name it fast)
 
 EVIDENCE HIERARCHY (strongest → weakest)
 - Tier 1: Measurable business outcomes (saved $ / grew revenue / % improvements / shipped usage & retention).
-- Tier 2: Channel-specific execution (e.g., YouTube, LinkedIn, podcasts, events) with clear levers and playbooks.
+- Tier 2: Channel- or method-specific execution with clear levers and playbooks.
 - Tier 3: Systems thinking WITH results (frameworks + concrete outcomes).
-- Tier 4: Intentionality without metrics (story is coherent but lacks numbers).
+- Tier 4: Intentionality without metrics (coherent story, weak proof).
 - Tier 5: Soft skills & aspirations (no proof).
 → Always push upward toward Tier 1–2 evidence.
 
 PROOF-EXTRACTION PROCESS (the 6-step sequence)
-1) Identify the aspiration: "I want to lead strategy / direct product / be world-class at X…"
+1) Identify the aspiration.
 2) Apply the VC test: "What makes you credible for a job someone must hire TODAY?"
-3) Force functional specificity: Marketing / Sales / Product / Operations / Finance — pick ONE primary.
-4) Extract channel/method detail: enumerate levers, when to use which, your decision criteria.
-5) Demand cross-context proof: repeatability at A and B (or A and an agency/side context).
-6) Get the numbers: how much, how many, % change, $ impact, volume, time saved, throughput.
+3) Anchor the mechanism of value creation.
+4) Extract channel/method detail: levers used, decision criteria, trade-offs.
+5) Demand cross-context proof.
+6) Get the numbers: %, $, volume, time saved, throughput, scale.
 
 CREDIBILITY LITMUS TESTS (quick validators)
 - ROI test: "Why would I, as an investor, bet budget on YOU?"
 - Hiring manager test: "What job are you provably qualified to OWN?"
-- Differentiation test: "What strong opinions/plays do you have that separate you from peers?"
+- Differentiation test: "What strong opinions or plays separate you from peers?"
 - Cross-context test: "Where else did you repeat this?"
-- Opinion test: "What's your principled stance on when to pull each lever?"
+- Opinion test: "When do you pull each lever—and when do you NOT?"
 
 COMMON RESISTANCE PATTERNS → YOUR RESPONSES
 - "I could do it if given a chance." → "What DO you have proof of? Paid work only."
 - "My journey/intentionality shows credibility." → "Investors buy outcomes; show ROI."
 - "I'm good at brainstorming/leadership." → "Everyone says that. Show hard expertise with metrics."
-- "I want to impact via strategy." → "Strategy isn't a function. Is it Finance, Ops, Marketing, Sales, or Product strategy—and what proof?"
-
-FIVE-FUNCTIONS ANCHOR (keep returning to mechanism)
-- Finance = resource allocation, budgets, ROI decisions.
-- Operations = better/faster/cheaper; throughput, quality, cost-down.
-- Marketing = demand, perception, positioning, GTM messaging.
-- Sales = direct revenue, pipeline ownership, closing or decisive enablement.
-- Product = what gets built and why; roadmap, prioritization, user-value tradeoffs.
+- "I want to impact via strategy." → "Strategy only matters with proof. What did you execute and measure?"
 
 CONVERSATION FLOW (natural, iterative)
-0) Provide brief definitions when first introducing concepts, such as:
-  Ice Bucket: Methodology for rapidly cooling inflated claims to reveal concrete facts
-  Evidence Tiers:
-    Tier 1: Measurable outcomes with direct causality (revenue impact, market share, user growth)
-    Tier 2: Process improvements or capabilities without quantified business results
-  Brand Claim: Single sentence capturing unique value proposition
+0) Briefly define concepts only if confusion appears:
+   - Ice Bucket: Rapidly stripping soft claims down to hard facts
+   - Evidence Tiers: Ranking proof by business check-worthiness
 1) Start with the $1M test. If soft → Ice Bucket.
-2) Lock a primary function (optionally note a secondary).
-3) Walk the specificity ladder (function → channels/methods → cross-context → metrics).
+2) Pressure-test the claimed mechanism with channels, repetition, and numbers.
+3) Walk the specificity ladder.
 4) Run litmus tests; handle resistance.
-5) Summarize evidence at the top tier it genuinely supports.
+5) Summarize evidence at the highest tier it genuinely supports.
 
 SESSION END — DELIVERABLES (concise, action-oriented)
 - One-line brand claim: "[Function] pro who [mechanism] to drive [measurable outcome]."
-- 3–5 proof bullets (Tier-1/2 evidence only), each with a number, lever, and repeatability context.
+- 3–5 proof bullets (Tier-1/2 evidence only), each with a number and repeatability context.
 - "$1M check reason": one sentence on why an investor/hiring manager would bet budget on them now.
-- Next steps if gaps remain: specific artifacts to build (portfolio pieces, case studies, channel proofs), targeted reps to gather numbers, and where to repeat results.
+- Next steps if gaps remain: specific artifacts to build, reps to gather metrics, and where to repeat results.
 
 GUARDRAILS
-- Never accept school projects as core proof. Never stop at vague "strategy/impact" talk.
-- Keep forcing mechanisms, numbers, and cross-context repetition.
-- Always translate soft claims into one of the five functions and ROI language.
+- Never accept school projects as core proof.
+- Never stop at vague "strategy" or "impact" talk.
+- Keep forcing mechanisms, numbers, and repeatability.
 
 CRITICAL COMPLETION INSTRUCTION:
 Do NOT end this session prematurely. The session is ONLY complete when ALL of the following are definitively established:
-1. Primary function is locked (Finance, Operations, Sales, Marketing, or Product)
-2. Credible expertise with MEASURABLE proof is documented (numbers, metrics, concrete outcomes)
-3. Cross-context repeatability is confirmed (proven in multiple settings/companies)
-4. Channel/method specificity is clear (exact mechanisms of value creation)
-5. ROI-credible evidence is at Tier 1 or Tier 2 level
+1. Credible expertise with MEASURABLE proof is documented
+2. Cross-context repeatability is confirmed
+3. Channel/method specificity is clear
+4. ROI-credible evidence is Tier 1 or Tier 2
 
-If ANY required data is missing or the user has given vague/incomplete answers:
-- Ask the question again in a different way
-- Provide examples to clarify what specific proof you need
-- Push for metrics, numbers, and cross-context evidence
-- Do NOT provide final deliverables until ALL criteria are completely met
+If ANY required data is missing:
+- Ask again differently
+- Push for metrics and repetition
+- Do NOT provide final deliverables until ALL criteria are met
 
-Only when you have COMPLETE credibility proof with all required elements should you:
+Only when credibility proof is COMPLETE should you:
 1. Provide the one-line brand claim
-2. List 3-5 proof bullets with Tier-1/2 evidence
+2. List 3–5 Tier-1/2 proof bullets
 3. State the "$1M check reason"
-4. Then and ONLY then, end the conversation naturally
+4. Then and ONLY then, end naturally
 `;
-        } else if (sessionNumber === 3) {
-          return `You are a Story Extraction Coach for professionals building their personal brand (Session 3). Your job is to turn generic claims into compelling, content-ready narratives that reveal HOW they think, WHY they chose a path, the STRUGGLE they navigated, and the INSIGHTS they earned—then tie each story back to their functional credibility.
+          } else if (sessionNumber === 3) {
+            return `You are a Story Extraction Coach for professionals building their personal brand (Session 3).
 
-STYLE & CONVERSATION RULES
-- Warm, direct, and incisive; plain English; "one short question at a time."
-- Keep it natural—no monologues. Escalate specificity progressively.
-- Default to "I, not we." Refuse vague claims; always seek mechanisms, trade-offs, and numbers.
-- Prioritize agency, methodology, vulnerability, specificity, and functional connection.
+              This session assumes:
+              - A primary functional identity has already been established
+              - Credible expertise has already been pressure-tested
+              Your job is to translate that credibility into compelling, content-ready stories that reveal HOW they think, WHY they chose a path, the STRUGGLE they navigated, and the INSIGHTS they earned—then reinforce their functional credibility through narrative.
 
-CORE CHALLENGE TO STATE UP FRONT
-"'I led cross-functional teams' means nothing by itself. We'll excavate the HOW, WHY, STRUGGLE, and INSIGHT so your stories prove credibility and fuel your brand."
+              STYLE & CONVERSATION RULES
+              - Warm, direct, and incisive; plain English; one short question at a time.
+              - Keep it natural—no monologues. Escalate specificity progressively.
+              - Default to "I, not we." Refuse vague claims.
+              - Prioritize agency, methodology, vulnerability, specificity, and functional reinforcement.
 
-------------------------------------------------------------
-PART 1 — SIGNATURE STORY EXCAVATION (OPENING PROMPTS)
-Use the "Surprise Success" mining technique:
-- "Give me the story where you surprised yourself with the outcome. What result did you not expect?"
-- "When was your approach different from everyone else's—what did you see that they missed?"
-- "What are you proud of that most people wouldn't understand was hard?"
-- "Tell me about a result that made your boss look good—how did they react?"
+              CORE CHALLENGE TO STATE UP FRONT
+              "'I led cross-functional teams' means nothing by itself. We’ll excavate the HOW, WHY, STRUGGLE, and INSIGHT so your stories clearly demonstrate value and strengthen your positioning."
 
-Goal: surface authentic pride, unique perspective, unexpected outcomes.
+              ------------------------------------------------------------
+              PART 1 — SIGNATURE STORY EXCAVATION (OPENING PROMPTS)
+              Use the "Surprise Success" mining technique:
+              - "Tell me about a result that surprised you—what didn’t you expect to happen?"
+              - "When did your approach differ from others—and why?"
+              - "What are you proud of that most people wouldn’t realize was hard?"
+              - "Which outcome made your boss look good—and what did YOU do?"
 
-------------------------------------------------------------
-PART 2 — HOW YOU THINK (METHODOLOGY & DECISIONING)
-Probe for frameworks, levers, and judgment calls:
-- "What made YOUR approach different from what anyone else would try?"
-- "Which framework/tool/method did you use that others hadn't considered?"
-- "Where did the idea come from? What told you this was the right bet?"
-- "What was the contrarian insight that changed the outcome?"
+              Goal: surface authentic pride, unique judgment, and non-obvious outcomes.
 
-Decision-making philosophy:
-- "When you faced the trade-off, how did you think about it?"
-- "What was going through your mind at the decision point?"
-- "What drives that choice—impact, principle, risk posture, something else?"
+              ------------------------------------------------------------
+              PART 2 — HOW YOU THINK (METHODOLOGY & DECISIONING)
+              Probe for frameworks, levers, and judgment calls:
+              - "What made YOUR approach different from what others tried?"
+              - "Which framework, tool, or lens guided your decision?"
+              - "What told you this was the right bet at the time?"
+              - "What insight changed the direction of the outcome?"
 
-First-principles pattern (if applicable):
-- "What's the fundamental question you asked?"
-- "How did you break the problem down? Which assumptions did you reject?"
+              Decision-making philosophy:
+              - "What trade-off were you weighing?"
+              - "What mattered most in that moment—and why?"
+              - "What principle or belief guided the decision?"
 
-Contrarian perspective pattern:
-- "What does everyone in your industry believe that you think is wrong?"
-- "What's the conventional wisdom you challenge—and why?"
+              Patterns to probe (use selectively):
+              - First-principles: "What assumption did you question?"
+              - Contrarian: "What did most people believe that you disagreed with?"
+              - Systems: "What system or structure shaped the outcome?"
+              - Win–win: "How did this create value for others?"
 
-Systems-thinking pattern:
-- "How do the parts connect? What system sits underneath this problem?"
-- "Which structural factors (org, incentives, flows) shaped the outcome?"
+              ------------------------------------------------------------
+              PART 3 — VULNERABILITY & STRUGGLE (AUTHENTICITY LAYER)
+              Expose tension and growth:
+              - "What part of this was uncomfortable or against your instincts?"
+              - "What did you have to change about how you worked or thought?"
+              - "What nearly broke—or didn’t work the first time?"
+              - "What’s something you’re proud of that others wouldn’t realize was hard?"
 
-Win–win value pattern:
-- "How did you ensure it created value for others? What's 'in it for them'?"
+              Identity tension probes:
+              - "Where did your strengths clash with constraints?"
+              - "What internal conflict did you have to work through?"
 
-------------------------------------------------------------
-PART 3 — VULNERABILITY & STRUGGLE (AUTHENTICITY LAYER)
-Expose the tension and growth:
-- "How does [strength/value A] conflict with [constraint/value B]?"
-- "What were you uncomfortable with? What did you have to change about yourself?"
-- "What did you force yourself to do that went against your nature?"
-- "What's something you're proud of that others wouldn't realize was hard—and why?"
+              ------------------------------------------------------------
+              PART 4 — IDEAL PROFESSIONAL SELF (FRAMING EXERCISE)
+              Set expectations:
+              "Assume strategy and team leadership are table stakes. Describe the distinctive way YOU operate when you’re at your best."
 
-Gap check:
-- "When have you felt the gap between your 'work self' and 'authentic self'?"
-- "Which parts of you do you amplify or downplay at work?"
+              Use to surface non-generic traits that differentiate their brand voice.
 
-------------------------------------------------------------
-PART 4 — IDEAL PROFESSIONAL SELF (FRAMING EXERCISE)
-Set expectations:
-"Assume that in any mid-career role you'll do some strategy and team management. Set that aside. Describe your ideal professional self's distinctive qualities, interactions, and impact."
+              ------------------------------------------------------------
+              PART 5 — CONTENT IDEATION FROM STORIES
+              Run a rapid ideation pass:
+              "List every topic or insight you could write about from this single story—don’t filter."
 
-Use to surface non-generic traits that differentiate their brand.
+              Then generate angles:
+              - "What’s a contrarian take this story supports?"
+              - "How does this apply to what’s happening in your industry right now?"
+              - "What lesson here would most people miss?"
+              - "What would you tell someone earlier in their career?"
 
-------------------------------------------------------------
-PART 5 — CONTENT IDEATION FROM STORIES
-Run a "2–4 minute speed-run":
-"List every topic you could write about from this single lasting impression. Don't filter—breadth over polish."
+              ------------------------------------------------------------
+              PART 6 — STORY QUALITY GATEKEEPERS (FILTERS & REDIRECTS)
+              Team-win filter:
+              - "You said ‘we.’ What did YOU personally own or decide?"
 
-Then generate thought-leadership angles:
-- "How does your expertise apply to [current trend/news]?"
-- "What's a contrarian take on [industry assumption]?"
-- "What lessons from [your background] apply to [target area]?"
-- "What would you tell someone just starting in [your field]?"
+              Credibility reinforcement (not proof discovery):
+              - "What would people associate YOU with because of this work?"
+              - "Why does this story strengthen your positioning?"
 
-------------------------------------------------------------
-PART 6 — STORY QUALITY GATEKEEPERS (FILTERS & REDIRECTS)
-Team-win filter:
-- "Sounds like a team win. What was YOUR specific contribution?"
-- "You said 'we.' What did YOU personally decide, build, or optimize?"
+              Forbidden story redirects:
+              - "Led a successful team project" → "Your fingerprints—what did you own?"
+              - "Helped the company grow" → "What specific outcome did your work drive?"
+              - "Contributed to strategy" → "Which recommendation shipped—and what changed?"
 
-Credibility check:
-- "If I called your old team, what would they remember you for?"
-- "What problem do people text YOU about on weekends—and why?"
+              ------------------------------------------------------------
+              PART 7 — SUCCESS INDICATORS VS RED FLAGS
+              Green lights (ship-ready story):
+              - Clear personal agency
+              - Visible thinking process
+              - Vulnerability and growth
+              - Concrete details and outcomes
+              - Clear reinforcement of functional credibility
 
-Forbidden story types → Redirects:
-- "Led a successful team project" → "Your fingerprints: what did you own?"
-- "Managed a challenging situation" → "What measurable result proves it worked?"
-- "Helped the company grow" → "Where's the causal link to your work?"
-- "Contributed to strategy" → "Which recommendation of yours shipped? Outcome?"
-- "Collaborated cross-functionally" → "How did you guide it? What struggle did you overcome?"
+              Red flags (keep excavating):
+              - Generic or interchangeable story
+              - Team success without ownership
+              - No struggle or learning
+              - Outcome without decision logic
 
-------------------------------------------------------------
-PART 7 — SUCCESS INDICATORS (GREEN LIGHTS) VS RED FLAGS
-Green lights (ship-ready story):
-- Personal agency is explicit ("I did").
-- Thinking process visible (frameworks, contrarian insight, system lens).
-- Vulnerability present (tension, discomfort, growth).
-- Specificity achieved (numbers, before/after, unique approach).
-- Functional connection made (ties back to their primary function/credibility).
+              ------------------------------------------------------------
+              PART 8 — IMPLEMENTATION FLOW (TIME-BOXED RHYTHM)
+              Stage 1: Surface story and outcome
+              Stage 2: Methodology and mindset
+              Stage 3: Vulnerability and learning
+              Stage 4: Functional reinforcement and content framing
 
-Red flags (keep excavating):
-- Too generic / could be anyone; soft skills only.
-- Team win without agency; participation, not ownership.
-- No vulnerability; success sounds effortless.
-- Outcomes with no "how they think."
+              ------------------------------------------------------------
+              PART 9 — SESSION CLOSE (DELIVERABLES)
+              Provide content-ready outputs:
+              1) One-line brand claim:
+                 "[Function] professional who [approach/mechanism] to achieve [measurable outcome]."
+              2) One polished Signature Story (outline):
+                 - Title
+                 - Context & stakes
+                 - Challenge & constraints
+                 - Approach (frameworks, levers, decisions)
+                 - Tension/Vulnerability
+                 - Outcome (numbers or concrete change)
+                 - Repeatability
+              3) 3–5 content post ideas derived from the story
+              4) Next steps (if gaps): exact elements to refine (clarity, numbers, tension, repeatability)
 
-------------------------------------------------------------
-PART 8 — IMPLEMENTATION FLOW (TIME-BOXED RHYTHM)
-Stage 1 (Minutes 2–4): Surface-level excavation
-- Surprise success; unexpected outcomes; pride with hidden difficulty.
+              REMINDERS
+              - This session is about STORY, not identity or proof discovery.
+              - Reinforce credibility already earned; don’t re-argue it.
+              - Keep pressing for agency, thinking, struggle, and specificity.
 
-Stage 2 (Minutes 5–7): Methodology & mindset
-- What made their approach different; frameworks; contrarian/system/first-principles; decision criteria.
+              CRITICAL COMPLETION INSTRUCTION:
+              Do NOT end this session prematurely. The session is ONLY complete when ALL are present:
+              1. Agency
+              2. Methodology
+              3. Vulnerability
+              4. Specificity
+              5. Functional reinforcement
 
-Stage 3 (Minutes 8–9): Vulnerability & learning
-- Discomfort, internal conflict, growth; values in tension.
+              If anything is missing:
+              - Probe again
+              - Ask for the decision, the tension, or the number
+              - Do NOT provide final deliverables until the story is complete
 
-Stage 4 (Minute 10): Content validation & functional tie-back
-- Confirm agency + methodology + vulnerability + specificity; link to their function.
+              Only when the story is COMPLETE should you:
+              1. Provide the content-ready story summary
+              2. List 3–5 content angles
+              3. Reinforce the functional positioning
+              4. Then and ONLY then, end naturally`;
+          }
 
-------------------------------------------------------------
-PART 9 — SESSION CLOSE (DELIVERABLES)
-Provide concise, content-ready outputs:
-1) One-line brand claim:
-   "[Function] professional who [mechanism/approach] to achieve [measurable outcome]."
-2) One polished Signature Story (outline):
-   - Title
-   - Context & stakes
-   - Challenge & constraints
-   - Approach (frameworks, levers, decisions, trade-offs)
-   - Tension/Vulnerability (what felt hard; what changed in you)
-   - Outcome (numbers, before/after, quality/throughput/revenue/etc.)
-   - Repeatability (where else you applied it or would apply it)
-3) 3–5 content post ideas derived from the story
-   - First-principles angle, contrarian take, systems insight, win–win philosophy
-4) Next steps (if gaps): exact artifacts to build (case study, portfolio proof), metrics to capture, and a plan to repeat results in a second context.
+          return `You are a professional business coach. This Foundation Session ${sessionNumber} is not yet fully implemented. Please let the user know this session is coming soon.`;
+        };
 
-REMINDERS
-- Keep pressing until we have agency, methodology, vulnerability, specificity, and a functional connection.
-- Translate soft claims into proof the market respects; numbers and decision points matter.
-- Ask one targeted question at a time. If answers stay generic, escalate to tension/decision/metric prompts.
+        // Generate streaming response using Foundation Session-specific Claude integration
+        const systemPrompt = getFoundationSessionSystemPrompt(
+          previousSessionData,
+          resumeSummary,
+        );
 
-CRITICAL COMPLETION INSTRUCTION:
-Do NOT end this session prematurely. The session is ONLY complete when ALL of the following story elements are definitively established:
-1. AGENCY - Clear "I" statements showing personal decision-making and ownership
-2. METHODOLOGY - Specific frameworks, tools, or approaches that demonstrate HOW they think
-3. VULNERABILITY - Honest moments of struggle, doubt, or unexpected challenges
-4. SPECIFICITY - Concrete details with numbers, decisions, and trade-offs (not generic claims)
-5. FUNCTIONAL CONNECTION - Story clearly ties back to their primary function and credible expertise
-
-If ANY required element is missing or the user has given vague/incomplete story details:
-- Ask probing questions to extract the missing element
-- Provide examples of what you need (e.g., "What specific decision did YOU make?")
-- Push for concrete details, numbers, and genuine struggle moments
-- Do NOT provide final deliverables until the story is COMPLETE with all 5 elements
-
-Only when you have a COMPLETE story with all required elements should you:
-1. Provide the content-ready story summary
-2. List the 3-5 proof bullets extracted from the story
-3. State the functional connection and brand reinforcement
-4. Then and ONLY then, end the conversation naturally
-`;
-        }
-        
-        return `You are a professional business coach. This Foundation Session ${sessionNumber} is not yet fully implemented. Please let the user know this session is coming soon.`;
-      };
-
-      // Generate streaming response using Foundation Session-specific Claude integration
-      const systemPrompt = getFoundationSessionSystemPrompt(previousSessionData, resumeSummary);
-      
-      const response = await anthropic.messages.create({
-        model: CLAUDE_MODEL,
-        system: systemPrompt,
-        messages: formattedMessages,
-        max_tokens: 4096,
-        temperature: 0.7,
-        stream: true,
-      });
-
-      for await (const chunk of response) {
-        if (chunk.type === 'content_block_delta' && chunk.delta.type === 'text_delta') {
-          const content = chunk.delta.text;
-          assistantContent += content;
-          
-          // Send the chunk to the client
-          res.write(`data: ${JSON.stringify({ type: 'chunk', content })}\n\n`);
-        }
-      }
-
-      // Save complete assistant message
-      const assistantMessage = await storage.createFoundationSessionMessage({
-        sessionId: session.id,
-        role: 'assistant',
-        content: assistantContent
-      });
-
-      // Check if session should be automatically completed
-      const allMessages = await storage.getFoundationSessionMessages(session.id);
-      const completionCheck = await checkSessionCompletion(userId, sessionNumber, allMessages, userProfile);
-      
-      if (completionCheck.shouldComplete) {
-        // Automatically complete the session with the extracted data
-        await storage.updateFoundationSession(session.id, {
-          status: 'completed',
-          completedAt: new Date(),
-          completionData: completionCheck.completionData
+        const response = await anthropic.messages.create({
+          model: CLAUDE_MODEL,
+          system: systemPrompt,
+          messages: formattedMessages,
+          max_tokens: 4096,
+          temperature: 0.7,
+          stream: true,
         });
 
-        // Unlock next session if it exists
-        if (sessionNumber < 3) {
-          const nextSession = await storage.getFoundationSession(userId, sessionNumber + 1);
-          if (nextSession && nextSession.status === "locked") {
-            await storage.updateFoundationSession(nextSession.id, {
-              status: "available"
-            });
+        for await (const chunk of response) {
+          if (
+            chunk.type === "content_block_delta" &&
+            chunk.delta.type === "text_delta"
+          ) {
+            const content = chunk.delta.text;
+            assistantContent += content;
+
+            // Send the chunk to the client
+            res.write(
+              `data: ${JSON.stringify({ type: "chunk", content })}\n\n`,
+            );
           }
         }
 
-        // Send completion notification
-        res.write(`data: ${JSON.stringify({ 
-          type: 'session_completed',
+        // Save complete assistant message
+        const assistantMessage = await storage.createFoundationSessionMessage({
+          sessionId: session.id,
+          role: "assistant",
+          content: assistantContent,
+        });
+
+        // Check if session should be automatically completed
+        const allMessages = await storage.getFoundationSessionMessages(
+          session.id,
+        );
+        const completionCheck = await checkSessionCompletion(
+          userId,
           sessionNumber,
-          completionData: completionCheck.completionData
-        })}\n\n`);
+          allMessages,
+          userProfile,
+        );
+
+        if (completionCheck.shouldComplete) {
+          // Automatically complete the session with the extracted data
+          await storage.updateFoundationSession(session.id, {
+            status: "completed",
+            completedAt: new Date(),
+            completionData: completionCheck.completionData,
+          });
+
+          // Unlock next session if it exists
+          if (sessionNumber < 3) {
+            const nextSession = await storage.getFoundationSession(
+              userId,
+              sessionNumber + 1,
+            );
+            if (nextSession && nextSession.status === "locked") {
+              await storage.updateFoundationSession(nextSession.id, {
+                status: "available",
+              });
+            }
+          }
+
+          // Send completion notification
+          res.write(
+            `data: ${JSON.stringify({
+              type: "session_completed",
+              sessionNumber,
+              completionData: completionCheck.completionData,
+            })}\n\n`,
+          );
+        }
+
+        // Send final message with assistant message ID
+        res.write(
+          `data: ${JSON.stringify({
+            type: "complete",
+            id: assistantMessage.id,
+            content: assistantContent,
+          })}\n\n`,
+        );
+
+        res.end();
+      } catch (error) {
+        console.error("Error in Foundation Session streaming chat:", error);
+        res.write(
+          `data: ${JSON.stringify({ type: "error", message: "Failed to generate response" })}\n\n`,
+        );
+        res.end();
       }
-
-      // Send final message with assistant message ID
-      res.write(`data: ${JSON.stringify({ 
-        type: 'complete', 
-        id: assistantMessage.id,
-        content: assistantContent 
-      })}\n\n`);
-
-      res.end();
-    } catch (error) {
-      console.error("Error in Foundation Session streaming chat:", error);
-      res.write(`data: ${JSON.stringify({ type: 'error', message: 'Failed to generate response' })}\n\n`);
-      res.end();
-    }
-  });
+    },
+  );
 
   // Update timer elapsed time for a foundation session
-  app.patch("/api/foundation-sessions/:sessionNumber/timer", isAuthenticated, async (req: Request, res: Response, next: NextFunction) => {
-    try {
-      const sessionNumber = parseInt(req.params.sessionNumber);
-      const userId = req.user!.id;
-      const { timerElapsed } = req.body;
+  app.patch(
+    "/api/foundation-sessions/:sessionNumber/timer",
+    isAuthenticated,
+    async (req: Request, res: Response, next: NextFunction) => {
+      try {
+        const sessionNumber = parseInt(req.params.sessionNumber);
+        const userId = req.user!.id;
+        const { timerElapsed } = req.body;
 
-      if (isNaN(sessionNumber) || sessionNumber < 1 || sessionNumber > 3) {
-        return res.status(400).json({ error: "Invalid session number. Must be 1, 2, or 3" });
+        if (isNaN(sessionNumber) || sessionNumber < 1 || sessionNumber > 3) {
+          return res
+            .status(400)
+            .json({ error: "Invalid session number. Must be 1, 2, or 3" });
+        }
+
+        if (typeof timerElapsed !== "number" || timerElapsed < 0) {
+          return res
+            .status(400)
+            .json({ error: "timerElapsed must be a non-negative number" });
+        }
+
+        const session = await storage.getFoundationSession(
+          userId,
+          sessionNumber,
+        );
+        if (!session) {
+          return res.status(404).json({ error: "Session not found" });
+        }
+
+        // Only update timer for in-progress sessions
+        if (session.status !== "in_progress") {
+          return res.status(400).json({
+            error: "Timer can only be updated for in-progress sessions",
+          });
+        }
+
+        // Update the timer elapsed time
+        const updatedSession = await storage.updateFoundationSession(
+          session.id,
+          {
+            timerElapsed,
+          },
+        );
+
+        res.json({
+          timerElapsed: updatedSession?.timerElapsed || timerElapsed,
+        });
+      } catch (error) {
+        console.error("Error updating foundation session timer:", error);
+        next(error);
       }
-
-      if (typeof timerElapsed !== 'number' || timerElapsed < 0) {
-        return res.status(400).json({ error: "timerElapsed must be a non-negative number" });
-      }
-
-      const session = await storage.getFoundationSession(userId, sessionNumber);
-      if (!session) {
-        return res.status(404).json({ error: "Session not found" });
-      }
-
-      // Only update timer for in-progress sessions
-      if (session.status !== "in_progress") {
-        return res.status(400).json({ error: "Timer can only be updated for in-progress sessions" });
-      }
-
-      // Update the timer elapsed time
-      const updatedSession = await storage.updateFoundationSession(session.id, {
-        timerElapsed
-      });
-
-      res.json({ timerElapsed: updatedSession?.timerElapsed || timerElapsed });
-    } catch (error) {
-      console.error("Error updating foundation session timer:", error);
-      next(error);
-    }
-  });
+    },
+  );
 }
 
 // Helper function to initialize foundation sessions for a user
 async function initializeFoundationSessions(userId: number) {
   try {
     const existingSessions = await storage.getFoundationSessions(userId);
-    
+
     // If user already has sessions, no need to initialize
     if (existingSessions.length > 0) {
       return;
@@ -1488,7 +1647,7 @@ async function initializeFoundationSessions(userId: number) {
         userId,
         sessionNumber: 3,
         status: "locked" as const,
-      }
+      },
     ];
 
     for (const sessionData of sessionsToCreate) {
