@@ -29,7 +29,7 @@ export const users = pgTable("users", {
   isAdmin: boolean("is_admin").default(false).notNull(),
   lastLoginAt: timestamp("last_login_at"),
   // Stripe and Subscription fields
-  subscriptionTier: subscriptionTierEnum("subscription_tier").default("free").notNull(),
+  subscriptionTier: subscriptionTierEnum("subscription_tier").default("subscription").notNull(),
   subscriptionStatus: subscriptionStatusEnum("subscription_status").default("active"),
   stripeCustomerId: text("stripe_customer_id"),
   stripeSubscriptionId: text("stripe_subscription_id"),
