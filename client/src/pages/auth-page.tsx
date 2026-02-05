@@ -1,5 +1,10 @@
 import { useAuth } from "@/hooks/use-auth";
-import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
@@ -63,7 +68,9 @@ const registerSchema = z
   });
 
 type LoginFormValues = z.infer<typeof loginSchema>;
-type RegisterFormValues = z.infer<typeof registerSchema> & { isSubmitting?: boolean };
+type RegisterFormValues = z.infer<typeof registerSchema> & {
+  isSubmitting?: boolean;
+};
 
 export default function AuthPage() {
   const [activeView, setActiveView] = useState<"login" | "signup">("login");
@@ -105,26 +112,25 @@ export default function AuthPage() {
 
   const onLoginSubmit = async (data: LoginFormValues) => {
     try {
-      console.log('Logging in user...');
+      console.log("Logging in user...");
       await loginMutation.mutateAsync({
         username: data.username,
         password: data.password,
       });
-      
-      console.log('Login successful, redirecting to homepage');
+
+      console.log("Login successful, redirecting to homepage");
       setTimeout(() => {
         navigate("/");
       }, 300);
-
     } catch (error) {
-      console.error('Login error:', error);
+      console.error("Login error:", error);
     }
   };
 
   const onRegisterSubmit = async (data: RegisterFormValues) => {
     try {
-      console.log('Registering user...');
-      
+      console.log("Registering user...");
+
       await registerMutation.mutateAsync({
         firstName: data.firstName,
         lastName: data.lastName,
@@ -133,14 +139,13 @@ export default function AuthPage() {
         password: data.password,
         confirmPassword: data.confirmPassword,
       });
-      
-      console.log('Registration successful, redirecting to homepage');
+
+      console.log("Registration successful, redirecting to homepage");
       setTimeout(() => {
         navigate("/");
       }, 300);
-      
     } catch (error) {
-      console.error('Registration error:', error);
+      console.error("Registration error:", error);
     }
   };
 
@@ -150,7 +155,6 @@ export default function AuthPage() {
         <div className="hero-text">
           <span>Control</span> what you are known for.
         </div>
-        <div className="vertical-tag">ESTABLISHED FOR THE DRIVEN</div>
       </aside>
 
       <main className="access-pillar">
@@ -262,7 +266,9 @@ export default function AuthPage() {
                   <button
                     type="button"
                     className="btn-linkedin"
-                    onClick={() => window.location.href = "/api/auth/linkedin"}
+                    onClick={() =>
+                      (window.location.href = "/api/auth/linkedin")
+                    }
                     data-testid="button-linkedin-login"
                   >
                     <SiLinkedin className="h-4 w-4" />
@@ -283,11 +289,13 @@ export default function AuthPage() {
               </div>
 
               {registerMutation.error &&
-                !registerMutation.error.message.includes("Username already exists") && (
+                !registerMutation.error.message.includes(
+                  "Username already exists",
+                ) && (
                   <div className="error-banner">
                     <p>
-                      Welcome back! It looks like you already have an account with us.
-                      Sign in to continue your journey.
+                      Welcome back! It looks like you already have an account
+                      with us. Sign in to continue your journey.
                     </p>
                   </div>
                 )}
@@ -350,10 +358,12 @@ export default function AuthPage() {
                         </FormControl>
                         <FormMessage className="error-message" />
                         {registerMutation.error &&
-                          registerMutation.error.message.includes("Username already exists") && (
+                          registerMutation.error.message.includes(
+                            "Username already exists",
+                          ) && (
                             <div className="error-message">
-                              This email address is already registered. Please try
-                              logging in or use a different email.
+                              This email address is already registered. Please
+                              try logging in or use a different email.
                             </div>
                           )}
                       </FormItem>
@@ -439,7 +449,9 @@ export default function AuthPage() {
 
       <Dialog open={showForgotPassword} onOpenChange={setShowForgotPassword}>
         <DialogContent className="sm:max-w-md">
-          <DialogTitle className="text-left sr-only">Forgot Password</DialogTitle>
+          <DialogTitle className="text-left sr-only">
+            Forgot Password
+          </DialogTitle>
           <DialogDescription className="sr-only">
             Reset your password by providing your email address
           </DialogDescription>

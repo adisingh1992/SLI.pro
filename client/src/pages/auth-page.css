@@ -56,7 +56,7 @@
 .access-pillar {
   width: 540px;
   background: var(--auth-silk);
-  min-height: 100vh;
+  min-height: 106vh;
   display: flex;
   flex-direction: column;
   justify-content: center;
