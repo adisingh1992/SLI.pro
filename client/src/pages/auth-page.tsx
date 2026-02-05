@@ -150,40 +150,50 @@ export default function AuthPage() {
   };
 
   return (
-    <div className="auth-container">
-      <aside className="manifesto-side">
-        <div className="hero-text">
-          <span>Control</span> what you are known for.
+    <div className="auth-container flex min-h-screen overflow-hidden antialiased">
+      <aside className="manifesto-side hidden lg:flex flex-1 flex-col justify-center px-[100px] py-[60px] relative bg-[#303454] text-[#f8f9fa]">
+        <div className="hero-text font-serif text-[52px] leading-tight max-w-[500px] font-normal">
+          <span className="text-[#bed6d1]">Control</span> what you are known for.
         </div>
       </aside>
 
-      <main className="access-pillar">
-        <div className="top-nav">
+      <main className="access-pillar w-full lg:w-[540px] bg-[#f8f9fa] min-h-[106vh] flex flex-col justify-center px-5 sm:px-10 lg:px-20 relative shadow-[-20px_0_60px_rgba(0,0,0,0.2)]">
+        <div className="absolute top-5 right-5 lg:top-10 lg:right-10 text-xs font-medium text-gray-500">
           {activeView === "login" ? (
             <span>
               New here?{" "}
-              <a onClick={() => setActiveView("signup")}>Request Membership</a>
+              <a 
+                onClick={() => setActiveView("signup")} 
+                className="text-[#bed6d1] no-underline font-semibold cursor-pointer transition-opacity duration-200 hover:opacity-70"
+              >
+                Request Membership
+              </a>
             </span>
           ) : (
             <span>
               Already a member?{" "}
-              <a onClick={() => setActiveView("login")}>Log In</a>
+              <a 
+                onClick={() => setActiveView("login")} 
+                className="text-[#bed6d1] no-underline font-semibold cursor-pointer transition-opacity duration-200 hover:opacity-70"
+              >
+                Log In
+              </a>
             </span>
           )}
         </div>
 
-        <div className="pillar-content">
+        <div className="w-full min-h-[500px] flex flex-col justify-center">
           {activeView === "login" && (
-            <div className="view-wrapper">
-              <div className="pillar-header">
-                <div className="logo-box">
-                  <img src={sliProLogo} alt="SLI.pro Logo" />
+            <div className="flex flex-col w-full">
+              <div className="mb-9">
+                <div className="mb-12">
+                  <img src={sliProLogo} alt="SLI.pro Logo" className="h-10 w-auto" />
                 </div>
               </div>
 
               {loginMutation.error && (
-                <div className="error-banner">
-                  <p>We do not recognise this email or password</p>
+                <div className="mb-5 p-3 bg-red-500/10 border border-red-500/20 rounded">
+                  <p className="text-[#E34240] text-xs m-0">We do not recognise this email or password</p>
                 </div>
               )}
 
@@ -193,17 +203,19 @@ export default function AuthPage() {
                     control={loginForm.control}
                     name="username"
                     render={({ field }) => (
-                      <FormItem className="auth-form-group">
-                        <label>Email Address</label>
+                      <FormItem className="mb-5">
+                        <label className="text-[10px] uppercase tracking-[2px] font-semibold block mb-2 text-[#303454]">
+                          Email Address
+                        </label>
                         <FormControl>
                           <input
                             {...field}
                             type="email"
                             placeholder="name@university.edu"
-                            className="auth-input"
+                            className="w-full border-0 border-b border-gray-300 py-3 text-[15px] bg-transparent transition-colors duration-300 text-[#303454] outline-none rounded-none placeholder:text-gray-400 focus:border-[#bed6d1]"
                           />
                         </FormControl>
-                        <FormMessage className="error-message" />
+                        <FormMessage className="text-[#E34240] text-[11px] mt-1" />
                       </FormItem>
                     )}
                   />
@@ -212,31 +224,34 @@ export default function AuthPage() {
                     control={loginForm.control}
                     name="password"
                     render={({ field }) => (
-                      <FormItem className="auth-form-group">
-                        <label>Password</label>
+                      <FormItem className="mb-5">
+                        <label className="text-[10px] uppercase tracking-[2px] font-semibold block mb-2 text-[#303454]">
+                          Password
+                        </label>
                         <FormControl>
                           <input
                             {...field}
                             type="password"
                             placeholder="••••••••"
-                            className="auth-input"
+                            className="w-full border-0 border-b border-gray-300 py-3 text-[15px] bg-transparent transition-colors duration-300 text-[#303454] outline-none rounded-none placeholder:text-gray-400 focus:border-[#bed6d1]"
                           />
                         </FormControl>
-                        <FormMessage className="error-message" />
+                        <FormMessage className="text-[#E34240] text-[11px] mt-1" />
                       </FormItem>
                     )}
                   />
 
-                  <div className="remember-row">
+                  <div className="flex justify-between items-center text-[11px] mb-4 mt-2">
                     <FormField
                       control={loginForm.control}
                       name="rememberMe"
                       render={({ field }) => (
-                        <div className="remember-check">
+                        <div className="flex items-center gap-2 text-gray-500">
                           <input
                             type="checkbox"
                             checked={field.value}
                             onChange={field.onChange}
+                            className="m-0 accent-[#bed6d1]"
                           />
                           <span>Remember me</span>
                         </div>
@@ -244,7 +259,7 @@ export default function AuthPage() {
                     />
                     <button
                       type="button"
-                      className="forgot-link"
+                      className="text-gray-500 no-underline transition-colors duration-200 text-[11px] bg-transparent border-0 cursor-pointer p-0 hover:text-[#bed6d1]"
                       onClick={() => setShowForgotPassword(true)}
                     >
                       Forgot Password?
@@ -253,7 +268,7 @@ export default function AuthPage() {
 
                   <button
                     type="submit"
-                    className="btn-enter"
+                    className="w-full py-5 px-6 bg-[#303454] text-white border-0 font-semibold tracking-[4px] cursor-pointer mt-4 uppercase transition-all duration-300 text-[11px] hover:bg-[#bed6d1] hover:translate-x-2 disabled:opacity-70 disabled:cursor-not-allowed disabled:hover:translate-x-0 disabled:hover:bg-[#303454]"
                     disabled={loginMutation.isPending}
                     data-testid="button-login"
                   >
@@ -265,7 +280,7 @@ export default function AuthPage() {
 
                   <button
                     type="button"
-                    className="btn-linkedin"
+                    className="w-full bg-white border border-[#e6e8eb] py-4 mt-4 flex items-center justify-center gap-3 text-[11px] font-semibold uppercase tracking-wider cursor-pointer transition-all duration-300 text-[#303454] hover:border-[#bed6d1] hover:bg-[#fafafa]"
                     onClick={() =>
                       (window.location.href = "/api/auth/linkedin")
                     }
@@ -280,20 +295,20 @@ export default function AuthPage() {
           )}
 
           {activeView === "signup" && (
-            <div className="view-wrapper">
-              <div className="pillar-header">
-                <div className="logo-box">
-                  <img src={sliProLogo} alt="SLI.pro Logo" />
+            <div className="flex flex-col w-full">
+              <div className="mb-9">
+                <div className="mb-12">
+                  <img src={sliProLogo} alt="SLI.pro Logo" className="h-10 w-auto" />
                 </div>
-                <h2>Membership Request</h2>
+                <h2 className="font-serif text-2xl m-0 text-[#303454]">Membership Request</h2>
               </div>
 
               {registerMutation.error &&
                 !registerMutation.error.message.includes(
                   "Username already exists",
                 ) && (
-                  <div className="error-banner">
-                    <p>
+                  <div className="mb-5 p-3 bg-red-500/10 border border-red-500/20 rounded">
+                    <p className="text-[#E34240] text-xs m-0">
                       Welcome back! It looks like you already have an account
                       with us. Sign in to continue your journey.
                     </p>
@@ -302,22 +317,24 @@ export default function AuthPage() {
 
               <Form {...registerForm}>
                 <form onSubmit={registerForm.handleSubmit(onRegisterSubmit)}>
-                  <div className="field-grid">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 sm:gap-5">
                     <FormField
                       control={registerForm.control}
                       name="firstName"
                       render={({ field }) => (
-                        <FormItem className="auth-form-group">
-                          <label>First Name</label>
+                        <FormItem className="mb-5">
+                          <label className="text-[10px] uppercase tracking-[2px] font-semibold block mb-2 text-[#303454]">
+                            First Name
+                          </label>
                           <FormControl>
                             <input
                               {...field}
                               type="text"
                               placeholder="John"
-                              className="auth-input"
+                              className="w-full border-0 border-b border-gray-300 py-3 text-[15px] bg-transparent transition-colors duration-300 text-[#303454] outline-none rounded-none placeholder:text-gray-400 focus:border-[#bed6d1]"
                             />
                           </FormControl>
-                          <FormMessage className="error-message" />
+                          <FormMessage className="text-[#E34240] text-[11px] mt-1" />
                         </FormItem>
                       )}
                     />
@@ -326,17 +343,19 @@ export default function AuthPage() {
                       control={registerForm.control}
                       name="lastName"
                       render={({ field }) => (
-                        <FormItem className="auth-form-group">
-                          <label>Last Name</label>
+                        <FormItem className="mb-5">
+                          <label className="text-[10px] uppercase tracking-[2px] font-semibold block mb-2 text-[#303454]">
+                            Last Name
+                          </label>
                           <FormControl>
                             <input
                               {...field}
                               type="text"
                               placeholder="Doe"
-                              className="auth-input"
+                              className="w-full border-0 border-b border-gray-300 py-3 text-[15px] bg-transparent transition-colors duration-300 text-[#303454] outline-none rounded-none placeholder:text-gray-400 focus:border-[#bed6d1]"
                             />
                           </FormControl>
-                          <FormMessage className="error-message" />
+                          <FormMessage className="text-[#E34240] text-[11px] mt-1" />
                         </FormItem>
                       )}
                     />
@@ -346,22 +365,24 @@ export default function AuthPage() {
                     control={registerForm.control}
                     name="username"
                     render={({ field }) => (
-                      <FormItem className="auth-form-group">
-                        <label>Email Address</label>
+                      <FormItem className="mb-5">
+                        <label className="text-[10px] uppercase tracking-[2px] font-semibold block mb-2 text-[#303454]">
+                          Email Address
+                        </label>
                         <FormControl>
                           <input
                             {...field}
                             type="email"
                             placeholder="name@university.edu"
-                            className="auth-input"
+                            className="w-full border-0 border-b border-gray-300 py-3 text-[15px] bg-transparent transition-colors duration-300 text-[#303454] outline-none rounded-none placeholder:text-gray-400 focus:border-[#bed6d1]"
                           />
                         </FormControl>
-                        <FormMessage className="error-message" />
+                        <FormMessage className="text-[#E34240] text-[11px] mt-1" />
                         {registerMutation.error &&
                           registerMutation.error.message.includes(
                             "Username already exists",
                           ) && (
-                            <div className="error-message">
+                            <div className="text-[#E34240] text-[11px] mt-1">
                               This email address is already registered. Please
                               try logging in or use a different email.
                             </div>
@@ -374,17 +395,19 @@ export default function AuthPage() {
                     control={registerForm.control}
                     name="phoneNumber"
                     render={({ field }) => (
-                      <FormItem className="auth-form-group">
-                        <label>Phone Number</label>
+                      <FormItem className="mb-5">
+                        <label className="text-[10px] uppercase tracking-[2px] font-semibold block mb-2 text-[#303454]">
+                          Phone Number
+                        </label>
                         <FormControl>
                           <input
                             {...field}
                             type="tel"
                             placeholder="(123) 456-7890"
-                            className="auth-input"
+                            className="w-full border-0 border-b border-gray-300 py-3 text-[15px] bg-transparent transition-colors duration-300 text-[#303454] outline-none rounded-none placeholder:text-gray-400 focus:border-[#bed6d1]"
                           />
                         </FormControl>
-                        <FormMessage className="error-message" />
+                        <FormMessage className="text-[#E34240] text-[11px] mt-1" />
                       </FormItem>
                     )}
                   />
@@ -393,20 +416,22 @@ export default function AuthPage() {
                     control={registerForm.control}
                     name="password"
                     render={({ field }) => (
-                      <FormItem className="auth-form-group">
-                        <label>Password</label>
+                      <FormItem className="mb-5">
+                        <label className="text-[10px] uppercase tracking-[2px] font-semibold block mb-2 text-[#303454]">
+                          Password
+                        </label>
                         <FormControl>
                           <input
                             {...field}
                             type="password"
                             placeholder="Create password"
-                            className="auth-input"
+                            className="w-full border-0 border-b border-gray-300 py-3 text-[15px] bg-transparent transition-colors duration-300 text-[#303454] outline-none rounded-none placeholder:text-gray-400 focus:border-[#bed6d1]"
                           />
                         </FormControl>
-                        <div className="helper-text">
+                        <div className="text-[9px] text-gray-400 mt-2 uppercase tracking-wider">
                           Min. 8 characters with mixed casing
                         </div>
-                        <FormMessage className="error-message" />
+                        <FormMessage className="text-[#E34240] text-[11px] mt-1" />
                       </FormItem>
                     )}
                   />
@@ -415,24 +440,26 @@ export default function AuthPage() {
                     control={registerForm.control}
                     name="confirmPassword"
                     render={({ field }) => (
-                      <FormItem className="auth-form-group">
-                        <label>Confirm Password</label>
+                      <FormItem className="mb-5">
+                        <label className="text-[10px] uppercase tracking-[2px] font-semibold block mb-2 text-[#303454]">
+                          Confirm Password
+                        </label>
                         <FormControl>
                           <input
                             {...field}
                             type="password"
                             placeholder="Repeat password"
-                            className="auth-input"
+                            className="w-full border-0 border-b border-gray-300 py-3 text-[15px] bg-transparent transition-colors duration-300 text-[#303454] outline-none rounded-none placeholder:text-gray-400 focus:border-[#bed6d1]"
                           />
                         </FormControl>
-                        <FormMessage className="error-message" />
+                        <FormMessage className="text-[#E34240] text-[11px] mt-1" />
                       </FormItem>
                     )}
                   />
 
                   <button
                     type="submit"
-                    className="btn-enter"
+                    className="w-full py-5 px-6 bg-[#303454] text-white border-0 font-semibold tracking-[4px] cursor-pointer mt-4 uppercase transition-all duration-300 text-[11px] hover:bg-[#bed6d1] hover:translate-x-2 disabled:opacity-70 disabled:cursor-not-allowed disabled:hover:translate-x-0 disabled:hover:bg-[#303454]"
                     disabled={registerMutation.isPending}
                   >
                     {registerMutation.isPending && (
