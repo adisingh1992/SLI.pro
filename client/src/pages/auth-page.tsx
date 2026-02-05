@@ -21,7 +21,7 @@ import { useState, useEffect } from "react";
 import { Loader2 } from "lucide-react";
 import { SiLinkedin } from "react-icons/si";
 import sliProLogo from "@/assets/sliPro-logos_aqua.png";
-import "./auth-page.css";
+import "@/assets/css/auth-page.css";
 
 const loginSchema = z.object({
   username: z.string().email("Please enter a valid email"),
