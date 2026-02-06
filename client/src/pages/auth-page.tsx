@@ -18,7 +18,7 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { useState, useEffect } from "react";
-import { Loader2 } from "lucide-react";
+import { Loader2, CheckCircle } from "lucide-react";
 import { SiLinkedin } from "react-icons/si";
 import sliProLogo from "@/assets/sliPro-logos_aqua.png";
 import "@/assets/css/auth-page.css";
@@ -73,7 +73,7 @@ type RegisterFormValues = z.infer<typeof registerSchema> & {
 };
 
 export default function AuthPage() {
-  const [activeView, setActiveView] = useState<"login" | "signup">("login");
+  const [activeView, setActiveView] = useState<"login" | "signup" | "success">("login");
   const [showForgotPassword, setShowForgotPassword] = useState(false);
   const { user, loginMutation, registerMutation } = useAuth();
   const [_, navigate] = useLocation();
@@ -101,12 +101,12 @@ export default function AuthPage() {
   });
 
   useEffect(() => {
-    if (user) {
+    if (user && activeView !== "success") {
       navigate("/");
     }
-  }, [user, navigate]);
+  }, [user, navigate, activeView]);
 
-  if (user) {
+  if (user && activeView !== "success") {
     return null;
   }
 
@@ -140,10 +140,8 @@ export default function AuthPage() {
         confirmPassword: data.confirmPassword,
       });
 
-      console.log("Registration successful, redirecting to homepage");
-      setTimeout(() => {
-        navigate("/");
-      }, 300);
+      console.log("Registration successful, showing success view");
+      setActiveView("success");
     } catch (error) {
       console.error("Registration error:", error);
     }
@@ -160,17 +158,7 @@ export default function AuthPage() {
 
       <main className="access-pillar w-full lg:w-[540px] bg-[#f8f9fa] min-h-[106vh] flex flex-col justify-center px-5 sm:px-10 lg:px-20 relative shadow-[-20px_0_60px_rgba(0,0,0,0.2)]">
         <div className="absolute top-5 right-5 lg:top-10 lg:right-10 text-xs font-medium text-gray-500">
-          {activeView === "login" ? (
-            <span>
-              New here?{" "}
-              <a
-                onClick={() => setActiveView("signup")}
-                className="text-[#6c8083] no-underline font-semibold cursor-pointer transition-opacity duration-200 hover:opacity-70"
-              >
-                Request Membership
-              </a>
-            </span>
-          ) : (
+          {activeView === "signup" ? (
             <span>
               Already a member?{" "}
               <a
@@ -178,6 +166,16 @@ export default function AuthPage() {
                 className="text-[#6c8083] no-underline font-semibold cursor-pointer transition-opacity duration-200 hover:opacity-70"
               >
                 Log In
+              </a>
+            </span>
+          ) : (
+            <span>
+              New here?{" "}
+              <a
+                onClick={() => setActiveView("signup")}
+                className="text-[#6c8083] no-underline font-semibold cursor-pointer transition-opacity duration-200 hover:opacity-70"
+              >
+                Request Membership
               </a>
             </span>
           )}
@@ -482,6 +480,30 @@ export default function AuthPage() {
                   </button>
                 </form>
               </Form>
+            </div>
+          )}
+
+          {activeView === "success" && (
+            <div className="flex flex-col w-full">
+              <div className="text-[#bed6d1] text-center mb-6">
+                <CheckCircle className="h-14 w-14 mx-auto" strokeWidth={1.5} />
+              </div>
+              <div className="mb-5 text-center">
+                <h2 className="font-serif text-2xl text-[#303454]">Request Submitted</h2>
+                <p className="text-gray-500 text-[13px] leading-relaxed mt-3">
+                  Your credentials are being validated. You will receive an activation protocol via email once verified.
+                </p>
+              </div>
+              <div className="font-bold text-xs tracking-wider uppercase mt-5 text-[#303454] text-center">
+                Estimated Activation: 24–48 Hours
+              </div>
+              <button
+                type="button"
+                className="w-full py-5 px-6 bg-[#303454] text-white border-0 font-semibold tracking-[4px] cursor-pointer mt-10 uppercase transition-all duration-300 text-[11px] hover:bg-[#bed6d1] hover:translate-x-2"
+                onClick={() => setActiveView("login")}
+              >
+                Return to Portal
+              </button>
             </div>
           )}
         </div>
