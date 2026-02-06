@@ -17,7 +17,7 @@ import {
   FormItem,
   FormMessage,
 } from "@/components/ui/form";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Loader2, CheckCircle } from "lucide-react";
 import { SiLinkedin } from "react-icons/si";
 import sliProLogo from "@/assets/sliPro-logos_aqua.png";
@@ -77,6 +77,7 @@ export default function AuthPage() {
   const [showForgotPassword, setShowForgotPassword] = useState(false);
   const { user, loginMutation, registerMutation } = useAuth();
   const [_, navigate] = useLocation();
+  const justRegisteredRef = useRef(false);
 
   const loginForm = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
@@ -101,12 +102,12 @@ export default function AuthPage() {
   });
 
   useEffect(() => {
-    if (user && activeView !== "success") {
+    if (user && activeView !== "success" && !justRegisteredRef.current) {
       navigate("/");
     }
   }, [user, navigate, activeView]);
 
-  if (user && activeView !== "success") {
+  if (user && activeView !== "success" && !justRegisteredRef.current) {
     return null;
   }
 
@@ -130,6 +131,7 @@ export default function AuthPage() {
   const onRegisterSubmit = async (data: RegisterFormValues) => {
     try {
       console.log("Registering user...");
+      justRegisteredRef.current = true;
 
       await registerMutation.mutateAsync({
         firstName: data.firstName,
@@ -142,8 +144,10 @@ export default function AuthPage() {
 
       console.log("Registration successful, showing success view");
       setActiveView("success");
+      justRegisteredRef.current = false;
     } catch (error) {
       console.error("Registration error:", error);
+      justRegisteredRef.current = false;
     }
   };
 
@@ -500,7 +504,10 @@ export default function AuthPage() {
               <button
                 type="button"
                 className="w-full py-5 px-6 bg-[#303454] text-white border-0 font-semibold tracking-[4px] cursor-pointer mt-10 uppercase transition-all duration-300 text-[11px] hover:bg-[#bed6d1] hover:translate-x-2"
-                onClick={() => setActiveView("login")}
+                onClick={() => {
+                  justRegisteredRef.current = false;
+                  setActiveView("login");
+                }}
               >
                 Return
               </button>
