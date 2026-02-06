@@ -151,9 +151,10 @@ export default function AuthPage() {
 
   return (
     <div className="auth-container flex min-h-screen overflow-hidden antialiased">
-      <aside className="manifesto-side hidden lg:flex flex-1 flex-col justify-center px-[100px] py-[60px] relative bg-[#303454] text-[#f8f9fa]">
+      <aside className="manifesto-side hidden lg:flex flex-1 flex-col justify-center px-[100px] py-[60px] relative bg-[#202436] text-[#f8f9fa]">
         <div className="hero-text font-serif text-[52px] leading-tight max-w-[500px] font-normal">
-          <span className="text-[#bed6d1]">Control</span> what you are known for.
+          <span className="text-[#bed6d1]">Control</span> what you are known
+          for.
         </div>
       </aside>
 
@@ -162,9 +163,9 @@ export default function AuthPage() {
           {activeView === "login" ? (
             <span>
               New here?{" "}
-              <a 
-                onClick={() => setActiveView("signup")} 
-                className="text-[#bed6d1] no-underline font-semibold cursor-pointer transition-opacity duration-200 hover:opacity-70"
+              <a
+                onClick={() => setActiveView("signup")}
+                className="text-[#6c8083] no-underline font-semibold cursor-pointer transition-opacity duration-200 hover:opacity-70"
               >
                 Request Membership
               </a>
@@ -172,9 +173,9 @@ export default function AuthPage() {
           ) : (
             <span>
               Already a member?{" "}
-              <a 
-                onClick={() => setActiveView("login")} 
-                className="text-[#bed6d1] no-underline font-semibold cursor-pointer transition-opacity duration-200 hover:opacity-70"
+              <a
+                onClick={() => setActiveView("login")}
+                className="text-[#6c8083] no-underline font-semibold cursor-pointer transition-opacity duration-200 hover:opacity-70"
               >
                 Log In
               </a>
@@ -187,13 +188,19 @@ export default function AuthPage() {
             <div className="flex flex-col w-full">
               <div className="mb-9">
                 <div className="mb-12">
-                  <img src={sliProLogo} alt="SLI.pro Logo" className="h-10 w-auto" />
+                  <img
+                    src={sliProLogo}
+                    alt="SLI.pro Logo"
+                    className="h-10 w-auto"
+                  />
                 </div>
               </div>
 
               {loginMutation.error && (
                 <div className="mb-5 p-3 bg-red-500/10 border border-red-500/20 rounded">
-                  <p className="text-[#E34240] text-xs m-0">We do not recognise this email or password</p>
+                  <p className="text-[#E34240] text-xs m-0">
+                    We do not recognise this email or password
+                  </p>
                 </div>
               )}
 
@@ -298,9 +305,15 @@ export default function AuthPage() {
             <div className="flex flex-col w-full">
               <div className="mb-9">
                 <div className="mb-12">
-                  <img src={sliProLogo} alt="SLI.pro Logo" className="h-10 w-auto" />
+                  <img
+                    src={sliProLogo}
+                    alt="SLI.pro Logo"
+                    className="h-10 w-auto"
+                  />
                 </div>
-                <h2 className="font-serif text-2xl m-0 text-[#303454]">Membership Request</h2>
+                <h2 className="font-serif text-2xl m-0 text-[#303454]">
+                  Membership Request
+                </h2>
               </div>
 
               {registerMutation.error &&
