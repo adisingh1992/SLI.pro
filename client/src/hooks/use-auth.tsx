@@ -91,13 +91,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         body: credentials
       }) as User;
     },
-    onSuccess: (userData: User) => {
-      queryClient.setQueryData(["/api/user"], userData);
-      toast({
-        title: "Registration successful",
-        description: `Welcome, ${userData.firstName}! Your account has been created.`,
-      });
-      // No longer suggesting questionnaire in toast message
+    onSuccess: () => {
     },
     onError: (error: Error) => {
       // Check for specific error messages

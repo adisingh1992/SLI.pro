@@ -206,12 +206,8 @@ export function setupAuth(app: Express) {
         isComplete: false
       });
 
-      req.login(user, (err) => {
-        if (err) return next(err);
-        // Remove password before sending to client
-        const { password, ...userWithoutPassword } = user;
-        res.status(201).json(userWithoutPassword);
-      });
+      const { password: _, ...userWithoutPassword } = user;
+      res.status(201).json(userWithoutPassword);
     } catch (error) {
       next(error);
     }
