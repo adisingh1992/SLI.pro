@@ -1,4 +1,12 @@
 import { useAuth } from "@/hooks/use-auth";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { LogOut, User, FileText, ChevronDown } from "lucide-react";
 import { useLocation } from "wouter";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
@@ -254,7 +262,7 @@ function getCurrentPhase(
 }
 
 export default function NewDashboardPage() {
-  const { user } = useAuth();
+  const { user, logoutMutation } = useAuth();
   const [, navigate] = useLocation();
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -496,11 +504,42 @@ export default function NewDashboardPage() {
 
       <main className="flex-1 bg-[var(--dashboard-silk)] px-[100px] py-[60px] text-[var(--dashboard-void)] relative flex flex-col overflow-y-auto">
         <div className="absolute top-10 right-10">
-          <UserAvatar
-            firstName={user?.firstName || ""}
-            lastName={user?.lastName || ""}
-            size="small"
-          />
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button className="flex items-center gap-3 cursor-pointer outline-none">
+                <span className="text-sm font-medium text-[var(--dashboard-void)]">
+                  {user?.firstName} {user?.lastName}
+                </span>
+                <UserAvatar
+                  firstName={user?.firstName || ""}
+                  lastName={user?.lastName || ""}
+                  size="small"
+                />
+                <ChevronDown className="w-4 h-4 text-[var(--dashboard-void)] opacity-60" />
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-48">
+              <DropdownMenuItem onClick={() => navigate("/profile")} className="cursor-pointer">
+                <User className="mr-2 h-4 w-4" />
+                <span>View Profile</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => navigate("/summaries")} className="cursor-pointer">
+                <FileText className="mr-2 h-4 w-4" />
+                <span>Conversation Summary</span>
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                onClick={async () => {
+                  await logoutMutation.mutateAsync();
+                  navigate("/auth");
+                }}
+                className="cursor-pointer text-red-500"
+              >
+                <LogOut className="mr-2 h-4 w-4" />
+                <span>Log Out</span>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
 
         <h1 className="dashboard-heading text-[56px] font-normal mb-6">
