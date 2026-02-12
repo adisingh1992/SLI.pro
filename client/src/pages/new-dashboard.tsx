@@ -2,7 +2,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { useLocation } from "wouter";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
-import { UserProfile, FoundationSession } from "@shared/schema";
+import { UserProfile, FoundationSession, EnhancementModule } from "@shared/schema";
 import { Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import DashboardSidebar from "@/components/dashboard/DashboardSidebar";
@@ -29,7 +29,25 @@ const SESSION_CONTENT = [
   },
 ];
 
-function useDashboardStatus(userProfile?: UserProfile) {
+const MODULE_CONTENT: Record<string, { header: string; title: string; description: string }> = {
+  A: {
+    header: "Module A",
+    title: "Digital Behavior Analysis Framework",
+    description: "Analyze your LinkedIn presence and content strategy patterns to identify opportunities and barriers for professional growth.",
+  },
+  B: {
+    header: "Module B",
+    title: "Network Position Mapping Framework",
+    description: "Map your current network position and develop strategic relationship building approaches for enhanced professional influence.",
+  },
+  C: {
+    header: "Module C",
+    title: "Career Aspiration Alignment Framework",
+    description: "Align your long-term career aspirations with your current positioning to create an actionable roadmap for professional advancement.",
+  },
+};
+
+function useDashboardStatus(userProfile?: UserProfile, foundationSessions?: FoundationSession[]) {
   const isAssessmentComplete =
     !!userProfile?.questionnaire && userProfile.questionnaire.isDraft !== true;
 
@@ -39,7 +57,12 @@ function useDashboardStatus(userProfile?: UserProfile) {
     userProfile?.documents?.some((doc) => doc.type === "linkedin") ?? false;
   const isDocumentsComplete = hasResume && hasLinkedIn;
 
-  return { isAssessmentComplete, hasResume, hasLinkedIn, isDocumentsComplete };
+  const completedSessionCount = foundationSessions?.filter(
+    (s) => s.status === "completed",
+  ).length ?? 0;
+  const areAllSessionsComplete = completedSessionCount >= 3;
+
+  return { isAssessmentComplete, hasResume, hasLinkedIn, isDocumentsComplete, areAllSessionsComplete };
 }
 
 type DashboardStatus = ReturnType<typeof useDashboardStatus>;
@@ -47,10 +70,16 @@ type DashboardStatus = ReturnType<typeof useDashboardStatus>;
 function buildSidebarSections(
   status: DashboardStatus,
   foundationSessions?: FoundationSession[],
+  enhancementModules?: EnhancementModule[],
 ) {
   const getSessionCompleted = (sessionNumber: number) =>
     foundationSessions?.some(
       (s) => s.sessionNumber === sessionNumber && s.status === "completed",
+    ) ?? false;
+
+  const getModuleCompleted = (code: string) =>
+    enhancementModules?.some(
+      (m) => m.moduleCode === code && m.status === "completed",
     ) ?? false;
 
   return [
@@ -91,6 +120,27 @@ function buildSidebarSections(
             },
           ],
         },
+        {
+          title: "Phase 3 - Enhancement Modules",
+          disabled: !status.areAllSessionsComplete,
+          items: [
+            {
+              label: "Digital Behavior Analysis",
+              locked: !status.areAllSessionsComplete,
+              completed: getModuleCompleted("A"),
+            },
+            {
+              label: "Network Position Mapping",
+              locked: !status.areAllSessionsComplete,
+              completed: getModuleCompleted("B"),
+            },
+            {
+              label: "Career Aspiration Alignment",
+              locked: !status.areAllSessionsComplete,
+              completed: getModuleCompleted("C"),
+            },
+          ],
+        },
       ],
     },
   ];
@@ -98,10 +148,11 @@ function buildSidebarSections(
 
 function getCurrentPhase(
   status: DashboardStatus,
-): "assessment" | "documents" | "sessions" {
+): "assessment" | "documents" | "sessions" | "enhancement" {
   if (!status.isAssessmentComplete) return "assessment";
   if (!status.isDocumentsComplete) return "documents";
-  return "sessions";
+  if (!status.areAllSessionsComplete) return "sessions";
+  return "enhancement";
 }
 
 export default function NewDashboardPage() {
@@ -119,6 +170,12 @@ export default function NewDashboardPage() {
 
   const { data: foundationSessions } = useQuery<FoundationSession[]>({
     queryKey: ["/api/foundation-sessions"],
+    enabled: !!user,
+    retry: false,
+  });
+
+  const { data: enhancementModules } = useQuery<EnhancementModule[]>({
+    queryKey: ["/api/enhancement-modules"],
     enabled: !!user,
     retry: false,
   });
@@ -147,9 +204,33 @@ export default function NewDashboardPage() {
     },
   });
 
-  const status = useDashboardStatus(userProfile);
+  const startModuleMutation = useMutation({
+    mutationFn: async (moduleCode: string) => {
+      return await apiRequest(
+        "POST",
+        `/api/enhancement-modules/${moduleCode}/start`,
+      );
+    },
+    onSuccess: (_data, moduleCode) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/enhancement-modules"] });
+      toast({
+        title: "Module Started",
+        description: `Enhancement Module ${moduleCode} has been started.`,
+      });
+      navigate(`/enhancement-modules/${moduleCode}`);
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to start module",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const status = useDashboardStatus(userProfile, foundationSessions);
   const currentPhase = getCurrentPhase(status);
-  const sidebarSections = buildSidebarSections(status, foundationSessions);
+  const sidebarSections = buildSidebarSections(status, foundationSessions, enhancementModules);
 
   const handleNavItemClick = (item: { label: string; locked?: boolean }) => {
     if (item.locked) return;
@@ -165,6 +246,12 @@ export default function NewDashboardPage() {
       handleSessionClick(2);
     } else if (item.label === "Positioning Story Development") {
       handleSessionClick(3);
+    } else if (item.label === "Digital Behavior Analysis") {
+      handleModuleClick("A");
+    } else if (item.label === "Network Position Mapping") {
+      handleModuleClick("B");
+    } else if (item.label === "Career Aspiration Alignment") {
+      handleModuleClick("C");
     }
   };
 
@@ -180,6 +267,21 @@ export default function NewDashboardPage() {
     }
   };
 
+  const handleModuleClick = (moduleCode: string) => {
+    const module = enhancementModules?.find(
+      (m) => m.moduleCode === moduleCode,
+    );
+    if (!module) {
+      startModuleMutation.mutate(moduleCode);
+      return;
+    }
+    if (module.status === "available") {
+      startModuleMutation.mutate(moduleCode);
+    } else if (module.status === "in_progress" || module.status === "completed") {
+      navigate(`/enhancement-modules/${moduleCode}`);
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="dashboard-layout flex min-h-screen overflow-hidden bg-[var(--dashboard-void)]">
@@ -191,8 +293,10 @@ export default function NewDashboardPage() {
   }
 
   const headingText =
+    currentPhase === "enhancement" ? "Enhancement" :
     currentPhase === "sessions" ? "Professional" : "Foundation";
   const headingAccent =
+    currentPhase === "enhancement" ? "Modules" :
     currentPhase === "sessions" ? "Development" : "Protocol";
 
   return (
@@ -253,6 +357,26 @@ export default function NewDashboardPage() {
                   description={content.description}
                   status={session.status}
                   onClick={() => handleSessionClick(session.sessionNumber)}
+                />
+              );
+            })}
+          </div>
+        )}
+
+        {currentPhase === "enhancement" && (
+          <div className="flex flex-col gap-6 max-w-[900px]">
+            {(["A", "B", "C"] as const).map((code) => {
+              const content = MODULE_CONTENT[code];
+              const module = enhancementModules?.find((m) => m.moduleCode === code);
+              const moduleStatus = module?.status ?? "available";
+              return (
+                <SessionCard
+                  key={code}
+                  header={content.header}
+                  title={content.title}
+                  description={content.description}
+                  status={moduleStatus}
+                  onClick={() => handleModuleClick(code)}
                 />
               );
             })}
