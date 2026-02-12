@@ -636,7 +636,6 @@ export default function QuestionnairePage() {
         else if (comfortText.includes("5")) setContentCreationComfort(5);
       }
 
-
       // Set other questionnaire fields
       setChallenges(q.challenges || "");
       setInterests(q.interests || "");
@@ -1095,8 +1094,6 @@ export default function QuestionnairePage() {
 
       // Step 5: Load professional goals
 
-
-
       // Try to parse industry connections percentage
       if (
         q.aspirations &&
@@ -1419,13 +1416,16 @@ export default function QuestionnairePage() {
 
               // Step 4: Professional Goals
               if (jsonData.professionalGoals) {
-                console.log("Loading professional goals from JSON:", Object.keys(jsonData.professionalGoals).join(", "));
-                
+                console.log(
+                  "Loading professional goals from JSON:",
+                  Object.keys(jsonData.professionalGoals).join(", "),
+                );
+
                 if (jsonData.professionalGoals.careerGoals) {
                   console.log("Setting career goals");
                   setCareerGoals(jsonData.professionalGoals.careerGoals);
                 }
-                
+
                 if (jsonData.professionalGoals.additionalInfo) {
                   console.log("Setting additional info");
                   setAdditionalInfo(jsonData.professionalGoals.additionalInfo);
@@ -1435,7 +1435,9 @@ export default function QuestionnairePage() {
               // Load professional areas (stored at top level)
               if (jsonData.professionalAreasForThoughtLeadership) {
                 console.log("Setting professional areas");
-                setProfessionalAreas(jsonData.professionalAreasForThoughtLeadership);
+                setProfessionalAreas(
+                  jsonData.professionalAreasForThoughtLeadership,
+                );
               }
 
               if (jsonData.brandOptimizationGoals) {
@@ -5965,7 +5967,7 @@ export default function QuestionnairePage() {
     <div className="bg-gray-50 min-h-screen">
       <div className="container py-10 px-4 sm:px-6 lg:px-8 max-w-5xl mx-auto">
         <Card className="border-none shadow-md">
-          <CardHeader className="bg-gradient-to-r from-[#6c8083] to-[#bed6d1] text-white rounded-t-lg">
+          <CardHeader className="bg-[#202436] text-white rounded-t-lg">
             <div className="flex justify-between items-center">
               <div>
                 <CardTitle className="text-2xl font-bold">
@@ -5984,7 +5986,7 @@ export default function QuestionnairePage() {
               </div>
               <Button
                 variant="outline"
-                className="bg-white text-[#6c8083] hover:bg-gray-100 hover:text-[#4c5c5e]"
+                className="bg-[#202436] text-[#6c8083] hover:bg-gray-100 hover:text-[#4c5c5e]"
                 onClick={(e) => {
                   e.preventDefault();
 

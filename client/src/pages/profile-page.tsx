@@ -80,10 +80,13 @@ export default function ProfilePage() {
     <div className="min-h-screen bg-[#F5F5F5] flex flex-col">
       <NavBar />
       <main className="flex-1 max-w-7xl mx-auto px-4 sm:px-6 py-8">
-        <div className="bg-white shadow-card rounded-lg overflow-hidden" style={{width: "900px"}}>
+        <div
+          className="bg-white shadow-card rounded-lg overflow-hidden"
+          style={{ width: "900px" }}
+        >
           {/* Profile Header */}
           <div className="relative">
-            <div className="bg-gradient-to-r from-[#bed6d1] to-[#dcede9] p-6">
+            <div className="bg-[#202436] p-6">
               <div className="flex items-center justify-between">
                 <div className="flex items-center">
                   <UserAvatar
@@ -103,10 +106,10 @@ export default function ProfilePage() {
                     navigate("/");
                   }}
                   variant="outline"
-                  className="bg-white/10 border-[#6c8083] hover:bg-white/20 text-white"
+                  className="bg-[#202436] border-[#6c8083] hover:bg-white/20 text-white"
                 >
-                  <Home className="h-4 w-4 mr-2 text-[#6c8083]" />
-                  <span className="text-[#6c8083]">Home Page</span>
+                  <Home className="h-4 w-4 mr-2 text-[#ffffff]" />
+                  <span className="text-[#ffffff]">Home Page</span>
                 </Button>
               </div>
             </div>
@@ -125,7 +128,7 @@ export default function ProfilePage() {
                   <TabsTrigger value="documents">Documents</TabsTrigger>
                 </TabsList>
 
-                <div className="w-full" style={{ minWidth: '100%' }}>
+                <div className="w-full" style={{ minWidth: "100%" }}>
                   <TabsContent value="profile">
                     <div className="pt-4">
                       {/* Profile Info - Only showing Name, Email, Phone Number and Career Development Summary */}
