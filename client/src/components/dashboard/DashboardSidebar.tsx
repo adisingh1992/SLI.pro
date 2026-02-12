@@ -90,7 +90,7 @@ export default function DashboardSidebar({
   onNavItemClick,
 }: DashboardSidebarProps) {
   return (
-    <aside className="w-80 bg-[var(--dashboard-void)] py-[50px] px-10 flex flex-col border-r border-white/5 shrink-0">
+    <aside className="w-[352px] bg-[var(--dashboard-void)] py-[50px] px-10 flex flex-col border-r border-white/5 shrink-0">
       <div className="mb-[50px] flex items-center gap-3">
         <img src={sliProLogo} alt="SLI.pro" className="h-8 object-contain" />
         <span className="text-xl font-bold tracking-[3px]" style={{ fontFamily: "Lora, serif" }}>
