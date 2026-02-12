@@ -1,21 +1,22 @@
 import { useState } from "react";
-import { ChevronDown } from "lucide-react";
+import { ChevronDown, Check } from "lucide-react";
 import sliProLogo from "@/assets/sliPro-logos_aqua.png";
 
-interface NavItem {
+export interface NavItem {
   label: string;
   locked?: boolean;
+  completed?: boolean;
   href?: string;
   onClick?: () => void;
 }
 
-interface PhaseGroup {
+export interface PhaseGroup {
   title: string;
   disabled?: boolean;
   items: NavItem[];
 }
 
-interface NavSection {
+export interface NavSection {
   label: string;
   phaseGroups: PhaseGroup[];
 }
@@ -57,13 +58,18 @@ function PhaseGroupComponent({
           <div
             key={idx}
             onClick={() => !item.locked && onItemClick?.(item)}
-            className={`text-[15px] my-3 text-white nav-item-link ${
+            className={`text-[15px] my-3 text-white nav-item-link flex items-center gap-2.5 ${
               item.locked
-                ? "opacity-30 cursor-not-allowed flex items-center gap-2.5"
-                : "opacity-80 cursor-pointer"
+                ? "opacity-30 cursor-not-allowed"
+                : item.completed
+                  ? "opacity-100 cursor-pointer"
+                  : "opacity-80 cursor-pointer"
             }`}
           >
-            {item.label}
+            {item.completed && (
+              <Check className="w-4 h-4 text-[var(--dashboard-aqua)] shrink-0" />
+            )}
+            <span>{item.label}</span>
             {item.locked && <span>🔒</span>}
           </div>
         ))}
