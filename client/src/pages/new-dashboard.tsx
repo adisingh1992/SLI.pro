@@ -12,8 +12,10 @@ function useDashboardStatus(userProfile?: UserProfile) {
   const isAssessmentComplete =
     !!userProfile?.questionnaire && userProfile.questionnaire.isDraft !== true;
 
-  const hasResume = userProfile?.documents?.some((doc) => doc.type === "resume") ?? false;
-  const hasLinkedIn = userProfile?.documents?.some((doc) => doc.type === "linkedin") ?? false;
+  const hasResume =
+    userProfile?.documents?.some((doc) => doc.type === "resume") ?? false;
+  const hasLinkedIn =
+    userProfile?.documents?.some((doc) => doc.type === "linkedin") ?? false;
   const isDocumentsComplete = hasResume && hasLinkedIn;
 
   return { isAssessmentComplete, hasResume, hasLinkedIn, isDocumentsComplete };
@@ -57,10 +59,7 @@ export default function NewDashboardPage() {
   const { user } = useAuth();
   const [, navigate] = useLocation();
 
-  const {
-    data: userProfile,
-    isLoading,
-  } = useQuery<UserProfile>({
+  const { data: userProfile, isLoading } = useQuery<UserProfile>({
     queryKey: ["/api/user/profile"],
     enabled: !!user,
     staleTime: 0,
@@ -83,16 +82,16 @@ export default function NewDashboardPage() {
 
   if (isLoading) {
     return (
-      <div className="dashboard-layout flex h-screen overflow-hidden bg-[var(--dashboard-void)]">
+      <div className="dashboard-layout flex min-h-screen overflow-hidden bg-[var(--dashboard-void)]">
         <div className="flex-1 flex items-center justify-center">
-          <Loader2 className="h-8 w-8 animate-spin text-[var(--dashboard-aqua)]" />
+          <Loader2 className="h-8 w-8 animate-spin text-[var(--dashboard-aqua-dark)]" />
         </div>
       </div>
     );
   }
 
   return (
-    <div className="dashboard-layout flex h-screen overflow-hidden">
+    <div className="dashboard-layout flex min-h-screen overflow-hidden">
       <DashboardSidebar
         sections={sidebarSections}
         onNavItemClick={handleNavItemClick}
@@ -108,7 +107,8 @@ export default function NewDashboardPage() {
         </div>
 
         <h1 className="dashboard-heading text-[56px] font-normal mb-16">
-          Foundation <span className="text-[var(--dashboard-aqua)]">Protocol</span>
+          Foundation{" "}
+          <span className="text-[var(--dashboard-aqua-dark)]">Protocol</span>
         </h1>
 
         {!status.isAssessmentComplete ? (

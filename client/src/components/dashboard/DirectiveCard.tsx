@@ -40,7 +40,7 @@ export default function DirectiveCard({
       {buttonLabel && (
         <button
           onClick={onButtonClick}
-          className="btn-begin absolute bottom-[60px] right-[60px] bg-[var(--dashboard-void)] text-white border-none py-[22px] px-[60px] text-[11px] font-semibold uppercase tracking-[4px] cursor-pointer"
+          className="btn-begin absolute bottom-[40px] right-[60px] bg-[var(--dashboard-void)] text-white border-none py-[22px] px-[60px] text-[11px] font-semibold uppercase tracking-[4px] cursor-pointer"
         >
           {buttonLabel}
         </button>
