@@ -23,6 +23,7 @@ import FoundationPage from "@/pages/foundation-page";
 import FoundationSessionChatPage from "@/pages/foundation-session-chat";
 import EnhancementModulesPage from "@/pages/enhancement-modules-page";
 import EnhancementModuleChatPage from "@/pages/enhancement-module-chat";
+import NewDashboardPage from "@/pages/new-dashboard";
 import { AuthProvider } from "@/hooks/use-auth";
 import { ProtectedRoute } from "@/lib/protected-route";
 
@@ -83,6 +84,7 @@ function Router() {
       <ProtectedRoute path="/foundation/session/:sessionNumber" component={FoundationSessionChatPage} />
       <ProtectedRoute path="/enhancement-modules" component={EnhancementModulesPage} />
       <ProtectedRoute path="/enhancement-modules/:moduleCode" component={EnhancementModuleChatPage} />
+      <ProtectedRoute path="/dashboard" component={NewDashboardPage} />
       
       {/* Admin routes */}
       <Route path="/admin/login" component={AdminLoginPage} />
