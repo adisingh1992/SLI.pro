@@ -2,6 +2,7 @@
   --dashboard-void: #202436;
   --dashboard-silk: #f8f9fa;
   --dashboard-aqua: #bed6d1;
+  --dashboard-aqua-dark: #6c8083;
   --dashboard-sand: #b3b19c;
   --dashboard-border: #e6e8eb;
 }
@@ -44,4 +45,8 @@
 .nav-item-link:hover {
   opacity: 1;
   color: var(--dashboard-aqua);
+}
+
+.min-h-screen {
+  min-height: 106vh !important;
 }

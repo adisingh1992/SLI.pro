@@ -6,7 +6,11 @@ interface UserAvatarProps {
   size?: "small" | "medium" | "large";
 }
 
-export default function UserAvatar({ firstName, lastName, size = "medium" }: UserAvatarProps) {
+export default function UserAvatar({
+  firstName,
+  lastName,
+  size = "medium",
+}: UserAvatarProps) {
   const getInitials = () => {
     return `${firstName.charAt(0)}${lastName.charAt(0)}`;
   };
@@ -25,8 +29,10 @@ export default function UserAvatar({ firstName, lastName, size = "medium" }: Use
   };
 
   return (
-    <Avatar className={`${getSizeClasses()} bg-[#bed6d1] text-white font-bold ${size === "large" ? "border-4 border-white" : ""}`}>
-      <AvatarFallback className="bg-[#bed6d1] text-white">
+    <Avatar
+      className={`${getSizeClasses()} bg-[#6c8083] text-white font-bold ${size === "large" ? "border-4 border-white" : ""}`}
+    >
+      <AvatarFallback className="bg-[#6c8083] text-white">
         {getInitials()}
       </AvatarFallback>
     </Avatar>

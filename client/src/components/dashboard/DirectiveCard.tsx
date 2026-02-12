@@ -32,7 +32,7 @@ export default function DirectiveCard({
       )}
 
       {metaInfo && (
-        <div className="text-[10px] uppercase tracking-[2px] text-[var(--dashboard-aqua)] font-semibold mt-5">
+        <div className="text-[10px] uppercase tracking-[2px] text-[var(--dashboard-aqua-dark)] font-semibold mt-5">
           {metaInfo}
         </div>
       )}

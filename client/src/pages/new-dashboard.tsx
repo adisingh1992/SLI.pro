@@ -42,7 +42,7 @@ export default function NewDashboardPage() {
   };
 
   return (
-    <div className="dashboard-layout flex h-screen overflow-hidden">
+    <div className="dashboard-layout flex min-h-screen overflow-hidden">
       <DashboardSidebar
         sections={SIDEBAR_SECTIONS}
         onNavItemClick={handleNavItemClick}
@@ -58,13 +58,14 @@ export default function NewDashboardPage() {
         </div>
 
         <h1 className="dashboard-heading text-[56px] font-normal mb-16">
-          Foundation <span className="text-[var(--dashboard-aqua)]">Protocol</span>
+          Foundation{" "}
+          <span className="text-[var(--dashboard-aqua-dark)]">Protocol</span>
         </h1>
 
         <DirectiveCard
           title="Professional Branding Assessment"
           description="To begin crafting your single lasting impression, we start by mapping your professional DNA, capturing your ambitions and establishing the structural foundation of your elite brand architecture."
-          note='To enhance session accuracy, you may complete a prior assessment (MBTI, StrengthsFinder, Enneagram, or 360° Leadership). This is non-blocking.'
+          note="To enhance session accuracy, you may complete a prior assessment (MBTI, StrengthsFinder, Enneagram, or 360° Leadership). This is non-blocking."
           metaInfo="Duration: 5 Minutes"
           buttonLabel="Begin"
           onButtonClick={handleBegin}
