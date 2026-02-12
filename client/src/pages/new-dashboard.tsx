@@ -96,7 +96,9 @@ function buildSidebarSections(
   ];
 }
 
-function getCurrentPhase(status: DashboardStatus): "assessment" | "documents" | "sessions" {
+function getCurrentPhase(
+  status: DashboardStatus,
+): "assessment" | "documents" | "sessions" {
   if (!status.isAssessmentComplete) return "assessment";
   if (!status.isDocumentsComplete) return "documents";
   return "sessions";
@@ -123,7 +125,10 @@ export default function NewDashboardPage() {
 
   const startSessionMutation = useMutation({
     mutationFn: async (sessionNumber: number) => {
-      return await apiRequest("POST", `/api/foundation-sessions/${sessionNumber}/start`);
+      return await apiRequest(
+        "POST",
+        `/api/foundation-sessions/${sessionNumber}/start`,
+      );
     },
     onSuccess: (_data, sessionNumber) => {
       queryClient.invalidateQueries({ queryKey: ["/api/foundation-sessions"] });
@@ -177,19 +182,21 @@ export default function NewDashboardPage() {
 
   if (isLoading) {
     return (
-      <div className="dashboard-layout flex h-screen overflow-hidden bg-[var(--dashboard-void)]">
+      <div className="dashboard-layout flex min-h-screen overflow-hidden bg-[var(--dashboard-void)]">
         <div className="flex-1 flex items-center justify-center">
-          <Loader2 className="h-8 w-8 animate-spin text-[var(--dashboard-aqua)]" />
+          <Loader2 className="h-8 w-8 animate-spin text-[var(--dashboard-aqua-dark)]" />
         </div>
       </div>
     );
   }
 
-  const headingText = currentPhase === "sessions" ? "Professional" : "Foundation";
-  const headingAccent = currentPhase === "sessions" ? "Development" : "Protocol";
+  const headingText =
+    currentPhase === "sessions" ? "Professional" : "Foundation";
+  const headingAccent =
+    currentPhase === "sessions" ? "Development" : "Protocol";
 
   return (
-    <div className="dashboard-layout flex h-screen overflow-hidden">
+    <div className="dashboard-layout flex min-h-screen overflow-hidden">
       <DashboardSidebar
         sections={sidebarSections}
         onNavItemClick={handleNavItemClick}
@@ -206,7 +213,9 @@ export default function NewDashboardPage() {
 
         <h1 className="dashboard-heading text-[56px] font-normal mb-16">
           {headingText}{" "}
-          <span className="text-[var(--dashboard-aqua)]">{headingAccent}</span>
+          <span className="text-[var(--dashboard-aqua-dark)]">
+            {headingAccent}
+          </span>
         </h1>
 
         {currentPhase === "assessment" && (
