@@ -38,21 +38,27 @@ const SESSION_CONTENT = [
   },
 ];
 
-const MODULE_CONTENT: Record<string, { header: string; title: string; description: string }> = {
+const MODULE_CONTENT: Record<
+  string,
+  { header: string; title: string; description: string }
+> = {
   A: {
     header: "Module A",
     title: "Digital Behavior Analysis Framework",
-    description: "Analyze your LinkedIn presence and content strategy patterns to identify opportunities and barriers for professional growth.",
+    description:
+      "Analyze your LinkedIn presence and content strategy patterns to identify opportunities and barriers for professional growth.",
   },
   B: {
     header: "Module B",
     title: "Network Position Mapping Framework",
-    description: "Map your current network position and develop strategic relationship building approaches for enhanced professional influence.",
+    description:
+      "Map your current network position and develop strategic relationship building approaches for enhanced professional influence.",
   },
   C: {
     header: "Module C",
     title: "Career Aspiration Alignment Framework",
-    description: "Align your long-term career aspirations with your current positioning to create an actionable roadmap for professional advancement.",
+    description:
+      "Align your long-term career aspirations with your current positioning to create an actionable roadmap for professional advancement.",
   },
 };
 
@@ -77,9 +83,8 @@ function useDashboardStatus(
     userProfile?.documents?.some((doc) => doc.type === "linkedin") ?? false;
   const isDocumentsComplete = hasResume && hasLinkedIn;
 
-  const completedSessionCount = foundationSessions?.filter(
-    (s) => s.status === "completed",
-  ).length ?? 0;
+  const completedSessionCount =
+    foundationSessions?.filter((s) => s.status === "completed").length ?? 0;
   const areAllSessionsComplete = completedSessionCount >= 3;
 
   const areAllModulesComplete =
@@ -122,7 +127,8 @@ function buildSidebarSections(
   const moduleBDone = getModuleCompleted("B");
 
   const hasSli = toolsData?.userSlis && toolsData.userSlis.length > 0;
-  const hasSliSelected = hasSli && toolsData.userSlis![0]?.selectedSliIndex !== null;
+  const hasSliSelected =
+    hasSli && toolsData.userSlis![0]?.selectedSliIndex !== null;
   const hasSliRefined = hasSli && !!toolsData.userSlis![0]?.refinedSliText;
   const hasFreshnessReport = !!toolsData?.latestFreshnessReport;
   const hasLinkedInOpt = !!toolsData?.latestLinkedinOptimization;
@@ -344,7 +350,11 @@ export default function NewDashboardPage() {
     },
   });
 
-  const status = useDashboardStatus(userProfile, foundationSessions, enhancementModules);
+  const status = useDashboardStatus(
+    userProfile,
+    foundationSessions,
+    enhancementModules,
+  );
   const currentPhase = getCurrentPhase(status);
 
   const toolsData: ToolsData = {
@@ -426,16 +436,17 @@ export default function NewDashboardPage() {
   };
 
   const handleModuleClick = (moduleCode: string) => {
-    const module = enhancementModules?.find(
-      (m) => m.moduleCode === moduleCode,
-    );
+    const module = enhancementModules?.find((m) => m.moduleCode === moduleCode);
     if (!module) {
       startModuleMutation.mutate(moduleCode);
       return;
     }
     if (module.status === "available") {
       startModuleMutation.mutate(moduleCode);
-    } else if (module.status === "in_progress" || module.status === "completed") {
+    } else if (
+      module.status === "in_progress" ||
+      module.status === "completed"
+    ) {
       navigate(`/enhancement-modules/${moduleCode}`);
     }
   };
@@ -451,13 +462,21 @@ export default function NewDashboardPage() {
   }
 
   const headingText =
-    currentPhase === "tools" ? "Advanced" :
-    currentPhase === "enhancement" ? "Enhancement" :
-    currentPhase === "sessions" ? "Foundation" : "Foundation";
+    currentPhase === "tools"
+      ? "Advanced"
+      : currentPhase === "enhancement"
+        ? "Enhancement"
+        : currentPhase === "sessions"
+          ? "Foundation"
+          : "Foundation";
   const headingAccent =
-    currentPhase === "tools" ? "Tools" :
-    currentPhase === "enhancement" ? "Modules" :
-    currentPhase === "sessions" ? "Sessions" : "Protocol";
+    currentPhase === "tools"
+      ? "Tools"
+      : currentPhase === "enhancement"
+        ? "Modules"
+        : currentPhase === "sessions"
+          ? "Sessions"
+          : "Protocol";
 
   return (
     <div className="dashboard-layout flex min-h-screen overflow-hidden">
@@ -484,7 +503,7 @@ export default function NewDashboardPage() {
           />
         </div>
 
-        <h1 className="dashboard-heading text-[56px] font-normal mb-16">
+        <h1 className="dashboard-heading text-[56px] font-normal mb-6">
           {headingText}{" "}
           <span className="text-[var(--dashboard-aqua-dark)]">
             {headingAccent}
@@ -521,11 +540,11 @@ export default function NewDashboardPage() {
               const prevCompleted =
                 session.sessionNumber === 1
                   ? true
-                  : foundationSessions?.some(
+                  : (foundationSessions?.some(
                       (s) =>
                         s.sessionNumber === session.sessionNumber - 1 &&
                         s.status === "completed",
-                    ) ?? false;
+                    ) ?? false);
               const cardStatus = prevCompleted ? session.status : "locked";
               return (
                 <SessionCard
@@ -545,17 +564,19 @@ export default function NewDashboardPage() {
           <div className="flex flex-col gap-6 max-w-[900px]">
             {(["A", "B", "C"] as const).map((code, index) => {
               const content = MODULE_CONTENT[code];
-              const module = enhancementModules?.find((m) => m.moduleCode === code);
+              const module = enhancementModules?.find(
+                (m) => m.moduleCode === code,
+              );
               const moduleStatus = module?.status ?? "available";
               const prevCodes = ["A", "B", "C"];
               const prevCompleted =
                 index === 0
                   ? true
-                  : enhancementModules?.some(
+                  : (enhancementModules?.some(
                       (m) =>
                         m.moduleCode === prevCodes[index - 1] &&
                         m.status === "completed",
-                    ) ?? false;
+                    ) ?? false);
               const cardStatus = prevCompleted ? moduleStatus : "locked";
               return (
                 <SessionCard
@@ -577,7 +598,9 @@ export default function NewDashboardPage() {
               title="Schedule Live Coaching Call"
               description="Book your 30-minute session with an SLI.pro expert to refine your professional positioning and create a powerful professional presence."
               buttonLabel="Schedule Now"
-              onClick={() => window.open("https://calendly.com/dcara-sli/haas", "_blank")}
+              onClick={() =>
+                window.open("https://calendly.com/dcara-sli/haas", "_blank")
+              }
               statusLabel="Available"
               statusType="available"
             />
@@ -585,7 +608,9 @@ export default function NewDashboardPage() {
             <ToolCard
               title="Review Your Brand Intelligence Report"
               description="Understand how your digital presence aligns with your career goals through a comprehensive analysis of your professional profile."
-              buttonLabel={latestFreshnessReport ? "View Report" : "Generate Report"}
+              buttonLabel={
+                latestFreshnessReport ? "View Report" : "Generate Report"
+              }
               onClick={() => navigate("/freshness-report")}
               statusLabel={latestFreshnessReport ? "Completed" : "Available"}
               statusType={latestFreshnessReport ? "completed" : "available"}
@@ -621,18 +646,32 @@ export default function NewDashboardPage() {
               disabled={!hasSli}
               disabledMessage="SLI options will become available once your coach generates them based on your profile and sessions."
               statusLabel={
-                hasSliRefined ? "Refined" : hasSliSelected ? "Selected" : hasSli ? "Ready" : undefined
+                hasSliRefined
+                  ? "Refined"
+                  : hasSliSelected
+                    ? "Selected"
+                    : hasSli
+                      ? "Ready"
+                      : undefined
               }
-              statusType={hasSliRefined || hasSliSelected ? "completed" : "available"}
+              statusType={
+                hasSliRefined || hasSliSelected ? "completed" : "available"
+              }
             />
 
             <ToolCard
               title="Optimize Your LinkedIn Profile"
               description="Get personalized recommendations to align your LinkedIn profile with your SLI and improve your professional presence."
-              buttonLabel={latestLinkedinOptimization ? "View Optimization" : "Generate Optimization"}
+              buttonLabel={
+                latestLinkedinOptimization
+                  ? "View Optimization"
+                  : "Generate Optimization"
+              }
               onClick={() => {
                 if (latestLinkedinOptimization) {
-                  navigate(`/linkedin-optimization/${latestLinkedinOptimization.id}`);
+                  navigate(
+                    `/linkedin-optimization/${latestLinkedinOptimization.id}`,
+                  );
                 } else {
                   navigate("/linkedin-optimization/generate");
                 }
@@ -643,8 +682,16 @@ export default function NewDashboardPage() {
                 !!(hasSliSelected || hasSliRefined),
                 !!latestFreshnessReport,
               )}
-              statusLabel={latestLinkedinOptimization ? "Completed" : canGenerateLinkedIn ? "Available" : undefined}
-              statusType={latestLinkedinOptimization ? "completed" : "available"}
+              statusLabel={
+                latestLinkedinOptimization
+                  ? "Completed"
+                  : canGenerateLinkedIn
+                    ? "Available"
+                    : undefined
+              }
+              statusType={
+                latestLinkedinOptimization ? "completed" : "available"
+              }
             />
 
             <ToolCard
@@ -666,7 +713,11 @@ export default function NewDashboardPage() {
                     ? `You have ${homeworkData.filter((hw) => !hw.answerText).length} unanswered questions waiting for your response.`
                     : "Your coach hasn't assigned any homework questions yet. Check back later."
                 }
-                buttonLabel={homeworkData && homeworkData.length > 0 ? "Answer Now" : "No Questions Yet"}
+                buttonLabel={
+                  homeworkData && homeworkData.length > 0
+                    ? "Answer Now"
+                    : "No Questions Yet"
+                }
                 onClick={() => navigate("/homework")}
                 disabled={!homeworkData || homeworkData.length === 0}
                 disabledMessage="Your coach hasn't assigned any homework questions yet. Check back later for personalized development questions."
@@ -676,8 +727,10 @@ export default function NewDashboardPage() {
                     : undefined
                 }
                 statusType={
-                  homeworkData && homeworkData.length > 0 &&
-                  homeworkData.filter((hw) => hw.answerText).length === homeworkData.length
+                  homeworkData &&
+                  homeworkData.length > 0 &&
+                  homeworkData.filter((hw) => hw.answerText).length ===
+                    homeworkData.length
                     ? "completed"
                     : "info"
                 }
