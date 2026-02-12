@@ -2,12 +2,21 @@ import { useAuth } from "@/hooks/use-auth";
 import { useLocation } from "wouter";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
-import { UserProfile, FoundationSession, EnhancementModule } from "@shared/schema";
+import {
+  UserProfile,
+  FoundationSession,
+  EnhancementModule,
+  Sli,
+  FreshnessReport,
+  LinkedinOptimization,
+  HomeworkAssignment,
+} from "@shared/schema";
 import { Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import DashboardSidebar from "@/components/dashboard/DashboardSidebar";
 import DirectiveCard from "@/components/dashboard/DirectiveCard";
 import SessionCard from "@/components/dashboard/SessionCard";
+import ToolCard from "@/components/dashboard/ToolCard";
 import UserAvatar from "@/components/user-avatar";
 import "@/assets/css/new-dashboard.css";
 
@@ -47,7 +56,18 @@ const MODULE_CONTENT: Record<string, { header: string; title: string; descriptio
   },
 };
 
-function useDashboardStatus(userProfile?: UserProfile, foundationSessions?: FoundationSession[]) {
+interface ToolsData {
+  userSlis?: Sli[];
+  latestFreshnessReport?: FreshnessReport;
+  latestLinkedinOptimization?: LinkedinOptimization;
+  homeworkData?: HomeworkAssignment[];
+}
+
+function useDashboardStatus(
+  userProfile?: UserProfile,
+  foundationSessions?: FoundationSession[],
+  enhancementModules?: EnhancementModule[],
+) {
   const isAssessmentComplete =
     !!userProfile?.questionnaire && userProfile.questionnaire.isDraft !== true;
 
@@ -62,7 +82,19 @@ function useDashboardStatus(userProfile?: UserProfile, foundationSessions?: Foun
   ).length ?? 0;
   const areAllSessionsComplete = completedSessionCount >= 3;
 
-  return { isAssessmentComplete, hasResume, hasLinkedIn, isDocumentsComplete, areAllSessionsComplete };
+  const areAllModulesComplete =
+    !!enhancementModules &&
+    enhancementModules.length > 0 &&
+    enhancementModules.every((m) => m.status === "completed");
+
+  return {
+    isAssessmentComplete,
+    hasResume,
+    hasLinkedIn,
+    isDocumentsComplete,
+    areAllSessionsComplete,
+    areAllModulesComplete,
+  };
 }
 
 type DashboardStatus = ReturnType<typeof useDashboardStatus>;
@@ -71,6 +103,8 @@ function buildSidebarSections(
   status: DashboardStatus,
   foundationSessions?: FoundationSession[],
   enhancementModules?: EnhancementModule[],
+  toolsData?: ToolsData,
+  isAdmin?: boolean,
 ) {
   const getSessionCompleted = (sessionNumber: number) =>
     foundationSessions?.some(
@@ -87,7 +121,17 @@ function buildSidebarSections(
   const moduleADone = getModuleCompleted("A");
   const moduleBDone = getModuleCompleted("B");
 
-  return [
+  const hasSli = toolsData?.userSlis && toolsData.userSlis.length > 0;
+  const hasSliSelected = hasSli && toolsData.userSlis![0]?.selectedSliIndex !== null;
+  const hasSliRefined = hasSli && !!toolsData.userSlis![0]?.refinedSliText;
+  const hasFreshnessReport = !!toolsData?.latestFreshnessReport;
+  const hasLinkedInOpt = !!toolsData?.latestLinkedinOptimization;
+  const canGenerateLinkedIn =
+    status.isDocumentsComplete &&
+    (hasSliSelected || hasSliRefined) &&
+    hasFreshnessReport;
+
+  const sections = [
     {
       label: "Overview",
       phaseGroups: [
@@ -146,18 +190,61 @@ function buildSidebarSections(
             },
           ],
         },
+        {
+          title: "Phase 4 - Advanced Tools",
+          disabled: !status.areAllModulesComplete,
+          items: [
+            {
+              label: "Schedule Coaching Call",
+              locked: !status.areAllModulesComplete,
+              completed: false,
+            },
+            {
+              label: "Brand Intelligence Report",
+              locked: !status.areAllModulesComplete,
+              completed: hasFreshnessReport,
+            },
+            {
+              label: "Single Lasting Impression",
+              locked: !status.areAllModulesComplete || !hasSli,
+              completed: !!(hasSliSelected || hasSliRefined),
+            },
+            {
+              label: "LinkedIn Optimization",
+              locked: !status.areAllModulesComplete || !canGenerateLinkedIn,
+              completed: hasLinkedInOpt,
+            },
+            {
+              label: "Strategic Content",
+              locked: !status.areAllModulesComplete || !canGenerateLinkedIn,
+              completed: false,
+            },
+            ...(!isAdmin
+              ? [
+                  {
+                    label: "Assigned Homework",
+                    locked: !status.areAllModulesComplete,
+                    completed: false,
+                  },
+                ]
+              : []),
+          ],
+        },
       ],
     },
   ];
+
+  return sections;
 }
 
 function getCurrentPhase(
   status: DashboardStatus,
-): "assessment" | "documents" | "sessions" | "enhancement" {
+): "assessment" | "documents" | "sessions" | "enhancement" | "tools" {
   if (!status.isAssessmentComplete) return "assessment";
   if (!status.isDocumentsComplete) return "documents";
   if (!status.areAllSessionsComplete) return "sessions";
-  return "enhancement";
+  if (!status.areAllModulesComplete) return "enhancement";
+  return "tools";
 }
 
 export default function NewDashboardPage() {
@@ -182,6 +269,30 @@ export default function NewDashboardPage() {
   const { data: enhancementModules } = useQuery<EnhancementModule[]>({
     queryKey: ["/api/enhancement-modules"],
     enabled: !!user,
+    retry: false,
+  });
+
+  const { data: userSlis } = useQuery<Sli[]>({
+    queryKey: ["/api/user/slis"],
+    enabled: !!user,
+    retry: false,
+  });
+
+  const { data: latestFreshnessReport } = useQuery<FreshnessReport>({
+    queryKey: ["/api/freshness-reports/latest"],
+    enabled: !!user,
+    retry: false,
+  });
+
+  const { data: latestLinkedinOptimization } = useQuery<LinkedinOptimization>({
+    queryKey: ["/api/linkedin-optimizations/latest"],
+    enabled: !!user,
+    retry: false,
+  });
+
+  const { data: homeworkData } = useQuery<HomeworkAssignment[]>({
+    queryKey: ["/api/user/homework"],
+    enabled: !!user && !user?.isAdmin,
     retry: false,
   });
 
@@ -233,9 +344,31 @@ export default function NewDashboardPage() {
     },
   });
 
-  const status = useDashboardStatus(userProfile, foundationSessions);
+  const status = useDashboardStatus(userProfile, foundationSessions, enhancementModules);
   const currentPhase = getCurrentPhase(status);
-  const sidebarSections = buildSidebarSections(status, foundationSessions, enhancementModules);
+
+  const toolsData: ToolsData = {
+    userSlis,
+    latestFreshnessReport,
+    latestLinkedinOptimization,
+    homeworkData,
+  };
+
+  const sidebarSections = buildSidebarSections(
+    status,
+    foundationSessions,
+    enhancementModules,
+    toolsData,
+    !!user?.isAdmin,
+  );
+
+  const hasSli = userSlis && userSlis.length > 0;
+  const hasSliSelected = hasSli && userSlis[0]?.selectedSliIndex !== null;
+  const hasSliRefined = hasSli && !!userSlis[0]?.refinedSliText;
+  const canGenerateLinkedIn =
+    status.isDocumentsComplete &&
+    (hasSliSelected || hasSliRefined) &&
+    !!latestFreshnessReport;
 
   const handleNavItemClick = (item: { label: string; locked?: boolean }) => {
     if (item.locked) return;
@@ -257,6 +390,26 @@ export default function NewDashboardPage() {
       handleModuleClick("B");
     } else if (item.label === "Career Aspiration Alignment") {
       handleModuleClick("C");
+    } else if (item.label === "Schedule Coaching Call") {
+      window.open("https://calendly.com/dcara-sli/haas", "_blank");
+    } else if (item.label === "Brand Intelligence Report") {
+      navigate("/freshness-report");
+    } else if (item.label === "Single Lasting Impression") {
+      if (hasSliSelected) {
+        navigate("/sli-refinement");
+      } else if (hasSli) {
+        navigate("/sli-selection");
+      }
+    } else if (item.label === "LinkedIn Optimization") {
+      if (latestLinkedinOptimization) {
+        navigate(`/linkedin-optimization/${latestLinkedinOptimization.id}`);
+      } else {
+        navigate("/linkedin-optimization/generate");
+      }
+    } else if (item.label === "Strategic Content") {
+      navigate("/linkedin-content-drafts");
+    } else if (item.label === "Assigned Homework") {
+      navigate("/homework");
     }
   };
 
@@ -298,9 +451,11 @@ export default function NewDashboardPage() {
   }
 
   const headingText =
+    currentPhase === "tools" ? "Advanced" :
     currentPhase === "enhancement" ? "Enhancement" :
     currentPhase === "sessions" ? "Foundation" : "Foundation";
   const headingAccent =
+    currentPhase === "tools" ? "Tools" :
     currentPhase === "enhancement" ? "Modules" :
     currentPhase === "sessions" ? "Sessions" : "Protocol";
 
@@ -406,7 +561,142 @@ export default function NewDashboardPage() {
             })}
           </div>
         )}
+
+        {currentPhase === "tools" && (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-[900px]">
+            <ToolCard
+              title="Schedule Live Coaching Call"
+              description="Book your 30-minute session with an SLI.pro expert to refine your professional positioning and create a powerful professional presence."
+              buttonLabel="Schedule Now"
+              onClick={() => window.open("https://calendly.com/dcara-sli/haas", "_blank")}
+              statusLabel="Available"
+              statusType="available"
+            />
+
+            <ToolCard
+              title="Review Your Brand Intelligence Report"
+              description="Understand how your digital presence aligns with your career goals through a comprehensive analysis of your professional profile."
+              buttonLabel={latestFreshnessReport ? "View Report" : "Generate Report"}
+              onClick={() => navigate("/freshness-report")}
+              statusLabel={latestFreshnessReport ? "Completed" : "Available"}
+              statusType={latestFreshnessReport ? "completed" : "available"}
+            />
+
+            <ToolCard
+              title="Discover Your Single Lasting Impression"
+              description={
+                hasSliRefined
+                  ? "Your SLI has been refined and is ready to use."
+                  : hasSliSelected
+                    ? "You've selected your SLI. Consider refining it for maximum impact."
+                    : hasSli
+                      ? "Your SLI options are ready. Select the one that resonates with your professional identity."
+                      : "SLI options will become available once your coach generates them based on your profile."
+              }
+              buttonLabel={
+                hasSliRefined
+                  ? "View Refined SLI"
+                  : hasSliSelected
+                    ? "View Selected SLI"
+                    : hasSli
+                      ? "Select Your SLI"
+                      : "Awaiting Coach"
+              }
+              onClick={() => {
+                if (hasSliSelected) {
+                  navigate("/sli-refinement");
+                } else if (hasSli) {
+                  navigate("/sli-selection");
+                }
+              }}
+              disabled={!hasSli}
+              disabledMessage="SLI options will become available once your coach generates them based on your profile and sessions."
+              statusLabel={
+                hasSliRefined ? "Refined" : hasSliSelected ? "Selected" : hasSli ? "Ready" : undefined
+              }
+              statusType={hasSliRefined || hasSliSelected ? "completed" : "available"}
+            />
+
+            <ToolCard
+              title="Optimize Your LinkedIn Profile"
+              description="Get personalized recommendations to align your LinkedIn profile with your SLI and improve your professional presence."
+              buttonLabel={latestLinkedinOptimization ? "View Optimization" : "Generate Optimization"}
+              onClick={() => {
+                if (latestLinkedinOptimization) {
+                  navigate(`/linkedin-optimization/${latestLinkedinOptimization.id}`);
+                } else {
+                  navigate("/linkedin-optimization/generate");
+                }
+              }}
+              disabled={!canGenerateLinkedIn}
+              disabledMessage={getLinkedInRequirementsMessage(
+                status.isDocumentsComplete,
+                !!(hasSliSelected || hasSliRefined),
+                !!latestFreshnessReport,
+              )}
+              statusLabel={latestLinkedinOptimization ? "Completed" : canGenerateLinkedIn ? "Available" : undefined}
+              statusType={latestLinkedinOptimization ? "completed" : "available"}
+            />
+
+            <ToolCard
+              title="Generate Strategic Content"
+              description="Create LinkedIn posts and professional content aligned with your brand positioning and SLI."
+              buttonLabel="Generate Content"
+              onClick={() => navigate("/linkedin-content-drafts")}
+              disabled={!canGenerateLinkedIn}
+              disabledMessage="Complete your Brand Intelligence Report, SLI selection, and document uploads first."
+              statusLabel={canGenerateLinkedIn ? "Available" : undefined}
+              statusType="available"
+            />
+
+            {user && !user.isAdmin && (
+              <ToolCard
+                title="Assigned Homework"
+                description={
+                  homeworkData && homeworkData.length > 0
+                    ? `You have ${homeworkData.filter((hw) => !hw.answerText).length} unanswered questions waiting for your response.`
+                    : "Your coach hasn't assigned any homework questions yet. Check back later."
+                }
+                buttonLabel={homeworkData && homeworkData.length > 0 ? "Answer Now" : "No Questions Yet"}
+                onClick={() => navigate("/homework")}
+                disabled={!homeworkData || homeworkData.length === 0}
+                disabledMessage="Your coach hasn't assigned any homework questions yet. Check back later for personalized development questions."
+                statusLabel={
+                  homeworkData && homeworkData.length > 0
+                    ? `${homeworkData.filter((hw) => hw.answerText).length}/${homeworkData.length} Complete`
+                    : undefined
+                }
+                statusType={
+                  homeworkData && homeworkData.length > 0 &&
+                  homeworkData.filter((hw) => hw.answerText).length === homeworkData.length
+                    ? "completed"
+                    : "info"
+                }
+              />
+            )}
+          </div>
+        )}
       </main>
     </div>
   );
+}
+
+function getLinkedInRequirementsMessage(
+  hasDocuments: boolean,
+  hasSli: boolean,
+  hasFreshnessReport: boolean,
+): string {
+  if (!hasDocuments && !hasSli && !hasFreshnessReport) {
+    return "Complete prerequisites to unlock LinkedIn optimization.";
+  }
+  if (!hasDocuments) {
+    return "Upload your resume and LinkedIn profile first.";
+  }
+  if (!hasSli) {
+    return "Select or refine your SLI first.";
+  }
+  if (!hasFreshnessReport) {
+    return "Generate a Brand Intelligence Report first.";
+  }
+  return "Almost ready for LinkedIn optimization.";
 }
