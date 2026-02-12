@@ -463,6 +463,15 @@ export default function NewDashboardPage() {
     <div className="dashboard-layout flex min-h-screen overflow-hidden">
       <DashboardSidebar
         sections={sidebarSections}
+        activePhaseTitle={
+          currentPhase === "assessment" || currentPhase === "documents"
+            ? "Phase 1 - Foundation Protocol"
+            : currentPhase === "sessions"
+              ? "Phase 2 - Foundation Sessions"
+              : currentPhase === "enhancement"
+                ? "Phase 3 - Enhancement Modules"
+                : "Phase 4 - Advanced Tools"
+        }
         onNavItemClick={handleNavItemClick}
       />
 
