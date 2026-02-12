@@ -65,7 +65,7 @@ function PhaseGroupComponent({
           <div
             key={idx}
             onClick={() => !item.locked && onItemClick?.(item)}
-            className={`text-[15px] my-3 text-white nav-item-link flex items-center gap-2.5 ${
+            className={`text-[15px] my-5 text-white nav-item-link flex items-center gap-2.5 ${
               item.locked
                 ? "opacity-30 cursor-not-allowed"
                 : item.completed
