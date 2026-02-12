@@ -46,7 +46,7 @@ function PhaseGroupComponent({
     <div className="mb-10">
       <button
         onClick={() => !group.disabled && setExpanded(!expanded)}
-        className={`flex w-full items-center justify-between text-[9px] uppercase tracking-[2px] font-semibold mb-3 ${
+        className={`flex w-full items-center justify-between text-[10px] uppercase tracking-[2px] font-semibold mb-3 ${
           group.disabled
             ? "text-[var(--dashboard-aqua)] opacity-50 cursor-default"
             : "text-[var(--dashboard-aqua)] cursor-pointer"
@@ -60,7 +60,8 @@ function PhaseGroupComponent({
         )}
       </button>
 
-      {expanded && !group.disabled &&
+      {expanded &&
+        !group.disabled &&
         group.items.map((item, idx) => (
           <div
             key={idx}
@@ -93,7 +94,10 @@ export default function DashboardSidebar({
     <aside className="w-[352px] bg-[var(--dashboard-void)] py-[50px] px-10 flex flex-col border-r border-white/5 shrink-0">
       <div className="mb-[50px] flex items-center gap-3">
         <img src={sliProLogo} alt="SLI.pro" className="h-8 object-contain" />
-        <span className="text-xl font-bold tracking-[3px]" style={{ fontFamily: "Lora, serif" }}>
+        <span
+          className="text-xl font-bold tracking-[3px]"
+          style={{ fontFamily: "Lora, serif" }}
+        >
           <span className="text-white">SLI</span>
           <span className="text-[var(--dashboard-aqua)]">.pro</span>
         </span>
