@@ -1,3 +1,4 @@
+import { useState, useEffect } from "react";
 import { ChevronDown, Check } from "lucide-react";
 import sliProLogo from "@/assets/sliPro-logos_aqua.png";
 
@@ -35,15 +36,20 @@ function PhaseGroupComponent({
   isActive: boolean;
   onItemClick?: (item: NavItem) => void;
 }) {
-  const expanded = isActive && !group.disabled;
+  const [expanded, setExpanded] = useState(isActive);
+
+  useEffect(() => {
+    setExpanded(isActive);
+  }, [isActive]);
 
   return (
     <div className="mb-6">
-      <div
+      <button
+        onClick={() => !group.disabled && setExpanded(!expanded)}
         className={`flex w-full items-center justify-between text-[9px] uppercase tracking-[2px] font-semibold mb-3 ${
           group.disabled
             ? "text-[var(--dashboard-aqua)] opacity-50 cursor-default"
-            : "text-[var(--dashboard-aqua)]"
+            : "text-[var(--dashboard-aqua)] cursor-pointer"
         }`}
       >
         <span>{group.title}</span>
@@ -52,9 +58,9 @@ function PhaseGroupComponent({
             className={`w-3 h-3 transition-transform ${expanded ? "" : "-rotate-90"}`}
           />
         )}
-      </div>
+      </button>
 
-      {expanded &&
+      {expanded && !group.disabled &&
         group.items.map((item, idx) => (
           <div
             key={idx}
@@ -87,9 +93,9 @@ export default function DashboardSidebar({
     <aside className="w-80 bg-[var(--dashboard-void)] py-[50px] px-10 flex flex-col border-r border-white/5 shrink-0">
       <div className="mb-[50px] flex items-center gap-3">
         <img src={sliProLogo} alt="SLI.pro" className="h-8 object-contain" />
-        <span className="text-xl font-bold" style={{ fontFamily: "Lora, serif" }}>
+        <span className="text-xl font-bold tracking-[3px]" style={{ fontFamily: "Lora, serif" }}>
           <span className="text-white">SLI</span>
-          <span className="text-[var(--dashboard-aqua-dark)]">.pro</span>
+          <span className="text-[var(--dashboard-aqua)]">.pro</span>
         </span>
       </div>
 
