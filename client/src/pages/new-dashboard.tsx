@@ -241,7 +241,7 @@ export default function NewDashboardPage() {
         )}
 
         {currentPhase === "sessions" && (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-[900px]">
+          <div className="flex flex-col gap-6 max-w-[900px]">
             {foundationSessions?.slice(0, 3).map((session) => {
               const content = SESSION_CONTENT[session.sessionNumber - 1];
               if (!content) return null;
