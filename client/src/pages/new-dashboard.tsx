@@ -82,6 +82,11 @@ function buildSidebarSections(
       (m) => m.moduleCode === code && m.status === "completed",
     ) ?? false;
 
+  const session1Done = getSessionCompleted(1);
+  const session2Done = getSessionCompleted(2);
+  const moduleADone = getModuleCompleted("A");
+  const moduleBDone = getModuleCompleted("B");
+
   return [
     {
       label: "Overview",
@@ -100,22 +105,22 @@ function buildSidebarSections(
           ],
         },
         {
-          title: "Phase 2 - Professional Development",
+          title: "Phase 2 - Foundation Sessions",
           disabled: !status.isDocumentsComplete,
           items: [
             {
               label: "Functional Identity Mapping",
               locked: !status.isDocumentsComplete,
-              completed: getSessionCompleted(1),
+              completed: session1Done,
             },
             {
               label: "Professional Credibility Assessment",
-              locked: !status.isDocumentsComplete,
-              completed: getSessionCompleted(2),
+              locked: !status.isDocumentsComplete || !session1Done,
+              completed: session2Done,
             },
             {
               label: "Positioning Story Development",
-              locked: !status.isDocumentsComplete,
+              locked: !status.isDocumentsComplete || !session2Done,
               completed: getSessionCompleted(3),
             },
           ],
@@ -127,16 +132,16 @@ function buildSidebarSections(
             {
               label: "Digital Behavior Analysis",
               locked: !status.areAllSessionsComplete,
-              completed: getModuleCompleted("A"),
+              completed: moduleADone,
             },
             {
               label: "Network Position Mapping",
-              locked: !status.areAllSessionsComplete,
-              completed: getModuleCompleted("B"),
+              locked: !status.areAllSessionsComplete || !moduleADone,
+              completed: moduleBDone,
             },
             {
               label: "Career Aspiration Alignment",
-              locked: !status.areAllSessionsComplete,
+              locked: !status.areAllSessionsComplete || !moduleBDone,
               completed: getModuleCompleted("C"),
             },
           ],
@@ -294,10 +299,10 @@ export default function NewDashboardPage() {
 
   const headingText =
     currentPhase === "enhancement" ? "Enhancement" :
-    currentPhase === "sessions" ? "Professional" : "Foundation";
+    currentPhase === "sessions" ? "Foundation" : "Foundation";
   const headingAccent =
     currentPhase === "enhancement" ? "Modules" :
-    currentPhase === "sessions" ? "Development" : "Protocol";
+    currentPhase === "sessions" ? "Sessions" : "Protocol";
 
   return (
     <div className="dashboard-layout flex min-h-screen overflow-hidden">
@@ -349,13 +354,22 @@ export default function NewDashboardPage() {
             {foundationSessions?.slice(0, 3).map((session) => {
               const content = SESSION_CONTENT[session.sessionNumber - 1];
               if (!content) return null;
+              const prevCompleted =
+                session.sessionNumber === 1
+                  ? true
+                  : foundationSessions?.some(
+                      (s) =>
+                        s.sessionNumber === session.sessionNumber - 1 &&
+                        s.status === "completed",
+                    ) ?? false;
+              const cardStatus = prevCompleted ? session.status : "locked";
               return (
                 <SessionCard
                   key={session.id}
                   header={content.header}
                   title={content.title}
                   description={content.description}
-                  status={session.status}
+                  status={cardStatus}
                   onClick={() => handleSessionClick(session.sessionNumber)}
                 />
               );
@@ -365,17 +379,27 @@ export default function NewDashboardPage() {
 
         {currentPhase === "enhancement" && (
           <div className="flex flex-col gap-6 max-w-[900px]">
-            {(["A", "B", "C"] as const).map((code) => {
+            {(["A", "B", "C"] as const).map((code, index) => {
               const content = MODULE_CONTENT[code];
               const module = enhancementModules?.find((m) => m.moduleCode === code);
               const moduleStatus = module?.status ?? "available";
+              const prevCodes = ["A", "B", "C"];
+              const prevCompleted =
+                index === 0
+                  ? true
+                  : enhancementModules?.some(
+                      (m) =>
+                        m.moduleCode === prevCodes[index - 1] &&
+                        m.status === "completed",
+                    ) ?? false;
+              const cardStatus = prevCompleted ? moduleStatus : "locked";
               return (
                 <SessionCard
                   key={code}
                   header={content.header}
                   title={content.title}
                   description={content.description}
-                  status={moduleStatus}
+                  status={cardStatus}
                   onClick={() => handleModuleClick(code)}
                 />
               );
