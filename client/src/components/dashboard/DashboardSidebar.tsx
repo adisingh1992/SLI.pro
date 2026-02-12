@@ -43,7 +43,7 @@ function PhaseGroupComponent({
   }, [isActive]);
 
   return (
-    <div className="mb-6">
+    <div className="mb-10">
       <button
         onClick={() => !group.disabled && setExpanded(!expanded)}
         className={`flex w-full items-center justify-between text-[9px] uppercase tracking-[2px] font-semibold mb-3 ${
