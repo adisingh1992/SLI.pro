@@ -1,12 +1,33 @@
 import { useAuth } from "@/hooks/use-auth";
 import { useLocation } from "wouter";
-import { useQuery } from "@tanstack/react-query";
-import { UserProfile } from "@shared/schema";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { apiRequest } from "@/lib/queryClient";
+import { UserProfile, FoundationSession } from "@shared/schema";
 import { Loader2 } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 import DashboardSidebar from "@/components/dashboard/DashboardSidebar";
 import DirectiveCard from "@/components/dashboard/DirectiveCard";
+import SessionCard from "@/components/dashboard/SessionCard";
 import UserAvatar from "@/components/user-avatar";
 import "@/assets/css/new-dashboard.css";
+
+const SESSION_CONTENT = [
+  {
+    header: "Session 1",
+    title: "Functional Identity Mapping",
+    description: "Define your primary business function and positioning",
+  },
+  {
+    header: "Session 2",
+    title: "Professional Credibility Assessment",
+    description: "Identify measurable expertise and business impact",
+  },
+  {
+    header: "Session 3",
+    title: "Positioning Story Development",
+    description: "Extract compelling stories that prove your unique value",
+  },
+];
 
 function useDashboardStatus(userProfile?: UserProfile) {
   const isAssessmentComplete =
@@ -21,10 +42,17 @@ function useDashboardStatus(userProfile?: UserProfile) {
   return { isAssessmentComplete, hasResume, hasLinkedIn, isDocumentsComplete };
 }
 
-function buildSidebarSections(status: {
-  isAssessmentComplete: boolean;
-  isDocumentsComplete: boolean;
-}) {
+type DashboardStatus = ReturnType<typeof useDashboardStatus>;
+
+function buildSidebarSections(
+  status: DashboardStatus,
+  foundationSessions?: FoundationSession[],
+) {
+  const getSessionCompleted = (sessionNumber: number) =>
+    foundationSessions?.some(
+      (s) => s.sessionNumber === sessionNumber && s.status === "completed",
+    ) ?? false;
+
   return [
     {
       label: "Overview",
@@ -44,10 +72,23 @@ function buildSidebarSections(status: {
         },
         {
           title: "Phase 2 - Professional Development",
-          disabled: true,
+          disabled: !status.isDocumentsComplete,
           items: [
-            { label: "Functional Identity Mapping", locked: true },
-            { label: "Narrative Architecture", locked: true },
+            {
+              label: "Functional Identity Mapping",
+              locked: !status.isDocumentsComplete,
+              completed: getSessionCompleted(1),
+            },
+            {
+              label: "Professional Credibility Assessment",
+              locked: !status.isDocumentsComplete,
+              completed: getSessionCompleted(2),
+            },
+            {
+              label: "Positioning Story Development",
+              locked: !status.isDocumentsComplete,
+              completed: getSessionCompleted(3),
+            },
           ],
         },
       ],
@@ -55,9 +96,17 @@ function buildSidebarSections(status: {
   ];
 }
 
+function getCurrentPhase(status: DashboardStatus): "assessment" | "documents" | "sessions" {
+  if (!status.isAssessmentComplete) return "assessment";
+  if (!status.isDocumentsComplete) return "documents";
+  return "sessions";
+}
+
 export default function NewDashboardPage() {
   const { user } = useAuth();
   const [, navigate] = useLocation();
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
 
   const { data: userProfile, isLoading } = useQuery<UserProfile>({
     queryKey: ["/api/user/profile"],
@@ -66,8 +115,36 @@ export default function NewDashboardPage() {
     refetchOnWindowFocus: true,
   });
 
+  const { data: foundationSessions } = useQuery<FoundationSession[]>({
+    queryKey: ["/api/foundation-sessions"],
+    enabled: !!user,
+    retry: false,
+  });
+
+  const startSessionMutation = useMutation({
+    mutationFn: async (sessionNumber: number) => {
+      return await apiRequest("POST", `/api/foundation-sessions/${sessionNumber}/start`);
+    },
+    onSuccess: (_data, sessionNumber) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/foundation-sessions"] });
+      toast({
+        title: "Session Started",
+        description: `Foundation Session ${sessionNumber} has been started.`,
+      });
+      navigate(`/foundation/session/${sessionNumber}`);
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to start session",
+        variant: "destructive",
+      });
+    },
+  });
+
   const status = useDashboardStatus(userProfile);
-  const sidebarSections = buildSidebarSections(status);
+  const currentPhase = getCurrentPhase(status);
+  const sidebarSections = buildSidebarSections(status, foundationSessions);
 
   const handleNavItemClick = (item: { label: string; locked?: boolean }) => {
     if (item.locked) return;
@@ -77,21 +154,42 @@ export default function NewDashboardPage() {
       if (status.isAssessmentComplete) {
         navigate("/profile?tab=documents");
       }
+    } else if (item.label === "Functional Identity Mapping") {
+      handleSessionClick(1);
+    } else if (item.label === "Professional Credibility Assessment") {
+      handleSessionClick(2);
+    } else if (item.label === "Positioning Story Development") {
+      handleSessionClick(3);
+    }
+  };
+
+  const handleSessionClick = (sessionNumber: number) => {
+    const session = foundationSessions?.find(
+      (s) => s.sessionNumber === sessionNumber,
+    );
+    if (!session || session.status === "locked") return;
+    if (session.status === "available") {
+      startSessionMutation.mutate(sessionNumber);
+    } else {
+      navigate(`/foundation/session/${sessionNumber}`);
     }
   };
 
   if (isLoading) {
     return (
-      <div className="dashboard-layout flex min-h-screen overflow-hidden bg-[var(--dashboard-void)]">
+      <div className="dashboard-layout flex h-screen overflow-hidden bg-[var(--dashboard-void)]">
         <div className="flex-1 flex items-center justify-center">
-          <Loader2 className="h-8 w-8 animate-spin text-[var(--dashboard-aqua-dark)]" />
+          <Loader2 className="h-8 w-8 animate-spin text-[var(--dashboard-aqua)]" />
         </div>
       </div>
     );
   }
 
+  const headingText = currentPhase === "sessions" ? "Professional" : "Foundation";
+  const headingAccent = currentPhase === "sessions" ? "Development" : "Protocol";
+
   return (
-    <div className="dashboard-layout flex min-h-screen overflow-hidden">
+    <div className="dashboard-layout flex h-screen overflow-hidden">
       <DashboardSidebar
         sections={sidebarSections}
         onNavItemClick={handleNavItemClick}
@@ -107,11 +205,11 @@ export default function NewDashboardPage() {
         </div>
 
         <h1 className="dashboard-heading text-[56px] font-normal mb-16">
-          Foundation{" "}
-          <span className="text-[var(--dashboard-aqua-dark)]">Protocol</span>
+          {headingText}{" "}
+          <span className="text-[var(--dashboard-aqua)]">{headingAccent}</span>
         </h1>
 
-        {!status.isAssessmentComplete ? (
+        {currentPhase === "assessment" && (
           <DirectiveCard
             title="Professional Branding Assessment"
             description="To begin crafting your single lasting impression, we start by mapping your professional DNA, capturing your ambitions and establishing the structural foundation of your elite brand architecture."
@@ -120,7 +218,9 @@ export default function NewDashboardPage() {
             buttonLabel="Begin"
             onButtonClick={() => navigate("/questionnaire")}
           />
-        ) : (
+        )}
+
+        {currentPhase === "documents" && (
           <DirectiveCard
             title="Document Vault"
             description="Upload your professional documents to enable deeper analysis. Your resume and LinkedIn profile allow us to map your current positioning and identify opportunities for your brand architecture."
@@ -129,6 +229,25 @@ export default function NewDashboardPage() {
             buttonLabel={status.isDocumentsComplete ? "View" : "Upload"}
             onButtonClick={() => navigate("/profile?tab=documents")}
           />
+        )}
+
+        {currentPhase === "sessions" && (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-[900px]">
+            {foundationSessions?.slice(0, 3).map((session) => {
+              const content = SESSION_CONTENT[session.sessionNumber - 1];
+              if (!content) return null;
+              return (
+                <SessionCard
+                  key={session.id}
+                  header={content.header}
+                  title={content.title}
+                  description={content.description}
+                  status={session.status}
+                  onClick={() => handleSessionClick(session.sessionNumber)}
+                />
+              );
+            })}
+          </div>
         )}
       </main>
     </div>
