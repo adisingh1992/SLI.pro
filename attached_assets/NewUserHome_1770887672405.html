@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SLI.pro | Overview</title>
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@200;400;500;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      /* ARCHITECT PALETTE */
+      --void: #202436;
+      --silk: #f8f9fa;
+      --aqua: #bed6d1;
+      --sand: #b3b19c;
+      --border: #e6e8eb;
+    }
+
+    * {
+      box-sizing: border-box;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    body {
+      margin: 0;
+      font-family: 'Montserrat', sans-serif;
+      background: var(--void);
+      color: var(--silk);
+      display: flex;
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    /* --- SIDEBAR NAVIGATION --- */
+    aside {
+      width: 320px;
+      background: var(--void);
+      padding: 50px 40px;
+      display: flex;
+      flex-direction: column;
+      border-right: 1px solid rgba(255, 255, 255, 0.05);
+    }
+
+    .logo-placeholder {
+      width: 80px;
+      height: 30px;
+      border: 1px dashed rgba(255, 255, 255, 0.2);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 10px;
+      color: rgba(255, 255, 255, 0.4);
+      letter-spacing: 2px;
+      margin-bottom: 50px;
+    }
+
+    .nav-section {
+      margin-bottom: 40px;
+    }
+
+    .nav-label {
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 3px;
+      color: white;
+      font-weight: 600;
+      margin-bottom: 30px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .nav-label::before {
+      content: '';
+      width: 2px;
+      height: 14px;
+      background: var(--aqua);
+    }
+
+    .phase-group {
+      margin-bottom: 25px;
+    }
+
+    .phase-title {
+      font-size: 9px;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      color: var(--aqua);
+      margin-bottom: 12px;
+      font-weight: 600;
+      display: flex;
+      justify-content: space-between;
+      cursor: pointer;
+    }
+
+    .nav-item {
+      font-size: 15px;
+      margin: 12px 0;
+      color: white;
+      opacity: 0.8;
+      cursor: pointer;
+      transition: 0.3s;
+    }
+
+    .nav-item:hover {
+      opacity: 1;
+      color: var(--aqua);
+    }
+
+    .nav-item.locked {
+      opacity: 0.3;
+      cursor: not-allowed;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    /* --- MAIN CONTENT AREA --- */
+    main {
+      flex: 1;
+      background: var(--silk);
+      padding: 60px 100px;
+      color: var(--void);
+      position: relative;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .user-avatar {
+      position: absolute;
+      top: 40px;
+      right: 40px;
+      width: 42px;
+      height: 42px;
+      background: var(--void);
+      color: white;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 600;
+      font-size: 14px;
+    }
+
+    h1 {
+      font-family: 'Charter', 'Georgia', serif;
+      font-size: 56px;
+      font-weight: 400;
+      margin: 0 0 60px 0;
+    }
+
+    h1 span {
+      color: var(--aqua);
+    }
+
+    /* --- THE DIRECTIVE CARD --- */
+    .directive-card {
+      background: white;
+      padding: 60px;
+      max-width: 900px;
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.03);
+      border: 1px solid var(--border);
+      position: relative;
+    }
+
+    .directive-card h2 {
+      font-family: 'Charter', serif;
+      font-size: 32px;
+      margin: 0 0 20px 0;
+      font-weight: 400;
+    }
+
+    .directive-card p {
+      font-size: 16px;
+      line-height: 1.6;
+      color: #555;
+      margin-bottom: 30px;
+      max-width: 700px;
+    }
+
+    .note-box {
+      border-left: 2px solid var(--aqua);
+      padding-left: 25px;
+      margin: 40px 0;
+      font-size: 14px;
+      line-height: 1.6;
+    }
+
+    .meta-info {
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      color: var(--aqua);
+      font-weight: 600;
+      margin-top: 20px;
+    }
+
+    .btn-begin {
+      background: var(--void);
+      color: white;
+      border: none;
+      padding: 22px 60px;
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 4px;
+      cursor: pointer;
+      position: absolute;
+      bottom: 60px;
+      right: 60px;
+      transition: 0.3s;
+    }
+
+    .btn-begin:hover {
+      background: var(--aqua);
+      transform: translateX(10px);
+    }
+  </style>
+</head>
+
+<body>
+
+  <aside>
+    <div class="logo-placeholder">LOGO</div>
+
+    <div class="nav-section">
+      <div class="nav-label">Overview</div>
+
+      <div class="phase-group">
+        <div class="phase-title">Phase 1 - Foundation Protocol <span>▾</span></div>
+        <div class="nav-item">Professional Branding Assessment</div>
+        <div class="nav-item">Document Vault</div>
+      </div>
+
+      <div class="phase-group">
+        <div class="phase-title" style="opacity: 0.5;">Phase 2 - Professional Development</div>
+        <div class="nav-item locked">Functional Identity Mapping 🔒</div>
+        <div class="nav-item locked">Narrative Architecture 🔒</div>
+      </div>
+    </div>
+  </aside>
+
+  <main>
+    <div class="user-avatar">A</div>
+
+    <h1>Foundation <span>Protocol</span></h1>
+
+    <div class="directive-card">
+      <h2>Professional Branding Assessment</h2>
+      <p>To begin crafting your single lasting impression, we start by mapping your professional DNA, capturing your
+        ambitions and establishing the structural foundation of your elite brand architecture.</p>
+
+      <div class="note-box">
+        <strong>Note:</strong> To enhance session accuracy, you may complete a prior assessment (MBTI, StrengthsFinder,
+        Enneagram, or 360° Leadership).<br>
+        This is <strong>non-blocking</strong>.
+      </div>
+
+      <div class="meta-info">Duration: 5 Minutes</div>
+
+      <button class="btn-begin">Begin</button>
+    </div>
+  </main>
+
+</body>
+
+</html>
