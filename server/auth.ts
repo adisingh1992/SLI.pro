@@ -42,9 +42,27 @@ const registerSchema = insertUserSchema.extend({
     .refine(val => /^[+]?[(]?[0-9]{3}[)]?[-\s.]?[0-9]{3}[-\s.]?[0-9]{4,6}$/.test(val), {
       message: "Please enter a valid phone number",
     }),
+  professionalStatus: z.enum([
+    "undergraduate_or_recent_grad",
+    "early_career",
+    "mid_career_or_senior",
+    "career_break_or_transition",
+  ], { required_error: "Please select your professional situation" }),
+  discoverySource: z.enum([
+    "university_partnership",
+    "colleague_or_mentor",
+    "linkedin",
+    "web_search",
+    "professional_network_or_conference",
+    "other",
+  ], { required_error: "Please select how you heard about us" }),
+  discoverySourceOther: z.string().optional(),
 }).refine(data => data.password === data.confirmPassword, {
   message: "Passwords do not match",
   path: ["confirmPassword"]
+}).refine(data => data.discoverySource !== "other" || (data.discoverySourceOther && data.discoverySourceOther.trim().length > 0), {
+  message: "Please specify how you heard about us",
+  path: ["discoverySourceOther"]
 });
 
 export function setupAuth(app: Express) {
@@ -184,7 +202,7 @@ export function setupAuth(app: Express) {
         });
       }
       
-      const { username, password, firstName, lastName, phoneNumber } = validationResult.data;
+      const { username, password, firstName, lastName, phoneNumber, professionalStatus, discoverySource, discoverySourceOther } = validationResult.data;
       
       const existingUser = await storage.getUserByUsername(username);
       if (existingUser) {
@@ -196,7 +214,10 @@ export function setupAuth(app: Express) {
         password: await hashPassword(password),
         firstName,
         lastName,
-        phoneNumber
+        phoneNumber,
+        professionalStatus,
+        discoverySource,
+        discoverySourceOther: discoverySource === "other" ? discoverySourceOther : undefined,
       });
 
       // Create an empty profile

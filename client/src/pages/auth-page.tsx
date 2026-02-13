@@ -30,6 +30,22 @@ const loginSchema = z.object({
   isSubmitting: z.boolean().optional(),
 });
 
+const professionalStatusOptions = [
+  { value: "undergraduate_or_recent_grad", label: "Undergraduate student or recent graduate (currently enrolled or <2 years full-time work experience)" },
+  { value: "early_career", label: "Early career professional (2\u20137 years full-time work experience, whether working or in graduate school)" },
+  { value: "mid_career_or_senior", label: "Mid-career or senior professional (8+ years full-time work experience, whether working or in graduate school)" },
+  { value: "career_break_or_transition", label: "Career break or significant transition" },
+] as const;
+
+const discoverySourceOptions = [
+  { value: "university_partnership", label: "University partnership" },
+  { value: "colleague_or_mentor", label: "Colleague or mentor referral" },
+  { value: "linkedin", label: "LinkedIn" },
+  { value: "web_search", label: "Web search" },
+  { value: "professional_network_or_conference", label: "Professional network or conference" },
+  { value: "other", label: "Other" },
+] as const;
+
 const registerSchema = z
   .object({
     firstName: z.string().min(1, "Required"),
@@ -61,10 +77,29 @@ const registerSchema = z
         "Password must contain at least one uppercase letter",
       ),
     confirmPassword: z.string(),
+    professionalStatus: z.enum([
+      "undergraduate_or_recent_grad",
+      "early_career",
+      "mid_career_or_senior",
+      "career_break_or_transition",
+    ], { required_error: "Please select your professional situation" }),
+    discoverySource: z.enum([
+      "university_partnership",
+      "colleague_or_mentor",
+      "linkedin",
+      "web_search",
+      "professional_network_or_conference",
+      "other",
+    ], { required_error: "Please select how you heard about us" }),
+    discoverySourceOther: z.string().optional(),
   })
   .refine((data) => data.password === data.confirmPassword, {
     message: "Passwords do not match",
     path: ["confirmPassword"],
+  })
+  .refine((data) => data.discoverySource !== "other" || (data.discoverySourceOther && data.discoverySourceOther.trim().length > 0), {
+    message: "Please specify how you heard about us",
+    path: ["discoverySourceOther"],
   });
 
 type LoginFormValues = z.infer<typeof loginSchema>;
@@ -97,7 +132,11 @@ export default function AuthPage() {
       phoneNumber: "",
       password: "",
       confirmPassword: "",
+      professionalStatus: undefined,
+      discoverySource: undefined,
+      discoverySourceOther: "",
     },
+    mode: "onTouched",
   });
 
   useEffect(() => {
@@ -127,6 +166,8 @@ export default function AuthPage() {
     }
   };
 
+  const watchDiscoverySource = registerForm.watch("discoverySource");
+
   const onRegisterSubmit = async (data: RegisterFormValues) => {
     try {
       console.log("Registering user...");
@@ -138,6 +179,9 @@ export default function AuthPage() {
         phoneNumber: data.phoneNumber,
         password: data.password,
         confirmPassword: data.confirmPassword,
+        professionalStatus: data.professionalStatus,
+        discoverySource: data.discoverySource,
+        discoverySourceOther: data.discoverySource === "other" ? data.discoverySourceOther : undefined,
       });
 
       console.log("Registration successful, showing success view");
@@ -468,10 +512,104 @@ export default function AuthPage() {
                     )}
                   />
 
+                  <div className="mt-8 mb-5">
+                    <label className="text-[10px] uppercase tracking-[2px] font-semibold block mb-4 text-[#303454]">
+                      Which best describes your current professional situation?
+                    </label>
+                    <FormField
+                      control={registerForm.control}
+                      name="professionalStatus"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormControl>
+                            <div className="space-y-3">
+                              {professionalStatusOptions.map((option) => (
+                                <label
+                                  key={option.value}
+                                  className="flex items-start gap-3 cursor-pointer group"
+                                >
+                                  <input
+                                    type="radio"
+                                    name="professionalStatus"
+                                    value={option.value}
+                                    checked={field.value === option.value}
+                                    onChange={() => field.onChange(option.value)}
+                                    className="mt-1 accent-[#bed6d1] shrink-0"
+                                  />
+                                  <span className="text-[13px] text-[#303454] leading-snug group-hover:text-[#6c8083] transition-colors">
+                                    {option.label}
+                                  </span>
+                                </label>
+                              ))}
+                            </div>
+                          </FormControl>
+                          <FormMessage className="text-[#E34240] text-[11px] mt-2" />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+
+                  <div className="mt-8 mb-5">
+                    <label className="text-[10px] uppercase tracking-[2px] font-semibold block mb-4 text-[#303454]">
+                      How did you hear about SLI.pro?
+                    </label>
+                    <FormField
+                      control={registerForm.control}
+                      name="discoverySource"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormControl>
+                            <div className="space-y-3">
+                              {discoverySourceOptions.map((option) => (
+                                <label
+                                  key={option.value}
+                                  className="flex items-start gap-3 cursor-pointer group"
+                                >
+                                  <input
+                                    type="radio"
+                                    name="discoverySource"
+                                    value={option.value}
+                                    checked={field.value === option.value}
+                                    onChange={() => field.onChange(option.value)}
+                                    className="mt-0.5 accent-[#bed6d1] shrink-0"
+                                  />
+                                  <span className="text-[13px] text-[#303454] leading-snug group-hover:text-[#6c8083] transition-colors">
+                                    {option.label}
+                                  </span>
+                                </label>
+                              ))}
+                            </div>
+                          </FormControl>
+                          <FormMessage className="text-[#E34240] text-[11px] mt-2" />
+                        </FormItem>
+                      )}
+                    />
+
+                    {watchDiscoverySource === "other" && (
+                      <FormField
+                        control={registerForm.control}
+                        name="discoverySourceOther"
+                        render={({ field }) => (
+                          <FormItem className="mt-3 ml-6">
+                            <FormControl>
+                              <input
+                                {...field}
+                                type="text"
+                                placeholder="Please specify..."
+                                className="w-full border-0 border-b border-gray-300 py-3 text-[15px] bg-transparent transition-colors duration-300 text-[#303454] outline-none rounded-none placeholder:text-gray-400 focus:border-[#bed6d1]"
+                              />
+                            </FormControl>
+                            <FormMessage className="text-[#E34240] text-[11px] mt-1" />
+                          </FormItem>
+                        )}
+                      />
+                    )}
+                  </div>
+
                   <button
                     type="submit"
                     className="w-full py-5 px-6 bg-[#303454] text-white border-0 font-semibold tracking-[4px] cursor-pointer mt-4 uppercase transition-all duration-300 text-[11px] hover:bg-[#bed6d1] hover:translate-x-2 disabled:opacity-70 disabled:cursor-not-allowed disabled:hover:translate-x-0 disabled:hover:bg-[#303454]"
-                    disabled={registerMutation.isPending}
+                    disabled={registerMutation.isPending || !registerForm.formState.isValid}
                   >
                     {registerMutation.isPending && (
                       <Loader2 className="inline mr-2 h-4 w-4 animate-spin" />

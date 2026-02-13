@@ -3,6 +3,23 @@ import { sql } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
+// Enums for user onboarding
+export const professionalStatusEnum = pgEnum("professional_status", [
+  "undergraduate_or_recent_grad",
+  "early_career",
+  "mid_career_or_senior",
+  "career_break_or_transition",
+]);
+
+export const discoverySourceEnum = pgEnum("discovery_source", [
+  "university_partnership",
+  "colleague_or_mentor",
+  "linkedin",
+  "web_search",
+  "professional_network_or_conference",
+  "other",
+]);
+
 // Enums for Foundation Sessions
 export const sessionStatusEnum = pgEnum("session_status", ["locked", "available", "in_progress", "completed"]);
 export const messageRoleEnum = pgEnum("message_role", ["user", "assistant"]);
@@ -35,6 +52,9 @@ export const users = pgTable("users", {
   stripeSubscriptionId: text("stripe_subscription_id"),
   subscriptionExpiresAt: timestamp("subscription_expires_at"),
   premiumPurchasedAt: timestamp("premium_purchased_at"),
+  professionalStatus: professionalStatusEnum("professional_status"),
+  discoverySource: discoverySourceEnum("discovery_source"),
+  discoverySourceOther: text("discovery_source_other"),
 });
 
 export const experiences = pgTable("experiences", {
@@ -93,6 +113,22 @@ export const transactions = pgTable("transactions", {
 });
 
 // Base insert schema with all fields optional to support both form registration and OAuth
+export const professionalStatusValues = [
+  "undergraduate_or_recent_grad",
+  "early_career",
+  "mid_career_or_senior",
+  "career_break_or_transition",
+] as const;
+
+export const discoverySourceValues = [
+  "university_partnership",
+  "colleague_or_mentor",
+  "linkedin",
+  "web_search",
+  "professional_network_or_conference",
+  "other",
+] as const;
+
 export const insertUserSchema = z.object({
   username: z.string(),
   password: z.string().optional(),
@@ -101,6 +137,9 @@ export const insertUserSchema = z.object({
   phoneNumber: z.string().optional(),
   linkedinId: z.string().optional(),
   isAdmin: z.boolean().optional(),
+  professionalStatus: z.enum(professionalStatusValues).optional(),
+  discoverySource: z.enum(discoverySourceValues).optional(),
+  discoverySourceOther: z.string().optional(),
 });
 
 export const insertExperienceSchema = createInsertSchema(experiences).omit({
