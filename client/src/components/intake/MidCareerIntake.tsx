@@ -186,7 +186,7 @@ export default function MidCareerIntake({
           strategic positioning and advancing your career.
         </p>
         <Link href="/dashboard">
-          <Button className="intake-btn-primary mt-8 inline-flex items-center gap-2">
+          <Button className="intake-btn-primary mt-8 inline-flex items-center gap-2 text-white">
             <Sparkles className="w-4 h-4" />
             Go to Dashboard
             <ChevronRight className="w-4 h-4" />
