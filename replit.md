@@ -34,6 +34,7 @@ Preferred communication style: Simple, everyday language.
   - SLI (Single Lasting Impression) generation and refinement
   - Coaching notes and homework assignments for admin workflow
   - Freshness reports for profile analysis
+  - Branding intakes with platform-specific multi-stage forms (undergraduate, early career, mid-career)
 
 ## AI Integration Strategy
 - **Primary Service**: Anthropic's Claude API (Claude-3-7-Sonnet) for high-quality text generation

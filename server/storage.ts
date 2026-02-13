@@ -24,6 +24,7 @@ import {
   enhancementModules, type EnhancementModule, type InsertEnhancementModule, type UpdateEnhancementModule,
   enhancementModuleMessages, type EnhancementModuleMessage, type InsertEnhancementModuleMessage,
   transactions, type Transaction, type InsertTransaction,
+  brandingIntakes, type BrandingIntake, type InsertBrandingIntake,
   type UpdateUser, type UpdateProfile, type UserProfile
 } from "@shared/schema";
 import session from "express-session";
@@ -189,6 +190,10 @@ export interface IStorage {
   getTransaction(id: number): Promise<Transaction | undefined>;
   createTransaction(transaction: InsertTransaction): Promise<Transaction>;
   updateTransaction(id: number, data: Partial<InsertTransaction>): Promise<Transaction | undefined>;
+
+  // Branding Intake operations
+  getBrandingIntake(userId: number): Promise<BrandingIntake | undefined>;
+  upsertBrandingIntake(userId: number, data: Partial<InsertBrandingIntake>): Promise<BrandingIntake>;
 
   // Session store
   sessionStore: session.Store;
@@ -1055,6 +1060,14 @@ export class MemStorage implements IStorage {
     };
     this.enhancementModuleMessages.set(id, newMessage);
     return newMessage;
+  }
+
+  async getBrandingIntake(userId: number): Promise<BrandingIntake | undefined> {
+    return undefined;
+  }
+
+  async upsertBrandingIntake(userId: number, data: Partial<InsertBrandingIntake>): Promise<BrandingIntake> {
+    throw new Error("Not implemented in MemStorage");
   }
 }
 

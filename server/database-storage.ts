@@ -24,6 +24,7 @@ import {
   enhancementModules, type EnhancementModule, type InsertEnhancementModule, type UpdateEnhancementModule,
   enhancementModuleMessages, type EnhancementModuleMessage, type InsertEnhancementModuleMessage,
   transactions, type Transaction, type InsertTransaction,
+  brandingIntakes, type BrandingIntake, type InsertBrandingIntake,
   type UpdateUser, type UpdateProfile, type UserProfile
 } from "@shared/schema";
 import session from "express-session";
@@ -995,5 +996,43 @@ export class DatabaseStorage implements IStorage {
       .where(eq(transactions.id, id))
       .returning();
     return updatedTransaction || undefined;
+  }
+
+  async getBrandingIntake(userId: number): Promise<BrandingIntake | undefined> {
+    const [intake] = await db
+      .select()
+      .from(brandingIntakes)
+      .where(eq(brandingIntakes.userId, userId));
+    return intake || undefined;
+  }
+
+  async upsertBrandingIntake(userId: number, data: Partial<InsertBrandingIntake>): Promise<BrandingIntake> {
+    const existing = await this.getBrandingIntake(userId);
+    if (existing) {
+      const [updated] = await db
+        .update(brandingIntakes)
+        .set({
+          ...data,
+          responses: data.responses
+            ? { ...(existing.responses as Record<string, unknown>), ...(data.responses as Record<string, unknown>) }
+            : existing.responses,
+          updatedAt: new Date(),
+        })
+        .where(eq(brandingIntakes.userId, userId))
+        .returning();
+      return updated;
+    }
+    const [created] = await db
+      .insert(brandingIntakes)
+      .values({
+        userId,
+        platform: data.platform!,
+        currentStage: data.currentStage ?? 1,
+        responses: data.responses ?? {},
+        completed: data.completed ?? false,
+        marketingOptIn: data.marketingOptIn ?? false,
+      })
+      .returning();
+    return created;
   }
 }

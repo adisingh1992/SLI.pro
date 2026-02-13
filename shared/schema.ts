@@ -820,6 +820,34 @@ export type UpdateEnhancementModule = z.infer<typeof updateEnhancementModuleSche
 export type EnhancementModule = typeof enhancementModules.$inferSelect;
 export type EnhancementModuleMessage = typeof enhancementModuleMessages.$inferSelect;
 
+// Branding Intake
+export const brandingIntakePlatformEnum = pgEnum("branding_intake_platform", [
+  "undergraduate",
+  "early_career",
+  "mid_career",
+]);
+
+export const brandingIntakes = pgTable("branding_intakes", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().references(() => users.id).unique(),
+  platform: brandingIntakePlatformEnum("platform").notNull(),
+  currentStage: integer("current_stage").default(1).notNull(),
+  responses: jsonb("responses").default({}).notNull(),
+  completed: boolean("completed").default(false).notNull(),
+  marketingOptIn: boolean("marketing_opt_in").default(false),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const insertBrandingIntakeSchema = createInsertSchema(brandingIntakes).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertBrandingIntake = z.infer<typeof insertBrandingIntakeSchema>;
+export type BrandingIntake = typeof brandingIntakes.$inferSelect;
+
 export type UserProfile = User & {
   experiences?: Experience[];
   education?: Education[];

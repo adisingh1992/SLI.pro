@@ -1056,6 +1056,48 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   })();
 
+  // Branding Intake routes
+  app.get("/api/branding-intake", isAuthenticated, async (req, res, next) => {
+    try {
+      const userId = req.user!.id;
+      const intake = await storage.getBrandingIntake(userId);
+      res.json(intake || null);
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  app.post("/api/branding-intake", isAuthenticated, async (req, res, next) => {
+    try {
+      const userId = req.user!.id;
+      const bodySchema = z.object({
+        platform: z.enum(["undergraduate", "early_career", "mid_career"]),
+        currentStage: z.number().int().min(1).max(5),
+        responses: z.record(z.any()).optional().default({}),
+        completed: z.boolean().optional().default(false),
+        marketingOptIn: z.boolean().optional().default(false),
+      });
+      const parsed = bodySchema.safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(400).json({
+          message: "Validation error",
+          errors: parsed.error.errors,
+        });
+      }
+      const { platform, currentStage, responses, completed, marketingOptIn } = parsed.data;
+      const intake = await storage.upsertBrandingIntake(userId, {
+        platform,
+        currentStage,
+        responses,
+        completed,
+        marketingOptIn,
+      });
+      res.json(intake);
+    } catch (error) {
+      next(error);
+    }
+  });
+
   const httpServer = createServer(app);
   
   // Set up WebSocket server for voice functionality
