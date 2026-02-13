@@ -31,6 +31,8 @@ export default function BrandingIntakePage() {
   const [, setLocation] = useLocation();
   const [stage, setStage] = useState(1);
   const [responses, setResponses] = useState<Record<string, any>>({});
+  const responsesRef = useRef(responses);
+  responsesRef.current = responses;
 
   const platform = mapProfessionalStatus(user?.professionalStatus);
 
@@ -98,9 +100,6 @@ export default function BrandingIntakePage() {
 
   const stageLabels = STAGE_LABELS[platform] || [];
   const totalStages = 5;
-
-  const responsesRef = useRef(responses);
-  responsesRef.current = responses;
 
   const handleUpdateResponses = (stageData: Record<string, any>) => {
     const merged = { ...responsesRef.current, ...stageData };
