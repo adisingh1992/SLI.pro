@@ -200,7 +200,7 @@ export default function AuthPage() {
         </div>
       </aside>
 
-      <main className="access-pillar w-full lg:w-[540px] bg-[#f8f9fa] min-h-[106vh] flex flex-col justify-center px-5 sm:px-10 lg:px-20 relative shadow-[-20px_0_60px_rgba(0,0,0,0.2)]">
+      <main className="access-pillar w-full lg:w-[540px] bg-[#f8f9fa] min-h-screen flex flex-col justify-center px-5 sm:px-10 lg:px-20 py-16 relative shadow-[-20px_0_60px_rgba(0,0,0,0.2)] overflow-y-auto">
         <div className="absolute top-5 right-5 lg:top-10 lg:right-10 text-xs font-medium text-gray-500">
           {activeView === "signup" ? (
             <span>
