@@ -193,7 +193,7 @@ export default function AuthPage() {
 
   return (
     <div className="auth-container flex min-h-screen overflow-hidden antialiased">
-      <aside className="manifesto-side hidden lg:flex flex-1 flex-col justify-center px-[100px] py-[60px] relative bg-[#202436] text-[#f8f9fa]">
+      <aside className="manifesto-side hidden lg:flex flex-1 flex-col justify-center px-[100px] py-[60px] sticky top-0 h-screen bg-[#202436] text-[#f8f9fa]">
         <div className="hero-text font-serif text-[52px] leading-tight max-w-[500px] font-normal">
           <span className="text-[#bed6d1]">Control</span> what you are known
           for.
