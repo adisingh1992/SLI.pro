@@ -1,0 +1,213 @@
+Create a new page called:
+
+/branding-intake
+
+This page must:
+
+Read the logged-in user's professional_status field from the database
+
+Route them to one of three platform intake flows:
+
+UNDERGRAD
+
+EARLY_CAREER
+
+MID_CAREER
+
+Render a structured multi-stage intake form
+
+Save responses in PostgreSQL
+
+Support required vs optional logic
+
+Save the response in structured JSON in the database.
+
+DO NOT ask platform selection on this page.
+professional_status already exists on the User model.
+
+On page load:
+
+Fetch current user
+
+Read professional_status
+
+Map to correct component based on the professional_status:
+
+<UndergradIntake />
+<EarlyCareerIntake />
+<MidCareerIntake />
+
+Use progressive disclosure:
+
+Stage 1 – Professional / Academic Context
+Stage 2 – Career Goals / Direction
+Stage 3 – Optional Demographic
+Stage 4 – Privacy + Marketing Consent
+Stage 5 – Completion Confirmation
+
+Include:
+
+Progress bar
+
+Save after each stage
+
+Resume capability
+
+Required field enforcement
+
+PLATFORM 1: UNDERGRAD
+Required Fields (Stage 1 + 2)
+
+Academic Context:
+
+university_name (text)
+
+enrollment_status (enum)
+
+graduation_year (dropdown)
+
+major (dropdown)
+
+academic_programs (multi-select)
+
+Career Exploration:
+
+target_industries (max 3)
+
+target_functions (max 2)
+
+professional_experience (multi-select)
+
+immediate_priorities (multi-select)
+
+Optional (Stage 3)
+
+first_generation_student
+
+domestic_or_international
+
+underrepresented_group
+
+identity_flags (multi-select)
+
+PLATFORM 2: EARLY CAREER
+Required
+
+Professional Context:
+
+current_title
+
+current_company
+
+years_experience
+
+current_industry
+
+current_function
+
+student_status
+
+Career Direction:
+
+career_focus
+
+timeline
+
+target_industry_optional
+
+Education:
+
+highest_degree
+
+undergrad_institution
+
+Optional
+
+first_generation_grad
+
+underrepresented_group
+
+career_path_pattern
+
+🟣 PLATFORM 3: MID CAREER
+Required
+
+Professional Context:
+
+current_title
+
+current_company
+
+years_experience
+
+leadership_level
+
+primary_industry
+
+functional_expertise
+
+transition_status
+
+Strategic Positioning:
+
+positioning_goal
+
+timeline
+
+current_reputation (text)
+
+Education:
+
+highest_degree
+
+Optional
+
+underrepresented_senior
+
+career_transition_pattern
+
+PRIVACY + MARKETING (ALL PLATFORMS)
+
+Render at final stage:
+
+Checkbox:
+
+☐ Join the Career Intelligence community
+
+
+Field:
+
+marketing_opt_in (boolean)
+
+
+Show privacy disclosure text block above checkbox.
+
+🧠 Validation Rules
+
+Required fields must block stage progression
+
+Optional fields always include "Prefer not to say"
+
+Multi-select fields should limit selections (enforce max count)
+
+Graduation year required only if enrollment_status == current student
+
+UI REQUIREMENTS
+
+Clean, minimal
+
+One question per section block
+
+Multi-select as pill toggles
+
+Dropdowns searchable
+
+Progress bar at top
+
+"Save & Continue" button
+
+"Back" button
+
+Auto-save draft after each stage
+
+Completion success screen
