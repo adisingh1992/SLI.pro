@@ -9,7 +9,7 @@ import EarlyCareerIntake from "@/components/intake/EarlyCareerIntake";
 import MidCareerIntake from "@/components/intake/MidCareerIntake";
 import { Loader2 } from "lucide-react";
 import type { BrandingIntake } from "@shared/schema";
-import "@/assets/css/new-dashboard.css";
+import "@/assets/css/intake-theme.css";
 
 type Platform = "undergraduate" | "early_career" | "mid_career";
 
@@ -71,17 +71,17 @@ export default function BrandingIntakePage() {
 
   if (!platform) {
     return (
-      <div className="min-h-screen bg-[var(--dashboard-silk)] flex items-center justify-center p-4 dashboard-layout">
-        <div className="bg-white rounded-xl shadow-sm border border-[var(--dashboard-border)] p-8 max-w-md text-center">
-          <h2 className="text-xl font-semibold text-[var(--dashboard-void)] mb-3 dashboard-heading">
+      <div className="min-h-screen intake-page flex items-center justify-center p-4 intake-layout">
+        <div className="bg-white rounded-2xl shadow-sm border border-[var(--intake-border)] p-10 max-w-md text-center">
+          <h2 className="text-xl font-semibold text-[var(--intake-void)] mb-3 intake-heading">
             Professional Status Required
           </h2>
-          <p className="text-gray-600 text-sm">
+          <p className="text-gray-600 text-sm leading-relaxed">
             Your professional status hasn't been set yet. Please complete your registration to access the branding intake.
           </p>
           <button
             onClick={() => setLocation("/dashboard")}
-            className="mt-6 px-6 py-2 bg-[var(--dashboard-void)] text-white rounded-lg text-sm hover:opacity-90 transition-colors"
+            className="intake-btn-primary mt-6"
           >
             Back to Dashboard
           </button>
@@ -92,8 +92,8 @@ export default function BrandingIntakePage() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-[var(--dashboard-silk)] flex items-center justify-center">
-        <Loader2 className="w-8 h-8 text-[var(--dashboard-aqua)] animate-spin" />
+      <div className="min-h-screen intake-page flex items-center justify-center">
+        <Loader2 className="w-8 h-8 text-[var(--intake-aqua)] animate-spin" />
       </div>
     );
   }
@@ -137,32 +137,32 @@ export default function BrandingIntakePage() {
   };
 
   return (
-    <div className="min-h-screen bg-[var(--dashboard-silk)] dashboard-layout">
+    <div className="min-h-screen intake-page intake-layout">
       <div className="max-w-2xl mx-auto px-4 py-8">
         {stage < totalStages && (
-          <div className="mb-8">
-            <div className="flex items-center justify-between mb-3">
-              <h1 className="text-2xl font-semibold text-[var(--dashboard-void)] dashboard-heading">
+          <div className="intake-header mb-8">
+            <div className="flex items-center justify-between mb-4 relative z-10">
+              <h1 className="text-2xl font-semibold text-white intake-heading">
                 Branding Intake
               </h1>
-              <span className="text-sm text-gray-500">
+              <span className="text-sm text-white/70">
                 Step {stage} of {totalStages - 1}
               </span>
             </div>
 
-            <div className="w-full bg-gray-200 rounded-full h-2 mb-2">
+            <div className="intake-progress-track mb-3 relative z-10">
               <div
-                className="h-2 rounded-full bg-[var(--dashboard-aqua)] transition-all duration-500 ease-out"
+                className="intake-progress-fill"
                 style={{ width: `${progressPercent}%` }}
               />
             </div>
 
-            <div className="flex justify-between">
+            <div className="flex justify-between relative z-10">
               {stageLabels.slice(0, -1).map((label, i) => (
                 <span
                   key={label}
                   className={`text-xs ${
-                    i + 1 <= stage ? "text-[var(--dashboard-void)] font-medium" : "text-gray-400"
+                    i + 1 <= stage ? "text-white font-medium" : "text-white/40"
                   }`}
                 >
                   {label}
@@ -173,7 +173,7 @@ export default function BrandingIntakePage() {
         )}
 
         {saveMutation.isPending && (
-          <div className="mb-4 flex items-center gap-2 text-sm text-gray-500">
+          <div className="mb-4 flex items-center gap-2 text-sm text-[var(--intake-aqua-dark)]">
             <Loader2 className="w-4 h-4 animate-spin" />
             Saving...
           </div>

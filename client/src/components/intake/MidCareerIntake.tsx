@@ -1,6 +1,6 @@
 import { useState, useEffect, type ReactNode } from "react";
 import { Link } from "wouter";
-import { Check, ChevronRight, ChevronLeft } from "lucide-react";
+import { Check, ChevronRight, ChevronLeft, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
@@ -22,7 +22,7 @@ import {
   PRIVACY_TEXT,
   MARKETING_TEXT,
 } from "@/lib/intake-constants";
-import "@/assets/css/new-dashboard.css";
+import "@/assets/css/intake-theme.css";
 
 interface IntakeProps {
   stage: number;
@@ -46,13 +46,13 @@ function SectionBlock({
   children: ReactNode;
 }) {
   return (
-    <div className="bg-white rounded-lg border border-[var(--dashboard-border)] p-6 space-y-3">
-      <Label className="text-base font-semibold text-[var(--dashboard-void)] dashboard-heading">
+    <div className="intake-section space-y-3">
+      <Label className="text-base font-semibold text-[var(--intake-void)] intake-heading">
         {title}
         {required && <span className="text-red-500 ml-1">*</span>}
       </Label>
       {description && (
-        <p className="text-sm text-gray-500">{description}</p>
+        <p className="text-sm text-[var(--intake-aqua-dark)]">{description}</p>
       )}
       {children}
       {error && <p className="text-sm text-red-500 mt-1">{error}</p>}
@@ -174,21 +174,22 @@ export default function MidCareerIntake({
 
   if (stage === 5) {
     return (
-      <div className="flex flex-col items-center justify-center py-16 space-y-6 bg-white rounded-lg dashboard-layout">
-        <div className="w-16 h-16 rounded-full bg-[var(--dashboard-aqua)] flex items-center justify-center">
-          <Check className="w-8 h-8 text-[var(--dashboard-void)]" />
+      <div className="intake-completion intake-layout">
+        <div className="intake-completion-icon">
+          <Check className="w-8 h-8 text-[var(--intake-void)]" />
         </div>
-        <h2 className="text-3xl font-bold text-[var(--dashboard-void)] dashboard-heading">
+        <h2 className="text-3xl font-bold text-[var(--intake-void)] intake-heading">
           You're all set!
         </h2>
-        <p className="text-gray-600 text-center max-w-md">
+        <p className="text-[var(--intake-aqua-dark)] text-center max-w-md mx-auto mt-3 leading-relaxed">
           Your profile has been saved. You're ready to start building your
           strategic positioning and advancing your career.
         </p>
         <Link href="/dashboard">
-          <Button className="bg-[var(--dashboard-void)] hover:bg-[var(--dashboard-void)]/90 text-white px-8 py-3">
+          <Button className="intake-btn-primary mt-8 inline-flex items-center gap-2">
+            <Sparkles className="w-4 h-4" />
             Go to Dashboard
-            <ChevronRight className="w-4 h-4 ml-2" />
+            <ChevronRight className="w-4 h-4" />
           </Button>
         </Link>
       </div>
@@ -196,7 +197,7 @@ export default function MidCareerIntake({
   }
 
   return (
-    <div className="space-y-6 dashboard-layout">
+    <div className="space-y-5 intake-layout">
       {stage === 1 && (
         <>
           <SectionBlock title="Current Job Title / Role" required error={errors.current_title}>
@@ -221,7 +222,7 @@ export default function MidCareerIntake({
             <RadioGroup
               value={years_experience}
               onValueChange={setYearsExperience}
-              className="mt-2 space-y-2"
+              className="mt-2 space-y-2 intake-radio-group"
             >
               {MID_CAREER_YEARS.map((opt) => (
                 <div key={opt.value} className="flex items-center space-x-2">
@@ -238,7 +239,7 @@ export default function MidCareerIntake({
             <RadioGroup
               value={leadership_level}
               onValueChange={setLeadershipLevel}
-              className="mt-2 space-y-2"
+              className="mt-2 space-y-2 intake-radio-group"
             >
               {LEADERSHIP_LEVELS.map((opt) => (
                 <div key={opt.value} className="flex items-center space-x-2">
@@ -289,7 +290,7 @@ export default function MidCareerIntake({
             <RadioGroup
               value={transition_status}
               onValueChange={setTransitionStatus}
-              className="mt-2 space-y-2"
+              className="mt-2 space-y-2 intake-radio-group"
             >
               {MID_CAREER_TRANSITION_STATUS.map((opt) => (
                 <div key={opt.value} className="flex items-center space-x-2">
@@ -310,7 +311,7 @@ export default function MidCareerIntake({
             <RadioGroup
               value={positioning_goal}
               onValueChange={setPositioningGoal}
-              className="mt-2 space-y-2"
+              className="mt-2 space-y-2 intake-radio-group"
             >
               {POSITIONING_GOALS.map((opt) => (
                 <div key={opt.value} className="flex items-center space-x-2">
@@ -327,7 +328,7 @@ export default function MidCareerIntake({
             <RadioGroup
               value={timeline}
               onValueChange={setTimeline}
-              className="mt-2 space-y-2"
+              className="mt-2 space-y-2 intake-radio-group"
             >
               {MID_CAREER_TIMELINE.map((opt) => (
                 <div key={opt.value} className="flex items-center space-x-2">
@@ -341,7 +342,7 @@ export default function MidCareerIntake({
           </SectionBlock>
 
           <SectionBlock title="Current Professional Reputation" required error={errors.current_reputation}>
-            <p className="text-sm text-gray-500">
+            <p className="text-sm text-[var(--intake-aqua-dark)]">
               In 2-3 sentences, describe the professional reputation you've built. What do colleagues, peers, or industry contacts associate with your name?
             </p>
             <Textarea
@@ -356,7 +357,7 @@ export default function MidCareerIntake({
             <RadioGroup
               value={highest_degree}
               onValueChange={setHighestDegree}
-              className="mt-2 space-y-2"
+              className="mt-2 space-y-2 intake-radio-group"
             >
               {MID_CAREER_DEGREE_OPTIONS.map((opt) => (
                 <div key={opt.value} className="flex items-center space-x-2">
@@ -370,7 +371,7 @@ export default function MidCareerIntake({
           </SectionBlock>
 
           <SectionBlock title="Graduate Degrees or Executive Education Programs">
-            <p className="text-sm text-gray-500">
+            <p className="text-sm text-[var(--intake-aqua-dark)]">
               List any graduate degrees or executive education programs
             </p>
             <Input
@@ -385,8 +386,8 @@ export default function MidCareerIntake({
 
       {stage === 3 && (
         <>
-          <div className="bg-[var(--dashboard-silk)] rounded-lg border border-[var(--dashboard-border)] p-6">
-            <p className="text-sm text-gray-600 leading-relaxed">
+          <div className="intake-info-block">
+            <p className="text-sm text-[var(--intake-void)] leading-relaxed">
               These optional questions help us understand how senior professionals with
               different backgrounds approach strategic positioning. Your responses
               inform our methodology while remaining confidential.
@@ -397,7 +398,7 @@ export default function MidCareerIntake({
             <RadioGroup
               value={underrepresented_senior}
               onValueChange={setUnderrepresentedSenior}
-              className="mt-2 space-y-2"
+              className="mt-2 space-y-2 intake-radio-group"
             >
               {THREE_WAY_OPTIONS.map((opt) => (
                 <div key={opt.value} className="flex items-center space-x-2">
@@ -414,7 +415,7 @@ export default function MidCareerIntake({
             <RadioGroup
               value={career_transition_pattern}
               onValueChange={setCareerTransitionPattern}
-              className="mt-2 space-y-2"
+              className="mt-2 space-y-2 intake-radio-group"
             >
               {CAREER_TRANSITION_PATTERNS.map((opt) => (
                 <div key={opt.value} className="flex items-center space-x-2">
@@ -431,16 +432,16 @@ export default function MidCareerIntake({
 
       {stage === 4 && (
         <>
-          <div className="bg-[var(--dashboard-silk)] rounded-lg border border-[var(--dashboard-border)] p-6">
-            <h3 className="text-lg font-semibold text-[var(--dashboard-void)] mb-3 dashboard-heading">
+          <div className="intake-privacy-block">
+            <h3 className="text-lg font-semibold text-[var(--intake-void)] mb-3 intake-heading">
               Privacy & Data Usage
             </h3>
-            <p className="text-sm text-gray-600 leading-relaxed whitespace-pre-line">
+            <p className="text-sm text-[var(--intake-void)] leading-relaxed whitespace-pre-line opacity-80">
               {PRIVACY_TEXT}
             </p>
           </div>
 
-          <div className="bg-white rounded-lg border border-[var(--dashboard-border)] p-6 space-y-3">
+          <div className="intake-section space-y-3">
             <div className="flex items-start space-x-3">
               <Checkbox
                 id="marketing-opt-in"
@@ -451,37 +452,36 @@ export default function MidCareerIntake({
               <div>
                 <Label
                   htmlFor="marketing-opt-in"
-                  className="text-base font-semibold text-[var(--dashboard-void)] cursor-pointer dashboard-heading"
+                  className="text-base font-semibold text-[var(--intake-void)] cursor-pointer intake-heading"
                 >
                   Join the Career Intelligence community
                 </Label>
-                <p className="text-sm text-gray-500 mt-1">{MARKETING_TEXT}</p>
+                <p className="text-sm text-[var(--intake-aqua-dark)] mt-1">{MARKETING_TEXT}</p>
               </div>
             </div>
           </div>
         </>
       )}
 
-      <div className="flex justify-between pt-4">
+      <div className="flex justify-between pt-4 pb-8">
         {stage > 1 ? (
-          <Button
-            variant="outline"
+          <button
             onClick={onBack}
-            className="border-[var(--dashboard-void)] text-[var(--dashboard-void)]"
+            className="intake-btn-outline inline-flex items-center gap-2"
           >
-            <ChevronLeft className="w-4 h-4 mr-2" />
+            <ChevronLeft className="w-4 h-4" />
             Back
-          </Button>
+          </button>
         ) : (
           <div />
         )}
-        <Button
+        <button
           onClick={handleSaveAndContinue}
-          className="bg-[var(--dashboard-void)] hover:bg-[var(--dashboard-void)]/90 text-white"
+          className="intake-btn-primary inline-flex items-center gap-2"
         >
           Save & Continue
-          <ChevronRight className="w-4 h-4 ml-2" />
-        </Button>
+          <ChevronRight className="w-4 h-4" />
+        </button>
       </div>
     </div>
   );
