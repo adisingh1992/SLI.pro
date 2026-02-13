@@ -2,7 +2,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { Loader2 } from "lucide-react";
 import { Redirect, Route } from "wouter";
 import { useQuery } from "@tanstack/react-query";
-import { UserProfile } from "@shared/schema";
+import { UserProfile, BrandingIntake } from "@shared/schema";
 
 export function ProtectedRoute({
   path,
@@ -13,14 +13,18 @@ export function ProtectedRoute({
 }) {
   const { user, isLoading } = useAuth();
   
-  // Fetch user profile data for redirection logic
   const { data: userProfile } = useQuery<UserProfile>({
     queryKey: ["/api/user/profile"],
     enabled: !!user,
   });
 
-  // Show loading state while authentication state is being determined
-  if (isLoading) {
+  const { data: brandingIntake, isLoading: isIntakeLoading, isError: isIntakeError } = useQuery<BrandingIntake | null>({
+    queryKey: ["/api/branding-intake"],
+    enabled: !!user,
+    retry: 1,
+  });
+
+  if (isLoading || (!!user && isIntakeLoading && !isIntakeError)) {
     return (
       <Route path={path}>
         <div className="flex items-center justify-center min-h-screen">
@@ -30,7 +34,6 @@ export function ProtectedRoute({
     );
   }
 
-  // Redirect unauthenticated users to login
   if (!user) {
     return (
       <Route path={path}>
@@ -38,10 +41,17 @@ export function ProtectedRoute({
       </Route>
     );
   }
-  
-  // No longer redirecting to questionnaire even if it's not completed
-  // The user will go directly to the requested page
 
-  // Render the requested protected component
+  const intakeCompleted = brandingIntake?.completed === true;
+  const isIntakePage = path === "/branding-intake";
+
+  if (!intakeCompleted && !isIntakePage && !isIntakeError) {
+    return (
+      <Route path={path}>
+        <Redirect to="/branding-intake" />
+      </Route>
+    );
+  }
+
   return <Route path={path} component={Component} />;
 }
