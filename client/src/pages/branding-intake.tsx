@@ -9,6 +9,7 @@ import EarlyCareerIntake from "@/components/intake/EarlyCareerIntake";
 import MidCareerIntake from "@/components/intake/MidCareerIntake";
 import { Loader2 } from "lucide-react";
 import type { BrandingIntake } from "@shared/schema";
+import "@/assets/css/new-dashboard.css";
 
 type Platform = "undergraduate" | "early_career" | "mid_career";
 
@@ -70,18 +71,17 @@ export default function BrandingIntakePage() {
 
   if (!platform) {
     return (
-      <div className="min-h-screen bg-[#f8f9fa] flex items-center justify-center p-4">
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-8 max-w-md text-center">
-          <h2 className="text-xl font-semibold text-[#202436] mb-3" style={{ fontFamily: "Lora, serif" }}>
+      <div className="min-h-screen bg-[var(--dashboard-silk)] flex items-center justify-center p-4 dashboard-layout">
+        <div className="bg-white rounded-xl shadow-sm border border-[var(--dashboard-border)] p-8 max-w-md text-center">
+          <h2 className="text-xl font-semibold text-[var(--dashboard-void)] mb-3 dashboard-heading">
             Professional Status Required
           </h2>
-          <p className="text-gray-600 text-sm" style={{ fontFamily: "Montserrat, sans-serif" }}>
+          <p className="text-gray-600 text-sm">
             Your professional status hasn't been set yet. Please complete your registration to access the branding intake.
           </p>
           <button
             onClick={() => setLocation("/dashboard")}
-            className="mt-6 px-6 py-2 bg-[#202436] text-white rounded-lg text-sm hover:bg-[#2a2f46] transition-colors"
-            style={{ fontFamily: "Montserrat, sans-serif" }}
+            className="mt-6 px-6 py-2 bg-[var(--dashboard-void)] text-white rounded-lg text-sm hover:opacity-90 transition-colors"
           >
             Back to Dashboard
           </button>
@@ -92,8 +92,8 @@ export default function BrandingIntakePage() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-[#f8f9fa] flex items-center justify-center">
-        <Loader2 className="w-8 h-8 text-[#bed6d1] animate-spin" />
+      <div className="min-h-screen bg-[var(--dashboard-silk)] flex items-center justify-center">
+        <Loader2 className="w-8 h-8 text-[var(--dashboard-aqua)] animate-spin" />
       </div>
     );
   }
@@ -137,28 +137,22 @@ export default function BrandingIntakePage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#f8f9fa]">
+    <div className="min-h-screen bg-[var(--dashboard-silk)] dashboard-layout">
       <div className="max-w-2xl mx-auto px-4 py-8">
         {stage < totalStages && (
           <div className="mb-8">
             <div className="flex items-center justify-between mb-3">
-              <h1
-                className="text-2xl font-semibold text-[#202436]"
-                style={{ fontFamily: "Lora, serif" }}
-              >
+              <h1 className="text-2xl font-semibold text-[var(--dashboard-void)] dashboard-heading">
                 Branding Intake
               </h1>
-              <span
-                className="text-sm text-gray-500"
-                style={{ fontFamily: "Montserrat, sans-serif" }}
-              >
+              <span className="text-sm text-gray-500">
                 Step {stage} of {totalStages - 1}
               </span>
             </div>
 
             <div className="w-full bg-gray-200 rounded-full h-2 mb-2">
               <div
-                className="h-2 rounded-full bg-[#bed6d1] transition-all duration-500 ease-out"
+                className="h-2 rounded-full bg-[var(--dashboard-aqua)] transition-all duration-500 ease-out"
                 style={{ width: `${progressPercent}%` }}
               />
             </div>
@@ -168,9 +162,8 @@ export default function BrandingIntakePage() {
                 <span
                   key={label}
                   className={`text-xs ${
-                    i + 1 <= stage ? "text-[#202436] font-medium" : "text-gray-400"
+                    i + 1 <= stage ? "text-[var(--dashboard-void)] font-medium" : "text-gray-400"
                   }`}
-                  style={{ fontFamily: "Montserrat, sans-serif" }}
                 >
                   {label}
                 </span>
@@ -180,7 +173,7 @@ export default function BrandingIntakePage() {
         )}
 
         {saveMutation.isPending && (
-          <div className="mb-4 flex items-center gap-2 text-sm text-gray-500" style={{ fontFamily: "Montserrat, sans-serif" }}>
+          <div className="mb-4 flex items-center gap-2 text-sm text-gray-500">
             <Loader2 className="w-4 h-4 animate-spin" />
             Saving...
           </div>

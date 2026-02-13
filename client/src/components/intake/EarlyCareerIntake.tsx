@@ -20,6 +20,7 @@ import {
   PRIVACY_TEXT,
   MARKETING_TEXT,
 } from "@/lib/intake-constants";
+import "@/assets/css/new-dashboard.css";
 
 interface IntakeProps {
   stage: number;
@@ -41,11 +42,8 @@ function SectionBlock({
   children: ReactNode;
 }) {
   return (
-    <div className="bg-white rounded-lg border border-gray-100 p-6 space-y-3">
-      <Label
-        className="text-base font-semibold text-[#202436]"
-        style={{ fontFamily: "Lora, serif" }}
-      >
+    <div className="bg-white rounded-lg border border-[var(--dashboard-border)] p-6 space-y-3">
+      <Label className="text-base font-semibold text-[var(--dashboard-void)] dashboard-heading">
         {title}
         {required && <span className="text-red-500 ml-1">*</span>}
       </Label>
@@ -171,28 +169,19 @@ export default function EarlyCareerIntake({
 
   if (stage === 5) {
     return (
-      <div className="flex flex-col items-center justify-center py-16 space-y-6 bg-white rounded-lg">
-        <div className="w-16 h-16 rounded-full bg-[#bed6d1] flex items-center justify-center">
-          <Check className="w-8 h-8 text-[#202436]" />
+      <div className="flex flex-col items-center justify-center py-16 space-y-6 bg-white rounded-lg dashboard-layout">
+        <div className="w-16 h-16 rounded-full bg-[var(--dashboard-aqua)] flex items-center justify-center">
+          <Check className="w-8 h-8 text-[var(--dashboard-void)]" />
         </div>
-        <h2
-          className="text-3xl font-bold text-[#202436]"
-          style={{ fontFamily: "Lora, serif" }}
-        >
+        <h2 className="text-3xl font-bold text-[var(--dashboard-void)] dashboard-heading">
           You're all set!
         </h2>
-        <p
-          className="text-gray-600 text-center max-w-md"
-          style={{ fontFamily: "Montserrat, sans-serif" }}
-        >
+        <p className="text-gray-600 text-center max-w-md">
           Your profile has been saved. You're ready to start building your
           professional brand and exploring career opportunities.
         </p>
         <Link href="/dashboard">
-          <Button
-            className="bg-[#202436] hover:bg-[#202436]/90 text-white px-8 py-3"
-            style={{ fontFamily: "Montserrat, sans-serif" }}
-          >
+          <Button className="bg-[var(--dashboard-void)] hover:bg-[var(--dashboard-void)]/90 text-white px-8 py-3">
             Go to Dashboard
             <ChevronRight className="w-4 h-4 ml-2" />
           </Button>
@@ -202,7 +191,7 @@ export default function EarlyCareerIntake({
   }
 
   return (
-    <div className="space-y-6" style={{ fontFamily: "Montserrat, sans-serif" }}>
+    <div className="space-y-6 dashboard-layout">
       {stage === 1 && (
         <>
           <SectionBlock title="Current Job Title" required error={errors.current_title}>
@@ -370,7 +359,7 @@ export default function EarlyCareerIntake({
 
       {stage === 3 && (
         <>
-          <div className="bg-[#f8f9fa] rounded-lg border border-gray-100 p-6">
+          <div className="bg-[var(--dashboard-silk)] rounded-lg border border-[var(--dashboard-border)] p-6">
             <p className="text-sm text-gray-600 leading-relaxed">
               These optional questions help us understand how professionals with
               different backgrounds approach positioning challenges. Your responses
@@ -434,11 +423,8 @@ export default function EarlyCareerIntake({
 
       {stage === 4 && (
         <>
-          <div className="bg-[#f8f9fa] rounded-lg border border-gray-100 p-6">
-            <h3
-              className="text-lg font-semibold text-[#202436] mb-3"
-              style={{ fontFamily: "Lora, serif" }}
-            >
+          <div className="bg-[var(--dashboard-silk)] rounded-lg border border-[var(--dashboard-border)] p-6">
+            <h3 className="text-lg font-semibold text-[var(--dashboard-void)] mb-3 dashboard-heading">
               Privacy & Data Usage
             </h3>
             <p className="text-sm text-gray-600 leading-relaxed whitespace-pre-line">
@@ -446,7 +432,7 @@ export default function EarlyCareerIntake({
             </p>
           </div>
 
-          <div className="bg-white rounded-lg border border-gray-100 p-6 space-y-3">
+          <div className="bg-white rounded-lg border border-[var(--dashboard-border)] p-6 space-y-3">
             <div className="flex items-start space-x-3">
               <Checkbox
                 id="marketing-opt-in"
@@ -457,8 +443,7 @@ export default function EarlyCareerIntake({
               <div>
                 <Label
                   htmlFor="marketing-opt-in"
-                  className="text-base font-semibold text-[#202436] cursor-pointer"
-                  style={{ fontFamily: "Lora, serif" }}
+                  className="text-base font-semibold text-[var(--dashboard-void)] cursor-pointer dashboard-heading"
                 >
                   Join the Career Intelligence community
                 </Label>
@@ -474,8 +459,7 @@ export default function EarlyCareerIntake({
           <Button
             variant="outline"
             onClick={onBack}
-            className="border-[#202436] text-[#202436]"
-            style={{ fontFamily: "Montserrat, sans-serif" }}
+            className="border-[var(--dashboard-void)] text-[var(--dashboard-void)]"
           >
             <ChevronLeft className="w-4 h-4 mr-2" />
             Back
@@ -485,8 +469,7 @@ export default function EarlyCareerIntake({
         )}
         <Button
           onClick={handleSaveAndContinue}
-          className="bg-[#202436] hover:bg-[#202436]/90 text-white"
-          style={{ fontFamily: "Montserrat, sans-serif" }}
+          className="bg-[var(--dashboard-void)] hover:bg-[var(--dashboard-void)]/90 text-white"
         >
           Save & Continue
           <ChevronRight className="w-4 h-4 ml-2" />
