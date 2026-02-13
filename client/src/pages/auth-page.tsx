@@ -192,15 +192,17 @@ export default function AuthPage() {
   };
 
   return (
-    <div className="auth-container flex min-h-screen overflow-hidden antialiased">
-      <aside className="manifesto-side hidden lg:flex flex-1 flex-col justify-center px-[100px] py-[60px] sticky top-0 h-screen bg-[#202436] text-[#f8f9fa]">
-        <div className="hero-text font-serif text-[52px] leading-tight max-w-[500px] font-normal">
-          <span className="text-[#bed6d1]">Control</span> what you are known
-          for.
+    <div className="auth-container flex min-h-screen antialiased">
+      <aside className="manifesto-side hidden lg:flex flex-1 bg-[#202436] text-[#f8f9fa] relative">
+        <div className="sticky top-0 h-screen w-full flex flex-col justify-center px-[100px] py-[60px]">
+          <div className="hero-text font-serif text-[52px] leading-tight max-w-[500px] font-normal">
+            <span className="text-[#bed6d1]">Control</span> what you are known
+            for.
+          </div>
         </div>
       </aside>
 
-      <main className="access-pillar w-full lg:w-[540px] bg-[#f8f9fa] min-h-screen flex flex-col justify-center px-5 sm:px-10 lg:px-20 py-16 relative shadow-[-20px_0_60px_rgba(0,0,0,0.2)] overflow-y-auto">
+      <main className="access-pillar w-full lg:w-[540px] bg-[#f8f9fa] min-h-screen flex flex-col justify-center px-5 sm:px-10 lg:px-20 py-16 relative shadow-[-20px_0_60px_rgba(0,0,0,0.2)]">
         <div className="absolute top-5 right-5 lg:top-10 lg:right-10 text-xs font-medium text-gray-500">
           {activeView === "signup" ? (
             <span>
