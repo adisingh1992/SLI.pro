@@ -213,11 +213,11 @@ ${freshnessReport.finalSynthesis?.contentRecommendations?.linkedInEnhancements?.
 Please analyze this information and provide detailed, actionable recommendations to optimize the client's LinkedIn profile to align with and reinforce their SLI.`;
 
   return await callWithRetry(async () => {
-    console.log("[claude] Calling Anthropic API with model:", process.env.CLAUDE_MODEL || "claude-3-7-sonnet-20250219");
+    console.log("[claude] Calling Anthropic API with model:", process.env.CLAUDE_MODEL || "claude-sonnet-4-20250514");
     
     try {
       const response = await anthropic.messages.create({
-        model: process.env.CLAUDE_MODEL || "claude-3-7-sonnet-20250219", // the newest Anthropic model is "claude-3-7-sonnet-20250219" which was released February 24, 2025
+        model: process.env.CLAUDE_MODEL || "claude-sonnet-4-20250514",
         max_tokens: 4000,
         system: systemPrompt,
         messages: [

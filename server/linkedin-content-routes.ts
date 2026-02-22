@@ -10,7 +10,7 @@ const log = (message: string, tag = "express") => {
   console.log(`${new Date().toLocaleTimeString()} [${tag}] ${message}`);
 };
 
-const CLAUDE_MODEL = process.env.CLAUDE_MODEL || "claude-3-7-sonnet-20250219";
+const CLAUDE_MODEL = process.env.CLAUDE_MODEL || "claude-sonnet-4-20250514";
 const apiKey = process.env.ANTHROPIC_API_KEY;
 
 if (!apiKey) {

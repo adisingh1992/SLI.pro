@@ -8,8 +8,7 @@ const anthropic = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY,
 });
 
-// For the freshness report, we use Claude Haiku which is faster and more cost-effective
-const CLAUDE_MODEL = "claude-3-haiku-20240307";
+const CLAUDE_MODEL = "claude-sonnet-4-20250514";
 
 // Helper function to make Claude API calls with retry logic for rate limits
 async function callClaude(systemPrompt: string, userPrompt: string, maxRetries = 3, initialBackoff = 60000) {
