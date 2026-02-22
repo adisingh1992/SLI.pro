@@ -243,7 +243,7 @@ function getInitialGuidanceMessage(sessionNumber: number): string | null {
     case 2:
       return "Building on the functional identity established in Session 1, this session assesses professional credibility through a rigorous investor lens. The questions may feel challenging—that's intentional. This 'ruthless revenue investor' framework forces specificity and reveals gaps between generic claims and measurable proof.\n\nOver the next 8-10 minutes, expect pushback on vague responses. The goal is extracting concrete evidence that validates expertise and justifies premium positioning.\n\nIf I'm writing you a $1M check because you're credible, what SPECIFIC expertise am I investing in? Think like a ruthless, revenue-only investor: what would they throw $1M at YOU to do?";
     case 3:
-      return "'I led cross-functional teams' means nothing by itself. We'll excavate the HOW, WHY, STRUGGLE, and INSIGHT so your stories prove credibility and fuel your brand.";
+      return "'I led cross-functional teams' means nothing by itself. We'll excavate the HOW, WHY, STRUGGLE, and INSIGHT so your stories clearly demonstrate value and strengthen your positioning.\n\nTell me about a result that surprised you—what didn't you expect to happen?";
     default:
       return null;
   }
