@@ -942,18 +942,40 @@ export function registerFoundationSessionsRoutes(app: Express) {
         // Get resume summary for context
         const resumeSummary = await formatResumeSummary(userId);
 
-        // Get previous session's completion data if available
-        let previousSessionData = null;
+        // Get ALL prior sessions' completion data and conversation transcripts
+        let allPriorSessionsContext: Array<{
+          sessionNumber: number;
+          completionData: any;
+          conversationTranscript: string;
+        }> = [];
         if (sessionNumber > 1) {
-          const previousSession = await storage.getFoundationSession(
-            userId,
-            sessionNumber - 1,
-          );
-          if (
-            previousSession?.status === "completed" &&
-            previousSession.completionData
-          ) {
-            previousSessionData = previousSession.completionData;
+          for (let i = 1; i < sessionNumber; i++) {
+            const priorSession = await storage.getFoundationSession(userId, i);
+            if (
+              priorSession?.status === "completed" &&
+              priorSession.completionData
+            ) {
+              const priorMessages = await storage.getFoundationSessionMessages(
+                priorSession.id,
+              );
+              const maxTranscriptChars = 8000;
+              let transcript = priorMessages
+                .map(
+                  (msg) =>
+                    `${msg.role === "user" ? "USER" : "COACH"}: ${msg.content}`,
+                )
+                .join("\n\n");
+              if (transcript.length > maxTranscriptChars) {
+                transcript =
+                  transcript.slice(0, maxTranscriptChars) +
+                  "\n\n[... transcript trimmed for brevity — key details captured in session summary above]";
+              }
+              allPriorSessionsContext.push({
+                sessionNumber: i,
+                completionData: priorSession.completionData,
+                conversationTranscript: transcript,
+              });
+            }
           }
         }
 
@@ -972,7 +994,11 @@ export function registerFoundationSessionsRoutes(app: Express) {
 
         // Generate Foundation Session-specific system prompt
         const getFoundationSessionSystemPrompt = (
-          previousSessionData?: any,
+          priorSessions?: Array<{
+            sessionNumber: number;
+            completionData: any;
+            conversationTranscript: string;
+          }>,
           resumeSummary?: string,
         ) => {
           let basePrompt = "";
@@ -982,21 +1008,36 @@ export function registerFoundationSessionsRoutes(app: Express) {
             basePrompt += resumeSummary + "\n";
           }
 
-          // Add previous session summary if available
-          if (previousSessionData) {
-            const summary = formatSessionSummary(
-              sessionNumber - 1,
-              previousSessionData,
-            );
-            if (summary) {
-              basePrompt += `${summary}
+          // Add all prior sessions' summaries and conversation context
+          if (priorSessions && priorSessions.length > 0) {
+            for (const prior of priorSessions) {
+              const summary = formatSessionSummary(
+                prior.sessionNumber,
+                prior.completionData,
+              );
+              if (summary) {
+                basePrompt += summary + "\n";
+              }
+              if (prior.conversationTranscript) {
+                basePrompt += `
+───────────────────────────────────────────────────────────────
+SESSION ${prior.sessionNumber} CONVERSATION TRANSCRIPT
+(Key exchanges from the prior session — use this to understand what the user already shared)
+───────────────────────────────────────────────────────────────
 
-⚠️ CRITICAL INSTRUCTION: The user has already completed the previous session shown above. Use this summary as essential context about what has been established. DO NOT repeat questions, exercises, or topics already covered in the previous session, instead mention the answers in the chat and confirm from the user again. Build upon this foundation to advance the conversation to new territory.
+${prior.conversationTranscript}
 
 ───────────────────────────────────────────────────────────────
 
 `;
+              }
             }
+            basePrompt += `
+⚠️ CRITICAL INSTRUCTION: The user has already completed the previous session(s) shown above. Use these summaries and conversation transcripts as essential context about what has been established. You already know the user's specific stories, examples, and details from prior sessions — reference them naturally. DO NOT repeat questions, exercises, or topics already covered in previous sessions. DO NOT ask the user to re-share information they already provided. Build upon this foundation to advance the conversation to new territory.
+
+───────────────────────────────────────────────────────────────
+
+`;
           }
 
           if (sessionNumber === 1) {
@@ -1468,7 +1509,9 @@ Only when credibility proof is COMPLETE should you:
 
         // Generate streaming response using Foundation Session-specific Claude integration
         const systemPrompt = getFoundationSessionSystemPrompt(
-          previousSessionData,
+          allPriorSessionsContext.length > 0
+            ? allPriorSessionsContext
+            : undefined,
           resumeSummary,
         );
 
