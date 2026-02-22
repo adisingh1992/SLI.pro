@@ -271,6 +271,7 @@ export default function NewDashboardPage() {
     queryKey: ["/api/user/profile"],
     enabled: !!user,
     staleTime: 0,
+    refetchOnMount: "always",
     refetchOnWindowFocus: true,
   });
 
@@ -278,36 +279,48 @@ export default function NewDashboardPage() {
     queryKey: ["/api/foundation-sessions"],
     enabled: !!user,
     retry: false,
+    staleTime: 0,
+    refetchOnMount: "always",
   });
 
   const { data: enhancementModules } = useQuery<EnhancementModule[]>({
     queryKey: ["/api/enhancement-modules"],
     enabled: !!user,
     retry: false,
+    staleTime: 0,
+    refetchOnMount: "always",
   });
 
   const { data: userSlis } = useQuery<Sli[]>({
     queryKey: ["/api/user/slis"],
     enabled: !!user,
     retry: false,
+    staleTime: 0,
+    refetchOnMount: "always",
   });
 
   const { data: latestFreshnessReport } = useQuery<FreshnessReport>({
     queryKey: ["/api/freshness-reports/latest"],
     enabled: !!user,
     retry: false,
+    staleTime: 0,
+    refetchOnMount: "always",
   });
 
   const { data: latestLinkedinOptimization } = useQuery<LinkedinOptimization>({
     queryKey: ["/api/linkedin-optimizations/latest"],
     enabled: !!user,
     retry: false,
+    staleTime: 0,
+    refetchOnMount: "always",
   });
 
   const { data: homeworkData } = useQuery<HomeworkAssignment[]>({
     queryKey: ["/api/user/homework"],
     enabled: !!user && !user?.isAdmin,
     retry: false,
+    staleTime: 0,
+    refetchOnMount: "always",
   });
 
   const startSessionMutation = useMutation({
