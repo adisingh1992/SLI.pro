@@ -26,6 +26,8 @@ import {
   insertCoachingNoteSchema,
   User
 } from "@shared/schema";
+import { extractDocumentText, validateExtractedText } from "./document-extractor";
+import Anthropic from "@anthropic-ai/sdk";
 
 const scryptAsync = promisify(scrypt);
 
@@ -36,6 +38,46 @@ async function hashPassword(password: string) {
   return `${buf.toString("hex")}.${salt}`;
 }
 
+const anthropicClient = new Anthropic({
+  apiKey: process.env.ANTHROPIC_API_KEY,
+});
+const CLAUDE_MODEL = process.env.CLAUDE_MODEL || "claude-sonnet-4-20250514";
+
+async function generateDocumentSummary(documentId: number, docType: string, fileData: string, fileName: string) {
+  try {
+    console.log(`[summary] Starting summary generation for document ${documentId} (${docType})`);
+
+    const extractedText = await extractDocumentText(fileData, fileName);
+    const cleanText = validateExtractedText(extractedText);
+
+    if (!cleanText || cleanText.startsWith("[Document text extraction failed") || cleanText.startsWith("[PDF document appears to be empty")) {
+      console.log(`[summary] Could not extract usable text from document ${documentId}`);
+      return;
+    }
+
+    const systemPrompt = docType === "resume"
+      ? `You are an expert resume analyst. Summarize this resume concisely, covering: career trajectory, key roles and companies, core skills, notable achievements, and education. Output plain text (not JSON). Keep the summary under 500 words.`
+      : `You are an expert LinkedIn profile analyst. Summarize this LinkedIn profile concisely, covering: headline and positioning, professional experience highlights, skills and endorsements, education, and overall brand impression. Output plain text (not JSON). Keep the summary under 500 words.`;
+
+    const userPrompt = `Here is the ${docType === "resume" ? "resume" : "LinkedIn profile"} content:\n\n${cleanText}\n\nPlease provide a concise professional summary.`;
+
+    const response = await anthropicClient.messages.create({
+      model: CLAUDE_MODEL,
+      system: systemPrompt,
+      messages: [{ role: "user", content: userPrompt }],
+      max_tokens: 1024,
+      temperature: 0.3,
+    });
+
+    const textContent = response.content.find((item) => item.type === "text");
+    if (textContent && "text" in textContent) {
+      await storage.updateDocument(documentId, { analysisContent: textContent.text });
+      console.log(`[summary] Summary saved for document ${documentId} (${textContent.text.length} chars)`);
+    }
+  } catch (error) {
+    console.error(`[summary] Error generating summary for document ${documentId}:`, error);
+  }
+}
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Set up authentication routes
@@ -578,6 +620,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const document = await storage.createDocument(validationResult.data);
       res.status(201).json(document);
+
+      if (document.type === "resume" || document.type === "linkedin") {
+        generateDocumentSummary(document.id, document.type, document.fileData, document.fileName).catch(err => {
+          console.error(`Background summary generation failed for document ${document.id}:`, err);
+        });
+      }
     } catch (error) {
       next(error);
     }
