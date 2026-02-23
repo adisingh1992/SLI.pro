@@ -247,6 +247,284 @@ CRITICAL: The user has already uploaded their resume. Use this information to pr
   }
 }
 
+// Format SLI (Single Lasting Impression) data for system prompt context
+async function formatSliSummary(userId: number): Promise<string> {
+  try {
+    const sliRecords = await storage.getSlisByUserId(userId);
+    if (!sliRecords || sliRecords.length === 0) {
+      return "";
+    }
+
+    const latestSli = sliRecords[0];
+
+    const selectedText = latestSli.selectedSliIndex
+      ? `Selected SLI Option: #${latestSli.selectedSliIndex}`
+      : latestSli.customSliText
+        ? `Custom SLI: ${latestSli.customSliText}`
+        : "No SLI selected yet";
+
+    const refinedText = latestSli.refinedSliText
+      ? `\nRefined SLI: ${latestSli.refinedSliText}`
+      : "";
+
+    const refinementRationale = latestSli.refinementRationale
+      ? `\nRefinement Rationale: ${latestSli.refinementRationale}`
+      : "";
+
+    const implementationGuidance = latestSli.implementationGuidance
+      ? `\nImplementation Guidance: ${latestSli.implementationGuidance}`
+      : "";
+
+    return `
+═══════════════════════════════════════════════════════════════
+USER'S SINGLE LASTING IMPRESSION (SLI)
+═══════════════════════════════════════════════════════════════
+
+SLI Option 1: "${latestSli.title1}" - ${latestSli.statement1}
+  Rationale: ${latestSli.rationale1}
+
+SLI Option 2: "${latestSli.title2}" - ${latestSli.statement2}
+  Rationale: ${latestSli.rationale2}
+
+SLI Option 3: "${latestSli.title3}" - ${latestSli.statement3}
+  Rationale: ${latestSli.rationale3}
+
+${selectedText}${refinedText}${refinementRationale}${implementationGuidance}
+
+CRITICAL: The user's SLI has been established. All coaching should reinforce and build upon this Single Lasting Impression. Reference it naturally when discussing positioning, content strategy, and networking.
+═══════════════════════════════════════════════════════════════
+`;
+  } catch (error) {
+    console.error("Error formatting SLI summary:", error);
+    return "";
+  }
+}
+
+// Format conversation summaries (from AI coaching chats) for system prompt context
+async function formatConversationSummariesContext(userId: number): Promise<string> {
+  try {
+    const summaries = await storage.getConversationSummaries(userId);
+    if (!summaries || summaries.length === 0) {
+      return "";
+    }
+
+    const latestSummary = summaries[0];
+
+    const basicInfo = latestSummary.basicInfo || {};
+    const functionalCat = latestSummary.functionalCategorization || {};
+    const careerTransition = latestSummary.careerTransition || {};
+    const strengths = latestSummary.strengthsAndPositioning || {};
+    const digitalPresence = latestSummary.digitalPresence || {};
+    const psychology = latestSummary.psychologyAndMotivation || {};
+    const contentStrat = latestSummary.contentStrategy || {};
+    const recommendations = latestSummary.recommendations || {};
+
+    const keyStrengthsText = strengths.keyStrengths?.map((s: string) => `• ${s}`).join("\n") ?? "• None identified";
+    const areasForDevText = strengths.areasForDevelopment?.map((a: string) => `• ${a}`).join("\n") ?? "• None identified";
+    const topPrioritiesText = psychology.topPriorities?.map((p: string) => `• ${p}`).join("\n") ?? "• None identified";
+    const aspirationalThemesText = psychology.aspirationalThemes?.map((t: string) => `• ${t}`).join("\n") ?? "• None identified";
+    const confidentTopicsText = contentStrat.confidentTopics?.map((t: string) => `• ${t}`).join("\n") ?? "• None identified";
+    const sliDirectionsText = recommendations.sliDirections?.map((d: string) => `• ${d}`).join("\n") ?? "• None identified";
+    const contentDirectionsText = recommendations.contentStrategyDirections?.map((d: string) => `• ${d}`).join("\n") ?? "• None identified";
+
+    return `
+═══════════════════════════════════════════════════════════════
+AI COACHING CONVERSATION SUMMARY
+═══════════════════════════════════════════════════════════════
+
+Basic Info:
+  Name: ${basicInfo.name ?? "Not provided"}
+  Current Role: ${basicInfo.currentRole ?? "Not specified"}
+  Industry: ${basicInfo.industry ?? "Not specified"}
+  Years of Experience: ${basicInfo.yearsOfExperience ?? "Not specified"}
+  Target Timeline: ${basicInfo.targetTimeline ?? "Not specified"}
+
+Functional Categorization:
+  Primary Function: ${functionalCat.primaryFunction ?? "Not determined"}
+  Secondary Function: ${functionalCat.secondaryFunction ?? "None"}
+  Level of Certainty: ${functionalCat.levelOfCertainty ?? "N/A"}%
+  Key Strengths:
+${keyStrengthsText}
+
+Career Transition:
+  Current State: ${careerTransition.currentState ?? "Not specified"}
+  Desired State: ${careerTransition.desiredState ?? "Not specified"}
+  Transition Type: ${careerTransition.transitionType ?? "Not specified"}
+  Complexity Rating: ${careerTransition.complexityRating ?? "N/A"}/5
+  Primary Motivation: ${careerTransition.primaryMotivation ?? "Not specified"}
+
+Strengths & Positioning:
+  Value Proposition: ${strengths.valueProposition ?? "Not articulated"}
+  Areas for Development:
+${areasForDevText}
+  Comfort with Self-Promotion: ${strengths.comfortWithSelfPromotion ?? "N/A"}/5
+
+Digital Presence:
+  LinkedIn Activity: ${digitalPresence.linkedInActivity ?? "Not assessed"}
+  Content Creation Experience: ${digitalPresence.contentCreationExperience ?? "Not specified"}
+  Barriers: ${digitalPresence.barriers ?? "None identified"}
+  Networking Approach: ${digitalPresence.networkingApproach ?? "Not specified"}
+  Posting Frequency: ${digitalPresence.postingFrequency ?? "Not specified"}
+
+Psychology & Motivation:
+  Enneagram Type: ${psychology.enneagramType ?? "Not assessed"}
+  Assessment Results: ${psychology.assessmentResults ?? "Not provided"}
+  Top Priorities:
+${topPrioritiesText}
+  Aspirational Themes:
+${aspirationalThemesText}
+
+Content Strategy Insights:
+  Confident Topics:
+${confidentTopicsText}
+  Preferred Formats: ${contentStrat.preferredFormats?.join(", ") ?? "Not specified"}
+  Creation Barriers: ${contentStrat.creationBarriers ?? "Not identified"}
+  Suggested Initial Topic: ${contentStrat.suggestedInitialTopic ?? "Not specified"}
+
+Recommendations:
+  SLI Directions:
+${sliDirectionsText}
+  Content Strategy Directions:
+${contentDirectionsText}
+  Special Considerations: ${recommendations.specialConsiderations ?? "None"}
+
+CRITICAL: This summary is from the user's AI coaching conversations. Do not repeat these questions. Reference this context naturally and build upon it.
+═══════════════════════════════════════════════════════════════
+`;
+  } catch (error) {
+    console.error("Error formatting conversation summaries:", error);
+    return "";
+  }
+}
+
+// Format branding intake data for system prompt context
+async function formatBrandingIntakeContext(userId: number): Promise<string> {
+  try {
+    const intake = await storage.getBrandingIntake(userId);
+    if (!intake) {
+      return "";
+    }
+
+    const responses = intake.responses as Record<string, any> || {};
+    const responseEntries = Object.entries(responses);
+
+    if (responseEntries.length === 0) {
+      return "";
+    }
+
+    const responsesText = responseEntries
+      .map(([key, value]) => {
+        const formattedKey = key.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+        const formattedValue = typeof value === 'object' ? JSON.stringify(value) : String(value);
+        return `  ${formattedKey}: ${formattedValue}`;
+      })
+      .join("\n");
+
+    return `
+═══════════════════════════════════════════════════════════════
+BRANDING INTAKE FORM DATA
+═══════════════════════════════════════════════════════════════
+
+Platform Type: ${intake.platform ?? "Not specified"}
+Completion Status: ${intake.completed ? "Completed" : `In Progress (Stage ${intake.currentStage})`}
+
+Responses:
+${responsesText}
+
+CRITICAL: The user has filled out a branding intake form. Use this information to provide personalized coaching. Do not ask questions that have already been answered here.
+═══════════════════════════════════════════════════════════════
+`;
+  } catch (error) {
+    console.error("Error formatting branding intake:", error);
+    return "";
+  }
+}
+
+// Format homework assignments and answers for system prompt context
+async function formatHomeworkContext(userId: number): Promise<string> {
+  try {
+    const assignments = await storage.getHomeworkAssignments(userId);
+    if (!assignments || assignments.length === 0) {
+      return "";
+    }
+
+    const assignmentsText = assignments.map((hw, index) => {
+      const answerText = hw.answerText
+        ? `  Answer: ${hw.answerText}`
+        : "  Answer: Not yet answered";
+      return `  ${index + 1}. Question: ${hw.questionText}\n${answerText}`;
+    }).join("\n\n");
+
+    return `
+═══════════════════════════════════════════════════════════════
+HOMEWORK ASSIGNMENTS & ANSWERS
+═══════════════════════════════════════════════════════════════
+
+${assignmentsText}
+
+CRITICAL: The user has been assigned homework by their coach. Reference their answers naturally in coaching to show continuity and build upon their reflections.
+═══════════════════════════════════════════════════════════════
+`;
+  } catch (error) {
+    console.error("Error formatting homework context:", error);
+    return "";
+  }
+}
+
+// Format LinkedIn optimization data for system prompt context
+async function formatLinkedinOptimizationContext(userId: number): Promise<string> {
+  try {
+    const optimization = await storage.getLatestLinkedinOptimization(userId);
+    if (!optimization) {
+      return "";
+    }
+
+    const headline = optimization.headlineOptimization as any || {};
+    const aboutSection = optimization.aboutSection as any || {};
+    const profileEnhancements = optimization.profileEnhancements as any || {};
+    const contentStrategy = optimization.contentStrategy as any || {};
+
+    return `
+═══════════════════════════════════════════════════════════════
+LINKEDIN OPTIMIZATION RECOMMENDATIONS
+═══════════════════════════════════════════════════════════════
+
+Alignment Assessment: ${optimization.alignmentAssessment ?? "Not assessed"}
+
+Headline Optimization:
+  Current Headline: ${headline.currentHeadline ?? "Not provided"}
+  Recommended Headline: ${headline.recommendedHeadline ?? "Not provided"}
+  Rationale: ${headline.rationale ?? "Not provided"}
+
+About Section:
+  Current Analysis: ${aboutSection.currentAnalysis ?? "Not analyzed"}
+  Recommendations: ${aboutSection.recommendations ?? "Not provided"}
+  Suggested Structure: ${aboutSection.suggestedStructure ?? "Not provided"}
+  Key Elements: ${aboutSection.keyElements ?? "Not provided"}
+  Draft Content: ${aboutSection.draftContent ?? "Not provided"}
+
+Profile Enhancements:
+  Experience Section: ${profileEnhancements.experienceSection ?? "Not assessed"}
+  Skills & Endorsements: ${profileEnhancements.skillsEndorsements ?? "Not assessed"}
+  Activity & Engagement: ${profileEnhancements.activityEngagement ?? "Not assessed"}
+  Visual Improvements: ${profileEnhancements.visualImprovements ?? "Not assessed"}
+
+Content Strategy:
+  Themes: ${contentStrategy.themes ?? "Not specified"}
+  Post Ideas: ${contentStrategy.postIdeas ?? "Not specified"}
+  Engagement Tips: ${contentStrategy.engagementTips ?? "Not specified"}
+
+Implementation Priorities: ${optimization.implementationPriorities ?? "Not specified"}
+
+CRITICAL: LinkedIn optimization recommendations have already been generated. Reference these when discussing profile improvements and content strategy. Do not repeat the full analysis.
+═══════════════════════════════════════════════════════════════
+`;
+  } catch (error) {
+    console.error("Error formatting LinkedIn optimization context:", error);
+    return "";
+  }
+}
+
 // Format foundation sessions 1, 2, 3 data into a concise combined summary
 async function formatFoundationSessionsSummary(
   userId: number,
@@ -915,28 +1193,46 @@ export function setupEnhancementModulesRoutes(app: Express) {
         // Get user profile data for context
         const userProfile = await storage.getUserProfile(userId);
 
-        // Fetch questionnaire data for context
+        // Fetch all context data in parallel for efficiency
         const questionnaire = await storage.getQuestionnaire(userId);
         const questionnaireSummary = formatQuestionnaireSummary(questionnaire);
 
-        // Fetch resume summary for context
-        const resumeSummary = await formatResumeSummary(userId);
-
-        // Fetch foundation sessions summary for context
-        const foundationSessionsSummary =
-          await formatFoundationSessionsSummary(userId);
+        const [
+          resumeSummary,
+          foundationSessionsSummary,
+          sliSummary,
+          conversationSummaryContext,
+          brandingIntakeContext,
+          homeworkContext,
+          linkedinOptimizationContext,
+        ] = await Promise.all([
+          formatResumeSummary(userId),
+          formatFoundationSessionsSummary(userId),
+          formatSliSummary(userId),
+          formatConversationSummariesContext(userId),
+          formatBrandingIntakeContext(userId),
+          formatHomeworkContext(userId),
+          formatLinkedinOptimizationContext(userId),
+        ]);
 
         // Fetch previous module's completion data for chaining
         let previousModuleData = null;
+        let moduleAData = null;
         if (moduleCode === "B") {
           const moduleA = await storage.getEnhancementModule(userId, "A");
           if (moduleA?.status === "completed" && moduleA.completionData) {
             previousModuleData = moduleA.completionData;
           }
         } else if (moduleCode === "C") {
-          const moduleB = await storage.getEnhancementModule(userId, "B");
+          const [moduleA, moduleB] = await Promise.all([
+            storage.getEnhancementModule(userId, "A"),
+            storage.getEnhancementModule(userId, "B"),
+          ]);
           if (moduleB?.status === "completed" && moduleB.completionData) {
             previousModuleData = moduleB.completionData;
+          }
+          if (moduleA?.status === "completed" && moduleA.completionData) {
+            moduleAData = moduleA.completionData;
           }
         }
 
@@ -959,7 +1255,7 @@ export function setupEnhancementModulesRoutes(app: Express) {
             ? formatModuleSummary("A", previousModuleData)
             : "";
 
-          return `${resumeSummary}${questionnaireSummary}${foundationSessionsSummary}${previousSummary}
+          return `${resumeSummary}${questionnaireSummary}${foundationSessionsSummary}${sliSummary}${conversationSummaryContext}${brandingIntakeContext}${homeworkContext}${linkedinOptimizationContext}${previousSummary}
             You are a Digital Behavior & LinkedIn Content Strategy Coach.
 
             This module assumes:
@@ -1037,7 +1333,7 @@ export function setupEnhancementModulesRoutes(app: Express) {
             ? formatModuleSummary("A", previousModuleData)
             : "";
 
-          return `${resumeSummary}${questionnaireSummary}${foundationSessionsSummary}${previousSummary}
+          return `${resumeSummary}${questionnaireSummary}${foundationSessionsSummary}${sliSummary}${conversationSummaryContext}${brandingIntakeContext}${homeworkContext}${linkedinOptimizationContext}${previousSummary}
             You are a Personal Brand & Network Positioning Coach.
 
             This module assumes:
@@ -1168,12 +1464,15 @@ export function setupEnhancementModulesRoutes(app: Express) {
         };
 
         // Generate Module C-specific system prompt with Career Aspiration Alignment coaching
-        const getModuleCSystemPrompt = (previousModuleData?: any) => {
-          const previousSummary = previousModuleData
+        const getModuleCSystemPrompt = (previousModuleData?: any, moduleACompletionData?: any) => {
+          const previousSummaryB = previousModuleData
             ? formatModuleSummary("B", previousModuleData)
             : "";
+          const previousSummaryA = moduleACompletionData
+            ? formatModuleSummary("A", moduleACompletionData)
+            : "";
 
-          return `${resumeSummary}${questionnaireSummary}${foundationSessionsSummary}${previousSummary}
+          return `${resumeSummary}${questionnaireSummary}${foundationSessionsSummary}${sliSummary}${conversationSummaryContext}${brandingIntakeContext}${homeworkContext}${linkedinOptimizationContext}${previousSummaryA}${previousSummaryB}
             You are a Career Aspiration Alignment Coach (Module C).
 
             This module assumes:
@@ -1374,7 +1673,7 @@ export function setupEnhancementModulesRoutes(app: Express) {
             : moduleCode === "B"
               ? getModuleBSystemPrompt(previousModuleData) // Module B receives Module A's data
               : moduleCode === "C"
-                ? getModuleCSystemPrompt(previousModuleData) // Module C receives Module B's data
+                ? getModuleCSystemPrompt(previousModuleData, moduleAData) // Module C receives both Module A's and Module B's data
                 : `You are a professional coaching assistant for Enhancement Module ${moduleCode}. Provide thoughtful, actionable guidance.`;
 
         try {
