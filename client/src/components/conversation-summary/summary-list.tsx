@@ -491,7 +491,7 @@ export default function SummaryList({ userId, isAdmin = false }: SummaryListProp
       <div ref={summaryRef}>
 
       {/* Session 1: Functional Identity Mapping */}
-      <div className="space-y-4">
+      <div className="space-y-4 mb-8">
         <h2 className="text-2xl font-bold text-blue-800 flex items-center gap-2">
           <Target className="h-6 w-6" />
           Foundation Session 1: Functional Identity Mapping Summary
@@ -500,7 +500,7 @@ export default function SummaryList({ userId, isAdmin = false }: SummaryListProp
       </div>
 
       {/* Session 2: Professional Credibility Assessment */}
-      <div className="space-y-4">
+      <div className="space-y-4 mb-8">
         <h2 className="text-2xl font-bold text-green-800 flex items-center gap-2">
           <Award className="h-6 w-6" />
           Foundation Session 2: Professional Credibility Assessment Summary
@@ -509,7 +509,7 @@ export default function SummaryList({ userId, isAdmin = false }: SummaryListProp
       </div>
 
       {/* Session 3: Positioning Story Development */}
-      <div className="space-y-4">
+      <div className="space-y-4 mb-8">
         <h2 className="text-2xl font-bold text-purple-800 flex items-center gap-2">
           <BookOpen className="h-6 w-6" />
           Foundation Session 3: Positioning Story Development Summary
@@ -528,7 +528,7 @@ export default function SummaryList({ userId, isAdmin = false }: SummaryListProp
         </div>
 
         {/* Module A: Digital Behavior Analysis */}
-        <div className="space-y-4">
+        <div className="space-y-4 mb-8">
           <h2 className="text-2xl font-bold text-teal-800 flex items-center gap-2">
             <Sparkles className="h-6 w-6" />
             Module A: Digital Behavior & LinkedIn Content Strategy
@@ -537,7 +537,7 @@ export default function SummaryList({ userId, isAdmin = false }: SummaryListProp
         </div>
 
         {/* Module B: Network Position Mapping */}
-        <div className="space-y-4">
+        <div className="space-y-4 mb-8">
           <h2 className="text-2xl font-bold text-orange-800 flex items-center gap-2">
             <Network className="h-6 w-6" />
             Module B: Network Position Mapping
@@ -546,7 +546,7 @@ export default function SummaryList({ userId, isAdmin = false }: SummaryListProp
         </div>
 
         {/* Module C: Career Aspiration Alignment */}
-        <div className="space-y-4">
+        <div className="space-y-4 mb-8">
           <h2 className="text-2xl font-bold text-indigo-800 flex items-center gap-2">
             <Rocket className="h-6 w-6" />
             Module C: Career Aspiration Alignment
