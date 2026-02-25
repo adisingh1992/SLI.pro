@@ -55,6 +55,36 @@ const FreshnessReportPage: React.FC = () => {
   // Progress animation reference
   const progressInterval = useRef<NodeJS.Timeout | null>(null);
   
+  // QUERY 0: Fetch user's SLI from the slis table
+  const { data: userSliData } = useQuery({
+    queryKey: ["/api/user/slis"],
+    queryFn: async () => {
+      try {
+        const response = await (await apiRequest("GET", `/api/user/slis`)).json();
+        return Array.isArray(response) ? response : null;
+      } catch (error) {
+        return null;
+      }
+    },
+    enabled: isAuthenticated,
+    staleTime: Infinity,
+    refetchOnWindowFocus: false,
+    refetchInterval: false,
+  });
+
+  // Resolve the user's SLI statement text with priority:
+  // refined → selected option statement → custom → undefined (fallback to AI-generated)
+  const resolvedUserSliText = React.useMemo(() => {
+    if (!userSliData || userSliData.length === 0) return undefined;
+    const sli = userSliData[0];
+    if (sli.refinedSliText) return sli.refinedSliText;
+    if (sli.selectedSliIndex === 1) return sli.statement1;
+    if (sli.selectedSliIndex === 2) return sli.statement2;
+    if (sli.selectedSliIndex === 3) return sli.statement3;
+    if (sli.customSliText) return sli.customSliText;
+    return undefined;
+  }, [userSliData]);
+
   // QUERY 1: Fetch all reports for the history list
   const {
     data: allReportsRaw,
@@ -658,7 +688,7 @@ const FreshnessReportPage: React.FC = () => {
           <div className="flex flex-col lg:flex-row gap-6 w-full">
             {/* Column 1: Report Content (80%) */}
             <div className="w-full lg:w-4/5">
-              <ReportDisplay report={currentReport} userName={user?.firstName} />
+              <ReportDisplay report={currentReport} userName={user?.firstName} userSliText={resolvedUserSliText} />
             </div>
             
             {/* Column 2: Report History (20%) */}

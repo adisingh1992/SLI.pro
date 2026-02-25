@@ -22,6 +22,7 @@ interface FreshnessReportProps {
     createdAt: string;
   };
   userName?: string;
+  userSliText?: string;
 }
 
 const calculateFreshnessGrade = (report: FreshnessReportProps['report']): string => {
@@ -84,7 +85,7 @@ const getProgressColor = (score: number): string => {
   return 'bg-red-500';
 };
 
-const ReportDisplay: React.FC<FreshnessReportProps> = ({ report, userName }) => {
+const ReportDisplay: React.FC<FreshnessReportProps> = ({ report, userName, userSliText }) => {
   console.log("Original report data:", report);
   
   if (!report) {
@@ -291,7 +292,7 @@ const ReportDisplay: React.FC<FreshnessReportProps> = ({ report, userName }) => 
             <div className="mb-4">
               <h4 className="text-sm font-semibold mb-2">Single Lasting Impression (SLI)</h4>
               <p className="text-sm p-3 bg-muted rounded-md border">
-                {personalBrandStrategy.uniqueValueProposition}
+                {userSliText || personalBrandStrategy.uniqueValueProposition}
               </p>
             </div>
             
