@@ -572,11 +572,18 @@ ${functionalExamplesText ? `Functional Language Examples:\n${functionalExamplesT
           ?.map((bullet: string) => `• ${bullet}`)
           ?.join("\n") ?? "";
 
+      const credibilityGapsText =
+        data.credibilityGaps
+          ?.map((gap: string) => `• ${gap}`)
+          ?.join("\n") ?? "";
+
       summary += `
 SESSION 2: CREDIBILITY & PROOF
 Credibility Tier: ${data.credibilityTier ? `Tier ${data.credibilityTier}` : "Not assessed"}
 Brand Claim: ${data.brandClaim ?? "Not established"}
 ${proofBulletsText ? `Top Proof Points:\n${proofBulletsText}` : ""}
+${credibilityGapsText ? `Credibility Gaps:\n${credibilityGapsText}` : ""}
+${data.credibilityCeiling ? `Credibility Ceiling: ${data.credibilityCeiling}` : ""}
 `;
     }
 
