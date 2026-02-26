@@ -47,6 +47,20 @@ Preferred communication style: Simple, everyday language.
   - SLI generation based on user data and documents
   - Content draft creation for LinkedIn posts
 
+## Prompt Architecture
+Both Foundation Sessions and Enhancement Modules use a status-based prompt strategy pattern, selecting different system prompts, analysis prompts, and initial guidance messages based on the user's `professional_status`.
+
+### Foundation Sessions — `server/prompts/`
+- `types.ts` — `PromptSet` interface (`getSystemPrompt`, `getAnalysisPrompt`, `getInitialGuidanceMessage`)
+- `index.ts` — `getPromptSet(professionalStatus)` selector function
+- `undergraduate-recent-grad.ts`, `early-career.ts`, `mid-career-senior.ts` — status-specific implementations
+
+### Enhancement Modules A, B, C — `server/enhancement-module-prompts/`
+- `types.ts` — `ModulePromptSet` interface and `ModulePromptContext` (takes `moduleCode` as parameter)
+- `index.ts` — `getModulePromptSet(professionalStatus)` selector function
+- `undergraduate-recent-grad.ts`, `early-career.ts`, `mid-career-senior.ts` — status-specific implementations
+- All three status files currently carry identical prompts; each can be edited independently for status-specific coaching
+
 ## Voice-to-Text Integration
 - **Frontend**: Custom `useVoiceRecording` hook with MediaRecorder API for audio capture
 - **Backend**: WebSocket server for real-time audio streaming to OpenAI Whisper API
