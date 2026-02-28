@@ -388,6 +388,54 @@ export const PROFESSIONAL_PATH_OPTIONS = [
   "None of these",
 ];
 
+export const MID_CAREER_EXPERIENCE_YEARS = [
+  { value: "8-12", label: "8–12 years" },
+  { value: "13-20", label: "13–20 years" },
+  { value: "20+", label: "20+ years" },
+];
+
+export const MID_CAREER_LEVEL_OPTIONS = [
+  { value: "individual_contributor", label: "Individual contributor / specialist" },
+  { value: "manager", label: "Manager / team lead" },
+  { value: "director", label: "Director / senior manager" },
+  { value: "vp", label: "VP / senior director" },
+  { value: "csuite", label: "C-suite / executive" },
+  { value: "founder", label: "Founder / entrepreneur" },
+  { value: "prefer_not_say", label: "Prefer not to say" },
+];
+
+export const MID_CAREER_SITUATION_OPTIONS = [
+  "I'm in a senior role and positioning for the next level",
+  "I'm exploring a career pivot or new direction",
+  "I've been laid off or am navigating a transition",
+  "I'm re-entering the workforce after a break",
+  "I want to build visibility or thought leadership",
+];
+
+export const MID_CAREER_PRIORITIES = [
+  "Position for a promotion or leadership role",
+  "Build thought leadership and external visibility",
+  "Navigate a career pivot or transition",
+  "Re-enter the workforce with a strong narrative",
+  "Differentiate from peers at my level",
+  "Expand my network into new industries or levels",
+  "Prepare for board or advisory roles",
+  "Launch, scale, or advise entrepreneurial ventures",
+  "Redefine what I'm known for",
+];
+
+export const MID_CAREER_PROFESSIONAL_PATH = [
+  "Career changer — I've made a significant pivot",
+  "Career accelerator — I'm building deep expertise in a specific vertical",
+  "International professional",
+  "Military veteran",
+  "Returned to workforce after a significant break",
+  "Entrepreneur or founder",
+  "Exploring entrepreneurship",
+  "Non-traditional path to leadership",
+  "None of these",
+];
+
 export const STAGE_LABELS: Record<string, string[]> = {
   undergraduate: [
     "Academic Context",
@@ -407,7 +455,8 @@ export const STAGE_LABELS: Record<string, string[]> = {
   ],
   mid_career: [
     "Professional Context",
-    "Strategic Positioning & Education",
+    "Strategic Positioning",
+    "Professional Context",
     "Demographics",
     "Privacy & Consent",
     "Complete",
