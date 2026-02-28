@@ -1,0 +1,120 @@
+Ask clarifying questions in case of any confusion before implementation.
+In the branding-intake (undergraduate version) I want you to add/update the following:
+
+After the "Enrollment Status" question add this one:
+Expected Graduation Year * (if currently enrolled)
+Dropdown
+○  2025 or earlier
+○  2026
+○  2027
+○  2028
+○  2029
+○  2030+
+
+
+Update "Major / Field of Study" question as follows:
+Add these options at the top of the dropdown:
+○  Bachelors in Business (general management or global management focus)
+○  Bachelors in Business + Bachelors in Engineering
+○  Bachelors in Business + Bachelors in Biology
+○  Bachelors in Business + Simultaneous Major
+If “Simultaneous Major” selected, show free text field: “Please fill in the other Simultaneous Major here: ___”
+
+
+Update "Academic Programs" questions as follows:
+Add or update these options:
+○  Global Management Program (GMP)
+○  Life Sciences, Business and Entrepreneurship (LSBE)
+○  Management, Entrepreneurship & Technology (M.E.T.)
+○  Spieker Program
+
+
+Update the "Target Industries" question as follows:
+Add "Still exploring" as the first option and make it little prominent.
+
+
+Update the "Target Functions" question as follows:
+Add "Still exploring" as the first option and make it little prominent.
+
+
+Update the "Professional Experience" question as follows:
+Select all that apply:
+○ No professional experience yet
+○ 1–2 internships completed○ 3+ internships completed
+○ Part-time work (10–20 hrs/wk)
+○ Significant part-time (20+ hrs/wk, 6+ mo)
+○ Full-time gap year work○ Entrepreneurship / founded project
+○ Research assistant or lab work
+○ Volunteer leadership roles
+
+
+Update the "Immediate Priorities" question as follows:
+○ Secure a strong internship for this summer (or future summers)
+○ Land a full-time role after graduation
+○ Get into competitive graduate programs
+○ Build a professional network in my target industry
+○ Understand what career path fits my interests
+○ Stand out among candidates with similar credentials
+○ Improve interview performance and confidence
+○ Explore or launch an entrepreneurial venture
+○ Still Exploring / Unsure
+
+
+Update the "Are you a first-generation college student?" question as follows:
+Add an info icon next to question to show the following definition - "Neither parent/guardian has completed a four-year college degree.".
+Also add a link "What does this mean?" to "https://www.universityofcalifornia.edu/about-us/information-center/first-generation-college-students"
+
+
+Remove the "Student Type" question.
+
+
+Remove the "Do you identify as part of an underrepresented group?" question.
+
+
+Update the "Identity & Background" question as follows:
+Change "Identity & Background" to "Which of these describe your student experience?"
+Multi-select chips
+○  Transfer student
+○  Student athlete
+○  Military veteran or dependent
+○  Non-traditional student (returning to education after work)
+○  International student
+○  None of these
+
+
+Move the current Step 4 to Step 5 and add a new Step 4 (Demographics) with following optional questions:
+How do you identify?
+Multi-select chips — Race & Ethnicity
+○  Asian or Asian American
+○  Black or African American
+○  Hispanic, Latino/a, or Latinx
+○  Middle Eastern or North African (MENA)
+○  Native American, Alaska Native, or Indigenous
+○  Native Hawaiian or Pacific Islander
+○  White or European American
+○  Multiracial or biracial
+○  An identity not listed here (free text field)
+○  Prefer not to say
+
+
+Rename Step 3 to Student Experience and newly created Step 4 to Demographics.
+
+
+What is your gender identity?
+Single select
+○  Woman
+○  Man
+○  Non-binary
+○  An identity not listed here (free text field)
+○  Prefer not to say
+
+
+Do any of these shape how you show up professionally?
+Multi-select chips — Identity & Representation
+○  I’m often one of few people who look like me in my field of interest
+○  First-generation college student/graduate or from a low-income background
+○  LGBTQ+
+○  Person with a disability or neurodivergent condition
+○  English is not my first language / immigrant or refugee background
+○  Prefer not to say
+○  None of these
