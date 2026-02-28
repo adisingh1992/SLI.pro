@@ -350,6 +350,44 @@ export const STUDENT_TYPE_OPTIONS = [
   { value: "prefer_not_say", label: "Prefer not to say" },
 ];
 
+export const EARLY_CAREER_STUDENT_STATUS_OPTIONS = [
+  { value: "yes_fulltime", label: "Yes — full-time MBA or master's program" },
+  { value: "yes_parttime", label: "Yes — part-time or executive program" },
+  { value: "no_working", label: "No — I'm working full-time" },
+  { value: "no_between_roles", label: "No — I'm between roles" },
+];
+
+export const EARLY_CAREER_FOCUS_OPTIONS = [
+  "I'm in a role and building my career",
+  "I'm actively job searching",
+  "I'm in a role but considering a change",
+  "I'm between roles",
+  "I'm in grad school full-time",
+];
+
+export const EARLY_CAREER_PRIORITIES = [
+  "Land a role that better reflects my value",
+  "Build visibility in my target industry",
+  "Transition to a new function or industry",
+  "Strengthen my professional network strategically",
+  "Develop a clear professional narrative",
+  "Position myself for grad school applications",
+  "Stand out among peers at my level",
+  "Launch or grow an entrepreneurial venture",
+  "Still figuring it out",
+];
+
+export const PROFESSIONAL_PATH_OPTIONS = [
+  "Career changer — I've shifted industries or functions",
+  "Career accelerator — I'm building deep expertise in a specific vertical",
+  "International professional working in the U.S.",
+  "Military veteran or transitioning service member",
+  "Returned to workforce after a career break",
+  "Non-traditional path (self-taught, no degree in my field, etc.)",
+  "Exploring entrepreneurship",
+  "None of these",
+];
+
 export const STAGE_LABELS: Record<string, string[]> = {
   undergraduate: [
     "Academic Context",
@@ -362,6 +400,7 @@ export const STAGE_LABELS: Record<string, string[]> = {
   early_career: [
     "Professional Context",
     "Career Direction & Education",
+    "Professional Context",
     "Demographics",
     "Privacy & Consent",
     "Complete",

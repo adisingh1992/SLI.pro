@@ -28,7 +28,7 @@ function mapProfessionalStatus(status: string | null | undefined): Platform | nu
 }
 
 function getTotalStages(platform: Platform | null): number {
-  if (platform === "undergraduate") return 6;
+  if (platform === "undergraduate" || platform === "early_career") return 6;
   return 5;
 }
 
