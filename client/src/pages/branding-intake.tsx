@@ -62,7 +62,8 @@ export default function BrandingIntakePage() {
       });
       return res.json();
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
+      queryClient.setQueryData(["/api/branding-intake"], data);
       queryClient.invalidateQueries({ queryKey: ["/api/branding-intake"] });
     },
   });
