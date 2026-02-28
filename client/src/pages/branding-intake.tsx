@@ -146,7 +146,7 @@ export default function BrandingIntakePage() {
 
   return (
     <div className="min-h-screen intake-page intake-layout">
-      <div className="max-w-2xl mx-auto px-4 py-8">
+      <div className="max-w-[46.2rem] mx-auto px-4 py-8">
         {stage < totalStages && (
           <div className="intake-header mb-8">
             <div className="flex items-center justify-between mb-4 relative z-10">
