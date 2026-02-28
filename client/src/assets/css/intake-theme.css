@@ -159,6 +159,18 @@
   box-shadow: 0 1px 4px rgba(190, 214, 209, 0.4);
 }
 
+.intake-pill-prominent {
+  border-color: var(--intake-aqua-dark);
+  color: var(--intake-void);
+  font-weight: 600;
+  background: linear-gradient(135deg, var(--intake-aqua-light) 0%, #f0f5f4 100%);
+}
+
+.intake-pill-prominent:hover {
+  border-color: var(--intake-aqua-dark);
+  background: var(--intake-aqua);
+}
+
 .intake-completion {
   background: linear-gradient(135deg, white 0%, var(--intake-aqua-light) 100%);
   border-radius: 20px;

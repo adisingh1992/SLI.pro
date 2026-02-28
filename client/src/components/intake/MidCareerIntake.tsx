@@ -30,6 +30,7 @@ interface IntakeProps {
   onUpdateResponses: (stageData: Record<string, any>) => void;
   onNext: () => void;
   onBack: () => void;
+  totalStages?: number;
 }
 
 function SectionBlock({

@@ -27,6 +27,11 @@ function mapProfessionalStatus(status: string | null | undefined): Platform | nu
   }
 }
 
+function getTotalStages(platform: Platform | null): number {
+  if (platform === "undergraduate") return 6;
+  return 5;
+}
+
 export default function BrandingIntakePage() {
   const { user } = useAuth();
   const [, setLocation] = useLocation();
@@ -37,6 +42,7 @@ export default function BrandingIntakePage() {
   responsesRef.current = responses;
 
   const platform = mapProfessionalStatus(user?.professionalStatus);
+  const totalStages = getTotalStages(platform);
 
   const { data: existingIntake, isLoading } = useQuery<BrandingIntake | null>({
     queryKey: ["/api/branding-intake"],
@@ -45,10 +51,10 @@ export default function BrandingIntakePage() {
 
   useEffect(() => {
     if (existingIntake) {
-      setStage(existingIntake.completed ? 5 : existingIntake.currentStage || 1);
+      setStage(existingIntake.completed ? totalStages : existingIntake.currentStage || 1);
       setResponses((existingIntake.responses as Record<string, any>) || {});
     }
-  }, [existingIntake]);
+  }, [existingIntake, totalStages]);
 
   const saveMutation = useMutation({
     mutationFn: async (data: {
@@ -101,7 +107,6 @@ export default function BrandingIntakePage() {
   }
 
   const stageLabels = STAGE_LABELS[platform] || [];
-  const totalStages = 5;
 
   const handleUpdateResponses = (stageData: Record<string, any>) => {
     const merged = { ...responsesRef.current, ...stageData };
@@ -136,6 +141,7 @@ export default function BrandingIntakePage() {
     onUpdateResponses: handleUpdateResponses,
     onNext: handleNext,
     onBack: handleBack,
+    totalStages,
   };
 
   return (

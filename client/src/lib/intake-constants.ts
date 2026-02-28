@@ -1,4 +1,5 @@
 export const INDUSTRIES = [
+  "Still exploring",
   "Accounting & Audit",
   "Advertising & Marketing",
   "Aerospace & Defense",
@@ -45,10 +46,10 @@ export const INDUSTRIES = [
   "Telecommunications",
   "Transportation",
   "Wealth Management",
-  "Still exploring",
 ];
 
 export const FUNCTIONS = [
+  "Still exploring",
   "Business Development & Sales",
   "Communications & PR",
   "Consulting",
@@ -69,7 +70,6 @@ export const FUNCTIONS = [
   "Research & Development",
   "Risk Management",
   "Strategy & Corporate Development",
-  "Still exploring",
 ];
 
 export const ENROLLMENT_STATUS_OPTIONS = [
@@ -78,11 +78,66 @@ export const ENROLLMENT_STATUS_OPTIONS = [
   { value: "gap_year", label: "Gap year (accepted to university, deferred enrollment)" },
 ];
 
-export const GRADUATION_YEARS = ["2025", "2026", "2027", "2028", "2029+"];
+export const GRADUATION_YEARS = ["2025 or earlier", "2026", "2027", "2028", "2029", "2030+"];
+
+export const MAJOR_FIELD_OPTIONS = [
+  "Bachelors in Business (general management or global management focus)",
+  "Bachelors in Business + Bachelors in Engineering",
+  "Bachelors in Business + Bachelors in Biology",
+  "Bachelors in Business + Simultaneous Major",
+  "Accounting & Audit",
+  "Advertising & Marketing",
+  "Aerospace & Defense",
+  "Agriculture & Farming",
+  "Architecture & Design",
+  "Arts & Entertainment",
+  "Automotive",
+  "Banking & Financial Services",
+  "Biotechnology",
+  "Business Services & Consulting",
+  "Chemicals",
+  "Clean Energy & Sustainability",
+  "Construction & Real Estate",
+  "Consumer Goods & Retail",
+  "Data & Analytics",
+  "Education & EdTech",
+  "Electronics & Hardware",
+  "Energy & Utilities",
+  "Fashion & Luxury",
+  "Film, TV & Media",
+  "Food & Beverage",
+  "Government & Public Policy",
+  "Healthcare & Hospital Systems",
+  "Hospitality & Tourism",
+  "Human Resources & Staffing",
+  "Information Technology",
+  "Insurance",
+  "Investment Banking",
+  "Legal Services",
+  "Logistics & Supply Chain",
+  "Management Consulting",
+  "Manufacturing",
+  "Nonprofit & Social Impact",
+  "Pharmaceuticals",
+  "Private Equity & Venture Capital",
+  "Professional Sports & Athletics",
+  "Public Relations & Communications",
+  "Publishing & Journalism",
+  "SaaS & Cloud Computing",
+  "Scientific Research",
+  "Semiconductors",
+  "Social Media & Digital Platforms",
+  "Space & Satellite Technology",
+  "Telecommunications",
+  "Transportation",
+  "Wealth Management",
+];
 
 export const ACADEMIC_PROGRAMS = [
-  "Management, Entrepreneurship & Technology (MET)",
-  "Leadership Summer Business Experience (LSBE)",
+  "Global Management Program (GMP)",
+  "Life Sciences, Business and Entrepreneurship (LSBE)",
+  "Management, Entrepreneurship & Technology (M.E.T.)",
+  "Spieker Program",
   "Haas School of Business undergraduate program",
   "Engineering program",
   "Pre-med/health sciences track",
@@ -92,24 +147,66 @@ export const ACADEMIC_PROGRAMS = [
 
 export const PROFESSIONAL_EXPERIENCE_OPTIONS = [
   "No professional experience yet",
-  "1-2 summer internships completed",
+  "1–2 internships completed",
   "3+ internships completed",
-  "Part-time work during school (10-20 hours/week)",
-  "Significant part-time work (20+ hours/week for 6+ months)",
-  "Full-time gap year work experience",
-  "Entrepreneurship / founded project or company",
+  "Part-time work (10–20 hrs/wk)",
+  "Significant part-time (20+ hrs/wk, 6+ mo)",
+  "Full-time gap year work",
+  "Entrepreneurship / founded project",
   "Research assistant or lab work",
   "Volunteer leadership roles",
 ];
 
 export const IMMEDIATE_PRIORITIES = [
-  "Secure a strong internship for this summer",
+  "Secure a strong internship for this summer (or future summers)",
   "Land a full-time role after graduation",
   "Get into competitive graduate programs",
   "Build a professional network in my target industry",
   "Understand what career path fits my interests",
-  "Stand out among other candidates with similar credentials",
+  "Stand out among candidates with similar credentials",
   "Improve interview performance and confidence",
+  "Explore or launch an entrepreneurial venture",
+  "Still Exploring / Unsure",
+];
+
+export const STUDENT_EXPERIENCE_OPTIONS = [
+  "Transfer student",
+  "Student athlete",
+  "Military veteran or dependent",
+  "Non-traditional student (returning to education after work)",
+  "International student",
+  "None of these",
+];
+
+export const RACE_ETHNICITY_OPTIONS = [
+  "Asian or Asian American",
+  "Black or African American",
+  "Hispanic, Latino/a, or Latinx",
+  "Middle Eastern or North African (MENA)",
+  "Native American, Alaska Native, or Indigenous",
+  "Native Hawaiian or Pacific Islander",
+  "White or European American",
+  "Multiracial or biracial",
+  "An identity not listed here",
+  "Prefer not to say",
+];
+
+export const GENDER_IDENTITY_OPTIONS = [
+  "Woman",
+  "Man",
+  "Non-binary",
+  "An identity not listed here",
+  "Prefer not to say",
+];
+
+export const IDENTITY_REPRESENTATION_OPTIONS = [
+  "I'm often one of few people who look like me in my field of interest",
+  "First-generation college student/graduate or from a low-income background",
+  "LGBTQ+",
+  "Person with a disability or neurodivergent condition",
+  "English is not my first language / immigrant or refugee background",
+  "Prefer not to say",
+  "None of these",
 ];
 
 export const IDENTITY_FLAGS = [
@@ -257,6 +354,7 @@ export const STAGE_LABELS: Record<string, string[]> = {
   undergraduate: [
     "Academic Context",
     "Career Exploration",
+    "Student Experience",
     "Demographics",
     "Privacy & Consent",
     "Complete",
