@@ -1,8 +1,8 @@
 import { useState, useEffect, useRef } from "react";
-import { useQuery, useMutation } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
-import { apiRequest, queryClient } from "@/lib/queryClient";
+import { apiRequest } from "@/lib/queryClient";
 import { STAGE_LABELS } from "@/lib/intake-constants";
 import UndergradIntake from "@/components/intake/UndergradIntake";
 import EarlyCareerIntake from "@/components/intake/EarlyCareerIntake";
@@ -30,6 +30,7 @@ function mapProfessionalStatus(status: string | null | undefined): Platform | nu
 export default function BrandingIntakePage() {
   const { user } = useAuth();
   const [, setLocation] = useLocation();
+  const queryClient = useQueryClient();
   const [stage, setStage] = useState(1);
   const [responses, setResponses] = useState<Record<string, any>>({});
   const responsesRef = useRef(responses);
