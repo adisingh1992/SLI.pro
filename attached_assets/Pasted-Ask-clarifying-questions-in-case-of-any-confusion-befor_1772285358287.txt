@@ -1,0 +1,109 @@
+Ask clarifying questions in case of any confusion before implementation.
+In the branding-intake (early-career version) I want you to add/update the following:
+
+In Step 1:
+
+Move the "Student Status" question to the top and rename it to "Are you currently enrolled in a graduate program?"
+○  Yes — full-time MBA or master’s program
+○  Yes — part-time or executive program
+○  No — I’m working full-time
+○  No — I’m between roles
+
+
+If enrolled: University Name
+Show a Text field
+
+
+Rename "Current Job Title" to "Current or most recent job title"
+
+
+Rename "Current Company" to "Current or most recent company/organization"
+
+
+Update the "Target Industries" question as follows:
+Add "Still exploring" as the first option and make it little prominent.
+
+
+Update the "Target Functions" question as follows:
+Add "Still exploring" as the first option and make it little prominent.
+
+
+In Step 2:
+
+Rename the "Career Focus" question to "Professional experience / current situation"
+Update the options to:
+○ I’m in a role and building my career
+○ I’m actively job searching
+○ I’m in a role but considering a change
+○ I’m between roles
+○ I’m in grad school full-time
+
+
+Rename "Timeline" to "Immediate priorities / goals"
+Update the options to:
+○ Land a role that better reflects my value
+○ Build visibility in my target industry
+○ Transition to a new function or industry
+○ Strengthen my professional network strategically
+○ Develop a clear professional narrative
+○ Position myself for grad school applications
+○ Stand out among peers at my level
+○ Launch or grow an entrepreneurial venture
+○ Still figuring it out
+
+
+In Step 3 (Rename to "Professional Context"):
+
+Update the "Are you a first-generation college student?" question as follows:
+Add an info icon next to question to show the following definition - "Neither parent/guardian has completed a four-year college degree.".
+Also add a link "What does this mean?" to "https://www.universityofcalifornia.edu/about-us/information-center/first-generation-college-students"
+
+
+Remove the question "Do you identify as part of an underrepresented group?"
+
+
+Rename "Career Path Pattern" to "Which of these describe your professional path?"
+Multi-select chips
+○  Career changer — I’ve shifted industries or functions
+○  Career accelerator — I’m building deep expertise in a specific vertical
+○  International professional working in the U.S.
+○  Military veteran or transitioning service member
+○  Returned to workforce after a career break
+○  Non-traditional path (self-taught, no degree in my field, etc.)
+○  Exploring entrepreneurship
+○  None of these
+
+
+Move the current Step 4 to Step 5 and add a new Step 4 (Demographics) with following optional questions:
+How do you identify?
+Multi-select chips — Race & Ethnicity
+○  Asian or Asian American
+○  Black or African American
+○  Hispanic, Latino/a, or Latinx
+○  Middle Eastern or North African (MENA)
+○  Native American, Alaska Native, or Indigenous
+○  Native Hawaiian or Pacific Islander
+○  White or European American
+○  Multiracial or biracial
+○  An identity not listed here (free text field)
+○  Prefer not to say
+
+
+What is your gender identity?
+Single select
+○  Woman
+○  Man
+○  Non-binary
+○  An identity not listed here (free text field)
+○  Prefer not to say
+
+
+Do any of these shape how you show up professionally?
+Multi-select chips — Identity & Representation
+○  I’m often one of few people who look like me in my field of interest
+○  First-generation college student/graduate or from a low-income background
+○  LGBTQ+
+○  Person with a disability or neurodivergent condition
+○  English is not my first language / immigrant or refugee background
+○  Prefer not to say
+○  None of these
