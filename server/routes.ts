@@ -1120,7 +1120,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const userId = req.user!.id;
       const bodySchema = z.object({
         platform: z.enum(["undergraduate", "early_career", "mid_career"]),
-        currentStage: z.number().int().min(1).max(5),
+        currentStage: z.number().int().min(1).max(6),
         responses: z.record(z.any()).optional().default({}),
         completed: z.boolean().optional().default(false),
         marketingOptIn: z.boolean().optional().default(false),
