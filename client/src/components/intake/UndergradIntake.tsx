@@ -67,7 +67,7 @@ function PillToggle({
     <button
       type="button"
       onClick={onClick}
-      className={`intake-pill ${selected ? "intake-pill-selected" : ""} ${prominent ? "intake-pill-prominent" : ""}`}
+      className={`intake-pill ${selected ? "intake-pill-selected" : ""} ${prominent && !selected ? "intake-pill-prominent" : ""}`}
     >
       {label}
     </button>
