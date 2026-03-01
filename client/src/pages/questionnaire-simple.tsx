@@ -1417,66 +1417,55 @@ export default function QuestionnairePage() {
 
             {/* Connected-dots stepper */}
             <nav aria-label="Progress">
-              <ol role="list" className="flex items-center">
+              <ol role="list" className="flex items-start w-full">
                 {SECTIONS.map((section, idx) => {
                   const lastStep = section.steps[section.steps.length - 1];
                   const isCompleted = lastStep < currentStep;
                   const isCurrent = section.steps.includes(currentStep);
-                  const isLast = idx === SECTIONS.length - 1;
+                  const prevCompleted = idx > 0 && SECTIONS[idx - 1].steps[SECTIONS[idx - 1].steps.length - 1] < currentStep;
                   return (
-                    <li key={section.label} className={`relative ${isLast ? "" : "flex-1"} flex items-center`}>
-                      {/* Connecting line before this dot (except first) */}
-                      {idx > 0 && (
-                        <div className="absolute inset-0 flex items-center" aria-hidden="true" style={{ right: "50%", left: "-50%" }}>
-                          <div className={`h-0.5 w-full rounded-full ${
-                            SECTIONS[idx - 1].steps[SECTIONS[idx - 1].steps.length - 1] < currentStep
-                              ? "bg-[#bed6d1]"
-                              : "bg-slate-200"
-                          }`} />
-                        </div>
-                      )}
-                      {/* Connecting line after this dot (to next) */}
-                      {!isLast && (
-                        <div className="absolute inset-0 flex items-center" aria-hidden="true" style={{ left: "50%", right: "-50%" }}>
-                          <div className={`h-0.5 w-full rounded-full ${isCompleted ? "bg-[#bed6d1]" : "bg-slate-200"}`} />
-                        </div>
-                      )}
-                      {/* Dot */}
-                      <div className="relative z-10 mx-auto">
-                        {isCompleted ? (
-                          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#bed6d1]">
-                            <svg className="h-5 w-5 text-white" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-                              <path fillRule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z" clipRule="evenodd" />
-                            </svg>
-                          </div>
-                        ) : isCurrent ? (
-                          <div className="flex h-8 w-8 items-center justify-center rounded-full border-2 border-[#bed6d1] bg-white" aria-current="step">
-                            <span className="h-2.5 w-2.5 rounded-full bg-[#bed6d1]" />
-                          </div>
-                        ) : (
-                          <div className="flex h-8 w-8 items-center justify-center rounded-full border-2 border-slate-300 bg-white hover:border-slate-400 transition-colors" />
+                    <li key={section.label} className="flex-1 flex flex-col items-center">
+                      {/* Dot row with connecting lines */}
+                      <div className="relative w-full flex items-center justify-center h-8">
+                        {/* Left connector */}
+                        {idx > 0 && (
+                          <div
+                            className={`absolute top-1/2 -translate-y-1/2 left-0 right-1/2 h-0.5 rounded-full ${prevCompleted ? "bg-[#bed6d1]" : "bg-slate-200"}`}
+                            aria-hidden="true"
+                          />
                         )}
+                        {/* Right connector */}
+                        {idx < SECTIONS.length - 1 && (
+                          <div
+                            className={`absolute top-1/2 -translate-y-1/2 left-1/2 right-0 h-0.5 rounded-full ${isCompleted ? "bg-[#bed6d1]" : "bg-slate-200"}`}
+                            aria-hidden="true"
+                          />
+                        )}
+                        {/* Dot */}
+                        <div className="relative z-10">
+                          {isCompleted ? (
+                            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#bed6d1]">
+                              <svg className="h-5 w-5 text-white" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                                <path fillRule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z" clipRule="evenodd" />
+                              </svg>
+                            </div>
+                          ) : isCurrent ? (
+                            <div className="flex h-8 w-8 items-center justify-center rounded-full border-2 border-[#bed6d1] bg-white" aria-current="step">
+                              <span className="h-2.5 w-2.5 rounded-full bg-[#bed6d1]" />
+                            </div>
+                          ) : (
+                            <div className="flex h-8 w-8 items-center justify-center rounded-full border-2 border-slate-300 bg-white" />
+                          )}
+                        </div>
                       </div>
+                      {/* Label — always centered under its dot */}
+                      <span className={`mt-2 text-[10px] font-medium uppercase tracking-wider text-center leading-tight ${isCurrent ? "text-[#6c8083] font-bold" : "text-slate-400"}`}>
+                        {section.name}
+                      </span>
                     </li>
                   );
                 })}
               </ol>
-              {/* Section labels */}
-              <div className="flex justify-between mt-3">
-                {SECTIONS.map((section, idx) => {
-                  const isCurrent = section.steps.includes(currentStep);
-                  return (
-                    <span
-                      key={section.label}
-                      className={`text-xs font-medium uppercase tracking-wider ${
-                        isCurrent ? "text-[#6c8083] font-bold" : "text-slate-400"
-                      } ${idx === 0 ? "text-left" : idx === SECTIONS.length - 1 ? "text-right" : "text-center"}`}
-                    >
-                      {section.name}
-                    </span>
-                  );
-                })}
-              </div>
             </nav>
           </div>
 
