@@ -373,14 +373,15 @@ export default function QuestionnairePage() {
   const validateCurrentStep = (): boolean => {
     switch (currentStep) {
       case 1: {
+        const url = linkedinUrl.toLowerCase().trim();
         const valid =
-          linkedinUrl.trim() !== "" &&
-          linkedinUrl.toLowerCase().includes("linkedin.com");
+          url !== "" &&
+          (url.includes("linkedin.com") || url.includes("linked.in"));
         if (!valid)
           toast({
             title: "Required Field",
             description:
-              "Please enter a valid LinkedIn URL (must include linkedin.com)",
+              "Please enter a valid LinkedIn URL (e.g. linkedin.com or linked.in)",
             variant: "destructive",
           });
         return valid;
