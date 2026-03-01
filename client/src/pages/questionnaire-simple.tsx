@@ -1,18 +1,5 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import { useAuth } from "@/hooks/use-auth";
-import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { Input } from "@/components/ui/input";
-import { Checkbox } from "@/components/ui/checkbox";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { toast } from "@/hooks/use-toast";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { UserProfile } from "@shared/schema";
@@ -647,63 +634,134 @@ export default function QuestionnairePage() {
     lowLabel: string;
     highLabel: string;
   }) => (
-    <div className="mt-4">
-      <div className="flex gap-3 flex-wrap">
+    <div className="flex items-center justify-between gap-2 max-w-lg mt-4 bg-slate-50 p-4 rounded-xl border border-slate-100">
+      <div className="text-xs font-medium text-slate-500 text-center w-16 shrink-0">{lowLabel}</div>
+      <div className="flex gap-2 sm:gap-3">
         {[1, 2, 3, 4, 5].map((n) => (
           <button
             key={n}
             type="button"
             onClick={() => onChange(n)}
-            className={`w-12 h-12 rounded-full border-2 font-semibold text-lg transition-colors ${
+            className={`h-10 w-10 sm:h-12 sm:w-12 rounded-full border-2 flex items-center justify-center font-semibold transition-all ${
               value === n
-                ? "bg-[#bed6d1] border-[#bed6d1] text-white"
-                : "border-gray-300 text-gray-600 hover:border-[#bed6d1]"
+                ? "border-[#bed6d1] bg-[#bed6d1] text-white"
+                : "border-slate-300 text-slate-600 hover:border-[#bed6d1]/70"
             }`}
           >
             {n}
           </button>
         ))}
       </div>
-      <div className="flex justify-between mt-2 text-xs text-gray-500">
-        <span>1 = {lowLabel}</span>
-        <span>5 = {highLabel}</span>
-      </div>
+      <div className="text-xs font-medium text-slate-500 text-center w-16 shrink-0">{highLabel}</div>
     </div>
   );
 
-  const MultiSelectPill = ({
+  const CardRadioGroup = ({
+    options,
+    value,
+    onChange,
+  }: {
+    options: string[];
+    value: string;
+    onChange: (v: string) => void;
+  }) => (
+    <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
+      {options.map((opt) => {
+        const selected = value === opt;
+        const parts = opt.split(" — ");
+        const title = parts[0];
+        const subtitle = parts.length > 1 ? parts.slice(1).join(" — ") : null;
+        return (
+          <button
+            key={opt}
+            type="button"
+            onClick={() => onChange(opt)}
+            className={`relative flex cursor-pointer rounded-xl border p-4 shadow-sm text-left transition-colors w-full ${
+              selected
+                ? "border-[#bed6d1] bg-[#bed6d1]/10"
+                : "border-slate-300 bg-white hover:border-slate-400 hover:bg-slate-50"
+            }`}
+          >
+            <span className="flex flex-1 flex-col">
+              <span className={`text-sm font-medium ${selected ? "text-[#202436]" : "text-slate-900"}`}>
+                {title}
+              </span>
+              {subtitle && (
+                <span className={`mt-1 text-sm ${selected ? "text-[#4c5c5e]" : "text-slate-500"}`}>
+                  {subtitle}
+                </span>
+              )}
+            </span>
+            {selected && (
+              <svg className="h-5 w-5 text-[#bed6d1] shrink-0 ml-2 mt-0.5" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.857-9.809a.75.75 0 00-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 10-1.06 1.061l2.5 2.5a.75.75 0 001.137-.089l4-5.5z" clipRule="evenodd" />
+              </svg>
+            )}
+          </button>
+        );
+      })}
+    </div>
+  );
+
+  const CardCheckboxGrid = ({
     options,
     selected,
     onToggle,
     max,
+    columns = 2,
   }: {
     options: string[];
     selected: string[];
     onToggle: (v: string) => void;
     max?: number;
+    columns?: 1 | 2;
   }) => (
-    <div className="flex flex-wrap gap-2 mt-3">
-      {options.map((opt) => (
-        <button
-          key={opt}
-          type="button"
-          onClick={() => onToggle(opt)}
-          className={`px-4 py-2 rounded-full border text-sm font-medium transition-colors ${
-            selected.includes(opt)
-              ? "bg-[#bed6d1] border-[#bed6d1] text-white"
-              : "border-gray-300 text-gray-700 hover:border-[#bed6d1]"
-          }`}
-        >
-          {opt}
-        </button>
-      ))}
-      {max && (
-        <span className="self-center text-xs text-gray-400 ml-1">
-          {selected.length}/{max} selected
-        </span>
-      )}
+    <div className={`grid gap-3 mt-3 ${columns === 2 ? "grid-cols-1 sm:grid-cols-2" : "grid-cols-1"}`}>
+      {options.map((opt) => {
+        const isChecked = selected.includes(opt);
+        return (
+          <label
+            key={opt}
+            className={`relative flex items-start cursor-pointer rounded-lg border p-3 transition-colors ${
+              isChecked
+                ? "border-[#bed6d1] bg-[#bed6d1]/5"
+                : "border-slate-200 bg-white hover:bg-slate-50"
+            }`}
+          >
+            <div className="flex h-5 items-center">
+              <input
+                type="checkbox"
+                className="sr-only"
+                checked={isChecked}
+                onChange={() => onToggle(opt)}
+              />
+              <div className={`h-4 w-4 rounded border-2 flex items-center justify-center transition-colors ${
+                isChecked ? "border-[#bed6d1] bg-[#bed6d1]" : "border-slate-300"
+              }`}>
+                {isChecked && (
+                  <svg className="h-3 w-3 text-white" viewBox="0 0 12 12" fill="none">
+                    <path d="M2 6l3 3 5-5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                )}
+              </div>
+            </div>
+            <div className="ml-3 text-sm leading-6">
+              <span className={`font-medium ${isChecked ? "text-[#202436]" : "text-slate-900"}`}>{opt}</span>
+            </div>
+          </label>
+        );
+      })}
     </div>
   );
+
+  const SECTION_SUBTITLES: Record<string, string> = {
+    A: "Let's understand your current digital footprint and where it stands.",
+    B: "Let's explore how you currently talk about your work and where you want to go.",
+    C: "Let's look at your relationship with creating and sharing professional content.",
+    D: "Let's understand how you build and maintain professional relationships.",
+    E: "Let's clarify what you're working toward and what drives you.",
+    F: "Let's draw on any self-knowledge you've gathered through assessments or reflection.",
+  };
 
   const renderStepContent = () => {
     switch (currentStep) {
@@ -711,18 +769,18 @@ export default function QuestionnairePage() {
         return (
           <div className="space-y-4">
             <div>
-              <Label className="text-gray-700 font-semibold text-base block mb-1">
+              <label className="text-base font-semibold leading-6 text-slate-900 block mb-1">
                 Q1 — LinkedIn URL <span className="text-red-500">*</span>
-              </Label>
-              <p className="text-sm text-gray-500 mb-3">
+              </label>
+              <p className="text-sm text-slate-500 mb-3">
                 Your LinkedIn profile URL — our AI coach will use this to audit
                 your presence.
               </p>
-              <Input
+              <input
                 value={linkedinUrl}
                 onChange={(e) => setLinkedinUrl(e.target.value)}
                 placeholder="https://www.linkedin.com/in/yourprofile"
-                className="w-full"
+                className="block w-full rounded-xl border-0 py-3 px-4 text-slate-900 shadow-sm ring-1 ring-inset ring-slate-300 placeholder:text-slate-400 focus:ring-2 focus:ring-inset focus:ring-[#bed6d1] sm:text-sm sm:leading-6"
               />
             </div>
           </div>
@@ -752,29 +810,15 @@ export default function QuestionnairePage() {
         const options = platform ? q2Options[platform] : q2Options.early_career;
         return (
           <div className="space-y-4">
-            <div>
-              <Label className="text-gray-700 font-semibold text-base block mb-1">
-                Q2 — Current LinkedIn Presence{" "}
-                <span className="text-red-500">*</span>
-              </Label>
-              <p className="text-sm text-gray-500 mb-3">
+            <fieldset>
+              <legend className="text-base font-semibold leading-6 text-slate-900">
+                Q2 — Current LinkedIn Presence <span className="text-red-500">*</span>
+              </legend>
+              <p className="text-sm text-slate-500 mt-1 mb-1">
                 Which best describes your current LinkedIn activity?
               </p>
-              <RadioGroup
-                value={linkedinPresence}
-                onValueChange={setLinkedinPresence}
-                className="space-y-3 mt-2"
-              >
-                {options.map((opt) => (
-                  <div key={opt} className="flex items-start space-x-3">
-                    <RadioGroupItem value={opt} id={`q2-${opt}`} className="mt-0.5" />
-                    <Label htmlFor={`q2-${opt}`} className="cursor-pointer leading-snug">
-                      {opt}
-                    </Label>
-                  </div>
-                ))}
-              </RadioGroup>
-            </div>
+              <CardRadioGroup options={options} value={linkedinPresence} onChange={setLinkedinPresence} />
+            </fieldset>
           </div>
         );
       }
@@ -790,64 +834,55 @@ export default function QuestionnairePage() {
         ];
         return (
           <div className="space-y-4">
-            <div>
-              <Label className="text-gray-700 font-semibold text-base block mb-1">
-                Q3 — Other Professional Online Presence{" "}
-                <span className="text-gray-400 font-normal text-sm">(Optional)</span>
-              </Label>
-              <p className="text-sm text-gray-500 mb-2">
-                Select any other platforms where you have a professional
-                presence.
+            <fieldset>
+              <div className="flex justify-between items-end mb-1">
+                <legend className="text-base font-semibold leading-6 text-slate-900">
+                  Q3 — Other Professional Online Presence{" "}
+                  <span className="text-slate-400 font-normal text-sm">(Optional)</span>
+                </legend>
+              </div>
+              <p className="text-sm text-slate-500 mb-1">
+                Select any other platforms where you have a professional presence.
               </p>
-              <MultiSelectPill
+              <CardCheckboxGrid
                 options={q3Options}
                 selected={otherPresence}
-                onToggle={(v) =>
-                  toggleMultiSelect(v, otherPresence, setOtherPresence)
-                }
+                onToggle={(v) => toggleMultiSelect(v, otherPresence, setOtherPresence)}
               />
-            </div>
+            </fieldset>
           </div>
         );
       }
 
       case 4: {
         const q4Prompt: Record<PlatformType, string> = {
-          undergraduate:
-            "How well does your online presence reflect who you are professionally?",
-          early_career:
-            "How well does your professional brand position you for where you want to go next?",
-          mid_career:
-            "How well does your professional presence reflect your current expertise and leadership?",
+          undergraduate: "How well does your online presence reflect who you are professionally?",
+          early_career: "How well does your professional brand position you for where you want to go next?",
+          mid_career: "How well does your professional presence reflect your current expertise and leadership?",
         };
         const prompt = platform ? q4Prompt[platform] : q4Prompt.early_career;
         return (
           <div className="space-y-4">
-            <div>
-              <Label className="text-gray-700 font-semibold text-base block mb-1">
-                Q4 — Self-Assessment of Professional Presence{" "}
-                <span className="text-red-500">*</span>
-              </Label>
-              <p className="text-sm text-gray-600 mb-1">{prompt}</p>
+            <fieldset>
+              <legend className="text-base font-semibold leading-6 text-slate-900">
+                Q4 — Self-Assessment of Professional Presence <span className="text-red-500">*</span>
+              </legend>
+              <p className="text-sm text-slate-500 mt-1">{prompt}</p>
               <LikertScale
                 value={presenceSelfAssessment}
                 onChange={setPresenceSelfAssessment}
                 lowLabel="Not at all"
                 highLabel="Very well"
               />
-            </div>
+            </fieldset>
           </div>
         );
       }
 
       case 5: {
-        const q5Config: Record<
-          PlatformType,
-          { prompt: string; options: string[] }
-        > = {
+        const q5Config: Record<PlatformType, { prompt: string; options: string[] }> = {
           undergraduate: {
-            prompt:
-              "When someone asks \"what do you want to do after graduation,\" how do you feel?",
+            prompt: "When someone asks \"what do you want to do after graduation,\" how do you feel?",
             options: [
               "Confident — I have a clear answer",
               "Directional — general sense but struggle to articulate",
@@ -856,8 +891,7 @@ export default function QuestionnairePage() {
             ],
           },
           early_career: {
-            prompt:
-              "When someone asks \"what do you do?,\" how confident are you?",
+            prompt: "When someone asks \"what do you do?,\" how confident are you?",
             options: [
               "Very — clear, compelling answer",
               "Somewhat — I describe my title but not my value",
@@ -878,27 +912,13 @@ export default function QuestionnairePage() {
         const config = platform ? q5Config[platform] : q5Config.early_career;
         return (
           <div className="space-y-4">
-            <div>
-              <Label className="text-gray-700 font-semibold text-base block mb-1">
-                Q5 — Professional Narrative Diagnostic{" "}
-                <span className="text-red-500">*</span>
-              </Label>
-              <p className="text-sm text-gray-600 mb-3">{config.prompt}</p>
-              <RadioGroup
-                value={narrativeDiagnostic}
-                onValueChange={setNarrativeDiagnostic}
-                className="space-y-3"
-              >
-                {config.options.map((opt) => (
-                  <div key={opt} className="flex items-start space-x-3">
-                    <RadioGroupItem value={opt} id={`q5-${opt}`} className="mt-0.5" />
-                    <Label htmlFor={`q5-${opt}`} className="cursor-pointer leading-snug">
-                      {opt}
-                    </Label>
-                  </div>
-                ))}
-              </RadioGroup>
-            </div>
+            <fieldset>
+              <legend className="text-base font-semibold leading-6 text-slate-900">
+                Q5 — Professional Narrative Diagnostic <span className="text-red-500">*</span>
+              </legend>
+              <p className="text-sm text-slate-500 mt-1 mb-1">{config.prompt}</p>
+              <CardRadioGroup options={config.options} value={narrativeDiagnostic} onChange={setNarrativeDiagnostic} />
+            </fieldset>
           </div>
         );
       }
@@ -933,28 +953,20 @@ export default function QuestionnairePage() {
         const options = platform ? q6Options[platform] : q6Options.early_career;
         return (
           <div className="space-y-4">
-            <div>
-              <Label className="text-gray-700 font-semibold text-base block mb-1">
-                Q6 — What's Hardest About Talking About Yourself?{" "}
-                <span className="text-red-500">*</span>
-              </Label>
-              <p className="text-sm text-gray-500 mb-2">
-                Select up to 2 options.
-              </p>
-              <MultiSelectPill
+            <fieldset>
+              <div className="flex justify-between items-end">
+                <legend className="text-base font-semibold leading-6 text-slate-900">
+                  Q6 — What's Hardest About Talking About Yourself? <span className="text-red-500">*</span>
+                </legend>
+                <span className="text-xs font-medium bg-slate-100 text-slate-600 py-1 px-2 rounded-md shrink-0 ml-3">Select up to 2</span>
+              </div>
+              <CardCheckboxGrid
                 options={options}
                 selected={talkingAboutYourselfHardest}
-                onToggle={(v) =>
-                  toggleMultiSelect(
-                    v,
-                    talkingAboutYourselfHardest,
-                    setTalkingAboutYourselfHardest,
-                    2,
-                  )
-                }
+                onToggle={(v) => toggleMultiSelect(v, talkingAboutYourselfHardest, setTalkingAboutYourselfHardest, 2)}
                 max={2}
               />
-            </div>
+            </fieldset>
           </div>
         );
       }
@@ -963,21 +975,19 @@ export default function QuestionnairePage() {
         return (
           <div className="space-y-4">
             <div>
-              <Label className="text-gray-700 font-semibold text-base block mb-1">
+              <label className="text-base font-semibold leading-6 text-slate-900 block">
                 Q7 — Desired Change <span className="text-red-500">*</span>
-              </Label>
-              <p className="text-sm text-gray-600 mb-3">
-                What do you hope is different about how you present yourself
-                professionally after completing SLI.pro?
+              </label>
+              <p className="text-sm text-slate-500 mt-1 mb-1">
+                What do you hope is different about how you present yourself professionally after completing SLI.pro?
               </p>
-              <p className="text-xs text-gray-400 mb-3">
-                Please write at least 2–3 sentences.
-              </p>
-              <Textarea
+              <p className="text-xs text-slate-400 mb-3">Please write at least 2–3 sentences.</p>
+              <textarea
                 value={desiredChange}
                 onChange={(e) => setDesiredChange(e.target.value)}
                 placeholder="Describe what you hope changes about how you show up professionally..."
-                className="w-full min-h-[120px]"
+                rows={4}
+                className="block w-full rounded-xl border-0 py-3 px-4 text-slate-900 shadow-sm ring-1 ring-inset ring-slate-300 placeholder:text-slate-400 focus:ring-2 focus:ring-inset focus:ring-[#bed6d1] sm:text-sm sm:leading-6 resize-none"
               />
             </div>
           </div>
@@ -986,22 +996,20 @@ export default function QuestionnairePage() {
       case 8:
         return (
           <div className="space-y-4">
-            <div>
-              <Label className="text-gray-700 font-semibold text-base block mb-1">
-                Q8 — Comfort Creating Professional Content{" "}
-                <span className="text-red-500">*</span>
-              </Label>
-              <p className="text-sm text-gray-600 mb-1">
-                How comfortable are you creating and sharing professional content
-                online?
+            <fieldset>
+              <legend className="text-base font-semibold leading-6 text-slate-900">
+                Q8 — Comfort Creating Professional Content <span className="text-red-500">*</span>
+              </legend>
+              <p className="text-sm text-slate-500 mt-1">
+                How comfortable are you creating and sharing professional content online?
               </p>
               <LikertScale
                 value={contentComfort}
                 onChange={setContentComfort}
-                lowLabel="Not at all comfortable"
+                lowLabel="Not comfortable"
                 highLabel="Very comfortable"
               />
-            </div>
+            </fieldset>
           </div>
         );
 
@@ -1035,31 +1043,17 @@ export default function QuestionnairePage() {
         const options = platform ? q9Options[platform] : q9Options.early_career;
         return (
           <div className="space-y-4">
-            <div>
-              <Label className="text-gray-700 font-semibold text-base block mb-1">
-                Q9 — What Holds You Back?{" "}
-                <span className="text-red-500">*</span>
-              </Label>
-              <p className="text-sm text-gray-500 mb-2">
-                Select all that apply.
-              </p>
-              <div className="space-y-3 mt-2">
-                {options.map((opt) => (
-                  <div key={opt} className="flex items-start space-x-3">
-                    <Checkbox
-                      id={`q9-${opt}`}
-                      checked={contentHoldBack.includes(opt)}
-                      onCheckedChange={() =>
-                        toggleMultiSelect(opt, contentHoldBack, setContentHoldBack)
-                      }
-                    />
-                    <Label htmlFor={`q9-${opt}`} className="cursor-pointer leading-snug">
-                      {opt}
-                    </Label>
-                  </div>
-                ))}
-              </div>
-            </div>
+            <fieldset>
+              <legend className="text-base font-semibold leading-6 text-slate-900">
+                Q9 — What Holds You Back? <span className="text-red-500">*</span>
+              </legend>
+              <p className="text-sm text-slate-500 mt-1 mb-1">Select all that apply.</p>
+              <CardCheckboxGrid
+                options={options}
+                selected={contentHoldBack}
+                onToggle={(v) => toggleMultiSelect(v, contentHoldBack, setContentHoldBack)}
+              />
+            </fieldset>
           </div>
         );
       }
@@ -1076,28 +1070,21 @@ export default function QuestionnairePage() {
         ];
         return (
           <div className="space-y-4">
-            <div>
-              <Label className="text-gray-700 font-semibold text-base block mb-1">
-                Q10 — Preferred Content Format{" "}
-                <span className="text-red-500">*</span>
-              </Label>
-              <p className="text-sm text-gray-500 mb-2">
-                Select up to 2 options.
-              </p>
-              <MultiSelectPill
+            <fieldset>
+              <div className="flex justify-between items-end">
+                <legend className="text-base font-semibold leading-6 text-slate-900">
+                  Q10 — Preferred Content Format <span className="text-red-500">*</span>
+                </legend>
+                <span className="text-xs font-medium bg-slate-100 text-slate-600 py-1 px-2 rounded-md shrink-0 ml-3">Select up to 2</span>
+              </div>
+              <CardCheckboxGrid
                 options={q10Options}
                 selected={preferredContentFormat}
-                onToggle={(v) =>
-                  toggleMultiSelect(
-                    v,
-                    preferredContentFormat,
-                    setPreferredContentFormat,
-                    2,
-                  )
-                }
+                onToggle={(v) => toggleMultiSelect(v, preferredContentFormat, setPreferredContentFormat, 2)}
                 max={2}
+                columns={1}
               />
-            </div>
+            </fieldset>
           </div>
         );
       }
@@ -1126,30 +1113,15 @@ export default function QuestionnairePage() {
         const options = platform ? q11Options[platform] : q11Options.early_career;
         return (
           <div className="space-y-4">
-            <div>
-              <Label className="text-gray-700 font-semibold text-base block mb-1">
-                Q11 — Current Network State{" "}
-                <span className="text-red-500">*</span>
-              </Label>
-              <p className="text-sm text-gray-500 mb-3">
-                Which best describes the current state of your professional
-                network?
+            <fieldset>
+              <legend className="text-base font-semibold leading-6 text-slate-900">
+                Q11 — Current Network State <span className="text-red-500">*</span>
+              </legend>
+              <p className="text-sm text-slate-500 mt-1 mb-1">
+                Which best describes the current state of your professional network?
               </p>
-              <RadioGroup
-                value={networkState}
-                onValueChange={setNetworkState}
-                className="space-y-3"
-              >
-                {options.map((opt) => (
-                  <div key={opt} className="flex items-start space-x-3">
-                    <RadioGroupItem value={opt} id={`q11-${opt}`} className="mt-0.5" />
-                    <Label htmlFor={`q11-${opt}`} className="cursor-pointer leading-snug">
-                      {opt}
-                    </Label>
-                  </div>
-                ))}
-              </RadioGroup>
-            </div>
+              <CardRadioGroup options={options} value={networkState} onChange={setNetworkState} />
+            </fieldset>
           </div>
         );
       }
@@ -1181,23 +1153,21 @@ export default function QuestionnairePage() {
         const options = platform ? q12Options[platform] : q12Options.early_career;
         return (
           <div className="space-y-4">
-            <div>
-              <Label className="text-gray-700 font-semibold text-base block mb-1">
-                Q12 — Networking Beliefs{" "}
-                <span className="text-red-500">*</span>
-              </Label>
-              <p className="text-sm text-gray-500 mb-2">
-                Select up to 2 options.
-              </p>
-              <MultiSelectPill
+            <fieldset>
+              <div className="flex justify-between items-end">
+                <legend className="text-base font-semibold leading-6 text-slate-900">
+                  Q12 — Networking Beliefs <span className="text-red-500">*</span>
+                </legend>
+                <span className="text-xs font-medium bg-slate-100 text-slate-600 py-1 px-2 rounded-md shrink-0 ml-3">Select up to 2</span>
+              </div>
+              <CardCheckboxGrid
                 options={options}
                 selected={networkingBeliefs}
-                onToggle={(v) =>
-                  toggleMultiSelect(v, networkingBeliefs, setNetworkingBeliefs, 2)
-                }
+                onToggle={(v) => toggleMultiSelect(v, networkingBeliefs, setNetworkingBeliefs, 2)}
                 max={2}
+                columns={1}
               />
-            </div>
+            </fieldset>
           </div>
         );
       }
@@ -1218,33 +1188,30 @@ export default function QuestionnairePage() {
         ];
         return (
           <div className="space-y-4">
-            <div>
-              <Label className="text-gray-700 font-semibold text-base block mb-1">
-                Q13 — Topic Interests{" "}
-                <span className="text-red-500">*</span>
-              </Label>
-              <p className="text-sm text-gray-500 mb-2">
-                Select up to 3 topics you care most about.
-              </p>
-              <MultiSelectPill
+            <fieldset>
+              <div className="flex justify-between items-end">
+                <legend className="text-base font-semibold leading-6 text-slate-900">
+                  Q13 — Topic Interests <span className="text-red-500">*</span>
+                </legend>
+                <span className="text-xs font-medium bg-slate-100 text-slate-600 py-1 px-2 rounded-md shrink-0 ml-3">Select up to 3</span>
+              </div>
+              <CardCheckboxGrid
                 options={q13Options}
                 selected={topicInterests}
-                onToggle={(v) =>
-                  toggleMultiSelect(v, topicInterests, setTopicInterests, 3)
-                }
+                onToggle={(v) => toggleMultiSelect(v, topicInterests, setTopicInterests, 3)}
                 max={3}
               />
               {topicInterests.includes("Something else") && (
                 <div className="mt-3">
-                  <Input
+                  <input
                     value={topicInterestsOther}
                     onChange={(e) => setTopicInterestsOther(e.target.value)}
                     placeholder="Please specify your topic..."
-                    className="w-full"
+                    className="block w-full rounded-xl border-0 py-3 px-4 text-slate-900 shadow-sm ring-1 ring-inset ring-slate-300 placeholder:text-slate-400 focus:ring-2 focus:ring-inset focus:ring-[#bed6d1] sm:text-sm sm:leading-6"
                   />
                 </div>
               )}
-            </div>
+            </fieldset>
           </div>
         );
       }
@@ -1268,61 +1235,42 @@ export default function QuestionnairePage() {
         ];
         return (
           <div className="space-y-4">
-            <div>
-              <Label className="text-gray-700 font-semibold text-base block mb-1">
-                Q14 — Cross-Cutting Themes{" "}
-                <span className="text-red-500">*</span>
-              </Label>
-              <p className="text-sm text-gray-500 mb-2">
-                Select all themes that resonate with you.
-              </p>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-2">
-                {q14Options.map((opt) => (
-                  <div key={opt} className="flex items-start space-x-3">
-                    <Checkbox
-                      id={`q14-${opt}`}
-                      checked={crossCuttingThemes.includes(opt)}
-                      onCheckedChange={() =>
-                        toggleMultiSelect(opt, crossCuttingThemes, setCrossCuttingThemes)
-                      }
-                    />
-                    <Label htmlFor={`q14-${opt}`} className="cursor-pointer leading-snug">
-                      {opt}
-                    </Label>
-                  </div>
-                ))}
-              </div>
-            </div>
+            <fieldset>
+              <legend className="text-base font-semibold leading-6 text-slate-900">
+                Q14 — Cross-Cutting Themes <span className="text-red-500">*</span>
+              </legend>
+              <p className="text-sm text-slate-500 mt-1 mb-1">Select all themes that resonate with you.</p>
+              <CardCheckboxGrid
+                options={q14Options}
+                selected={crossCuttingThemes}
+                onToggle={(v) => toggleMultiSelect(v, crossCuttingThemes, setCrossCuttingThemes)}
+              />
+            </fieldset>
           </div>
         );
       }
 
       case 15: {
         const q15Prompt: Record<PlatformType, string> = {
-          undergraduate:
-            "Beyond your next job or internship, what kind of impact do you want to have in your career?",
-          early_career:
-            "Where do you want to be professionally in 3–5 years, and what's the gap between there and here?",
-          mid_career:
-            "What do you want to be known for in your industry? What's preventing that from being true today?",
+          undergraduate: "Beyond your next job or internship, what kind of impact do you want to have in your career?",
+          early_career: "Where do you want to be professionally in 3–5 years, and what's the gap between there and here?",
+          mid_career: "What do you want to be known for in your industry? What's preventing that from being true today?",
         };
         const prompt = platform ? q15Prompt[platform] : q15Prompt.early_career;
         return (
           <div className="space-y-4">
             <div>
-              <Label className="text-gray-700 font-semibold text-base block mb-1">
-                Q15 — Aspiration Question{" "}
-                <span className="text-red-500">*</span>
-              </Label>
-              <p className="text-sm text-gray-600 mb-3">{prompt}</p>
-              <p className="text-xs text-gray-400 mb-3">
-                Please write at least 2–3 sentences.
-              </p>
-              <Textarea
+              <label className="text-base font-semibold leading-6 text-slate-900 block">
+                Q15 — Aspiration Question <span className="text-red-500">*</span>
+              </label>
+              <p className="text-sm text-slate-500 mt-1 mb-1">{prompt}</p>
+              <p className="text-xs text-slate-400 mb-3">Please write at least 2–3 sentences.</p>
+              <textarea
                 value={aspiration}
                 onChange={(e) => setAspiration(e.target.value)}
                 placeholder="Share your aspirations..."
-                className="w-full min-h-[120px]"
+                rows={4}
+                className="block w-full rounded-xl border-0 py-3 px-4 text-slate-900 shadow-sm ring-1 ring-inset ring-slate-300 placeholder:text-slate-400 focus:ring-2 focus:ring-inset focus:ring-[#bed6d1] sm:text-sm sm:leading-6 resize-none"
               />
             </div>
           </div>
@@ -1341,35 +1289,18 @@ export default function QuestionnairePage() {
         ];
         return (
           <div className="space-y-4">
-            <div>
-              <Label className="text-gray-700 font-semibold text-base block mb-1">
+            <fieldset>
+              <legend className="text-base font-semibold leading-6 text-slate-900">
                 Q16 — Personality / Strengths Assessments{" "}
-                <span className="text-gray-400 font-normal text-sm">(Optional)</span>
-              </Label>
-              <p className="text-sm text-gray-500 mb-3">
-                Which of these have you completed? Select all that apply.
-              </p>
-              <div className="space-y-3">
-                {q16Options.map((opt) => (
-                  <div key={opt} className="flex items-start space-x-3">
-                    <Checkbox
-                      id={`q16-${opt}`}
-                      checked={personalityAssessments.includes(opt)}
-                      onCheckedChange={() =>
-                        toggleMultiSelect(
-                          opt,
-                          personalityAssessments,
-                          setPersonalityAssessments,
-                        )
-                      }
-                    />
-                    <Label htmlFor={`q16-${opt}`} className="cursor-pointer leading-snug">
-                      {opt}
-                    </Label>
-                  </div>
-                ))}
-              </div>
-            </div>
+                <span className="text-slate-400 font-normal text-sm">(Optional)</span>
+              </legend>
+              <p className="text-sm text-slate-500 mt-1 mb-1">Which of these have you completed? Select all that apply.</p>
+              <CardCheckboxGrid
+                options={q16Options}
+                selected={personalityAssessments}
+                onToggle={(v) => toggleMultiSelect(v, personalityAssessments, setPersonalityAssessments)}
+              />
+            </fieldset>
           </div>
         );
       }
@@ -1378,42 +1309,27 @@ export default function QuestionnairePage() {
         return (
           <div className="space-y-4">
             <div>
-              <Label className="text-gray-700 font-semibold text-base block mb-1">
+              <label className="text-base font-semibold leading-6 text-slate-900 block">
                 Q17 — Upload Assessment Results{" "}
-                <span className="text-gray-400 font-normal text-sm">(Optional)</span>
-              </Label>
-              <p className="text-sm text-gray-500 mb-4">
-                If you'd like to share results from any of your personality or
-                strengths assessments, you can upload them here. Accepted
-                formats: PDF, JPG, PNG, DOCX.
+                <span className="text-slate-400 font-normal text-sm">(Optional)</span>
+              </label>
+              <p className="text-sm text-slate-500 mt-1 mb-4">
+                If you'd like to share results from any of your personality or strengths assessments, you can upload them here. Accepted formats: PDF, JPG, PNG, DOCX.
               </p>
-
               <div
-                className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-[#bed6d1] transition-colors cursor-pointer"
-                onClick={() =>
-                  document.getElementById("assessment-upload")?.click()
-                }
-                onDragOver={(e) => {
-                  e.preventDefault();
-                  e.currentTarget.classList.add("border-[#bed6d1]");
-                }}
-                onDragLeave={(e) => {
-                  e.currentTarget.classList.remove("border-[#bed6d1]");
-                }}
+                className="border-2 border-dashed border-slate-300 rounded-xl p-8 text-center hover:border-[#bed6d1] transition-colors cursor-pointer"
+                onClick={() => document.getElementById("assessment-upload")?.click()}
+                onDragOver={(e) => { e.preventDefault(); e.currentTarget.classList.add("border-[#bed6d1]"); }}
+                onDragLeave={(e) => { e.currentTarget.classList.remove("border-[#bed6d1]"); }}
                 onDrop={(e) => {
                   e.preventDefault();
                   e.currentTarget.classList.remove("border-[#bed6d1]");
-                  const droppedFiles = Array.from(e.dataTransfer.files);
-                  setFiles((prev) => [...prev, ...droppedFiles]);
+                  setFiles((prev) => [...prev, ...Array.from(e.dataTransfer.files)]);
                 }}
               >
-                <Upload className="h-10 w-10 text-gray-400 mx-auto mb-3" />
-                <p className="text-gray-600 font-medium">
-                  Drag & drop files here, or click to browse
-                </p>
-                <p className="text-sm text-gray-400 mt-1">
-                  PDF, JPG, PNG, DOCX accepted
-                </p>
+                <Upload className="h-10 w-10 text-slate-400 mx-auto mb-3" />
+                <p className="text-slate-600 font-medium">Drag & drop files here, or click to browse</p>
+                <p className="text-sm text-slate-400 mt-1">PDF, JPG, PNG, DOCX accepted</p>
                 <input
                   id="assessment-upload"
                   type="file"
@@ -1422,40 +1338,25 @@ export default function QuestionnairePage() {
                   accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
                   onChange={(e) => {
                     if (e.target.files) {
-                      setFiles((prev) => [
-                        ...prev,
-                        ...Array.from(e.target.files!),
-                      ]);
+                      setFiles((prev) => [...prev, ...Array.from(e.target.files!)]);
                     }
                   }}
                 />
               </div>
-
               {files.length > 0 && (
                 <div className="mt-4 space-y-2">
-                  <p className="text-sm font-medium text-gray-700">
-                    Selected files:
-                  </p>
+                  <p className="text-sm font-medium text-slate-700">Selected files:</p>
                   {files.map((file, index) => (
-                    <div
-                      key={index}
-                      className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border"
-                    >
+                    <div key={index} className="flex items-center justify-between p-3 bg-slate-50 rounded-lg border border-slate-200">
                       <div className="flex items-center gap-2">
                         <FileText className="h-4 w-4 text-[#bed6d1]" />
-                        <span className="text-sm text-gray-700">
-                          {file.name}
-                        </span>
-                        <span className="text-xs text-gray-400">
-                          ({(file.size / 1024).toFixed(1)} KB)
-                        </span>
+                        <span className="text-sm text-slate-700">{file.name}</span>
+                        <span className="text-xs text-slate-400">({(file.size / 1024).toFixed(1)} KB)</span>
                       </div>
                       <button
                         type="button"
-                        onClick={() =>
-                          setFiles((prev) => prev.filter((_, i) => i !== index))
-                        }
-                        className="text-gray-400 hover:text-red-500 transition-colors"
+                        onClick={() => setFiles((prev) => prev.filter((_, i) => i !== index))}
+                        className="text-slate-400 hover:text-red-500 transition-colors"
                       >
                         <X className="h-4 w-4" />
                       </button>
@@ -1471,18 +1372,19 @@ export default function QuestionnairePage() {
         return (
           <div className="space-y-4">
             <div>
-              <Label className="text-gray-700 font-semibold text-base block mb-1">
+              <label className="text-base font-semibold leading-6 text-slate-900 block">
                 Q18 — Anything Else?{" "}
-                <span className="text-gray-400 font-normal text-sm">(Optional)</span>
-              </Label>
-              <p className="text-sm text-gray-600 mb-3">
+                <span className="text-slate-400 font-normal text-sm">(Optional)</span>
+              </label>
+              <p className="text-sm text-slate-500 mt-1 mb-3">
                 Is there anything else you want to share before we begin?
               </p>
-              <Textarea
+              <textarea
                 value={additionalInfo}
                 onChange={(e) => setAdditionalInfo(e.target.value)}
                 placeholder="Share anything else you'd like us to know..."
-                className="w-full min-h-[120px]"
+                rows={4}
+                className="block w-full rounded-xl border-0 py-3 px-4 text-slate-900 shadow-sm ring-1 ring-inset ring-slate-300 placeholder:text-slate-400 focus:ring-2 focus:ring-inset focus:ring-[#bed6d1] sm:text-sm sm:leading-6 resize-none"
               />
             </div>
           </div>
@@ -1495,7 +1397,7 @@ export default function QuestionnairePage() {
 
   if (profileLoading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
+      <div className="flex items-center justify-center min-h-screen bg-slate-50">
         <Loader2 className="h-8 w-8 animate-spin text-[#bed6d1]" />
       </div>
     );
@@ -1505,170 +1407,193 @@ export default function QuestionnairePage() {
   const isLastStep = currentStep === TOTAL_STEPS;
 
   return (
-    <div className="bg-gray-50 min-h-screen">
-      <div className="container py-10 px-4 sm:px-6 lg:px-8 max-w-3xl mx-auto">
-        <Card className="border-none shadow-md">
-          <CardHeader className="bg-[#202436] text-white rounded-t-lg">
-            <div className="flex justify-between items-center">
-              <div>
-                <CardTitle className="text-2xl font-bold">
-                  Branding Assessment
-                  {userProfile?.questionnaire?.isDraft && (
-                    <span className="ml-2 inline-flex items-center rounded-md bg-yellow-100 px-2 py-1 text-xs font-medium text-yellow-800 ring-1 ring-inset ring-yellow-600/20">
-                      Draft
-                    </span>
-                  )}
-                </CardTitle>
-                <CardDescription className="text-white opacity-90">
-                  Build your professional foundation — step by step.
-                </CardDescription>
-              </div>
-              <Button
-                variant="outline"
-                className="bg-[#202436] text-[#6c8083] hover:bg-gray-100 hover:text-[#4c5c5e]"
-                onClick={() => navigate("/", { replace: true })}
-              >
-                Back to Home
-              </Button>
-            </div>
-          </CardHeader>
-          <CardContent className="p-6 lg:p-8">
-            {/* Section progress bar */}
-            <div className="mb-8">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-sm font-medium text-gray-700">
-                  Section {currentSection.label}: {currentSection.name}
-                </span>
-                <span className="text-sm text-gray-500">
-                  Q{currentStep} of {TOTAL_STEPS}
-                </span>
-              </div>
+    <div className="bg-slate-50 text-slate-800 antialiased min-h-screen flex flex-col">
+      <main className="flex-grow flex items-start justify-center py-12 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-3xl w-full space-y-8">
 
-              {/* Section bubbles */}
-              <div className="flex gap-2 items-center mb-3">
-                {SECTIONS.map((section) => {
-                  const firstStep = section.steps[0];
+          {/* Header + Stepper */}
+          <div>
+            <h1 className="text-3xl font-bold text-center text-slate-900 mb-8">SLI.pro Onboarding</h1>
+
+            {/* Connected-dots stepper */}
+            <nav aria-label="Progress">
+              <ol role="list" className="flex items-center">
+                {SECTIONS.map((section, idx) => {
                   const lastStep = section.steps[section.steps.length - 1];
-                  const isActive = section.steps.includes(currentStep);
                   const isCompleted = lastStep < currentStep;
+                  const isCurrent = section.steps.includes(currentStep);
+                  const isLast = idx === SECTIONS.length - 1;
                   return (
-                    <div
-                      key={section.label}
-                      className={`flex items-center justify-center rounded-full text-xs font-bold transition-all ${
-                        isActive
-                          ? "bg-[#bed6d1] text-white w-8 h-8"
-                          : isCompleted
-                            ? "bg-green-500 text-white w-7 h-7"
-                            : "bg-gray-200 text-gray-500 w-7 h-7"
-                      }`}
-                      title={`Section ${section.label}: ${section.name}`}
-                    >
-                      {isCompleted ? (
-                        <CheckCircle className="h-4 w-4" />
-                      ) : (
-                        section.label
+                    <li key={section.label} className={`relative ${isLast ? "" : "flex-1"} flex items-center`}>
+                      {/* Connecting line before this dot (except first) */}
+                      {idx > 0 && (
+                        <div className="absolute inset-0 flex items-center" aria-hidden="true" style={{ right: "50%", left: "-50%" }}>
+                          <div className={`h-0.5 w-full rounded-full ${
+                            SECTIONS[idx - 1].steps[SECTIONS[idx - 1].steps.length - 1] < currentStep
+                              ? "bg-[#bed6d1]"
+                              : "bg-slate-200"
+                          }`} />
+                        </div>
                       )}
-                    </div>
+                      {/* Connecting line after this dot (to next) */}
+                      {!isLast && (
+                        <div className="absolute inset-0 flex items-center" aria-hidden="true" style={{ left: "50%", right: "-50%" }}>
+                          <div className={`h-0.5 w-full rounded-full ${isCompleted ? "bg-[#bed6d1]" : "bg-slate-200"}`} />
+                        </div>
+                      )}
+                      {/* Dot */}
+                      <div className="relative z-10 mx-auto">
+                        {isCompleted ? (
+                          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#bed6d1]">
+                            <svg className="h-5 w-5 text-white" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                              <path fillRule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z" clipRule="evenodd" />
+                            </svg>
+                          </div>
+                        ) : isCurrent ? (
+                          <div className="flex h-8 w-8 items-center justify-center rounded-full border-2 border-[#bed6d1] bg-white" aria-current="step">
+                            <span className="h-2.5 w-2.5 rounded-full bg-[#bed6d1]" />
+                          </div>
+                        ) : (
+                          <div className="flex h-8 w-8 items-center justify-center rounded-full border-2 border-slate-300 bg-white hover:border-slate-400 transition-colors" />
+                        )}
+                      </div>
+                    </li>
+                  );
+                })}
+              </ol>
+              {/* Section labels */}
+              <div className="flex justify-between mt-3">
+                {SECTIONS.map((section, idx) => {
+                  const isCurrent = section.steps.includes(currentStep);
+                  return (
+                    <span
+                      key={section.label}
+                      className={`text-xs font-medium uppercase tracking-wider ${
+                        isCurrent ? "text-[#6c8083] font-bold" : "text-slate-400"
+                      } ${idx === 0 ? "text-left" : idx === SECTIONS.length - 1 ? "text-right" : "text-center"}`}
+                    >
+                      {section.name}
+                    </span>
                   );
                 })}
               </div>
+            </nav>
+          </div>
 
-              {/* Progress bar */}
-              <div className="h-1.5 bg-gray-200 rounded-full overflow-hidden">
-                <div
-                  className="h-full bg-[#bed6d1] transition-all duration-300 ease-in-out"
-                  style={{ width: `${(currentStep / TOTAL_STEPS) * 100}%` }}
-                />
+          {/* Question card */}
+          <div className="bg-white shadow-xl shadow-slate-200/50 rounded-2xl p-6 sm:p-10 border border-slate-100">
+            {/* Section header */}
+            <div className="mb-8">
+              <div className="flex items-center justify-between mb-1">
+                <h2 className="text-xl font-semibold leading-7 text-slate-900">
+                  Section {currentSection.label} — {currentSection.name}
+                  {userProfile?.questionnaire?.isDraft && (
+                    <span className="ml-3 inline-flex items-center rounded-md bg-yellow-100 px-2 py-0.5 text-xs font-medium text-yellow-800 ring-1 ring-inset ring-yellow-600/20">
+                      Draft
+                    </span>
+                  )}
+                </h2>
+                <span className="text-xs text-slate-400 shrink-0 ml-4">Q{currentStep} of {TOTAL_STEPS}</span>
               </div>
-
-              {/* Step dots within current section */}
-              <div className="flex gap-1.5 mt-2">
-                {currentSection.steps.map((step) => (
-                  <div
-                    key={step}
-                    className={`h-1.5 rounded-full transition-all duration-200 ${
-                      step < currentStep
-                        ? "bg-green-400 flex-1"
-                        : step === currentStep
-                          ? "bg-[#bed6d1] flex-1"
-                          : "bg-gray-200 flex-1"
-                    }`}
-                  />
-                ))}
-              </div>
+              <p className="text-sm leading-6 text-slate-500">{SECTION_SUBTITLES[currentSection.label]}</p>
             </div>
 
+            <hr className="border-slate-200 mb-8" />
+
+            {/* Question content */}
             <div className="space-y-6">
               {renderStepContent()}
-
-              <div className="flex justify-between mt-8">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={prevStep}
-                  disabled={currentStep === 1}
-                  className="w-[120px]"
-                >
-                  Previous
-                </Button>
-
-                <div className="flex items-center gap-2">
-                  {saveStatus === "saving" && (
-                    <div className="text-xs text-muted-foreground flex items-center mr-2">
-                      <Loader2 className="h-3 w-3 animate-spin mr-1" />
-                      Saving...
-                    </div>
-                  )}
-                  {saveStatus === "saved" && (
-                    <div className="text-xs text-green-600 flex items-center mr-2">
-                      <CheckCircle className="h-3 w-3 mr-1" />
-                      Saved
-                    </div>
-                  )}
-
-                  {(!userProfile?.questionnaire ||
-                    userProfile?.questionnaire?.isDraft) && (
-                    <Button
-                      type="button"
-                      onClick={handleSaveAsDraft}
-                      className="w-[120px]"
-                      variant="outline"
-                      disabled={saveAsDraftMutation.isPending}
-                    >
-                      {saveAsDraftMutation.isPending ? (
-                        <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                      ) : null}
-                      Save Progress
-                    </Button>
-                  )}
-
-                  {isLastStep ? (
-                    <Button
-                      type="button"
-                      onClick={handleSubmit}
-                      className="w-[120px] bg-[#bed6d1] hover:bg-[#6c8083]"
-                      disabled={questionnaireMutation.isPending}
-                    >
-                      {questionnaireMutation.isPending ? (
-                        <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                      ) : null}
-                      Submit
-                    </Button>
-                  ) : (
-                    <Button
-                      type="button"
-                      onClick={nextStep}
-                      className="w-[120px] bg-[#bed6d1] hover:bg-[#6c8083]"
-                    >
-                      Next
-                    </Button>
-                  )}
-                </div>
-              </div>
             </div>
-          </CardContent>
-        </Card>
-      </div>
+          </div>
+
+          {/* Navigation buttons — outside the card */}
+          <div className="flex items-center justify-between px-2">
+            {/* Back */}
+            {currentStep > 1 ? (
+              <button
+                type="button"
+                onClick={prevStep}
+                className="text-sm font-semibold leading-6 text-slate-600 hover:text-slate-900 flex items-center gap-2 transition-colors"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                </svg>
+                Back
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={() => navigate("/", { replace: true })}
+                className="text-sm font-semibold leading-6 text-slate-400 hover:text-slate-600 flex items-center gap-2 transition-colors"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                </svg>
+                Home
+              </button>
+            )}
+
+            {/* Right side: save status + save draft + next/submit */}
+            <div className="flex items-center gap-4">
+              {saveStatus === "saving" && (
+                <span className="text-xs text-slate-400 flex items-center gap-1">
+                  <Loader2 className="h-3 w-3 animate-spin" />
+                  Saving...
+                </span>
+              )}
+              {saveStatus === "saved" && (
+                <span className="text-xs text-green-600 flex items-center gap-1">
+                  <CheckCircle className="h-3 w-3" />
+                  Saved
+                </span>
+              )}
+
+              {(!userProfile?.questionnaire || userProfile?.questionnaire?.isDraft) && (
+                <button
+                  type="button"
+                  onClick={handleSaveAsDraft}
+                  disabled={saveAsDraftMutation.isPending}
+                  className="text-sm font-semibold text-slate-500 hover:text-slate-700 transition-colors disabled:opacity-50 flex items-center gap-1"
+                >
+                  {saveAsDraftMutation.isPending && <Loader2 className="h-3 w-3 animate-spin" />}
+                  Save Progress
+                </button>
+              )}
+
+              {isLastStep ? (
+                <button
+                  type="button"
+                  onClick={handleSubmit}
+                  disabled={questionnaireMutation.isPending}
+                  className="rounded-xl bg-[#bed6d1] px-8 py-3.5 text-sm font-semibold text-white shadow-sm hover:bg-[#6c8083] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#bed6d1] transition-colors flex items-center gap-2 disabled:opacity-50"
+                >
+                  {questionnaireMutation.isPending ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : null}
+                  Submit
+                  {!questionnaireMutation.isPending && (
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
+                    </svg>
+                  )}
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={nextStep}
+                  className="rounded-xl bg-[#bed6d1] px-8 py-3.5 text-sm font-semibold text-white shadow-sm hover:bg-[#6c8083] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#bed6d1] transition-colors flex items-center gap-2"
+                >
+                  Next Section
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
+                  </svg>
+                </button>
+              )}
+            </div>
+          </div>
+
+        </div>
+      </main>
     </div>
   );
 }
