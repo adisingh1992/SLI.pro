@@ -64,6 +64,7 @@ export default function QuestionnairePage() {
   const [networkingBeliefs, setNetworkingBeliefs] = useState<string[]>([]);
   const [topicInterests, setTopicInterests] = useState<string[]>([]);
   const [topicInterestsOther, setTopicInterestsOther] = useState("");
+  const [aiTechSubtopics, setAiTechSubtopics] = useState<string[]>([]);
   const [crossCuttingThemes, setCrossCuttingThemes] = useState<string[]>([]);
   const [aspiration, setAspiration] = useState("");
   const [personalityAssessments, setPersonalityAssessments] = useState<
@@ -180,6 +181,8 @@ export default function QuestionnairePage() {
             setTopicInterests(interestsData.topicInterests);
           if (interestsData.topicInterestsOther)
             setTopicInterestsOther(interestsData.topicInterestsOther);
+          if (interestsData.aiTechSubtopics)
+            setAiTechSubtopics(interestsData.aiTechSubtopics);
           if (interestsData.crossCuttingThemes)
             setCrossCuttingThemes(interestsData.crossCuttingThemes);
           if (interestsData.personalityAssessments)
@@ -262,6 +265,7 @@ export default function QuestionnairePage() {
         question: "Topic Interests (up to 3)",
         answer: topicInterests,
         other: topicInterestsOther || null,
+        aiSubtopics: aiTechSubtopics.length > 0 ? aiTechSubtopics : null,
       },
       Q14: {
         question: "Cross-Cutting Themes",
@@ -312,6 +316,7 @@ export default function QuestionnairePage() {
         preferredContentFormat,
         topicInterests,
         topicInterestsOther,
+        aiTechSubtopics,
         crossCuttingThemes,
         personalityAssessments,
       }),
@@ -1213,6 +1218,99 @@ export default function QuestionnairePage() {
                 </div>
               )}
             </fieldset>
+
+            {topicInterests.includes("AI & Technology") && (() => {
+              const aiGroups: { group: string; items: string[] }[] = [
+                {
+                  group: "AI & Machine Learning",
+                  items: [
+                    "AI/ML — Consumer Applications",
+                    "AI/ML — Computer Vision & Generation",
+                    "AI/ML — Ethics & Governance",
+                    "AI/ML — Infrastructure & Platforms",
+                    "AI/ML — Natural Language Processing",
+                    "AI/ML — Predictive Analytics",
+                    "AI/ML — Robotics & Automation",
+                    "AI/ML — Scientific Applications",
+                    "AI/ML — Supervised/Unsupervised Learning",
+                  ],
+                },
+                {
+                  group: "Consumer Technology",
+                  items: [
+                    "Consumer Tech — Devices & Gadgets",
+                    "Consumer Tech — Gaming, Esports & Entertainment",
+                    "Consumer Tech — Mobile & Apps",
+                    "Consumer Tech — Smart Home & IoT",
+                  ],
+                },
+                {
+                  group: "Cybersecurity & Privacy",
+                  items: [
+                    "Cybersecurity — Cybersecurity Solutions",
+                    "Cybersecurity — Data Privacy",
+                    "Cybersecurity — Regulatory Compliance",
+                    "Cybersecurity — Risk Management",
+                  ],
+                },
+                {
+                  group: "Digital Infrastructure",
+                  items: [
+                    "Infrastructure — Cloud Computing",
+                    "Infrastructure — Data Centers",
+                    "Infrastructure — Networks & Connectivity",
+                    "Infrastructure — Web3 & Blockchain",
+                  ],
+                },
+                {
+                  group: "Digital Media & Content",
+                  items: [
+                    "Digital Media — Content Distribution",
+                    "Digital Media — Creator Economy",
+                    "Digital Media — Digital Marketing",
+                    "Digital Media — Social Media & Platforms",
+                  ],
+                },
+                {
+                  group: "Emerging Technology",
+                  items: [
+                    "Emerging — AR / VR / XR",
+                    "Emerging — Biotech & Digital Health",
+                    "Emerging — Quantum Computing",
+                    "Emerging — Robotics & Automation",
+                  ],
+                },
+                {
+                  group: "Enterprise Technology",
+                  items: [
+                    "Enterprise — Business Applications",
+                    "Enterprise — Digital Transformation",
+                    "Enterprise — Integration & APIs",
+                    "Enterprise — SaaS & Enterprise Software",
+                  ],
+                },
+              ];
+              return (
+                <div className="mt-6 border border-slate-200 rounded-xl p-5 bg-slate-50/60">
+                  <p className="text-sm font-semibold text-slate-800 mb-0.5">
+                    Which areas of technology interest you most?
+                  </p>
+                  <p className="text-xs text-slate-500 mb-4">Select all that apply</p>
+                  <div className="space-y-5">
+                    {aiGroups.map((g) => (
+                      <div key={g.group}>
+                        <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">{g.group}</p>
+                        <CardCheckboxGrid
+                          options={g.items}
+                          selected={aiTechSubtopics}
+                          onToggle={(v) => toggleMultiSelect(v, aiTechSubtopics, setAiTechSubtopics)}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            })()}
           </div>
         );
       }
