@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { toast } from "@/hooks/use-toast";
 import { useQuery, useMutation } from "@tanstack/react-query";
@@ -127,7 +127,7 @@ export default function QuestionnairePage() {
     },
   });
 
-  React.useEffect(() => {
+  useEffect(() => {
     if (userProfile?.questionnaire) {
       const q = userProfile.questionnaire;
 
