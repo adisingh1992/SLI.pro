@@ -1409,11 +1409,11 @@ export default function QuestionnairePage() {
   return (
     <div className="bg-slate-50 text-slate-800 antialiased min-h-screen flex flex-col">
       <main className="flex-grow flex items-start justify-center py-12 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-3xl w-full space-y-8">
+        <div className="max-w-4xl w-full space-y-8">
 
           {/* Header + Stepper */}
           <div>
-            <h1 className="text-3xl font-bold text-center text-slate-900 mb-8">SLI.pro Onboarding</h1>
+            <h1 className="text-3xl font-bold text-center text-slate-900 mb-8">Brand Assessment</h1>
 
             {/* Connected-dots stepper */}
             <nav aria-label="Progress">
