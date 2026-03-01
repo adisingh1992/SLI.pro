@@ -202,6 +202,103 @@ export default function QuestionnairePage() {
     }
   }, [userProfile]);
 
+  const buildRawAnswers = () => {
+    const p = platform ?? "early_career";
+
+    const q2Prompt = "Current LinkedIn Presence";
+    const q4Prompts: Record<PlatformType, string> = {
+      undergraduate: "How well does your online presence reflect who you are professionally? (1–5)",
+      early_career: "How well does your professional brand position you for where you want to go next? (1–5)",
+      mid_career: "How well does your professional presence reflect your current expertise and leadership? (1–5)",
+    };
+    const q5Prompts: Record<PlatformType, string> = {
+      undergraduate: "When someone asks \"what do you want to do after graduation,\" how do you feel?",
+      early_career: "When someone asks \"what do you do?,\" how confident are you?",
+      mid_career: "When someone asks \"what's your story?,\" how do you feel?",
+    };
+    const q15Prompts: Record<PlatformType, string> = {
+      undergraduate: "Beyond your next job or internship, what kind of impact do you want to have in your career?",
+      early_career: "Where do you want to be professionally in 3–5 years, and what's the gap between there and here?",
+      mid_career: "What do you want to be known for in your industry? What's preventing that from being true today?",
+    };
+
+    return {
+      Q1: {
+        question: "LinkedIn URL",
+        answer: linkedinUrl,
+      },
+      Q2: {
+        question: q2Prompt,
+        answer: linkedinPresence,
+      },
+      Q3: {
+        question: "Other Professional Online Presence",
+        answer: otherPresence,
+      },
+      Q4: {
+        question: q4Prompts[p],
+        answer: presenceSelfAssessment,
+      },
+      Q5: {
+        question: q5Prompts[p],
+        answer: narrativeDiagnostic,
+      },
+      Q6: {
+        question: "What's Hardest About Talking About Yourself? (up to 2)",
+        answer: talkingAboutYourselfHardest,
+      },
+      Q7: {
+        question: "What do you hope is different about how you present yourself professionally after completing SLI.pro?",
+        answer: desiredChange,
+      },
+      Q8: {
+        question: "Comfort Creating Professional Content (1–5)",
+        answer: contentComfort,
+      },
+      Q9: {
+        question: "What Holds You Back from creating content?",
+        answer: contentHoldBack,
+      },
+      Q10: {
+        question: "Preferred Content Format (up to 2)",
+        answer: preferredContentFormat,
+      },
+      Q11: {
+        question: "Current Network State",
+        answer: networkState,
+      },
+      Q12: {
+        question: "Networking Beliefs (up to 2)",
+        answer: networkingBeliefs,
+      },
+      Q13: {
+        question: "Topic Interests (up to 3)",
+        answer: topicInterests,
+        other: topicInterestsOther || null,
+      },
+      Q14: {
+        question: "Cross-Cutting Themes",
+        answer: crossCuttingThemes,
+      },
+      Q15: {
+        question: q15Prompts[p],
+        answer: aspiration,
+      },
+      Q16: {
+        question: "Personality / Strengths Assessments",
+        answer: personalityAssessments,
+      },
+      Q17: {
+        question: "Upload Assessment Results",
+        answer: files.map((f) => f.name),
+      },
+      Q18: {
+        question: "Is there anything else you want to share before we begin?",
+        answer: additionalInfo,
+      },
+    };
+  };
+
   const prepareFormData = (isDraft = true) => {
     return {
       isDraft,
@@ -233,6 +330,7 @@ export default function QuestionnairePage() {
       }),
       timeframe: "",
       industry: "",
+      rawAnswers: buildRawAnswers(),
     };
   };
 

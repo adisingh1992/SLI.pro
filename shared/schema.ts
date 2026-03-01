@@ -238,6 +238,7 @@ export const questionnaires = pgTable("questionnaires", {
   challenges: text("challenges"),
   interests: text("interests"),
   timeframe: text("timeframe"),
+  rawAnswers: jsonb("raw_answers"),
   isDraft: boolean("is_draft").default(false),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
