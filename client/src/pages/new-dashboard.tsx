@@ -586,6 +586,15 @@ export default function NewDashboardPage() {
 
         {currentPhase === "sessions" && (
           <div className="flex flex-col gap-6 max-w-[900px]">
+            {foundationSessions?.find(s => Number(s.sessionNumber) === 1)?.status === "available" && (
+              <div className="rounded-lg border border-amber-300 bg-amber-50 px-6 py-4 flex gap-4 items-start">
+                <span className="text-amber-500 mt-0.5 shrink-0 text-xl">⏱</span>
+                <p className="text-sm leading-relaxed text-amber-900">
+                  <span className="font-semibold">Set aside 25–35 minutes before you begin.</span>{" "}
+                  These three sessions work together — each one builds on the last. The platform needs all three to generate your personalized positioning results, so starting when you actually have the time makes a big difference. Partial completion = partial results. One sitting, start to finish, is the best move.
+                </p>
+              </div>
+            )}
             {foundationSessions?.slice(0, 3).map((session) => {
               const content = SESSION_CONTENT[session.sessionNumber - 1];
               if (!content) return null;

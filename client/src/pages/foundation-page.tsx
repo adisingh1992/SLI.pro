@@ -232,9 +232,6 @@ export default function FoundationPage() {
     }
   };
 
-  const session1 = sessions.find(s => Number(s.sessionNumber) === 1);
-  const showBeforeYouBegin = session1?.status === 'available';
-
   return (
     <div className="min-h-screen bg-background">
       <NavBar />
@@ -268,17 +265,6 @@ export default function FoundationPage() {
       {/* Full-width sessions section */}
       <div className="w-full px-6 py-12 pb-4">
         <div className="max-w-7xl mx-auto">
-          {/* Before-you-begin callout — visible only when Session 1 has not yet started */}
-          {showBeforeYouBegin && (
-            <div className="mb-8 rounded-lg border border-amber-300 bg-amber-50 dark:bg-amber-900/20 dark:border-amber-700 px-6 py-4 flex gap-4 items-start">
-              <span className="text-amber-500 mt-0.5 shrink-0 text-xl">⏱</span>
-              <p className="text-sm leading-relaxed text-amber-900 dark:text-amber-200">
-                <span className="font-semibold">Set aside 25–35 minutes before you begin.</span>{" "}
-                These three sessions work together — each one builds on the last. The platform needs all three to generate your personalized positioning results, so starting when you actually have the time makes a big difference. Partial completion = partial results. One sitting, start to finish, is the best move.
-              </p>
-            </div>
-          )}
-
           {/* Sessions Grid */}
           <div className="grid gap-8 lg:grid-cols-3 items-stretch">
             {sessions.map((session) => {
