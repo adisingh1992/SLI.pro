@@ -1,0 +1,35 @@
+Following is the bug report sent by the customer, the customer is using Safari browser and experiencing following issues, create a detailed plan to fix these issues.
+Ask clarifying questions wherever needed without assuming anything:
+
+Brand Assessment — Blank white screen after Topics of Interest
+
+After selecting topics of interest and clicking proceed, the screen goes completely blank. Nothing loads. On refresh, the assessment restarts from the beginning (answers are mostly saved but the user must click through again).
+
+Brand Assessment — Section D (Networking), Q11: Unselectable options + single select
+
+The bottom two options (“A few professionals from internships or family” and “A growing network I’m actively building”) cannot be clicked when the page first loads. After ~90 seconds they become selectable. Additionally this question needs to be multi-select, not single select. Noticeable delay (~30 seconds) when proceeding to next section.
+
+Brand Assessment — Section E (Aspirations), Q15: Text field unresponsive
+
+On page load, clicking the text field produces no cursor — the field is completely unresponsive. After a noticeable delay it becomes usable. On refresh, previously submitted text cannot be edited. Noticeable delay before “Next Section” becomes clickable.
+
+Document Vault — Résumé upload fails
+
+Selecting a résumé file and attempting to upload causes the interface to malfunction. LinkedIn PDF upload works fine. After refresh, both uploads work.
+
+--------------------------------------------------
+
+All Brand Assessment sections: Noticeable delay on “Next Section” button
+
+This appears consistently across multiple sections (confirmed on Q1, Q10, Q11, Q15). Students will interpret the delay as a broken button and click repeatedly or abandon.
+
+Registration Intake — Industries (Step 2): Single select instead of multi-select
+
+Target Industries appears to be single select. Should allow up to 3 selections.
+
+“End Session Early” button (all foundation sessions)
+Can we add a button on the right side (near the session timer) labeled “End Session Early” that triggers this warning:
+“Are you sure you want to end this session? This foundation session is most effective when completed in full. Exiting now may impact the quality of your positioning results. 
+Your progress is saved. You can return to complete this session at any time — but finishing in one sitting is strongly encouraged for the best outcome.”
+
+[Keep Going] [End Session Anyway]
