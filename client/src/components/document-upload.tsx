@@ -50,6 +50,8 @@ const DocumentUpload = () => {
   const [isUploading, setIsUploading] = useState(false);
   const [isUploadingResume, setIsUploadingResume] = useState(false);
   const [isUploadingLinkedIn, setIsUploadingLinkedIn] = useState(false);
+  const [resumeFileName, setResumeFileName] = useState<string | null>(null);
+  const [linkedInFileName, setLinkedInFileName] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const resumeInputRef = useRef<HTMLInputElement>(null);
   const linkedInInputRef = useRef<HTMLInputElement>(null);
@@ -270,6 +272,7 @@ const DocumentUpload = () => {
       if (resumeInputRef.current) {
         resumeInputRef.current.value = "";
       }
+      setResumeFileName(null);
 
       toast({
         title: "Resume Uploaded",
@@ -280,6 +283,7 @@ const DocumentUpload = () => {
       if (resumeInputRef.current) {
         resumeInputRef.current.value = "";
       }
+      setResumeFileName(null);
       toast({
         title: "Upload Failed",
         description:
@@ -340,8 +344,25 @@ const DocumentUpload = () => {
       if (linkedInInputRef.current) {
         linkedInInputRef.current.value = "";
       }
+      setLinkedInFileName(null);
+      toast({
+        title: "LinkedIn Profile Uploaded",
+        description: "Your LinkedIn profile PDF has been uploaded successfully.",
+      });
     } catch (error) {
       console.error("LinkedIn upload error:", error);
+      if (linkedInInputRef.current) {
+        linkedInInputRef.current.value = "";
+      }
+      setLinkedInFileName(null);
+      toast({
+        title: "Upload Failed",
+        description:
+          error instanceof Error
+            ? error.message
+            : "Failed to upload LinkedIn profile. Please try again.",
+        variant: "destructive",
+      });
     } finally {
       setIsUploadingLinkedIn(false);
     }
@@ -469,19 +490,33 @@ const DocumentUpload = () => {
                 </div>
               ) : null}
 
-              <div className="flex items-center space-x-3">
-                <Input
-                  type="file"
-                  accept="application/pdf"
-                  ref={resumeInputRef}
-                  className="cursor-pointer flex-1"
-                />
+              <input
+                type="file"
+                accept="application/pdf"
+                ref={resumeInputRef}
+                className="hidden"
+                onChange={(e) => setResumeFileName(e.target.files?.[0]?.name ?? null)}
+              />
+              <div className="flex items-center gap-3 flex-wrap">
                 <Button
-                  onClick={handleResumeUpload}
+                  type="button"
+                  onClick={() => resumeInputRef.current?.click()}
                   disabled={isUploadingResume}
                   className="shrink-0"
                 >
-                  {isUploadingResume ? "Uploading..." : "Click here to upload"}
+                  Choose File
+                </Button>
+                {resumeFileName && (
+                  <span className="text-sm text-gray-700 truncate max-w-xs">{resumeFileName}</span>
+                )}
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={handleResumeUpload}
+                  disabled={isUploadingResume || !resumeFileName}
+                  className="shrink-0"
+                >
+                  {isUploadingResume ? "Uploading..." : "Upload"}
                 </Button>
               </div>
             </div>
@@ -538,21 +573,33 @@ const DocumentUpload = () => {
                 </div>
               ) : null}
 
-              <div className="flex items-center space-x-3">
-                <Input
-                  type="file"
-                  accept="application/pdf"
-                  ref={linkedInInputRef}
-                  className="cursor-pointer flex-1"
-                />
+              <input
+                type="file"
+                accept="application/pdf"
+                ref={linkedInInputRef}
+                className="hidden"
+                onChange={(e) => setLinkedInFileName(e.target.files?.[0]?.name ?? null)}
+              />
+              <div className="flex items-center gap-3 flex-wrap">
                 <Button
-                  onClick={handleLinkedInUpload}
+                  type="button"
+                  onClick={() => linkedInInputRef.current?.click()}
                   disabled={isUploadingLinkedIn}
                   className="shrink-0"
                 >
-                  {isUploadingLinkedIn
-                    ? "Uploading..."
-                    : "Click here to upload"}
+                  Choose File
+                </Button>
+                {linkedInFileName && (
+                  <span className="text-sm text-gray-700 truncate max-w-xs">{linkedInFileName}</span>
+                )}
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={handleLinkedInUpload}
+                  disabled={isUploadingLinkedIn || !linkedInFileName}
+                  className="shrink-0"
+                >
+                  {isUploadingLinkedIn ? "Uploading..." : "Upload"}
                 </Button>
               </div>
             </div>
