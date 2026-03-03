@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { toast } from "@/hooks/use-toast";
 import { useQuery, useMutation } from "@tanstack/react-query";
@@ -60,7 +60,7 @@ export default function QuestionnairePage() {
   const [preferredContentFormat, setPreferredContentFormat] = useState<
     string[]
   >([]);
-  const [networkState, setNetworkState] = useState("");
+  const [networkState, setNetworkState] = useState<string[]>([]);
   const [networkingBeliefs, setNetworkingBeliefs] = useState<string[]>([]);
   const [topicInterests, setTopicInterests] = useState<string[]>([]);
   const [topicInterestsOther, setTopicInterestsOther] = useState("");
@@ -76,6 +76,8 @@ export default function QuestionnairePage() {
   const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved">(
     "idle",
   );
+
+  const profileInitializedRef = useRef(false);
 
   const { data: userProfile, isLoading: profileLoading } =
     useQuery<UserProfile>({
@@ -129,7 +131,8 @@ export default function QuestionnairePage() {
   });
 
   useEffect(() => {
-    if (userProfile?.questionnaire) {
+    if (userProfile?.questionnaire && !profileInitializedRef.current) {
+      profileInitializedRef.current = true;
       const q = userProfile.questionnaire;
 
       if (q.background) setLinkedinUrl(q.background);
@@ -139,7 +142,10 @@ export default function QuestionnairePage() {
           const goalsData = JSON.parse(q.goals);
           if (goalsData.linkedinPresence) setLinkedinPresence(goalsData.linkedinPresence);
           if (goalsData.otherPresence) setOtherPresence(goalsData.otherPresence);
-          if (goalsData.networkState) setNetworkState(goalsData.networkState);
+          if (goalsData.networkState) {
+            const ns = goalsData.networkState;
+            setNetworkState(Array.isArray(ns) ? ns : [ns]);
+          }
           if (goalsData.networkingBeliefs) setNetworkingBeliefs(goalsData.networkingBeliefs);
         }
       } catch {}
@@ -474,7 +480,7 @@ export default function QuestionnairePage() {
         return valid;
       }
       case 11: {
-        const valid = networkState !== "";
+        const valid = networkState.length >= 1;
         if (!valid)
           toast({
             title: "Required Field",
@@ -550,18 +556,18 @@ export default function QuestionnairePage() {
     }
   };
 
-  const nextStep = async () => {
+  const nextStep = () => {
     if (!validateCurrentStep()) return;
-    await autoSave();
+    autoSave();
     if (currentStep < TOTAL_STEPS) {
       setCurrentStep(currentStep + 1);
       scrollToTop();
     }
   };
 
-  const prevStep = async () => {
+  const prevStep = () => {
     if (currentStep > 1) {
-      await autoSave();
+      autoSave();
       setCurrentStep(currentStep - 1);
       scrollToTop();
     }
@@ -1120,13 +1126,20 @@ export default function QuestionnairePage() {
         return (
           <div className="space-y-4">
             <fieldset>
-              <legend className="text-base font-semibold leading-6 text-slate-900">
-                Q11 — Current Network State <span className="text-red-500">*</span>
-              </legend>
+              <div className="flex justify-between items-end">
+                <legend className="text-base font-semibold leading-6 text-slate-900">
+                  Q11 — Current Network State <span className="text-red-500">*</span>
+                </legend>
+                <span className="text-xs font-medium bg-slate-100 text-slate-600 py-1 px-2 rounded-md shrink-0 ml-3">Select all that apply</span>
+              </div>
               <p className="text-sm text-slate-500 mt-1 mb-1">
                 Which best describes the current state of your professional network?
               </p>
-              <CardRadioGroup options={options} value={networkState} onChange={setNetworkState} />
+              <CardCheckboxGrid
+                options={options}
+                selected={networkState}
+                onToggle={(v) => toggleMultiSelect(v, networkState, setNetworkState)}
+              />
             </fieldset>
           </div>
         );
@@ -1490,7 +1503,18 @@ export default function QuestionnairePage() {
         );
 
       default:
-        return null;
+        return (
+          <div className="text-center py-8 text-slate-500">
+            <p className="text-sm">Something went wrong loading this section.</p>
+            <button
+              type="button"
+              onClick={prevStep}
+              className="mt-4 text-sm font-semibold text-[#bed6d1] hover:underline"
+            >
+              Go back
+            </button>
+          </div>
+        );
     }
   };
 

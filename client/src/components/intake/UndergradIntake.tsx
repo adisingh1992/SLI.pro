@@ -175,7 +175,7 @@ export default function UndergradIntake({
   const [simultaneous_major_text, setSimultaneousMajorText] = useState(responses.simultaneous_major_text || "");
   const [academic_programs, setAcademicPrograms] = useState<string[]>(responses.academic_programs || []);
 
-  const [target_industries, setTargetIndustries] = useState(responses.target_industries || "");
+  const [target_industries, setTargetIndustries] = useState<string[]>(Array.isArray(responses.target_industries) ? responses.target_industries : responses.target_industries ? [responses.target_industries] : []);
   const [target_functions, setTargetFunctions] = useState(responses.target_functions || "");
   const [professional_experience, setProfessionalExperience] = useState<string[]>(responses.professional_experience || []);
   const [immediate_priorities, setImmediatePriorities] = useState<string[]>(responses.immediate_priorities || []);
@@ -200,7 +200,7 @@ export default function UndergradIntake({
     setMajor(responses.major || "");
     setSimultaneousMajorText(responses.simultaneous_major_text || "");
     setAcademicPrograms(responses.academic_programs || []);
-    setTargetIndustries(responses.target_industries || "");
+    setTargetIndustries(Array.isArray(responses.target_industries) ? responses.target_industries : responses.target_industries ? [responses.target_industries] : []);
     setTargetFunctions(responses.target_functions || "");
     setProfessionalExperience(responses.professional_experience || []);
     setImmediatePriorities(responses.immediate_priorities || []);
@@ -231,7 +231,7 @@ export default function UndergradIntake({
 
   const validateStage2 = () => {
     const errs: Record<string, string> = {};
-    if (!target_industries) errs.target_industries = "Please select an industry";
+    if (target_industries.length === 0) errs.target_industries = "Please select at least one industry";
     if (!target_functions) errs.target_functions = "Please select a function";
     if (professional_experience.length === 0) errs.professional_experience = "Please select at least one option";
     if (immediate_priorities.length === 0) errs.immediate_priorities = "Please select at least one priority";
@@ -412,12 +412,15 @@ export default function UndergradIntake({
               required
               error={errors.target_industries}
             >
-              <Combobox
-                options={INDUSTRIES}
-                value={target_industries}
-                onValueChange={setTargetIndustries}
-                placeholder="Select an industry..."
-              />
+              <p className="text-sm text-[var(--intake-aqua-dark)] mb-2">Select up to 3</p>
+              <div className="mt-2">
+                <MultiSelectPills
+                  options={INDUSTRIES}
+                  selected={target_industries}
+                  onChange={setTargetIndustries}
+                  max={3}
+                />
+              </div>
             </SectionBlock>
 
             <SectionBlock

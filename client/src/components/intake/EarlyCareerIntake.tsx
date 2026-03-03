@@ -165,7 +165,7 @@ export default function EarlyCareerIntake({
   const [current_title, setCurrentTitle] = useState(responses.current_title || "");
   const [current_company, setCurrentCompany] = useState(responses.current_company || "");
   const [years_experience, setYearsExperience] = useState(responses.years_experience || "");
-  const [target_industries, setTargetIndustries] = useState(responses.target_industries || "");
+  const [target_industries, setTargetIndustries] = useState<string[]>(Array.isArray(responses.target_industries) ? responses.target_industries : responses.target_industries ? [responses.target_industries] : []);
   const [target_functions, setTargetFunctions] = useState(responses.target_functions || "");
 
   const [career_focus, setCareerFocus] = useState(responses.career_focus || "");
@@ -193,7 +193,7 @@ export default function EarlyCareerIntake({
     setCurrentTitle(responses.current_title || "");
     setCurrentCompany(responses.current_company || "");
     setYearsExperience(responses.years_experience || "");
-    setTargetIndustries(responses.target_industries || "");
+    setTargetIndustries(Array.isArray(responses.target_industries) ? responses.target_industries : responses.target_industries ? [responses.target_industries] : []);
     setTargetFunctions(responses.target_functions || "");
     setCareerFocus(responses.career_focus || "");
     setImmediatePriorities(responses.immediate_priorities || []);
@@ -216,7 +216,7 @@ export default function EarlyCareerIntake({
     if (!current_title.trim()) errs.current_title = "Job title is required";
     if (!current_company.trim()) errs.current_company = "Company is required";
     if (!years_experience) errs.years_experience = "Please select your years of experience";
-    if (!target_industries) errs.target_industries = "Please select an industry";
+    if (target_industries.length === 0) errs.target_industries = "Please select at least one industry";
     if (!target_functions) errs.target_functions = "Please select a function";
     return errs;
   };
@@ -379,12 +379,15 @@ export default function EarlyCareerIntake({
             </SectionBlock>
 
             <SectionBlock title="Target Industries" required error={errors.target_industries}>
-              <Combobox
-                options={INDUSTRIES}
-                value={target_industries}
-                onValueChange={setTargetIndustries}
-                placeholder="Select an industry..."
-              />
+              <p className="text-sm text-[var(--intake-aqua-dark)] mb-2">Select up to 3</p>
+              <div className="mt-2">
+                <MultiSelectPills
+                  options={INDUSTRIES}
+                  selected={target_industries}
+                  onChange={setTargetIndustries}
+                  max={3}
+                />
+              </div>
             </SectionBlock>
 
             <SectionBlock title="Target Functions" required error={errors.target_functions}>

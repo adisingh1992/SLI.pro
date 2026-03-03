@@ -167,7 +167,7 @@ export default function MidCareerIntake({
   const [years_experience, setYearsExperience] = useState(responses.years_experience || "");
   const [leadership_level, setLeadershipLevel] = useState(responses.leadership_level || "");
 
-  const [primary_industry, setPrimaryIndustry] = useState(responses.primary_industry || "");
+  const [primary_industry, setPrimaryIndustry] = useState<string[]>(Array.isArray(responses.primary_industry) ? responses.primary_industry : responses.primary_industry ? [responses.primary_industry] : []);
   const [functional_expertise, setFunctionalExpertise] = useState(responses.functional_expertise || "");
   const [current_situation, setCurrentSituation] = useState(responses.current_situation || "");
   const [mid_career_priorities, setMidCareerPriorities] = useState<string[]>(responses.mid_career_priorities || []);
@@ -192,7 +192,7 @@ export default function MidCareerIntake({
     setCurrentCompany(responses.current_company || "");
     setYearsExperience(responses.years_experience || "");
     setLeadershipLevel(responses.leadership_level || "");
-    setPrimaryIndustry(responses.primary_industry || "");
+    setPrimaryIndustry(Array.isArray(responses.primary_industry) ? responses.primary_industry : responses.primary_industry ? [responses.primary_industry] : []);
     setFunctionalExpertise(responses.functional_expertise || "");
     setCurrentSituation(responses.current_situation || "");
     setMidCareerPriorities(responses.mid_career_priorities || []);
@@ -218,7 +218,7 @@ export default function MidCareerIntake({
 
   const validateStage2 = () => {
     const errs: Record<string, string> = {};
-    if (!primary_industry) errs.primary_industry = "Please select your target industry";
+    if (primary_industry.length === 0) errs.primary_industry = "Please select at least one industry";
     if (!functional_expertise) errs.functional_expertise = "Please select your target function";
     if (!current_situation) errs.current_situation = "Please select your current situation";
     if (mid_career_priorities.length === 0) errs.mid_career_priorities = "Please select at least one priority";
@@ -393,17 +393,16 @@ export default function MidCareerIntake({
           <>
             <SectionBlock
               title="Target Industries"
-              description="If you have expertise across multiple industries, select the one most relevant to your current positioning goals"
+              description="Select up to 3 industries most relevant to your current positioning goals"
               required
               error={errors.primary_industry}
             >
-              <div className="mt-1">
-                <Combobox
+              <div className="mt-2">
+                <MultiSelectPills
                   options={INDUSTRIES}
-                  value={primary_industry}
-                  onValueChange={setPrimaryIndustry}
-                  placeholder="Search for your target industry..."
-                  emptyMessage="No matching industry found."
+                  selected={primary_industry}
+                  onChange={setPrimaryIndustry}
+                  max={3}
                 />
               </div>
             </SectionBlock>

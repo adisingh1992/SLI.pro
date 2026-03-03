@@ -8,7 +8,15 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, Send, ArrowLeft, Lock, CheckCircle, MessageSquare, AlertCircle, FileText } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Loader2, Send, ArrowLeft, Lock, CheckCircle, MessageSquare, AlertCircle, FileText, LogOut } from "lucide-react";
 import VoiceMicButton from "@/components/VoiceMicButton";
 import { useVoiceRecording } from "@/hooks/use-voice-recording";
 import { useToast } from "@/hooks/use-toast";
@@ -35,6 +43,7 @@ export default function FoundationSessionChatPage() {
   const [streamingResponse, setStreamingResponse] = useState('');
   const [optimisticMessage, setOptimisticMessage] = useState<FoundationSessionMessage | null>(null);
   const [allowContinue, setAllowContinue] = useState(false);
+  const [showEndSessionDialog, setShowEndSessionDialog] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messageInputRef = useRef<HTMLTextAreaElement>(null);
   const messageCountBeforeStreamRef = useRef<number>(0);
@@ -575,6 +584,17 @@ export default function FoundationSessionChatPage() {
                   sessionNumber={sessionNumber}
                   initialTimerElapsed={session.timerElapsed || 0}
                 />
+                {session.status === 'in_progress' && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="w-full text-muted-foreground hover:text-destructive hover:border-destructive"
+                    onClick={() => setShowEndSessionDialog(true)}
+                  >
+                    <LogOut className="h-3.5 w-3.5 mr-2" />
+                    End Session Early
+                  </Button>
+                )}
               </div>
             )}
 
@@ -635,6 +655,38 @@ export default function FoundationSessionChatPage() {
           </div>
         </div>
       </div>
+
+      {/* End Session Early Dialog */}
+      <Dialog open={showEndSessionDialog} onOpenChange={setShowEndSessionDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>End this session early?</DialogTitle>
+            <DialogDescription className="pt-2 leading-relaxed">
+              This foundation session is most effective when completed in full. Exiting now may impact the quality of your positioning results.
+              <br /><br />
+              Your progress is saved. You can return to complete this session at any time — but finishing in one sitting is strongly encouraged for the best outcome.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="flex-col-reverse sm:flex-row gap-2 sm:gap-0">
+            <Button
+              variant="outline"
+              onClick={() => setShowEndSessionDialog(false)}
+              className="sm:mr-2"
+            >
+              Keep Going
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={() => {
+                setShowEndSessionDialog(false);
+                navigate('/');
+              }}
+            >
+              End Session Anyway
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

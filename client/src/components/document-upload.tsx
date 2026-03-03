@@ -270,8 +270,24 @@ const DocumentUpload = () => {
       if (resumeInputRef.current) {
         resumeInputRef.current.value = "";
       }
+
+      toast({
+        title: "Resume Uploaded",
+        description: "Your resume has been uploaded successfully.",
+      });
     } catch (error) {
       console.error("Resume upload error:", error);
+      if (resumeInputRef.current) {
+        resumeInputRef.current.value = "";
+      }
+      toast({
+        title: "Upload Failed",
+        description:
+          error instanceof Error
+            ? error.message
+            : "Failed to upload resume. Please try again.",
+        variant: "destructive",
+      });
     } finally {
       setIsUploadingResume(false);
     }
