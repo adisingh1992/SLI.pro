@@ -154,6 +154,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Onboarding route: save professionalStatus + discoverySource for LinkedIn users
+  app.patch("/api/user/onboarding", isAuthenticated, async (req, res, next) => {
+    try {
+      const { professionalStatus, discoverySource, discoverySourceOther } = req.body;
+
+      if (!professionalStatus || !discoverySource) {
+        return res.status(400).json({ message: "professionalStatus and discoverySource are required" });
+      }
+
+      const updatedUser = await storage.updateUser(req.user.id, {
+        professionalStatus,
+        discoverySource,
+        ...(discoverySourceOther ? { discoverySourceOther } : {}),
+      });
+
+      res.json(updatedUser);
+    } catch (error) {
+      next(error);
+    }
+  });
+
   // Experience routes
   app.get("/api/experiences", isAuthenticated, async (req, res, next) => {
     try {
