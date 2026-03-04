@@ -6,6 +6,7 @@ import {
   ArrowLeft,
   Calendar,
   Download,
+  ExternalLink,
   File,
   FileText,
   Loader2,
@@ -181,6 +182,104 @@ export default function UserDetailPage() {
             : current;
         })
       : null;
+
+  // ── Brand Assessment helpers ──────────────────────────────────────────────
+  type RawEntry = {
+    question: string;
+    answer: unknown;
+    other?: string | null;
+    aiSubtopics?: string[] | null;
+  };
+  type RawAnswers = Record<string, RawEntry>;
+
+  const rawAnswers = (userData.questionnaire?.rawAnswers ?? {}) as RawAnswers;
+
+  const renderAnswer = (answer: unknown, isUrl = false) => {
+    if (answer === null || answer === undefined) {
+      return <span className="text-muted-foreground italic text-sm">Not answered</span>;
+    }
+    if (typeof answer === "string" && answer.trim() === "") {
+      return <span className="text-muted-foreground italic text-sm">Not answered</span>;
+    }
+    if (Array.isArray(answer) && answer.length === 0) {
+      return <span className="text-muted-foreground italic text-sm">Not answered</span>;
+    }
+    if (typeof answer === "number") {
+      return (
+        <div className="flex items-center gap-1.5">
+          {[1, 2, 3, 4, 5].map((i) => (
+            <div
+              key={i}
+              className={`h-2 w-7 rounded-full ${i <= answer ? "bg-primary" : "bg-secondary"}`}
+            />
+          ))}
+          <span className="text-sm text-muted-foreground ml-1">{answer} / 5</span>
+        </div>
+      );
+    }
+    if (typeof answer === "string" && (isUrl || answer.includes("linkedin.com") || answer.startsWith("http"))) {
+      const href = answer.startsWith("http") ? answer : `https://${answer}`;
+      return (
+        <a href={href} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-sm text-primary hover:underline break-all">
+          {answer}
+          <ExternalLink className="h-3 w-3 shrink-0" />
+        </a>
+      );
+    }
+    if (typeof answer === "string") {
+      return <p className="text-sm leading-relaxed">{answer}</p>;
+    }
+    if (Array.isArray(answer)) {
+      return (
+        <div className="flex flex-wrap gap-1.5">
+          {(answer as string[]).map((item, i) => (
+            <span key={i} className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-secondary text-secondary-foreground">
+              {item}
+            </span>
+          ))}
+        </div>
+      );
+    }
+    return <span className="text-sm">{String(answer)}</span>;
+  };
+
+  const QuestionRow = ({ qKey, isUrl = false }: { qKey: string; isUrl?: boolean }) => {
+    const entry = rawAnswers[qKey];
+    if (!entry) return null;
+    return (
+      <div className="space-y-1.5">
+        <p className="text-xs font-medium text-muted-foreground leading-snug">{entry.question}</p>
+        {renderAnswer(entry.answer, isUrl)}
+        {entry.aiSubtopics && entry.aiSubtopics.length > 0 && (
+          <div className="mt-1.5 space-y-1">
+            <p className="text-[11px] font-medium text-muted-foreground/70">AI Suggested Subtopics</p>
+            <div className="flex flex-wrap gap-1">
+              {entry.aiSubtopics.map((t, i) => (
+                <span key={i} className="inline-flex items-center px-2 py-0.5 rounded-full text-xs bg-primary/10 text-primary">
+                  {t}
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  const QuestionGroup = ({ title, keys, urlKeys = [] }: { title: string; keys: string[]; urlKeys?: string[] }) => (
+    <div className="space-y-4">
+      <div className="flex items-center gap-2">
+        <h3 className="text-sm font-semibold text-foreground">{title}</h3>
+        <div className="flex-1 h-px bg-border" />
+      </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-5">
+        {keys.map((k) => (
+          <QuestionRow key={k} qKey={k} isUrl={urlKeys.includes(k)} />
+        ))}
+      </div>
+    </div>
+  );
+  // ── end helpers ───────────────────────────────────────────────────────────
 
   return (
     <AdminLayout>
@@ -400,15 +499,15 @@ export default function UserDetailPage() {
           </Card>
         </div>
 
-        {/* Section 3: Questionnaire Data */}
+        {/* Section 3: Brand Assessment */}
         <Card>
           <CardHeader className="pb-3">
             <CardTitle className="flex items-center text-xl">
               <FileText className="mr-2 h-5 w-5" />
-              Questionnaire Data
+              Brand Assessment
             </CardTitle>
             <CardDescription>
-              User's responses to the career profile questionnaire
+              User's responses to the brand assessment questionnaire
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -421,71 +520,40 @@ export default function UserDetailPage() {
                 </p>
               </div>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-6">
-                <div className="rounded-lg bg-secondary/20 p-4">
-                  <h3 className="text-base font-medium mb-2 text-primary">
-                    Industry
-                  </h3>
-                  <p className="text-sm">
-                    {userData.questionnaire.industry || "Not specified"}
-                  </p>
-                </div>
-
-                <div className="rounded-lg bg-secondary/20 p-4">
-                  <h3 className="text-base font-medium mb-2 text-primary">
-                    Background
-                  </h3>
-                  <p className="text-sm">
-                    {userData.questionnaire.background || "Not specified"}
-                  </p>
-                </div>
-
-                <div className="rounded-lg bg-secondary/20 p-4">
-                  <h3 className="text-base font-medium mb-2 text-primary">
-                    Goals
-                  </h3>
-                  <p className="text-sm">
-                    {userData.questionnaire.goals || "Not specified"}
-                  </p>
-                </div>
-
-                <div className="rounded-lg bg-secondary/20 p-4">
-                  <h3 className="text-base font-medium mb-2 text-primary">
-                    Aspirations
-                  </h3>
-                  <p className="text-sm">
-                    {userData.questionnaire.aspirations || "Not specified"}
-                  </p>
-                </div>
-
-                <div className="rounded-lg bg-secondary/20 p-4">
-                  <h3 className="text-base font-medium mb-2 text-primary">
-                    Challenges
-                  </h3>
-                  <p className="text-sm">
-                    {userData.questionnaire.challenges || "Not specified"}
-                  </p>
-                </div>
-
-                <div className="rounded-lg bg-secondary/20 p-4">
-                  <h3 className="text-base font-medium mb-2 text-primary">
-                    Interests
-                  </h3>
-                  <p className="text-sm">
-                    {userData.questionnaire.interests || "Not specified"}
-                  </p>
-                </div>
-
-                {userData.questionnaire.timeframe && (
-                  <div className="rounded-lg bg-secondary/20 p-4 md:col-span-2">
-                    <h3 className="text-base font-medium mb-2 text-primary">
-                      Timeframe
-                    </h3>
-                    <p className="text-sm">
-                      {userData.questionnaire.timeframe}
-                    </p>
-                  </div>
-                )}
+              <div className="space-y-8">
+                <QuestionGroup
+                  title="LinkedIn & Online Presence"
+                  keys={["Q1", "Q2", "Q3", "Q4"]}
+                  urlKeys={["Q1"]}
+                />
+                <QuestionGroup
+                  title="Self-Presentation"
+                  keys={["Q5", "Q6", "Q7"]}
+                />
+                <QuestionGroup
+                  title="Content Creation"
+                  keys={["Q8", "Q9", "Q10"]}
+                />
+                <QuestionGroup
+                  title="Networking"
+                  keys={["Q11", "Q12"]}
+                />
+                <QuestionGroup
+                  title="Topics & Interests"
+                  keys={["Q13", "Q14"]}
+                />
+                <QuestionGroup
+                  title="Career Vision"
+                  keys={["Q15"]}
+                />
+                <QuestionGroup
+                  title="Assessments"
+                  keys={["Q16", "Q17"]}
+                />
+                <QuestionGroup
+                  title="Additional Notes"
+                  keys={["Q18"]}
+                />
               </div>
             )}
           </CardContent>
