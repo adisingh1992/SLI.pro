@@ -55,6 +55,7 @@ export const users = pgTable("users", {
   professionalStatus: professionalStatusEnum("professional_status"),
   discoverySource: discoverySourceEnum("discovery_source"),
   discoverySourceOther: text("discovery_source_other"),
+  createdAt: timestamp("created_at").defaultNow(),
 });
 
 export const experiences = pgTable("experiences", {

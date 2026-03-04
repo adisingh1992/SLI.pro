@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/use-auth";
 import { useLocation } from "wouter";
-import { Eye, Loader2, Search, UserCircle } from "lucide-react";
+import { Eye, Loader2, Search, UserCircle, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -26,17 +26,55 @@ import AdminLayout from "./layout";
 import { User } from "@shared/schema";
 
 type UserWithoutPassword = Omit<User, "password">;
-// Extended user type with status field
-type UserWithStatus = UserWithoutPassword & { status?: string };
+type UserWithStatus = UserWithoutPassword & {
+  status?: string;
+  school?: string | null;
+  academicProgram?: string | null;
+};
+
+type SortColumn =
+  | "name"
+  | "email"
+  | "status"
+  | "careerStatus"
+  | "school"
+  | "academicProgram"
+  | "registeredAt"
+  | "lastLoginAt";
+type SortDirection = "asc" | "desc";
+
+const CAREER_STATUS_LABELS: Record<string, string> = {
+  undergraduate_or_recent_grad: "Undergrad / Recent Grad",
+  early_career: "Early Career",
+  mid_career_or_senior: "Mid-Career / Senior",
+  career_break_or_transition: "Career Break / Transition",
+};
+
+function formatDate(value: string | Date | null | undefined) {
+  if (!value) return "—";
+  return new Date(value).toLocaleDateString("en-US", {
+    month: "2-digit",
+    day: "2-digit",
+    year: "numeric",
+  });
+}
+
+function SortIcon({ column, sortColumn, sortDirection }: { column: SortColumn; sortColumn: SortColumn | null; sortDirection: SortDirection }) {
+  if (sortColumn !== column) return <ArrowUpDown className="ml-1 h-3 w-3 inline opacity-40" />;
+  return sortDirection === "asc"
+    ? <ArrowUp className="ml-1 h-3 w-3 inline text-primary" />
+    : <ArrowDown className="ml-1 h-3 w-3 inline text-primary" />;
+}
 
 export default function UsersPage() {
   const { user, isLoading: authLoading } = useAuth();
   const [_, navigate] = useLocation();
   const [searchQuery, setSearchQuery] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
+  const [sortColumn, setSortColumn] = useState<SortColumn | null>(null);
+  const [sortDirection, setSortDirection] = useState<SortDirection>("asc");
   const pageSize = 10;
 
-  // Fetch all users
   const {
     data: usersData,
     isLoading: isUsersLoading,
@@ -47,38 +85,93 @@ export default function UsersPage() {
     enabled: !!user?.isAdmin,
   });
 
-  // Redirect if not admin
   useEffect(() => {
     if (!authLoading && (!user || !user.isAdmin)) {
       navigate("/admin/login");
     }
   }, [user, authLoading, navigate]);
 
-  // Filter users based on search query
   const filteredUsers = usersData?.filter(
-    (user) =>
-      user.username.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      user.firstName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      user.lastName.toLowerCase().includes(searchQuery.toLowerCase())
+    (u) =>
+      u.username.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      u.firstName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      u.lastName.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  // Paginate users
-  const paginatedUsers = filteredUsers?.slice(
+  const sortedUsers = (() => {
+    if (!filteredUsers || !sortColumn) return filteredUsers;
+    return [...filteredUsers].sort((a, b) => {
+      let valA: string | number | null = null;
+      let valB: string | number | null = null;
+
+      switch (sortColumn) {
+        case "name":
+          valA = `${a.firstName} ${a.lastName}`.toLowerCase();
+          valB = `${b.firstName} ${b.lastName}`.toLowerCase();
+          break;
+        case "email":
+          valA = a.username.toLowerCase();
+          valB = b.username.toLowerCase();
+          break;
+        case "status":
+          valA = (a.status ?? "Registered").toLowerCase();
+          valB = (b.status ?? "Registered").toLowerCase();
+          break;
+        case "careerStatus":
+          valA = (CAREER_STATUS_LABELS[a.professionalStatus ?? ""] ?? "").toLowerCase();
+          valB = (CAREER_STATUS_LABELS[b.professionalStatus ?? ""] ?? "").toLowerCase();
+          break;
+        case "school":
+          valA = (a.school ?? "").toLowerCase();
+          valB = (b.school ?? "").toLowerCase();
+          break;
+        case "academicProgram":
+          valA = (a.academicProgram ?? "").toLowerCase();
+          valB = (b.academicProgram ?? "").toLowerCase();
+          break;
+        case "registeredAt":
+          valA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+          valB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+          break;
+        case "lastLoginAt":
+          valA = a.lastLoginAt ? new Date(a.lastLoginAt).getTime() : 0;
+          valB = b.lastLoginAt ? new Date(b.lastLoginAt).getTime() : 0;
+          break;
+      }
+
+      if (valA === null || valA === "") return 1;
+      if (valB === null || valB === "") return -1;
+      if (valA < valB) return sortDirection === "asc" ? -1 : 1;
+      if (valA > valB) return sortDirection === "asc" ? 1 : -1;
+      return 0;
+    });
+  })();
+
+  const paginatedUsers = sortedUsers?.slice(
     (currentPage - 1) * pageSize,
     currentPage * pageSize
   );
 
-  // Calculate total pages
-  const totalPages = filteredUsers
-    ? Math.ceil(filteredUsers.length / pageSize)
-    : 0;
+  const totalPages = sortedUsers ? Math.ceil(sortedUsers.length / pageSize) : 0;
 
-  // Handle page change
   const handlePageChange = (page: number) => {
-    if (page > 0 && page <= totalPages) {
-      setCurrentPage(page);
-    }
+    if (page > 0 && page <= totalPages) setCurrentPage(page);
   };
+
+  const handleSort = (column: SortColumn) => {
+    if (sortColumn === column) {
+      setSortDirection((d) => (d === "asc" ? "desc" : "asc"));
+    } else {
+      setSortColumn(column);
+      setSortDirection("asc");
+    }
+    setCurrentPage(1);
+  };
+
+  const thProps = (column: SortColumn) => ({
+    className: "cursor-pointer select-none whitespace-nowrap text-xs py-2 px-2",
+    onClick: () => handleSort(column),
+  });
 
   if (authLoading) {
     return (
@@ -88,20 +181,18 @@ export default function UsersPage() {
     );
   }
 
-  if (!user?.isAdmin) {
-    return null; // Will redirect in useEffect
-  }
+  if (!user?.isAdmin) return null;
 
   return (
     <AdminLayout>
-      <div className="p-6 space-y-6">
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+      <div className="p-6 space-y-4">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div>
-            <h1 className="text-3xl font-bold">Users</h1>
-            <p className="text-sm text-gray-500 mt-1">Showing all non-admin users</p>
+            <h1 className="text-2xl font-bold">Users</h1>
+            <p className="text-xs text-gray-500 mt-0.5">Showing all non-admin users</p>
           </div>
-          <div className="w-full sm:w-auto flex items-center gap-2 sm:min-w-[300px]">
-            <Search className="h-4 w-4 text-gray-500" />
+          <div className="w-full sm:w-auto flex items-center gap-2 sm:min-w-[280px]">
+            <Search className="h-4 w-4 text-gray-400 shrink-0" />
             <Input
               placeholder="Search users..."
               value={searchQuery}
@@ -109,7 +200,7 @@ export default function UsersPage() {
                 setSearchQuery(e.target.value);
                 setCurrentPage(1);
               }}
-              className="flex-1"
+              className="flex-1 h-8 text-sm"
             />
           </div>
         </div>
@@ -119,73 +210,104 @@ export default function UsersPage() {
             <Loader2 className="h-8 w-8 animate-spin text-primary" />
           </div>
         ) : usersError ? (
-          <div className="text-center p-8 text-red-500">
+          <div className="text-center p-8 text-red-500 text-sm">
             Error loading users. Please try again.
           </div>
         ) : !paginatedUsers?.length ? (
           <div className="text-center p-8 text-gray-500">
-            <UserCircle className="h-16 w-16 mx-auto mb-4 text-gray-400" />
-            {searchQuery ? "No users match your search." : "No users found."}
+            <UserCircle className="h-12 w-12 mx-auto mb-3 text-gray-400" />
+            <p className="text-sm">{searchQuery ? "No users match your search." : "No users found."}</p>
           </div>
         ) : (
           <>
-            <div className="bg-white border rounded-md shadow-sm overflow-hidden">
+            <div className="bg-white border rounded-md shadow-sm overflow-x-auto">
               <Table>
                 <TableHeader>
-                  <TableRow>
-                    <TableHead>ID</TableHead>
-                    <TableHead>Email</TableHead>
-                    <TableHead>Name</TableHead>
-                    <TableHead>Phone</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Last Login At</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
+                  <TableRow className="hover:bg-transparent">
+                    <TableHead {...thProps("name")}>
+                      Name <SortIcon column="name" sortColumn={sortColumn} sortDirection={sortDirection} />
+                    </TableHead>
+                    <TableHead {...thProps("email")}>
+                      Email <SortIcon column="email" sortColumn={sortColumn} sortDirection={sortDirection} />
+                    </TableHead>
+                    <TableHead className="text-xs py-2 px-2 whitespace-nowrap">Phone</TableHead>
+                    <TableHead {...thProps("status")}>
+                      Status <SortIcon column="status" sortColumn={sortColumn} sortDirection={sortDirection} />
+                    </TableHead>
+                    <TableHead {...thProps("careerStatus")}>
+                      Career Status <SortIcon column="careerStatus" sortColumn={sortColumn} sortDirection={sortDirection} />
+                    </TableHead>
+                    <TableHead {...thProps("school")}>
+                      School <SortIcon column="school" sortColumn={sortColumn} sortDirection={sortDirection} />
+                    </TableHead>
+                    <TableHead {...thProps("academicProgram")}>
+                      Program <SortIcon column="academicProgram" sortColumn={sortColumn} sortDirection={sortDirection} />
+                    </TableHead>
+                    <TableHead {...thProps("registeredAt")}>
+                      Registered <SortIcon column="registeredAt" sortColumn={sortColumn} sortDirection={sortDirection} />
+                    </TableHead>
+                    <TableHead {...thProps("lastLoginAt")}>
+                      Last Login <SortIcon column="lastLoginAt" sortColumn={sortColumn} sortDirection={sortDirection} />
+                    </TableHead>
+                    <TableHead className="text-right text-xs py-2 px-2">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {paginatedUsers.map((user: UserWithStatus) => (
-                    <TableRow key={user.id}>
-                      <TableCell className="font-medium">{user.id}</TableCell>
-                      <TableCell>{user.username}</TableCell>
-                      <TableCell>
-                        {user.firstName} {user.lastName}
+                  {paginatedUsers.map((u: UserWithStatus) => (
+                    <TableRow key={u.id} className="text-xs">
+                      <TableCell className="py-2 px-2 font-medium whitespace-nowrap">
+                        {u.firstName} {u.lastName}
                       </TableCell>
-                      <TableCell>{user.phoneNumber}</TableCell>
-                      <TableCell>
-                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                          user.status === "LinkedIn Optimization Done" 
-                            ? "bg-green-100 text-green-800" 
-                            : user.status === "SLI Generated" 
+                      <TableCell className="py-2 px-2 max-w-[160px] truncate" title={u.username}>
+                        {u.username}
+                      </TableCell>
+                      <TableCell className="py-2 px-2 whitespace-nowrap">
+                        {u.phoneNumber ?? "—"}
+                      </TableCell>
+                      <TableCell className="py-2 px-2">
+                        <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
+                          u.status === "LinkedIn Optimization Done"
+                            ? "bg-green-100 text-green-800"
+                            : u.status === "SLI Generated"
                             ? "bg-blue-100 text-blue-800"
-                            : user.status === "Freshness Report Generated"
+                            : u.status === "Freshness Report Generated"
                             ? "bg-purple-100 text-purple-800"
-                            : user.status === "Chat Session Done"
+                            : u.status === "Chat Session Done"
                             ? "bg-indigo-100 text-indigo-800"
-                            : user.status === "Documents Uploaded"
+                            : u.status === "Documents Uploaded"
                             ? "bg-yellow-100 text-yellow-800"
-                            : user.status === "Questionnaire Completed"
+                            : u.status === "Questionnaire Completed"
                             ? "bg-orange-100 text-orange-800"
                             : "bg-gray-100 text-gray-800"
                         }`}>
-                          {user.status || "Registered"}
+                          {u.status ?? "Registered"}
                         </span>
                       </TableCell>
-                      <TableCell>
-                        {user.lastLoginAt 
-                          ? new Date(user.lastLoginAt).toLocaleDateString('en-US', {
-                              month: '2-digit',
-                              day: '2-digit',
-                              year: 'numeric'
-                            })
-                          : "Never"}
+                      <TableCell className="py-2 px-2 whitespace-nowrap">
+                        {u.professionalStatus
+                          ? CAREER_STATUS_LABELS[u.professionalStatus] ?? u.professionalStatus
+                          : "—"}
                       </TableCell>
-                      <TableCell className="text-right">
+                      <TableCell className="py-2 px-2 max-w-[140px] truncate" title={u.school ?? ""}>
+                        {u.school ?? "—"}
+                      </TableCell>
+                      <TableCell className="py-2 px-2 max-w-[120px] truncate" title={u.academicProgram ?? ""}>
+                        {u.academicProgram ?? "—"}
+                      </TableCell>
+                      <TableCell className="py-2 px-2 whitespace-nowrap">
+                        {formatDate(u.createdAt)}
+                      </TableCell>
+                      <TableCell className="py-2 px-2 whitespace-nowrap">
+                        {u.lastLoginAt ? formatDate(u.lastLoginAt) : "Never"}
+                      </TableCell>
+                      <TableCell className="py-2 px-2 text-right">
                         <Button
                           variant="ghost"
                           size="sm"
-                          onClick={() => navigate(`/admin/users/${user.id}`)}
+                          className="h-6 px-2 text-xs"
+                          onClick={() => navigate(`/admin/users/${u.id}`)}
                         >
-                          <Eye className="h-4 w-4 mr-1" />
+                          <Eye className="h-3 w-3 mr-1" />
                           View
                         </Button>
                       </TableCell>
@@ -195,16 +317,13 @@ export default function UsersPage() {
               </Table>
             </div>
 
-            {/* Pagination */}
             {totalPages > 1 && (
-              <Pagination className="justify-center mt-6">
+              <Pagination className="justify-center mt-4">
                 <PaginationContent>
                   <PaginationItem>
                     <PaginationPrevious
                       onClick={() => handlePageChange(currentPage - 1)}
-                      className={
-                        currentPage === 1 ? "pointer-events-none opacity-50" : ""
-                      }
+                      className={currentPage === 1 ? "pointer-events-none opacity-50" : ""}
                     />
                   </PaginationItem>
                   {[...Array(totalPages)].map((_, i) => (
@@ -220,11 +339,7 @@ export default function UsersPage() {
                   <PaginationItem>
                     <PaginationNext
                       onClick={() => handlePageChange(currentPage + 1)}
-                      className={
-                        currentPage === totalPages
-                          ? "pointer-events-none opacity-50"
-                          : ""
-                      }
+                      className={currentPage === totalPages ? "pointer-events-none opacity-50" : ""}
                     />
                   </PaginationItem>
                 </PaginationContent>

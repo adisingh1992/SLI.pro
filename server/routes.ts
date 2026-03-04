@@ -891,13 +891,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // FORCE filter admin users out - manual approach to bypass any caching issues
       const nonAdminUsers = allUsers.filter(user => user.isAdmin !== true);
       
-      // Enhance each user with their status
+      // Enhance each user with their status and branding intake data
       const enhancedUsers = await Promise.all(nonAdminUsers.map(async (user) => {
         const { password, ...userWithoutPassword } = user;
         const status = await getUserStatus(user.id);
+        const brandingIntake = await storage.getBrandingIntake(user.id);
+        const responses = (brandingIntake?.responses as Record<string, unknown>) ?? {};
+        const school =
+          (responses.university_name as string) ||
+          (responses.undergrad_institution as string) ||
+          (responses.grad_university_name as string) ||
+          null;
+        const academicProgram =
+          (responses.major as string) ||
+          (responses.highest_degree as string) ||
+          null;
         return {
           ...userWithoutPassword,
-          status
+          status,
+          school,
+          academicProgram
         };
       }));
       
