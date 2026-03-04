@@ -43,9 +43,9 @@ type SortColumn =
 type SortDirection = "asc" | "desc";
 
 const CAREER_STATUS_LABELS: Record<string, string> = {
-  undergraduate_or_recent_grad: "Undergrad / Recent Grad",
+  undergraduate_or_recent_grad: "Undergrad",
   early_career: "Early Career",
-  mid_career_or_senior: "Mid-Career / Senior",
+  mid_career_or_senior: "Mid-Career",
   career_break_or_transition: "Career Break / Transition",
 };
 
