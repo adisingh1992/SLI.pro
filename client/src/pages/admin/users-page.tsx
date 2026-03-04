@@ -333,7 +333,7 @@ export default function UsersPage() {
                 <SelectItem value="__all__">All Statuses</SelectItem>
                 {ALL_STATUSES.map((s) => (
                   <SelectItem key={s} value={s}>
-                    {s === "Questionnaire Completed" ? "Brand Assessment" : s}
+                    {s === "Questionnaire Completed" ? "Brand Assessment" : s.replace(" Completed", "")}
                   </SelectItem>
                 ))}
               </SelectContent>
