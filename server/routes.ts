@@ -862,8 +862,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
     if (freshnessReports.length > 0) {
       return "Freshness Report Generated";
     }
-    
-    
+
+    // Check Enhancement Modules (C > B > A) — use individual lookups to avoid auto-creation side effects
+    const [moduleC, moduleB, moduleA] = await Promise.all([
+      storage.getEnhancementModule(userId, 'C'),
+      storage.getEnhancementModule(userId, 'B'),
+      storage.getEnhancementModule(userId, 'A'),
+    ]);
+    if (moduleC?.status === 'completed') return "Enhancement Module C Completed";
+    if (moduleB?.status === 'completed') return "Enhancement Module B Completed";
+    if (moduleA?.status === 'completed') return "Enhancement Module A Completed";
+
+    // Check Foundation Sessions (3 > 2 > 1)
+    const foundationSessions = await storage.getFoundationSessions(userId);
+    const completedSessions = foundationSessions
+      .filter(s => s.status === 'completed')
+      .map(s => s.sessionNumber);
+    if (completedSessions.includes(3)) return "Foundation Session 3 Completed";
+    if (completedSessions.includes(2)) return "Foundation Session 2 Completed";
+    if (completedSessions.includes(1)) return "Foundation Session 1 Completed";
+
     // Check Documents
     const documents = await storage.getDocuments(userId);
     const hasResume = documents.some(doc => doc.type === 'resume');
@@ -871,7 +889,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
     if (hasResume && hasLinkedin) {
       return "Documents Uploaded";
     }
-    
+
+    // Check Branding Intake
+    const brandingIntake = await storage.getBrandingIntake(userId);
+    if (brandingIntake?.completed) {
+      return "Branding Intake Completed";
+    }
+
     // Check Questionnaire
     const questionnaire = await storage.getQuestionnaire(userId);
     if (questionnaire && !questionnaire.isDraft) {
