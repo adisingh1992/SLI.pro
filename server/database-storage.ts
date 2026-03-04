@@ -313,6 +313,7 @@ export class DatabaseStorage implements IStorage {
     const skills = await this.getSkills(userId);
     const languages = await this.getLanguages(userId);
     const questionnaire = await this.getQuestionnaire(userId);
+    const brandingIntake = await this.getBrandingIntake(userId);
     const documents = await this.getDocuments(userId);
     const conversations = await this.getConversations(userId);
     const conversationSummaries = await this.getConversationSummaries(userId);
@@ -332,6 +333,7 @@ export class DatabaseStorage implements IStorage {
       skills,
       languages,
       questionnaire,
+      brandingIntake,
       documents,
       conversations,
       conversationSummaries,

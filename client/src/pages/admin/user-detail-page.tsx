@@ -499,7 +499,112 @@ export default function UserDetailPage() {
           </Card>
         </div>
 
-        {/* Section 3: Brand Assessment */}
+        {/* Section 3: Registration Intake */}
+        {(() => {
+          const intake = (userData as any).brandingIntake as {
+            platform: string;
+            completed: boolean;
+            marketingOptIn: boolean | null;
+            currentStage: number;
+            createdAt: string | Date;
+            responses: Record<string, unknown>;
+          } | undefined;
+
+          const toTitleCase = (key: string) =>
+            key.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+
+          const platformLabel: Record<string, string> = {
+            undergraduate: "Undergraduate",
+            early_career: "Early Career",
+            mid_career: "Mid-Career",
+          };
+
+          const platformColor: Record<string, string> = {
+            undergraduate: "bg-sky-100 text-sky-800",
+            early_career: "bg-blue-100 text-blue-800",
+            mid_career: "bg-indigo-100 text-indigo-800",
+          };
+
+          const renderIntakeValue = (value: unknown) => {
+            if (value === null || value === undefined || value === "") {
+              return <span className="text-muted-foreground text-sm">—</span>;
+            }
+            if (typeof value === "boolean") {
+              return <span className="text-sm">{value ? "Yes" : "No"}</span>;
+            }
+            if (Array.isArray(value)) {
+              if (value.length === 0) return <span className="text-muted-foreground text-sm">—</span>;
+              return (
+                <div className="flex flex-wrap gap-1.5">
+                  {value.map((item, i) => (
+                    <span key={i} className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-secondary text-secondary-foreground">
+                      {String(item)}
+                    </span>
+                  ))}
+                </div>
+              );
+            }
+            return <p className="text-sm leading-relaxed">{String(value)}</p>;
+          };
+
+          return (
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="flex items-center text-xl">
+                  <FileText className="mr-2 h-5 w-5" />
+                  Registration Intake
+                </CardTitle>
+                <CardDescription>
+                  User's responses from the registration intake form
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {!intake ? (
+                  <div className="flex flex-col items-center justify-center border border-dashed rounded-lg p-8 text-center text-muted-foreground">
+                    <FileText className="h-10 w-10 text-muted-foreground mb-2" />
+                    <p>No registration intake data available</p>
+                    <p className="text-sm mt-1">User has not completed the registration intake yet</p>
+                  </div>
+                ) : (
+                  <div className="space-y-6">
+                    {/* Metadata row */}
+                    <div className="flex flex-wrap items-center gap-3 pb-4 border-b">
+                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold ${platformColor[intake.platform] ?? "bg-gray-100 text-gray-800"}`}>
+                        {platformLabel[intake.platform] ?? intake.platform}
+                      </span>
+                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold ${intake.completed ? "bg-green-100 text-green-800" : "bg-gray-100 text-gray-600"}`}>
+                        {intake.completed ? "Completed" : "In Progress"}
+                      </span>
+                      <span className="text-xs text-muted-foreground">
+                        Stage {intake.currentStage}
+                      </span>
+                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${intake.marketingOptIn ? "bg-emerald-100 text-emerald-800" : "bg-gray-100 text-gray-600"}`}>
+                        Email Opt-in: {intake.marketingOptIn ? "Yes" : "No"}
+                      </span>
+                      <span className="text-xs text-muted-foreground ml-auto">
+                        Submitted {formatDate(String(intake.createdAt))}
+                      </span>
+                    </div>
+
+                    {/* Responses grid */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-5">
+                      {Object.entries(intake.responses ?? {})
+                        .filter(([key]) => key !== "marketing_opt_in")
+                        .map(([key, value]) => (
+                          <div key={key} className="space-y-1.5">
+                            <p className="text-xs font-medium text-muted-foreground">{toTitleCase(key)}</p>
+                            {renderIntakeValue(value)}
+                          </div>
+                        ))}
+                    </div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          );
+        })()}
+
+        {/* Section 4: Brand Assessment */}
         <Card>
           <CardHeader className="pb-3">
             <CardTitle className="flex items-center text-xl">

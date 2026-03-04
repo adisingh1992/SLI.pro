@@ -857,6 +857,7 @@ export type UserProfile = User & {
   languages?: Language[];
   profile?: Profile;
   questionnaire?: Questionnaire;
+  brandingIntake?: BrandingIntake;
   documents?: Document[];
   conversations?: Conversation[];
   conversationSummaries?: ConversationSummary[];

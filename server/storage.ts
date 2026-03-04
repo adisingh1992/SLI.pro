@@ -540,6 +540,7 @@ export class MemStorage implements IStorage {
     const languages = await this.getLanguages(userId);
     const profile = await this.getProfile(userId);
     const questionnaire = await this.getQuestionnaire(userId);
+    const brandingIntake = await this.getBrandingIntake(userId);
     const documents = await this.getDocuments(userId);
     const conversations = await this.getConversations(userId);
     const monthlyCheckIns = await this.getMonthlyCheckIns(userId);
@@ -557,6 +558,7 @@ export class MemStorage implements IStorage {
       languages,
       profile,
       questionnaire,
+      brandingIntake,
       documents,
       conversations,
       monthlyCheckIns,
