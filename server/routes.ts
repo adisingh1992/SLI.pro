@@ -893,7 +893,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     // Check Branding Intake
     const brandingIntake = await storage.getBrandingIntake(userId);
     if (brandingIntake?.completed) {
-      return "Branding Intake Completed";
+      return "Registration Intake Completed";
     }
 
     // Check Questionnaire

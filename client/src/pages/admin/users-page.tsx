@@ -60,7 +60,7 @@ const CAREER_STATUS_LABELS: Record<string, string> = {
 
 const ALL_STATUSES = [
   "Registered",
-  "Branding Intake Completed",
+  "Registration Intake Completed",
   "Questionnaire Completed",
   "Documents Uploaded",
   "Foundation Session 1 Completed",
@@ -106,7 +106,7 @@ function statusBadgeClass(status: string | undefined) {
     case "Foundation Session 2 Completed": return "bg-blue-100 text-blue-900";
     case "Foundation Session 1 Completed": return "bg-sky-100 text-sky-800";
     case "Documents Uploaded":           return "bg-yellow-100 text-yellow-800";
-    case "Branding Intake Completed":    return "bg-amber-100 text-amber-800";
+    case "Registration Intake Completed": return "bg-amber-100 text-amber-800";
     case "Questionnaire Completed":      return "bg-orange-100 text-orange-800";
     default:                             return "bg-gray-100 text-gray-800";
   }
