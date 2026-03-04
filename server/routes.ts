@@ -934,7 +934,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           ...userWithoutPassword,
           status,
           school,
-          academicProgram
+          academicProgram,
+          marketingOptIn: brandingIntake?.marketingOptIn ?? null,
         };
       }));
       
