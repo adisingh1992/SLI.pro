@@ -2,8 +2,7 @@ import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/use-auth";
 import { useLocation } from "wouter";
-import { Eye, Loader2, Search, UserCircle, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { Loader2, Search, UserCircle, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import {
   Table,
@@ -249,12 +248,11 @@ export default function UsersPage() {
                     <TableHead {...thProps("lastLoginAt")}>
                       Last Login <SortIcon column="lastLoginAt" sortColumn={sortColumn} sortDirection={sortDirection} />
                     </TableHead>
-                    <TableHead className="text-right text-xs py-2 px-2">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {paginatedUsers.map((u: UserWithStatus) => (
-                    <TableRow key={u.id} className="text-xs">
+                    <TableRow key={u.id} className="text-xs cursor-pointer hover:bg-muted/60" onClick={() => navigate(`/admin/users/${u.id}`)}>
                       <TableCell className="py-2 px-2 font-medium whitespace-nowrap">
                         {u.firstName} {u.lastName}
                       </TableCell>
@@ -299,17 +297,6 @@ export default function UsersPage() {
                       </TableCell>
                       <TableCell className="py-2 px-2 whitespace-nowrap">
                         {u.lastLoginAt ? formatDate(u.lastLoginAt) : "Never"}
-                      </TableCell>
-                      <TableCell className="py-2 px-2 text-right">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="h-6 px-2 text-xs"
-                          onClick={() => navigate(`/admin/users/${u.id}`)}
-                        >
-                          <Eye className="h-3 w-3 mr-1" />
-                          View
-                        </Button>
                       </TableCell>
                     </TableRow>
                   ))}
