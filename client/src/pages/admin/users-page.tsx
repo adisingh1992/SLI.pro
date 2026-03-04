@@ -323,10 +323,10 @@ export default function UsersPage() {
               </Button>
             )}
           </div>
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2">
+          <div className="flex flex-row items-center gap-2 flex-wrap">
             {/* Status filter */}
             <Select value={filterStatus || "__all__"} onValueChange={(v) => { setFilterStatus(v === "__all__" ? "" : v); resetPage(); }}>
-              <SelectTrigger className="h-8 text-xs">
+              <SelectTrigger className="h-8 text-xs w-[160px] shrink-0">
                 <SelectValue placeholder="All Statuses" />
               </SelectTrigger>
               <SelectContent>
@@ -339,8 +339,8 @@ export default function UsersPage() {
 
             {/* Career Status filter */}
             <Select value={filterCareerStatus || "__all__"} onValueChange={(v) => { setFilterCareerStatus(v === "__all__" ? "" : v); resetPage(); }}>
-              <SelectTrigger className="h-8 text-xs">
-                <SelectValue placeholder="All Career Statuses" />
+              <SelectTrigger className="h-8 text-xs w-[140px] shrink-0">
+                <SelectValue placeholder="Career Status" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="__all__">All Career Statuses</SelectItem>
@@ -351,31 +351,31 @@ export default function UsersPage() {
             </Select>
 
             {/* Register Date From */}
-            <div className="flex flex-col gap-0.5">
-              <label className="text-[10px] text-gray-400 pl-0.5">Registered from</label>
+            <div className="flex items-center gap-1 shrink-0">
+              <span className="text-xs text-gray-400 whitespace-nowrap">From</span>
               <input
                 type="date"
                 value={filterDateFrom}
                 onChange={(e) => { setFilterDateFrom(e.target.value); resetPage(); }}
-                className="h-8 w-full rounded-md border border-input bg-background px-2 text-xs focus:outline-none focus:ring-1 focus:ring-ring"
+                className="h-8 w-[130px] rounded-md border border-input bg-background px-2 text-xs focus:outline-none focus:ring-1 focus:ring-ring"
               />
             </div>
 
             {/* Register Date To */}
-            <div className="flex flex-col gap-0.5">
-              <label className="text-[10px] text-gray-400 pl-0.5">Registered to</label>
+            <div className="flex items-center gap-1 shrink-0">
+              <span className="text-xs text-gray-400 whitespace-nowrap">To</span>
               <input
                 type="date"
                 value={filterDateTo}
                 onChange={(e) => { setFilterDateTo(e.target.value); resetPage(); }}
-                className="h-8 w-full rounded-md border border-input bg-background px-2 text-xs focus:outline-none focus:ring-1 focus:ring-ring"
+                className="h-8 w-[130px] rounded-md border border-input bg-background px-2 text-xs focus:outline-none focus:ring-1 focus:ring-ring"
               />
             </div>
 
             {/* Email Opt-in filter */}
             <Select value={filterOptIn || "__all__"} onValueChange={(v) => { setFilterOptIn(v === "__all__" ? "" : v); resetPage(); }}>
-              <SelectTrigger className="h-8 text-xs">
-                <SelectValue placeholder="Email Opt-in" />
+              <SelectTrigger className="h-8 text-xs w-[120px] shrink-0">
+                <SelectValue placeholder="Opt-in" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="__all__">All (Opt-in)</SelectItem>
