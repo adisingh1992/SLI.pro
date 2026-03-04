@@ -60,8 +60,8 @@ const CAREER_STATUS_LABELS: Record<string, string> = {
 
 const ALL_STATUSES = [
   "Registered",
-  "Questionnaire Completed",
   "Branding Intake Completed",
+  "Questionnaire Completed",
   "Documents Uploaded",
   "Foundation Session 1 Completed",
   "Foundation Session 2 Completed",
@@ -332,7 +332,9 @@ export default function UsersPage() {
               <SelectContent>
                 <SelectItem value="__all__">All Statuses</SelectItem>
                 {ALL_STATUSES.map((s) => (
-                  <SelectItem key={s} value={s}>{s}</SelectItem>
+                  <SelectItem key={s} value={s}>
+                    {s === "Questionnaire Completed" ? "Brand Assessment" : s}
+                  </SelectItem>
                 ))}
               </SelectContent>
             </Select>
