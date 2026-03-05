@@ -127,7 +127,7 @@ export default function UsersPage() {
   const [filterDateTo, setFilterDateTo] = useState("");
   const [filterOptIn, setFilterOptIn] = useState("");
 
-  const pageSize = 10;
+  const [pageSize, setPageSize] = useState(10);
 
   const {
     data: usersData,
@@ -487,34 +487,72 @@ export default function UsersPage() {
               </Table>
             </div>
 
-            {totalPages > 1 && (
-              <Pagination className="justify-center mt-4">
-                <PaginationContent>
-                  <PaginationItem>
-                    <PaginationPrevious
-                      onClick={() => handlePageChange(currentPage - 1)}
-                      className={currentPage === 1 ? "pointer-events-none opacity-50" : ""}
-                    />
-                  </PaginationItem>
-                  {[...Array(totalPages)].map((_, i) => (
-                    <PaginationItem key={i + 1}>
-                      <PaginationLink
-                        onClick={() => handlePageChange(i + 1)}
-                        isActive={currentPage === i + 1}
-                      >
-                        {i + 1}
-                      </PaginationLink>
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-3 mt-4">
+              <div className="flex items-center gap-2 text-xs text-gray-500">
+                <span>
+                  Showing{" "}
+                  <span className="font-medium text-gray-700">
+                    {sortedUsers && sortedUsers.length > 0
+                      ? `${(currentPage - 1) * pageSize + 1}–${Math.min(currentPage * pageSize, sortedUsers.length)}`
+                      : "0"}
+                  </span>{" "}
+                  of{" "}
+                  <span className="font-medium text-gray-700">{sortedUsers?.length ?? 0}</span>{" "}
+                  user{sortedUsers?.length !== 1 ? "s" : ""}
+                </span>
+                <span className="text-gray-300">|</span>
+                <div className="flex items-center gap-1.5">
+                  <span>Per page:</span>
+                  <Select
+                    value={String(pageSize)}
+                    onValueChange={(v) => {
+                      setPageSize(Number(v));
+                      setCurrentPage(1);
+                    }}
+                  >
+                    <SelectTrigger className="h-7 w-[70px] text-xs">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {[10, 25, 50, 100].map((n) => (
+                        <SelectItem key={n} value={String(n)} className="text-xs">
+                          {n}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              {totalPages > 1 && (
+                <Pagination className="justify-center sm:justify-end">
+                  <PaginationContent>
+                    <PaginationItem>
+                      <PaginationPrevious
+                        onClick={() => handlePageChange(currentPage - 1)}
+                        className={currentPage === 1 ? "pointer-events-none opacity-50" : ""}
+                      />
                     </PaginationItem>
-                  ))}
-                  <PaginationItem>
-                    <PaginationNext
-                      onClick={() => handlePageChange(currentPage + 1)}
-                      className={currentPage === totalPages ? "pointer-events-none opacity-50" : ""}
-                    />
-                  </PaginationItem>
-                </PaginationContent>
-              </Pagination>
-            )}
+                    {[...Array(totalPages)].map((_, i) => (
+                      <PaginationItem key={i + 1}>
+                        <PaginationLink
+                          onClick={() => handlePageChange(i + 1)}
+                          isActive={currentPage === i + 1}
+                        >
+                          {i + 1}
+                        </PaginationLink>
+                      </PaginationItem>
+                    ))}
+                    <PaginationItem>
+                      <PaginationNext
+                        onClick={() => handlePageChange(currentPage + 1)}
+                        className={currentPage === totalPages ? "pointer-events-none opacity-50" : ""}
+                      />
+                    </PaginationItem>
+                  </PaginationContent>
+                </Pagination>
+              )}
+            </div>
           </>
         )}
       </div>
