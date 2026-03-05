@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/use-auth";
 import { useLocation } from "wouter";
-import { Loader2, Search, UserCircle, ArrowUpDown, ArrowUp, ArrowDown, Filter, X } from "lucide-react";
+import { Loader2, Search, UserCircle, ArrowUpDown, ArrowUp, ArrowDown, Filter, X, Download } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import {
@@ -263,6 +263,53 @@ export default function UsersPage() {
     setCurrentPage(1);
   };
 
+  const exportCSV = () => {
+    if (!sortedUsers || sortedUsers.length === 0) return;
+
+    const headers = [
+      "Name",
+      "Email",
+      "Phone",
+      "Status",
+      "Career Status",
+      "School",
+      "Program",
+      "Registered",
+      "Last Login",
+    ];
+
+    const escape = (val: string | null | undefined) => {
+      if (val == null) return "";
+      const str = String(val);
+      if (str.includes(",") || str.includes('"') || str.includes("\n")) {
+        return `"${str.replace(/"/g, '""')}"`;
+      }
+      return str;
+    };
+
+    const rows = sortedUsers.map((u) => [
+      escape(`${u.firstName} ${u.lastName}`),
+      escape(u.username),
+      escape(u.phoneNumber),
+      escape(u.status ?? "Registered"),
+      escape(CAREER_STATUS_LABELS[u.professionalStatus ?? ""] ?? u.professionalStatus),
+      escape(u.school),
+      escape(u.academicProgram),
+      escape(formatDate(u.createdAt)),
+      escape(u.lastLoginAt ? formatDate(u.lastLoginAt) : "Never"),
+    ]);
+
+    const csv = [headers.join(","), ...rows.map((r) => r.join(","))].join("\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    const date = new Date().toISOString().slice(0, 10);
+    link.href = url;
+    link.download = `users-export-${date}.csv`;
+    link.click();
+    URL.revokeObjectURL(url);
+  };
+
   const thProps = (column: SortColumn) => ({
     className: "cursor-pointer select-none whitespace-nowrap text-xs py-2 px-2",
     onClick: () => handleSort(column),
@@ -290,14 +337,26 @@ export default function UsersPage() {
               {activeFilterCount > 0 && ` (${activeFilterCount} filter${activeFilterCount > 1 ? "s" : ""} active)`}
             </p>
           </div>
-          <div className="w-full sm:w-auto flex items-center gap-2 sm:min-w-[280px]">
-            <Search className="h-4 w-4 text-gray-400 shrink-0" />
-            <Input
-              placeholder="Search by name or email..."
-              value={searchQuery}
-              onChange={(e) => { setSearchQuery(e.target.value); resetPage(); }}
-              className="flex-1 h-8 text-sm"
-            />
+          <div className="w-full sm:w-auto flex items-center gap-2">
+            <div className="flex items-center gap-2 sm:min-w-[280px] flex-1">
+              <Search className="h-4 w-4 text-gray-400 shrink-0" />
+              <Input
+                placeholder="Search by name or email..."
+                value={searchQuery}
+                onChange={(e) => { setSearchQuery(e.target.value); resetPage(); }}
+                className="flex-1 h-8 text-sm"
+              />
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-8 text-xs whitespace-nowrap shrink-0"
+              onClick={exportCSV}
+              disabled={!sortedUsers || sortedUsers.length === 0}
+            >
+              <Download className="h-3.5 w-3.5 mr-1.5" />
+              Download CSV
+            </Button>
           </div>
         </div>
 
