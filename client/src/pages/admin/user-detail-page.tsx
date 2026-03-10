@@ -259,8 +259,8 @@ export default function UserDetailPage() {
     const entry = rawAnswers[qKey];
     return (
       <div className="space-y-1.5">
-        <p className="text-xs font-semibold text-foreground leading-snug">{label}</p>
-        <p className="text-[11px] text-muted-foreground/80 italic leading-snug">{description}</p>
+        <p className="text-sm font-semibold text-foreground leading-snug">{label}</p>
+        <p className="text-xs text-muted-foreground/80 italic leading-snug">{description}</p>
         {renderAnswer(entry?.answer ?? null, isUrl)}
         {entry?.aiSubtopics && entry.aiSubtopics.length > 0 && (
           <div className="mt-1.5 space-y-1">
@@ -603,7 +603,7 @@ export default function UserDetailPage() {
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-5">
                             {stage.questions.map((question) => (
                               <div key={question.key} className="space-y-1.5">
-                                <p className="text-xs font-medium text-muted-foreground">{question.label}</p>
+                                <p className="text-sm font-medium text-foreground">{question.label}</p>
                                 {renderIntakeValue(resolveIntakeFieldValue(question, (intake.responses ?? {})[question.key]))}
                               </div>
                             ))}
