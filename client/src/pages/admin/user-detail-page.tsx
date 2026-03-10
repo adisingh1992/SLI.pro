@@ -42,6 +42,7 @@ import { getQueryFn } from "@/lib/queryClient";
 import AdminLayout from "./layout";
 import { UserProfile, CoachingNote } from "@shared/schema";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { INTAKE_SCHEMA, resolveIntakeFieldValue } from "@/lib/intake-admin-schema";
 
 type UserProfileWithoutPassword = Omit<UserProfile, "password">;
 
@@ -510,9 +511,6 @@ export default function UserDetailPage() {
             responses: Record<string, unknown>;
           } | undefined;
 
-          const toTitleCase = (key: string) =>
-            key.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
-
           const platformLabel: Record<string, string> = {
             undergraduate: "Undergraduate",
             early_career: "Early Career",
@@ -586,16 +584,23 @@ export default function UserDetailPage() {
                       </span>
                     </div>
 
-                    {/* Responses grid */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-5">
-                      {Object.entries(intake.responses ?? {})
-                        .filter(([key]) => key !== "marketing_opt_in")
-                        .map(([key, value]) => (
-                          <div key={key} className="space-y-1.5">
-                            <p className="text-xs font-medium text-muted-foreground">{toTitleCase(key)}</p>
-                            {renderIntakeValue(value)}
+                    {/* Stage-grouped responses */}
+                    <div className="space-y-8">
+                      {(INTAKE_SCHEMA[intake.platform] ?? []).map((stage) => (
+                        <div key={stage.name}>
+                          <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3 pb-1.5 border-b">
+                            {stage.name}
+                          </p>
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-5">
+                            {stage.questions.map((question) => (
+                              <div key={question.key} className="space-y-1.5">
+                                <p className="text-xs font-medium text-muted-foreground">{question.label}</p>
+                                {renderIntakeValue(resolveIntakeFieldValue(question, (intake.responses ?? {})[question.key]))}
+                              </div>
+                            ))}
                           </div>
-                        ))}
+                        </div>
+                      ))}
                     </div>
                   </div>
                 )}
