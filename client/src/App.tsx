@@ -36,6 +36,7 @@ import AdminCoachingNotesPage from "@/pages/admin/coaching-notes-page";
 import AdminUserSummaryPage from "@/pages/admin/user-summary-page";
 import AdminSliPage from "@/pages/admin/sli-page";
 import AdminHomeworkPage from "@/pages/admin/homework-page";
+import AdminUserTranscriptsPage from "@/pages/admin/user-transcripts-page";
 
 function Router() {
   return (
@@ -97,6 +98,7 @@ function Router() {
       <Route path="/admin/users/:userId/summary/:summaryId" component={AdminUserSummaryPage} />
       <Route path="/admin/users/:userId/sli" component={AdminSliPage} />
       <Route path="/admin/users/:userId/homework" component={AdminHomeworkPage} />
+      <Route path="/admin/users/:userId/transcripts" component={AdminUserTranscriptsPage} />
       
       {/* Auth and fallback routes */}
       <Route path="/auth" component={AuthPage} />

@@ -1047,6 +1047,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Transcript routes - ADMIN only
+  app.get("/api/admin/users/:userId/foundation-sessions/:sessionNumber/messages", isAdmin, async (req, res, next) => {
+    try {
+      const userId = parseInt(req.params.userId);
+      const sessionNumber = parseInt(req.params.sessionNumber);
+      const session = await storage.getFoundationSession(userId, sessionNumber);
+      if (!session) {
+        return res.json({ session: null, messages: [] });
+      }
+      const messages = await storage.getFoundationSessionMessages(session.id);
+      res.json({ session, messages });
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  app.get("/api/admin/users/:userId/enhancement-modules/:moduleCode/messages", isAdmin, async (req, res, next) => {
+    try {
+      const userId = parseInt(req.params.userId);
+      const { moduleCode } = req.params;
+      const result = await storage.getEnhancementModuleWithMessages(userId, moduleCode);
+      if (!result) {
+        return res.json({ module: null, messages: [] });
+      }
+      res.json(result);
+    } catch (error) {
+      next(error);
+    }
+  });
+
   // Coaching Notes routes - ADMIN only
   app.get("/api/admin/users/:userId/coaching-notes", isAdmin, async (req, res, next) => {
     try {

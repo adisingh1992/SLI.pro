@@ -19,6 +19,7 @@ import {
   MessageSquare,
   Star,
   BookOpen,
+  ScrollText,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -329,6 +330,14 @@ export default function UserDetailPage() {
               >
                 <BookOpen className="h-4 w-4" />
                 Assigned Homework
+              </Button>
+              <Button
+                variant="outline"
+                className="flex items-center gap-2"
+                onClick={() => navigate(`/admin/users/${userId}/transcripts`)}
+              >
+                <ScrollText className="h-4 w-4" />
+                Transcripts
               </Button>
               <TooltipProvider>
                 <Tooltip>
