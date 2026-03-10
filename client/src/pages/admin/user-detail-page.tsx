@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, type ReactNode } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/use-auth";
 import { Link, useLocation, useParams } from "wouter";
@@ -43,6 +43,7 @@ import AdminLayout from "./layout";
 import { UserProfile, CoachingNote } from "@shared/schema";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { INTAKE_SCHEMA, resolveIntakeFieldValue } from "@/lib/intake-admin-schema";
+import { QUESTIONNAIRE_SCHEMA, resolveQuestionText } from "@/lib/questionnaire-admin-schema";
 
 type UserProfileWithoutPassword = Omit<UserProfile, "password">;
 
@@ -244,14 +245,24 @@ export default function UserDetailPage() {
     return <span className="text-sm">{String(answer)}</span>;
   };
 
-  const QuestionRow = ({ qKey, isUrl = false }: { qKey: string; isUrl?: boolean }) => {
+  const QuestionRow = ({
+    qKey,
+    label,
+    description,
+    isUrl = false,
+  }: {
+    qKey: string;
+    label: string;
+    description: string;
+    isUrl?: boolean;
+  }) => {
     const entry = rawAnswers[qKey];
-    if (!entry) return null;
     return (
       <div className="space-y-1.5">
-        <p className="text-xs font-medium text-muted-foreground leading-snug">{entry.question}</p>
-        {renderAnswer(entry.answer, isUrl)}
-        {entry.aiSubtopics && entry.aiSubtopics.length > 0 && (
+        <p className="text-xs font-semibold text-foreground leading-snug">{label}</p>
+        <p className="text-[11px] text-muted-foreground/80 italic leading-snug">{description}</p>
+        {renderAnswer(entry?.answer ?? null, isUrl)}
+        {entry?.aiSubtopics && entry.aiSubtopics.length > 0 && (
           <div className="mt-1.5 space-y-1">
             <p className="text-[11px] font-medium text-muted-foreground/70">AI Suggested Subtopics</p>
             <div className="flex flex-wrap gap-1">
@@ -267,16 +278,14 @@ export default function UserDetailPage() {
     );
   };
 
-  const QuestionGroup = ({ title, keys, urlKeys = [] }: { title: string; keys: string[]; urlKeys?: string[] }) => (
+  const QuestionGroup = ({ title, children }: { title: string; children: ReactNode }) => (
     <div className="space-y-4">
       <div className="flex items-center gap-2">
         <h3 className="text-sm font-semibold text-foreground">{title}</h3>
         <div className="flex-1 h-px bg-border" />
       </div>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-5">
-        {keys.map((k) => (
-          <QuestionRow key={k} qKey={k} isUrl={urlKeys.includes(k)} />
-        ))}
+        {children}
       </div>
     </div>
   );
@@ -629,43 +638,29 @@ export default function UserDetailPage() {
                   User has not completed the questionnaire yet
                 </p>
               </div>
-            ) : (
-              <div className="space-y-8">
-                <QuestionGroup
-                  title="LinkedIn & Online Presence"
-                  keys={["Q1", "Q2", "Q3", "Q4"]}
-                  urlKeys={["Q1"]}
-                />
-                <QuestionGroup
-                  title="Self-Presentation"
-                  keys={["Q5", "Q6", "Q7"]}
-                />
-                <QuestionGroup
-                  title="Content Creation"
-                  keys={["Q8", "Q9", "Q10"]}
-                />
-                <QuestionGroup
-                  title="Networking"
-                  keys={["Q11", "Q12"]}
-                />
-                <QuestionGroup
-                  title="Topics & Interests"
-                  keys={["Q13", "Q14"]}
-                />
-                <QuestionGroup
-                  title="Career Vision"
-                  keys={["Q15"]}
-                />
-                <QuestionGroup
-                  title="Assessments"
-                  keys={["Q16", "Q17"]}
-                />
-                <QuestionGroup
-                  title="Additional Notes"
-                  keys={["Q18"]}
-                />
-              </div>
-            )}
+            ) : (() => {
+              const assessmentPlatform = (userData.brandingIntake?.platform ?? "early_career") as string;
+              return (
+                <div className="space-y-8">
+                  {QUESTIONNAIRE_SCHEMA.map((section) => (
+                    <QuestionGroup key={section.name} title={section.name}>
+                      {section.questions.map((q) => {
+                        const { label, description } = resolveQuestionText(q, assessmentPlatform);
+                        return (
+                          <QuestionRow
+                            key={q.key}
+                            qKey={q.key}
+                            label={label}
+                            description={description}
+                            isUrl={q.isUrl}
+                          />
+                        );
+                      })}
+                    </QuestionGroup>
+                  ))}
+                </div>
+              );
+            })()}
           </CardContent>
         </Card>
 
