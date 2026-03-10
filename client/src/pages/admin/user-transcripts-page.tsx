@@ -132,7 +132,7 @@ export default function UserTranscriptsPage() {
 
   return (
     <AdminLayout>
-      <div className="p-6 max-w-4xl mx-auto space-y-6">
+      <div className="p-6 space-y-6">
         <div>
           <Button
             variant="ghost"
