@@ -174,11 +174,11 @@ const DocumentUpload = () => {
       return;
     }
 
-    // Check file size (2MB limit to ensure it works with the server limit)
+    // Check file size (4MB limit to ensure it works with the server limit)
     if (file.size > 4 * 1024 * 1024) {
       toast({
         title: "Error",
-        description: "File size should be less than 2MB",
+        description: "File size should be less than 4MB",
         variant: "destructive",
       });
       return;
@@ -251,7 +251,7 @@ const DocumentUpload = () => {
     if (file.size > 4 * 1024 * 1024) {
       toast({
         title: "Error",
-        description: "File size should be less than 2MB",
+        description: "File size should be less than 4MB",
         variant: "destructive",
       });
       return;
@@ -323,7 +323,7 @@ const DocumentUpload = () => {
     if (file.size > 4 * 1024 * 1024) {
       toast({
         title: "Error",
-        description: "File size should be less than 2MB",
+        description: "File size should be less than 4MB",
         variant: "destructive",
       });
       return;
@@ -688,7 +688,7 @@ const DocumentUpload = () => {
               />
               <p className="text-xs text-gray-500">
                 <strong>Accepted formats:</strong> PDF, DOC & DOCX • Max file
-                size: 2MB
+                size: 4MB
               </p>
             </div>
 
