@@ -175,7 +175,7 @@ const DocumentUpload = () => {
     }
 
     // Check file size (2MB limit to ensure it works with the server limit)
-    if (file.size > 2 * 1024 * 1024) {
+    if (file.size > 4 * 1024 * 1024) {
       toast({
         title: "Error",
         description: "File size should be less than 2MB",
@@ -248,7 +248,7 @@ const DocumentUpload = () => {
       return;
     }
 
-    if (file.size > 2 * 1024 * 1024) {
+    if (file.size > 4 * 1024 * 1024) {
       toast({
         title: "Error",
         description: "File size should be less than 2MB",
@@ -320,7 +320,7 @@ const DocumentUpload = () => {
       return;
     }
 
-    if (file.size > 2 * 1024 * 1024) {
+    if (file.size > 4 * 1024 * 1024) {
       toast({
         title: "Error",
         description: "File size should be less than 2MB",
