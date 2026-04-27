@@ -1112,21 +1112,49 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return String(val);
       }
 
+      type RawEntry = { question?: string; answer?: unknown; other?: unknown; aiSubtopics?: unknown };
+
+      const Q_KEYS = ["Q1","Q2","Q3","Q4","Q5","Q6","Q7","Q8","Q9","Q10","Q11","Q12","Q13","Q14","Q15","Q16","Q17","Q18"];
+
+      const sortedUsers = [...nonAdminUsers].sort((a, b) =>
+        (a.username || "").localeCompare(b.username || "")
+      );
+
+      // First pass: load all questionnaires and determine a label for each Q key.
+      // For platform-specific questions that have different text per user, collect
+      // all unique texts and join them with " / " so the header is self-explanatory.
+      const questionLabelSets: Record<string, Set<string>> = {};
+      for (const key of Q_KEYS) questionLabelSets[key] = new Set();
+
+      const userQuestionnaires: Map<number, Record<string, RawEntry>> = new Map();
+
+      for (const user of sortedUsers) {
+        const questionnaire = await storage.getQuestionnaire(user.id);
+        if (!questionnaire?.rawAnswers) continue;
+        const raw = questionnaire.rawAnswers as Record<string, RawEntry>;
+        userQuestionnaires.set(user.id, raw);
+        for (const key of Q_KEYS) {
+          const label = raw[key]?.question;
+          if (label) questionLabelSets[key].add(label);
+        }
+      }
+
+      // Build ordered column labels: use first found for non-ambiguous questions,
+      // combine with " / " for platform-specific ones.
+      const questionLabels: Record<string, string> = {};
+      for (const key of Q_KEYS) {
+        const texts = Array.from(questionLabelSets[key]);
+        questionLabels[key] = texts.length > 0 ? texts.join(" / ") : key;
+      }
+
       const workbook = new ExcelJS.Workbook();
       workbook.creator = "SLI.pro Admin";
       workbook.created = new Date();
 
       const sheet = workbook.addWorksheet("Questionnaire");
 
-      const headers = [
-        "Email",
-        "Name",
-        "Phone Number",
-        "Platform",
-        "Question",
-        "Response",
-        "Account Created",
-      ];
+      const fixedHeaders = ["Email", "Name", "Phone Number", "Platform", "Account Created"];
+      const headers = [...fixedHeaders, ...Q_KEYS.map((k) => questionLabels[k])];
 
       sheet.addRow(headers);
 
@@ -1136,51 +1164,44 @@ export async function registerRoutes(app: Express): Promise<Server> {
       headerRow.alignment = { vertical: "middle", horizontal: "center", wrapText: true };
       headerRow.height = 36;
 
-      const colWidths = [30, 25, 18, 16, 55, 55, 18];
-      colWidths.forEach((width, i) => {
+      const fixedWidths = [30, 25, 18, 16, 18];
+      fixedWidths.forEach((width, i) => {
         sheet.getColumn(i + 1).width = width;
       });
+      for (let i = 0; i < Q_KEYS.length; i++) {
+        sheet.getColumn(fixedHeaders.length + i + 1).width = 35;
+      }
 
-      const sortedUsers = [...nonAdminUsers].sort((a, b) =>
-        (a.username || "").localeCompare(b.username || "")
-      );
-
-      const Q_KEYS = ["Q1","Q2","Q3","Q4","Q5","Q6","Q7","Q8","Q9","Q10","Q11","Q12","Q13","Q14","Q15","Q16","Q17","Q18"];
-
+      // Second pass: one row per user
       for (const user of sortedUsers) {
-        const questionnaire = await storage.getQuestionnaire(user.id);
-        if (!questionnaire || !questionnaire.rawAnswers) continue;
+        const raw = userQuestionnaires.get(user.id);
+        if (!raw) continue;
 
-        const raw = questionnaire.rawAnswers as Record<string, { question?: string; answer?: unknown; other?: unknown; aiSubtopics?: unknown }>;
         const platform = mapPlatform(user.professionalStatus);
         const createdAt = user.createdAt ? new Date(user.createdAt).toISOString().split("T")[0] : "";
         const name = `${user.firstName} ${user.lastName}`.trim();
 
-        for (const key of Q_KEYS) {
+        const answerCells = Q_KEYS.map((key) => {
           const entry = raw[key];
-          if (!entry) continue;
-          const questionText = entry.question ?? key;
-
-          // Build answer: base answer + optional other/aiSubtopics suffixes
-          let answerParts: string[] = [];
+          if (!entry) return "";
+          const parts: string[] = [];
           const base = formatAnswer(entry.answer);
-          if (base) answerParts.push(base);
-          if (entry.other) answerParts.push(`Other: ${formatAnswer(entry.other)}`);
-          if (entry.aiSubtopics && Array.isArray(entry.aiSubtopics) && entry.aiSubtopics.length > 0) {
-            answerParts.push(`AI/Tech subtopics: ${(entry.aiSubtopics as unknown[]).join(", ")}`);
+          if (base) parts.push(base);
+          if (entry.other) parts.push(`Other: ${formatAnswer(entry.other)}`);
+          if (Array.isArray(entry.aiSubtopics) && entry.aiSubtopics.length > 0) {
+            parts.push(`AI/Tech subtopics: ${(entry.aiSubtopics as unknown[]).join(", ")}`);
           }
-          const answerText = answerParts.join(" | ");
+          return parts.join(" | ");
+        });
 
-          sheet.addRow([
-            user.username || "",
-            name,
-            user.phoneNumber || "",
-            platform,
-            questionText,
-            answerText,
-            createdAt,
-          ]);
-        }
+        sheet.addRow([
+          user.username || "",
+          name,
+          user.phoneNumber || "",
+          platform,
+          createdAt,
+          ...answerCells,
+        ]);
       }
 
       sheet.autoFilter = {
