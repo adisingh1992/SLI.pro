@@ -1,8 +1,7 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { useLocation } from "wouter";
-import { useEffect } from "react";
-import { Loader2, Download, FileSpreadsheet } from "lucide-react";
+import { Loader2, Download, FileSpreadsheet, ClipboardList } from "lucide-react";
 import {
   Card,
   CardContent,
@@ -13,10 +12,25 @@ import {
 import { Button } from "@/components/ui/button";
 import AdminLayout from "./layout";
 
+async function triggerDownload(url: string, filename: string) {
+  const res = await fetch(url, { credentials: "include" });
+  if (!res.ok) throw new Error("Export failed");
+  const blob = await res.blob();
+  const objectUrl = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = objectUrl;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(objectUrl);
+}
+
 export default function AdminReportsPage() {
   const { user, isLoading: authLoading } = useAuth();
   const [_, navigate] = useLocation();
-  const [isExporting, setIsExporting] = useState(false);
+  const [isExportingIntake, setIsExportingIntake] = useState(false);
+  const [isExportingQuestionnaire, setIsExportingQuestionnaire] = useState(false);
 
   useEffect(() => {
     if (!authLoading && (!user || !user.isAdmin)) {
@@ -25,24 +39,26 @@ export default function AdminReportsPage() {
   }, [user, authLoading, navigate]);
 
   async function handleExportIntake() {
-    setIsExporting(true);
+    setIsExportingIntake(true);
     try {
-      const res = await fetch("/api/admin/export/branding-intake", { credentials: "include" });
-      if (!res.ok) throw new Error("Export failed");
-      const blob = await res.blob();
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
       const today = new Date().toISOString().split("T")[0];
-      a.download = `branding-intake-export-${today}.xlsx`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
+      await triggerDownload("/api/admin/export/branding-intake", `branding-intake-export-${today}.xlsx`);
     } catch (err) {
-      console.error("Export error:", err);
+      console.error("Intake export error:", err);
     } finally {
-      setIsExporting(false);
+      setIsExportingIntake(false);
+    }
+  }
+
+  async function handleExportQuestionnaire() {
+    setIsExportingQuestionnaire(true);
+    try {
+      const today = new Date().toISOString().split("T")[0];
+      await triggerDownload("/api/admin/export/questionnaire", `questionnaire-export-${today}.xlsx`);
+    } catch (err) {
+      console.error("Questionnaire export error:", err);
+    } finally {
+      setIsExportingQuestionnaire(false);
     }
   }
 
@@ -73,21 +89,47 @@ export default function AdminReportsPage() {
                 <CardTitle className="text-base font-semibold">Branding Intake Export</CardTitle>
               </div>
               <CardDescription>
-                Download a spreadsheet of all users' branding intake responses. Each row is one question/answer pair. Columns: email, name, phone, question, answer, platform, and account created date.
+                Download all users' branding intake responses. One row per user with each question as its own column. Columns include email, name, phone, platform, account created date, and all intake questions.
               </CardDescription>
             </CardHeader>
             <CardContent className="mt-auto pt-4">
               <Button
                 className="w-full"
                 onClick={handleExportIntake}
-                disabled={isExporting}
+                disabled={isExportingIntake}
               >
-                {isExporting ? (
+                {isExportingIntake ? (
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 ) : (
                   <Download className="mr-2 h-4 w-4" />
                 )}
-                {isExporting ? "Generating…" : "Download (.xlsx)"}
+                {isExportingIntake ? "Generating…" : "Download (.xlsx)"}
+              </Button>
+            </CardContent>
+          </Card>
+
+          <Card className="flex flex-col">
+            <CardHeader className="pb-2">
+              <div className="flex items-center gap-2">
+                <ClipboardList className="h-5 w-5 text-primary" />
+                <CardTitle className="text-base font-semibold">Questionnaire Export</CardTitle>
+              </div>
+              <CardDescription>
+                Download all users' questionnaire responses. One row per question per user. Columns: email, name, phone, platform, full question text, response, and account created date.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="mt-auto pt-4">
+              <Button
+                className="w-full"
+                onClick={handleExportQuestionnaire}
+                disabled={isExportingQuestionnaire}
+              >
+                {isExportingQuestionnaire ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <Download className="mr-2 h-4 w-4" />
+                )}
+                {isExportingQuestionnaire ? "Generating…" : "Download (.xlsx)"}
               </Button>
             </CardContent>
           </Card>

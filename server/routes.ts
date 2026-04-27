@@ -1092,6 +1092,117 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Admin Excel export: questionnaire Q&A for all users
+  app.get("/api/admin/export/questionnaire", isAdmin, async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const allUsers = await storage.getAllUsers();
+      const nonAdminUsers = allUsers.filter((u) => !u.isAdmin);
+
+      function mapPlatform(status: string | null | undefined): string {
+        if (!status) return "";
+        if (status === "undergraduate_or_recent_grad") return "undergraduate";
+        if (status === "early_career") return "early_career";
+        if (status === "mid_career_or_senior" || status === "career_break_or_transition") return "mid_career";
+        return status;
+      }
+
+      function formatAnswer(val: unknown): string {
+        if (val === null || val === undefined || val === "") return "";
+        if (Array.isArray(val)) return val.join(", ");
+        return String(val);
+      }
+
+      const workbook = new ExcelJS.Workbook();
+      workbook.creator = "SLI.pro Admin";
+      workbook.created = new Date();
+
+      const sheet = workbook.addWorksheet("Questionnaire");
+
+      const headers = [
+        "Email",
+        "Name",
+        "Phone Number",
+        "Platform",
+        "Question",
+        "Response",
+        "Account Created",
+      ];
+
+      sheet.addRow(headers);
+
+      const headerRow = sheet.getRow(1);
+      headerRow.font = { bold: true, color: { argb: "FFFFFFFF" } };
+      headerRow.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FF2F5496" } };
+      headerRow.alignment = { vertical: "middle", horizontal: "center", wrapText: true };
+      headerRow.height = 36;
+
+      const colWidths = [30, 25, 18, 16, 55, 55, 18];
+      colWidths.forEach((width, i) => {
+        sheet.getColumn(i + 1).width = width;
+      });
+
+      const sortedUsers = [...nonAdminUsers].sort((a, b) =>
+        (a.username || "").localeCompare(b.username || "")
+      );
+
+      const Q_KEYS = ["Q1","Q2","Q3","Q4","Q5","Q6","Q7","Q8","Q9","Q10","Q11","Q12","Q13","Q14","Q15","Q16","Q17","Q18"];
+
+      for (const user of sortedUsers) {
+        const questionnaire = await storage.getQuestionnaire(user.id);
+        if (!questionnaire || !questionnaire.rawAnswers) continue;
+
+        const raw = questionnaire.rawAnswers as Record<string, { question?: string; answer?: unknown; other?: unknown; aiSubtopics?: unknown }>;
+        const platform = mapPlatform(user.professionalStatus);
+        const createdAt = user.createdAt ? new Date(user.createdAt).toISOString().split("T")[0] : "";
+        const name = `${user.firstName} ${user.lastName}`.trim();
+
+        for (const key of Q_KEYS) {
+          const entry = raw[key];
+          if (!entry) continue;
+          const questionText = entry.question ?? key;
+
+          // Build answer: base answer + optional other/aiSubtopics suffixes
+          let answerParts: string[] = [];
+          const base = formatAnswer(entry.answer);
+          if (base) answerParts.push(base);
+          if (entry.other) answerParts.push(`Other: ${formatAnswer(entry.other)}`);
+          if (entry.aiSubtopics && Array.isArray(entry.aiSubtopics) && entry.aiSubtopics.length > 0) {
+            answerParts.push(`AI/Tech subtopics: ${(entry.aiSubtopics as unknown[]).join(", ")}`);
+          }
+          const answerText = answerParts.join(" | ");
+
+          sheet.addRow([
+            user.username || "",
+            name,
+            user.phoneNumber || "",
+            platform,
+            questionText,
+            answerText,
+            createdAt,
+          ]);
+        }
+      }
+
+      sheet.autoFilter = {
+        from: { row: 1, column: 1 },
+        to: { row: 1, column: headers.length },
+      };
+
+      sheet.views = [{ state: "frozen", xSplit: 0, ySplit: 1 }];
+
+      res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+      res.setHeader(
+        "Content-Disposition",
+        `attachment; filename="questionnaire-export-${new Date().toISOString().split("T")[0]}.xlsx"`
+      );
+
+      await workbook.xlsx.write(res);
+      res.end();
+    } catch (error) {
+      next(error);
+    }
+  });
+
   // Temporary debug route to check user state
   app.get("/api/debug/users", isAdmin, async (req: Request, res: Response) => {
     // Get all users from the database
