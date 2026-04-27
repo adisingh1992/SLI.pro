@@ -4,7 +4,7 @@ import { storage } from "./storage";
 import { setupAuth } from "./auth";
 import { z } from "zod";
 import ExcelJS from "exceljs";
-import { INTAKE_SCHEMA, resolveIntakeFieldValue } from "./intake-schema";
+import { INTAKE_SCHEMA, resolveIntakeFieldValue, QuestionEntry } from "./intake-schema";
 import { scrypt, randomBytes } from "crypto";
 import { promisify } from "util";
 import { registerSliRoutes } from "./sli-routes";
@@ -993,34 +993,47 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const allUsers = await storage.getAllUsers();
       const nonAdminUsers = allUsers.filter((u) => !u.isAdmin);
 
+      // Build a deduplicated ordered list of all questions across all platforms
+      const allQuestions: { key: string; label: string; question: QuestionEntry }[] = [];
+      const seenKeys = new Set<string>();
+      for (const platform of ["undergraduate", "early_career", "mid_career"]) {
+        const stages = INTAKE_SCHEMA[platform] ?? [];
+        for (const stage of stages) {
+          for (const q of stage.questions) {
+            if (!seenKeys.has(q.key)) {
+              seenKeys.add(q.key);
+              allQuestions.push({ key: q.key, label: q.label, question: q });
+            }
+          }
+        }
+      }
+
       const workbook = new ExcelJS.Workbook();
       workbook.creator = "SLI.pro Admin";
       workbook.created = new Date();
 
       const sheet = workbook.addWorksheet("Branding Intake");
 
-      const headers = [
-        "User Email",
-        "Name",
-        "Phone Number",
-        "Branding Intake Question",
-        "Branding Intake Answer",
-        "Platform",
-        "Created At",
-      ];
+      // Fixed columns + one column per question
+      const fixedHeaders = ["Email", "Name", "Phone Number", "Platform", "Account Created"];
+      const headers = [...fixedHeaders, ...allQuestions.map((q) => q.label)];
 
       sheet.addRow(headers);
 
       const headerRow = sheet.getRow(1);
       headerRow.font = { bold: true, color: { argb: "FFFFFFFF" } };
       headerRow.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FF2F5496" } };
-      headerRow.alignment = { vertical: "middle", horizontal: "center" };
-      headerRow.height = 20;
+      headerRow.alignment = { vertical: "middle", horizontal: "center", wrapText: true };
+      headerRow.height = 36;
 
-      const colWidths = [30, 25, 18, 45, 40, 18, 22];
-      colWidths.forEach((width, i) => {
+      // Set column widths: fixed cols first, then 25 for each question
+      const fixedWidths = [30, 25, 18, 16, 18];
+      fixedWidths.forEach((width, i) => {
         sheet.getColumn(i + 1).width = width;
       });
+      for (let i = 0; i < allQuestions.length; i++) {
+        sheet.getColumn(fixedHeaders.length + i + 1).width = 30;
+      }
 
       const sortedUsers = [...nonAdminUsers].sort((a, b) =>
         (a.username || "").localeCompare(b.username || "")
@@ -1028,32 +1041,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       for (const user of sortedUsers) {
         const intake = await storage.getBrandingIntake(user.id);
-
         if (!intake) continue;
 
         const platform = intake.platform as string;
-        const stages = INTAKE_SCHEMA[platform] ?? [];
-        const questions = stages.flatMap((stage) => stage.questions);
-
-        if (questions.length === 0) continue;
-
         const responses = (intake.responses as Record<string, unknown>) ?? {};
         const createdAt = user.createdAt ? new Date(user.createdAt).toISOString().split("T")[0] : "";
         const name = `${user.firstName} ${user.lastName}`.trim();
 
-        for (const question of questions) {
-          const rawValue = responses[question.key];
-          const answer = resolveIntakeFieldValue(question, rawValue);
-          sheet.addRow([
-            user.username,
-            name,
-            user.phoneNumber || "",
-            question.label,
-            answer,
-            platform,
-            createdAt,
-          ]);
+        // Build a key→resolved-answer map for this user's platform questions
+        const answerMap: Record<string, string> = {};
+        const stages = INTAKE_SCHEMA[platform] ?? [];
+        for (const stage of stages) {
+          for (const q of stage.questions) {
+            answerMap[q.key] = resolveIntakeFieldValue(q, responses[q.key]);
+          }
         }
+
+        const row: (string)[] = [
+          user.username || "",
+          name,
+          user.phoneNumber || "",
+          platform,
+          createdAt,
+          ...allQuestions.map((q) => answerMap[q.key] ?? ""),
+        ];
+
+        sheet.addRow(row);
       }
 
       sheet.autoFilter = {
