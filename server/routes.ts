@@ -1029,39 +1029,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       for (const user of sortedUsers) {
         const intake = await storage.getBrandingIntake(user.id);
 
-        if (!intake) {
-          sheet.addRow([
-            user.username,
-            `${user.firstName} ${user.lastName}`.trim(),
-            user.phoneNumber || "",
-            "",
-            "",
-            "",
-            user.createdAt ? new Date(user.createdAt).toISOString().split("T")[0] : "",
-          ]);
-          continue;
-        }
+        if (!intake) continue;
 
         const platform = intake.platform as string;
         const stages = INTAKE_SCHEMA[platform] ?? [];
+        const questions = stages.flatMap((stage) => stage.questions);
+
+        if (questions.length === 0) continue;
+
         const responses = (intake.responses as Record<string, unknown>) ?? {};
         const createdAt = user.createdAt ? new Date(user.createdAt).toISOString().split("T")[0] : "";
         const name = `${user.firstName} ${user.lastName}`.trim();
-
-        const questions = stages.flatMap((stage) => stage.questions);
-
-        if (questions.length === 0) {
-          sheet.addRow([
-            user.username,
-            name,
-            user.phoneNumber || "",
-            "",
-            "",
-            platform,
-            createdAt,
-          ]);
-          continue;
-        }
 
         for (const question of questions) {
           const rawValue = responses[question.key];
