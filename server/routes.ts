@@ -3,6 +3,8 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { setupAuth } from "./auth";
 import { z } from "zod";
+import ExcelJS from "exceljs";
+import { INTAKE_SCHEMA, resolveIntakeFieldValue } from "./intake-schema";
 import { scrypt, randomBytes } from "crypto";
 import { promisify } from "util";
 import { registerSliRoutes } from "./sli-routes";
@@ -980,6 +982,120 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Remove password before sending
       const { password, ...profileWithoutPassword } = userProfile;
       res.json(profileWithoutPassword);
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  // Admin Excel export: branding intake data for all users
+  app.get("/api/admin/export/branding-intake", isAdmin, async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const allUsers = await storage.getAllUsers();
+      const nonAdminUsers = allUsers.filter((u) => !u.isAdmin);
+
+      const workbook = new ExcelJS.Workbook();
+      workbook.creator = "SLI.pro Admin";
+      workbook.created = new Date();
+
+      const sheet = workbook.addWorksheet("Branding Intake");
+
+      const headers = [
+        "User Email",
+        "Name",
+        "Phone Number",
+        "Branding Intake Question",
+        "Branding Intake Answer",
+        "Platform",
+        "Created At",
+      ];
+
+      sheet.addRow(headers);
+
+      const headerRow = sheet.getRow(1);
+      headerRow.font = { bold: true, color: { argb: "FFFFFFFF" } };
+      headerRow.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FF2F5496" } };
+      headerRow.alignment = { vertical: "middle", horizontal: "center" };
+      headerRow.height = 20;
+
+      const colWidths = [30, 25, 18, 45, 40, 18, 22];
+      colWidths.forEach((width, i) => {
+        sheet.getColumn(i + 1).width = width;
+      });
+
+      const sortedUsers = [...nonAdminUsers].sort((a, b) =>
+        (a.username || "").localeCompare(b.username || "")
+      );
+
+      for (const user of sortedUsers) {
+        const intake = await storage.getBrandingIntake(user.id);
+
+        if (!intake) {
+          sheet.addRow([
+            user.username,
+            `${user.firstName} ${user.lastName}`.trim(),
+            user.phoneNumber || "",
+            "",
+            "",
+            "",
+            user.createdAt ? new Date(user.createdAt).toISOString().split("T")[0] : "",
+          ]);
+          continue;
+        }
+
+        const platform = intake.platform as string;
+        const stages = INTAKE_SCHEMA[platform] ?? [];
+        const responses = (intake.responses as Record<string, unknown>) ?? {};
+        const createdAt = user.createdAt ? new Date(user.createdAt).toISOString().split("T")[0] : "";
+        const name = `${user.firstName} ${user.lastName}`.trim();
+
+        const questions = stages.flatMap((stage) => stage.questions);
+
+        if (questions.length === 0) {
+          sheet.addRow([
+            user.username,
+            name,
+            user.phoneNumber || "",
+            "",
+            "",
+            platform,
+            createdAt,
+          ]);
+          continue;
+        }
+
+        for (const question of questions) {
+          const rawValue = responses[question.key];
+          const answer = resolveIntakeFieldValue(question, rawValue);
+          sheet.addRow([
+            user.username,
+            name,
+            user.phoneNumber || "",
+            question.label,
+            answer,
+            platform,
+            createdAt,
+          ]);
+        }
+      }
+
+      sheet.autoFilter = {
+        from: { row: 1, column: 1 },
+        to: { row: 1, column: headers.length },
+      };
+
+      sheet.views = [{ state: "frozen", xSplit: 0, ySplit: 1 }];
+
+      res.setHeader(
+        "Content-Type",
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+      );
+      res.setHeader(
+        "Content-Disposition",
+        `attachment; filename="branding-intake-export-${new Date().toISOString().split("T")[0]}.xlsx"`
+      );
+
+      await workbook.xlsx.write(res);
+      res.end();
     } catch (error) {
       next(error);
     }
