@@ -1,8 +1,8 @@
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/use-auth";
 import { useLocation } from "wouter";
-import { Loader2, Users, UserCircle, Calendar, ExternalLink, Download } from "lucide-react";
+import { Loader2, Users, UserCircle, Calendar, ExternalLink } from "lucide-react";
 import {
   Card,
   CardContent,
@@ -19,29 +19,6 @@ import AdminLayout from "./layout";
 export default function AdminDashboardPage() {
   const { user, isLoading: authLoading } = useAuth();
   const [_, navigate] = useLocation();
-  const [isExporting, setIsExporting] = useState(false);
-
-  async function handleExportIntake() {
-    setIsExporting(true);
-    try {
-      const res = await fetch("/api/admin/export/branding-intake", { credentials: "include" });
-      if (!res.ok) throw new Error("Export failed");
-      const blob = await res.blob();
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      const today = new Date().toISOString().split("T")[0];
-      a.download = `branding-intake-export-${today}.xlsx`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-    } catch (err) {
-      console.error("Export error:", err);
-    } finally {
-      setIsExporting(false);
-    }
-  }
 
   // Fetch user count for the dashboard
   const {
@@ -78,19 +55,7 @@ export default function AdminDashboardPage() {
       <div className="p-6 space-y-6">
         <div className="flex justify-between items-center">
           <h1 className="text-3xl font-bold">Admin Dashboard</h1>
-          <div className="flex gap-2">
-            <Button
-              variant="outline"
-              onClick={handleExportIntake}
-              disabled={isExporting}
-            >
-              {isExporting ? (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              ) : (
-                <Download className="mr-2 h-4 w-4" />
-              )}
-              Download Intake Export (.xlsx)
-            </Button>
+          <div className="space-x-2">
             <Button
               variant="secondary"
               onClick={() => navigate("/admin/users")}

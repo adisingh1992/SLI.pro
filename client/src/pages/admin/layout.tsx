@@ -7,7 +7,8 @@ import {
   LogOut, 
   Home,
   Menu,
-  X
+  X,
+  FileBarChart2
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
@@ -43,6 +44,15 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
       icon: Users,
       href: "/admin/users",
       active: isActive("/admin/users"),
+    },
+  ];
+
+  const reportItems = [
+    {
+      title: "Reports",
+      icon: FileBarChart2,
+      href: "/admin/reports",
+      active: isActive("/admin/reports"),
     },
   ];
 
@@ -86,6 +96,22 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
       <Separator />
       <div className="px-3 py-2">
         {navItems.map((item) => (
+          <NavLink
+            key={item.href}
+            href={item.href}
+            icon={item.icon}
+            title={item.title}
+            active={item.active}
+            isMobile={isMobile}
+          />
+        ))}
+      </div>
+      <Separator />
+      <div className="px-3 py-2">
+        <p className="px-4 pb-1 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+          Reports
+        </p>
+        {reportItems.map((item) => (
           <NavLink
             key={item.href}
             href={item.href}
