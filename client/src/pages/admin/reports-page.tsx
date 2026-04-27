@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { useLocation } from "wouter";
-import { Loader2, Download, FileSpreadsheet, ClipboardList } from "lucide-react";
+import { Loader2, Download, FileSpreadsheet, ClipboardList, MessageSquare } from "lucide-react";
 import {
   Card,
   CardContent,
@@ -31,6 +31,7 @@ export default function AdminReportsPage() {
   const [_, navigate] = useLocation();
   const [isExportingIntake, setIsExportingIntake] = useState(false);
   const [isExportingQuestionnaire, setIsExportingQuestionnaire] = useState(false);
+  const [isExportingSessions, setIsExportingSessions] = useState(false);
 
   useEffect(() => {
     if (!authLoading && (!user || !user.isAdmin)) {
@@ -59,6 +60,18 @@ export default function AdminReportsPage() {
       console.error("Questionnaire export error:", err);
     } finally {
       setIsExportingQuestionnaire(false);
+    }
+  }
+
+  async function handleExportSessions() {
+    setIsExportingSessions(true);
+    try {
+      const today = new Date().toISOString().split("T")[0];
+      await triggerDownload("/api/admin/export/chatbot-sessions", `chatbot-sessions-export-${today}.xlsx`);
+    } catch (err) {
+      console.error("Sessions export error:", err);
+    } finally {
+      setIsExportingSessions(false);
     }
   }
 
@@ -115,7 +128,7 @@ export default function AdminReportsPage() {
                 <CardTitle className="text-base font-semibold">Questionnaire Export</CardTitle>
               </div>
               <CardDescription>
-                Download all users' questionnaire responses. One row per question per user. Columns: email, name, phone, platform, full question text, response, and account created date.
+                Download all users' questionnaire responses. One row per user with each question as its own column. Columns: email, name, phone, platform, account created, and all 18 questionnaire questions.
               </CardDescription>
             </CardHeader>
             <CardContent className="mt-auto pt-4">
@@ -130,6 +143,32 @@ export default function AdminReportsPage() {
                   <Download className="mr-2 h-4 w-4" />
                 )}
                 {isExportingQuestionnaire ? "Generating…" : "Download (.xlsx)"}
+              </Button>
+            </CardContent>
+          </Card>
+
+          <Card className="flex flex-col">
+            <CardHeader className="pb-2">
+              <div className="flex items-center gap-2">
+                <MessageSquare className="h-5 w-5 text-primary" />
+                <CardTitle className="text-base font-semibold">Chatbot Sessions Export</CardTitle>
+              </div>
+              <CardDescription>
+                Download session progress for all users. One row per user. Columns: email, name, phone, platform, account created, then for each of the 3 Foundation Sessions and 3 Enhancement Modules: status, start date, completion date, and time spent.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="mt-auto pt-4">
+              <Button
+                className="w-full"
+                onClick={handleExportSessions}
+                disabled={isExportingSessions}
+              >
+                {isExportingSessions ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <Download className="mr-2 h-4 w-4" />
+                )}
+                {isExportingSessions ? "Generating…" : "Download (.xlsx)"}
               </Button>
             </CardContent>
           </Card>

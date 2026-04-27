@@ -1224,6 +1224,151 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Admin Excel export: chatbot session data (foundation sessions + enhancement modules)
+  app.get("/api/admin/export/chatbot-sessions", isAdmin, async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const allUsers = await storage.getAllUsers();
+      const nonAdminUsers = allUsers.filter((u) => !u.isAdmin);
+
+      function mapPlatform(status: string | null | undefined): string {
+        if (!status) return "";
+        if (status === "undergraduate_or_recent_grad") return "undergraduate";
+        if (status === "early_career") return "early_career";
+        if (status === "mid_career_or_senior" || status === "career_break_or_transition") return "mid_career";
+        return status;
+      }
+
+      function formatStatus(status: string | null | undefined): string {
+        if (!status) return "Not Started";
+        const map: Record<string, string> = {
+          locked: "Locked",
+          available: "Available",
+          in_progress: "In Progress",
+          completed: "Completed",
+        };
+        return map[status] ?? status;
+      }
+
+      function formatDate(d: Date | null | undefined): string {
+        if (!d) return "";
+        return new Date(d).toISOString().split("T")[0];
+      }
+
+      function formatElapsed(seconds: number | null | undefined): string {
+        if (!seconds || seconds === 0) return "";
+        const mins = Math.floor(seconds / 60);
+        const secs = seconds % 60;
+        if (mins === 0) return `${secs}s`;
+        if (secs === 0) return `${mins}m`;
+        return `${mins}m ${secs}s`;
+      }
+
+      const workbook = new ExcelJS.Workbook();
+      workbook.creator = "SLI.pro Admin";
+      workbook.created = new Date();
+
+      const sheet = workbook.addWorksheet("Chatbot Sessions");
+
+      const fixedHeaders = ["Email", "Name", "Phone Number", "Platform", "Account Created"];
+      const sessionHeaders: string[] = [];
+
+      for (let i = 1; i <= 3; i++) {
+        sessionHeaders.push(`Foundation ${i} – Status`);
+        sessionHeaders.push(`Foundation ${i} – Started`);
+        sessionHeaders.push(`Foundation ${i} – Completed`);
+        sessionHeaders.push(`Foundation ${i} – Time Spent`);
+      }
+      for (const mod of ["A", "B", "C"]) {
+        sessionHeaders.push(`Module ${mod} – Status`);
+        sessionHeaders.push(`Module ${mod} – Started`);
+        sessionHeaders.push(`Module ${mod} – Completed`);
+        sessionHeaders.push(`Module ${mod} – Time Spent`);
+      }
+
+      const headers = [...fixedHeaders, ...sessionHeaders];
+      sheet.addRow(headers);
+
+      const headerRow = sheet.getRow(1);
+      headerRow.font = { bold: true, color: { argb: "FFFFFFFF" } };
+      headerRow.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FF2F5496" } };
+      headerRow.alignment = { vertical: "middle", horizontal: "center", wrapText: true };
+      headerRow.height = 40;
+
+      const fixedWidths = [30, 25, 18, 16, 18];
+      fixedWidths.forEach((width, i) => { sheet.getColumn(i + 1).width = width; });
+      for (let i = 0; i < sessionHeaders.length; i++) {
+        const colType = i % 4; // 0=status, 1=started, 2=completed, 3=time
+        const width = colType === 0 ? 16 : colType === 3 ? 14 : 14;
+        sheet.getColumn(fixedHeaders.length + i + 1).width = width;
+      }
+
+      const sortedUsers = [...nonAdminUsers].sort((a, b) =>
+        (a.username || "").localeCompare(b.username || "")
+      );
+
+      for (const user of sortedUsers) {
+        const [foundationList, moduleList] = await Promise.all([
+          storage.getFoundationSessions(user.id),
+          storage.getEnhancementModulesForUser(user.id),
+        ]);
+
+        const fsMap: Record<number, typeof foundationList[number]> = {};
+        for (const s of foundationList) fsMap[s.sessionNumber] = s;
+
+        const emMap: Record<string, typeof moduleList[number]> = {};
+        for (const m of moduleList) emMap[m.moduleCode] = m;
+
+        const platform = mapPlatform(user.professionalStatus);
+        const createdAt = user.createdAt ? new Date(user.createdAt).toISOString().split("T")[0] : "";
+        const name = `${user.firstName} ${user.lastName}`.trim();
+
+        const sessionCells: string[] = [];
+
+        for (let i = 1; i <= 3; i++) {
+          const s = fsMap[i];
+          sessionCells.push(formatStatus(s?.status));
+          sessionCells.push(formatDate(s?.startedAt));
+          sessionCells.push(formatDate(s?.completedAt));
+          sessionCells.push(formatElapsed(s?.timerElapsed));
+        }
+        for (const mod of ["A", "B", "C"]) {
+          const m = emMap[mod];
+          sessionCells.push(formatStatus(m?.status));
+          sessionCells.push(formatDate(m?.startedAt));
+          sessionCells.push(formatDate(m?.completedAt));
+          sessionCells.push(formatElapsed(m?.timerElapsed));
+        }
+
+        sheet.addRow([
+          user.username || "",
+          name,
+          user.phoneNumber || "",
+          platform,
+          createdAt,
+          ...sessionCells,
+        ]);
+      }
+
+      sheet.autoFilter = {
+        from: { row: 1, column: 1 },
+        to: { row: 1, column: headers.length },
+      };
+
+      sheet.views = [{ state: "frozen", xSplit: 0, ySplit: 1 }];
+
+      res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+      res.setHeader(
+        "Content-Disposition",
+        `attachment; filename="chatbot-sessions-export-${new Date().toISOString().split("T")[0]}.xlsx"`
+      );
+
+      await workbook.xlsx.write(res);
+      res.end();
+    } catch (error) {
+      next(error);
+    }
+  });
+
   // Temporary debug route to check user state
   app.get("/api/debug/users", isAdmin, async (req: Request, res: Response) => {
     // Get all users from the database
