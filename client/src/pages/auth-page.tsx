@@ -639,7 +639,7 @@ export default function AuthPage() {
                 className="w-full py-5 px-6 bg-[#303454] text-white border-0 font-semibold tracking-[4px] cursor-pointer mt-10 uppercase transition-all duration-300 text-[11px] hover:bg-[#bed6d1] hover:translate-x-2"
                 onClick={() => setActiveView("login")}
               >
-                Log In
+                Return
               </button>
             </div>
           )}
