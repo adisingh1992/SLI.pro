@@ -221,7 +221,7 @@ export default function AuthPage() {
                 onClick={() => setActiveView("signup")}
                 className="text-[#6c8083] no-underline font-semibold cursor-pointer transition-opacity duration-200 hover:opacity-70"
               >
-                Request Membership
+                Create Your Account
               </a>
             </span>
           )}
@@ -356,7 +356,7 @@ export default function AuthPage() {
                   />
                 </div>
                 <h2 className="font-serif text-2xl m-0 text-[#303454]">
-                  Membership Request
+                  Create Account
                 </h2>
               </div>
 
@@ -629,20 +629,17 @@ export default function AuthPage() {
                 <CheckCircle className="h-14 w-14 mx-auto" strokeWidth={1.5} />
               </div>
               <div className="mb-5 text-center">
-                <h2 className="font-serif text-2xl text-[#303454]">Request Submitted</h2>
+                <h2 className="font-serif text-2xl text-[#303454]">Account Created</h2>
                 <p className="text-gray-500 text-[13px] leading-relaxed mt-3">
-                  Your credentials are being validated. Please check back again later.
+                  Your account has been created. Please log in to access it.
                 </p>
-              </div>
-              <div className="font-bold text-xs tracking-wider uppercase mt-5 text-[#303454] text-center">
-                Estimated Activation: 24–48 Hours
               </div>
               <button
                 type="button"
                 className="w-full py-5 px-6 bg-[#303454] text-white border-0 font-semibold tracking-[4px] cursor-pointer mt-10 uppercase transition-all duration-300 text-[11px] hover:bg-[#bed6d1] hover:translate-x-2"
                 onClick={() => setActiveView("login")}
               >
-                Return
+                Log In
               </button>
             </div>
           )}
