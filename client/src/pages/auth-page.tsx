@@ -616,7 +616,7 @@ export default function AuthPage() {
                     {registerMutation.isPending && (
                       <Loader2 className="inline mr-2 h-4 w-4 animate-spin" />
                     )}
-                    Submit for Verification
+                    Create Account
                   </button>
                 </form>
               </Form>
