@@ -446,6 +446,86 @@ export function registerFoundationSessionsRoutes(app: Express) {
     },
   );
 
+  // End a foundation session early - mirrors normal auto-completion flow
+  app.post(
+    "/api/foundation-sessions/:sessionNumber/end-early",
+    isAuthenticated,
+    async (req: Request, res: Response, next: NextFunction) => {
+      try {
+        const sessionNumber = parseInt(req.params.sessionNumber);
+        const userId = req.user!.id;
+
+        if (isNaN(sessionNumber) || sessionNumber < 1 || sessionNumber > 3) {
+          return res
+            .status(400)
+            .json({ error: "Invalid session number. Must be 1, 2, or 3" });
+        }
+
+        const session = await storage.getFoundationSession(
+          userId,
+          sessionNumber,
+        );
+        if (!session) {
+          return res.status(404).json({ error: "Session not found" });
+        }
+
+        if (session.status !== "in_progress") {
+          return res.status(400).json({
+            error: "Session must be in progress to end early",
+          });
+        }
+
+        // Run the same Claude analysis used by normal auto-completion
+        const messages = await storage.getFoundationSessionMessages(session.id);
+        const userProfile = await storage.getUserProfile(userId);
+        const completionCheck = await checkSessionCompletion(
+          userId,
+          sessionNumber,
+          messages,
+          userProfile,
+        );
+
+        // Use analyzer's completionData when available; otherwise fall back to a
+        // minimal stub so the session is still marked completed.
+        const completionData = completionCheck.completionData ?? {
+          endedEarly: true,
+          completedAt: new Date().toISOString(),
+        };
+
+        const updatedSession = await storage.updateFoundationSession(
+          session.id,
+          {
+            status: "completed",
+            completedAt: new Date(),
+            completionData,
+          },
+        );
+
+        // Unlock next session if it exists (mirrors auto-completion branch)
+        if (sessionNumber < 3) {
+          const nextSession = await storage.getFoundationSession(
+            userId,
+            sessionNumber + 1,
+          );
+          if (nextSession && nextSession.status === "locked") {
+            await storage.updateFoundationSession(nextSession.id, {
+              status: "available",
+            });
+          }
+        }
+
+        res.json({
+          session: updatedSession,
+          sessionNumber,
+          completionData,
+        });
+      } catch (error) {
+        console.error("Error ending foundation session early:", error);
+        next(error);
+      }
+    },
+  );
+
   // Update foundation session (for completion and progress tracking)
   app.patch(
     "/api/foundation-sessions/:sessionNumber",

@@ -72,6 +72,50 @@ export default function FoundationSessionChatPage() {
     enabled: !!user,
   });
 
+  // End session early - mirrors normal auto-completion flow
+  const endSessionEarlyMutation = useMutation({
+    mutationFn: async () => {
+      const response = await apiRequest('POST', `/api/foundation-sessions/${sessionNumber}/end-early`);
+      return await response.json();
+    },
+    onSuccess: (data: any) => {
+      const completionData = data?.completionData;
+      let description = '';
+      if (sessionNumber === 1) {
+        description = completionData?.primaryFunction
+          ? `Foundation Session 1 completed. Your primary function has been identified as ${completionData.primaryFunction}.`
+          : `Foundation Session 1 has been ended and marked complete.`;
+      } else if (sessionNumber === 2) {
+        const tier = completionData?.credibilityTier;
+        const brandClaim = completionData?.brandClaim;
+        description = tier
+          ? `Professional Credibility Assessment completed. Achieved Tier ${tier} evidence strength${brandClaim ? `: ${brandClaim}` : ''}.`
+          : `Foundation Session 2 has been ended and marked complete.`;
+      } else {
+        description = `Foundation Session ${sessionNumber} has been completed successfully.`;
+      }
+
+      toast({
+        title: "Session Completed!",
+        description,
+        duration: 5000,
+      });
+
+      queryClient.invalidateQueries({ queryKey: ['/api/foundation-sessions', sessionNumber] });
+      queryClient.invalidateQueries({ queryKey: ['/api/foundation-sessions'] });
+
+      setShowEndSessionDialog(false);
+      navigate('/');
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Couldn't end session",
+        description: error?.message || "Failed to end session. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
   // Auto-start session if available
   const startSessionMutation = useMutation({
     mutationFn: async (sessionNumber: number) => {
@@ -590,6 +634,7 @@ export default function FoundationSessionChatPage() {
                     size="sm"
                     className="w-full text-muted-foreground hover:text-destructive hover:border-destructive"
                     onClick={() => setShowEndSessionDialog(true)}
+                    disabled={isStreaming || endSessionEarlyMutation.isPending}
                   >
                     <LogOut className="h-3.5 w-3.5 mr-2" />
                     End Session Early
@@ -672,17 +717,24 @@ export default function FoundationSessionChatPage() {
               variant="outline"
               onClick={() => setShowEndSessionDialog(false)}
               className="sm:mr-2"
+              disabled={endSessionEarlyMutation.isPending}
             >
               Keep Going
             </Button>
             <Button
               variant="destructive"
-              onClick={() => {
-                setShowEndSessionDialog(false);
-                navigate('/');
-              }}
+              onClick={() => endSessionEarlyMutation.mutate()}
+              disabled={endSessionEarlyMutation.isPending}
+              data-testid="button-end-session-confirm"
             >
-              End Session Anyway
+              {endSessionEarlyMutation.isPending ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Ending Session...
+                </>
+              ) : (
+                'End Session Anyway'
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>
