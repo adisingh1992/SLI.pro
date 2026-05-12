@@ -1264,34 +1264,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         "Professional Status",
         "Discovery Source",
         "Discovery Source (Other)",
-        "Headline",
-        "Bio",
-        "Location",
         "LinkedIn Connected",
-        "Subscription Tier",
-        "Subscription Status",
-        "Subscription Expires",
-        "Premium Purchased",
         "Account Created",
         "Last Login",
-        "Profile Complete",
-        "Completion Step",
-        "Branding Intake Platform",
-        "Branding Intake Completed",
-        "Branding Intake Stage",
-        "Questionnaire Completed",
-        "Documents Count",
-        "Has Resume",
-        "Has LinkedIn Doc",
-        "Foundation Sessions Completed",
-        "Enhancement Modules Completed",
-        "SLI Generated",
-        "SLI Selected",
-        "SLI Refined",
-        "Coaching Notes",
-        "Homework Assigned",
-        "Homework Answered",
-        "Freshness Reports",
       ];
 
       sheet.addRow(headers);
@@ -1301,9 +1276,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       headerRow.alignment = { vertical: "middle", horizontal: "center", wrapText: true };
       headerRow.height = 36;
 
-      const widths = [
-        30, 18, 18, 18, 24, 22, 24, 32, 40, 22, 16, 16, 18, 18, 18, 16, 16, 14, 14, 22, 18, 14, 18, 14, 12, 16, 22, 22, 14, 14, 14, 14, 14, 16, 16,
-      ];
+      const widths = [30, 18, 18, 18, 24, 22, 24, 16, 16, 16];
       widths.forEach((w, i) => {
         sheet.getColumn(i + 1).width = w;
       });
@@ -1313,47 +1286,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const yn = (b: boolean) => (b ? "Yes" : "No");
 
       for (const user of targetUsers) {
-        const [
-          profile,
-          intake,
-          questionnaire,
-          documents,
-          foundationSessions,
-          enhancementModules,
-          slis,
-          coachingNotes,
-          homework,
-          freshnessReports,
-        ] = await Promise.all([
-          storage.getProfile(user.id),
-          storage.getBrandingIntake(user.id),
-          storage.getQuestionnaire(user.id),
-          storage.getDocuments(user.id),
-          storage.getFoundationSessions(user.id),
-          Promise.all([
-            storage.getEnhancementModule(user.id, "A"),
-            storage.getEnhancementModule(user.id, "B"),
-            storage.getEnhancementModule(user.id, "C"),
-          ]),
-          storage.getSlisByUserId(user.id),
-          storage.getCoachingNotes(user.id),
-          storage.getHomeworkAssignments(user.id),
-          storage.getFreshnessReports(user.id),
-        ]);
-
-        const docs = documents ?? [];
-        const hasResume = docs.some((d) => (d.type || "").toLowerCase() === "resume");
-        const hasLinkedinDoc = docs.some((d) => (d.type || "").toLowerCase() === "linkedin");
-        const foundationCompleted = (foundationSessions ?? []).filter((s) => s.status === "completed").length;
-        const enhancementCompleted = (enhancementModules ?? []).filter((m) => m?.status === "completed").length;
-        const sliRecord = (slis ?? [])[0];
-        const sliGenerated = !!sliRecord;
-        const sliSelected = !!sliRecord && (sliRecord.selectedSliIndex !== null || !!sliRecord.customSliText);
-        const sliRefined = !!sliRecord?.refinedSliText;
-        const homeworkAssigned = (homework ?? []).length;
-        const homeworkAnswered = (homework ?? []).filter((h) => !!h.answerText).length;
-        const questionnaireCompleted = !!questionnaire && !questionnaire.isDraft;
-
         sheet.addRow([
           user.username || "",
           user.firstName || "",
@@ -1362,34 +1294,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           user.professionalStatus || "",
           user.discoverySource || "",
           user.discoverySourceOther || "",
-          user.headline || "",
-          user.bio || "",
-          user.location || "",
           yn(!!user.linkedinId),
-          user.subscriptionTier || "",
-          user.subscriptionStatus || "",
-          fmtDate(user.subscriptionExpiresAt),
-          fmtDate(user.premiumPurchasedAt),
           fmtDate(user.createdAt),
           fmtDate(user.lastLoginAt),
-          yn(!!profile?.isComplete),
-          profile?.completionStep ?? 0,
-          intake?.platform || "",
-          yn(!!intake?.completed),
-          intake?.currentStage ?? 0,
-          yn(questionnaireCompleted),
-          docs.length,
-          yn(hasResume),
-          yn(hasLinkedinDoc),
-          foundationCompleted,
-          enhancementCompleted,
-          yn(sliGenerated),
-          yn(sliSelected),
-          yn(sliRefined),
-          (coachingNotes ?? []).length,
-          homeworkAssigned,
-          homeworkAnswered,
-          (freshnessReports ?? []).length,
         ]);
       }
 

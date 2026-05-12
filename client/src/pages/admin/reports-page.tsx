@@ -162,7 +162,7 @@ export default function AdminReportsPage() {
                 <CardTitle className="text-base font-semibold">Users Export</CardTitle>
               </div>
               <CardDescription>
-                Download a summary of all real users (excludes admins and test users). One row per user with profile basics, professional info, subscription, document counts, session/module progress, SLI status, and coaching activity.
+                Download a list of all real users (excludes admins and test users). Columns: Email, First Name, Last Name, Phone Number, Professional Status, Discovery Source, Discovery Source (Other), LinkedIn Connected, Account Created, Last Login.
               </CardDescription>
             </CardHeader>
             <CardContent className="mt-auto pt-4">
