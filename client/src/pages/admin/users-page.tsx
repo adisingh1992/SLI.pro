@@ -265,6 +265,8 @@ export default function UsersPage() {
 
   const exportCSV = () => {
     if (!sortedUsers || sortedUsers.length === 0) return;
+    const exportableUsers = sortedUsers.filter((u) => !u.isTestUser);
+    if (exportableUsers.length === 0) return;
 
     const headers = [
       "Name",
@@ -287,7 +289,7 @@ export default function UsersPage() {
       return str;
     };
 
-    const rows = sortedUsers.map((u) => [
+    const rows = exportableUsers.map((u) => [
       escape(`${u.firstName} ${u.lastName}`),
       escape(u.username),
       escape(u.phoneNumber),

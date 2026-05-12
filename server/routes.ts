@@ -991,7 +991,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/admin/export/branding-intake", isAdmin, async (req: Request, res: Response, next: NextFunction) => {
     try {
       const allUsers = await storage.getAllUsers();
-      const nonAdminUsers = allUsers.filter((u) => !u.isAdmin);
+      const nonAdminUsers = allUsers.filter((u) => !u.isAdmin && !u.isTestUser);
 
       // Build a deduplicated ordered list of all questions across all platforms
       const allQuestions: { key: string; label: string; question: QuestionEntry }[] = [];
@@ -1096,7 +1096,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/admin/export/questionnaire", isAdmin, async (req: Request, res: Response, next: NextFunction) => {
     try {
       const allUsers = await storage.getAllUsers();
-      const nonAdminUsers = allUsers.filter((u) => !u.isAdmin);
+      const nonAdminUsers = allUsers.filter((u) => !u.isAdmin && !u.isTestUser);
 
       function mapPlatform(status: string | null | undefined): string {
         if (!status) return "";
@@ -1228,7 +1228,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/admin/export/chatbot-sessions", isAdmin, async (req: Request, res: Response, next: NextFunction) => {
     try {
       const allUsers = await storage.getAllUsers();
-      const nonAdminUsers = allUsers.filter((u) => !u.isAdmin);
+      const nonAdminUsers = allUsers.filter((u) => !u.isAdmin && !u.isTestUser);
 
       function mapPlatform(status: string | null | undefined): string {
         if (!status) return "";

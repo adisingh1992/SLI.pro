@@ -44,6 +44,7 @@ export const users = pgTable("users", {
   bio: text("bio"),
   location: text("location"),
   isAdmin: boolean("is_admin").default(false).notNull(),
+  isTestUser: boolean("is_test_user").default(false).notNull(),
   lastLoginAt: timestamp("last_login_at"),
   // Stripe and Subscription fields
   subscriptionTier: subscriptionTierEnum("subscription_tier").default("subscription").notNull(),
