@@ -993,16 +993,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const allUsers = await storage.getAllUsers();
       const nonAdminUsers = allUsers.filter((u) => !u.isAdmin && !u.isTestUser);
 
-      // Build a deduplicated ordered list of all questions across all platforms
-      const allQuestions: { key: string; label: string; question: QuestionEntry }[] = [];
-      const seenKeys = new Set<string>();
+      // Build a deduplicated ordered list of all questions across all platforms.
+      // Columns are merged by label so questions that share wording across
+      // platforms (e.g. "Target Industries") become a single column even if
+      // they use different underlying keys (e.g. target_industries vs primary_industry).
+      const allQuestions: { label: string; keys: string[] }[] = [];
+      const labelIndex = new Map<string, number>();
       for (const platform of ["undergraduate", "early_career", "mid_career"]) {
         const stages = INTAKE_SCHEMA[platform] ?? [];
         for (const stage of stages) {
           for (const q of stage.questions) {
-            if (!seenKeys.has(q.key)) {
-              seenKeys.add(q.key);
-              allQuestions.push({ key: q.key, label: q.label, question: q });
+            const idx = labelIndex.get(q.label);
+            if (idx === undefined) {
+              labelIndex.set(q.label, allQuestions.length);
+              allQuestions.push({ label: q.label, keys: [q.key] });
+            } else if (!allQuestions[idx].keys.includes(q.key)) {
+              allQuestions[idx].keys.push(q.key);
             }
           }
         }
@@ -1063,7 +1069,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
           user.phoneNumber || "",
           platform,
           createdAt,
-          ...allQuestions.map((q) => answerMap[q.key] ?? ""),
+          ...allQuestions.map((q) => {
+            // Use the first key for this label that has a non-empty answer.
+            for (const key of q.keys) {
+              const value = answerMap[key];
+              if (value !== undefined && value !== "") return value;
+            }
+            return "";
+          }),
         ];
 
         sheet.addRow(row);
