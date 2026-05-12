@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { useLocation } from "wouter";
-import { Loader2, Download, FileSpreadsheet, ClipboardList, MessageSquare, FileText } from "lucide-react";
+import { Loader2, Download, FileSpreadsheet, ClipboardList, MessageSquare, FileText, Users2 } from "lucide-react";
 import {
   Card,
   CardContent,
@@ -46,6 +46,7 @@ async function triggerDownload(url: string, filename: string) {
 export default function AdminReportsPage() {
   const { user, isLoading: authLoading } = useAuth();
   const [_, navigate] = useLocation();
+  const [isExportingUsers, setIsExportingUsers] = useState(false);
   const [isExportingIntake, setIsExportingIntake] = useState(false);
   const [isExportingQuestionnaire, setIsExportingQuestionnaire] = useState(false);
   const [isExportingSessions, setIsExportingSessions] = useState(false);
@@ -58,6 +59,23 @@ export default function AdminReportsPage() {
       navigate("/admin/login");
     }
   }, [user, authLoading, navigate]);
+
+  async function handleExportUsers() {
+    setIsExportingUsers(true);
+    try {
+      const today = new Date().toISOString().split("T")[0];
+      await triggerDownload("/api/admin/export/users", `users-export-${today}.xlsx`);
+    } catch (err) {
+      console.error("Users export error:", err);
+      toast({
+        title: "Export failed",
+        description: err instanceof Error ? err.message : "Could not generate the users report.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsExportingUsers(false);
+    }
+  }
 
   async function handleExportIntake() {
     setIsExportingIntake(true);
@@ -137,6 +155,32 @@ export default function AdminReportsPage() {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <Card className="flex flex-col">
+            <CardHeader className="pb-2">
+              <div className="flex items-center gap-2">
+                <Users2 className="h-5 w-5 text-primary" />
+                <CardTitle className="text-base font-semibold">Users Export</CardTitle>
+              </div>
+              <CardDescription>
+                Download a summary of all real users (excludes admins and test users). One row per user with profile basics, professional info, subscription, document counts, session/module progress, SLI status, and coaching activity.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="mt-auto pt-4">
+              <Button
+                className="w-full"
+                onClick={handleExportUsers}
+                disabled={isExportingUsers}
+              >
+                {isExportingUsers ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <Download className="mr-2 h-4 w-4" />
+                )}
+                {isExportingUsers ? "Generating…" : "Download (.xlsx)"}
+              </Button>
+            </CardContent>
+          </Card>
+
           <Card className="flex flex-col">
             <CardHeader className="pb-2">
               <div className="flex items-center gap-2">
