@@ -26,8 +26,14 @@ import {
   insertDocumentSchema,
   insertMonthlyCheckInSchema,
   insertCoachingNoteSchema,
-  User
+  User,
+  foundationSessions,
+  foundationSessionMessages,
+  enhancementModules,
+  enhancementModuleMessages,
 } from "@shared/schema";
+import { db } from "./db";
+import { and, asc, eq, inArray } from "drizzle-orm";
 import { extractDocumentText, validateExtractedText } from "./document-extractor";
 import Anthropic from "@anthropic-ai/sdk";
 
@@ -1374,6 +1380,255 @@ export async function registerRoutes(app: Express): Promise<Server> {
         "Content-Disposition",
         `attachment; filename="chatbot-sessions-export-${new Date().toISOString().split("T")[0]}.xlsx"`
       );
+
+      await workbook.xlsx.write(res);
+      res.end();
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  // Admin Excel export: full chat transcripts for a single Foundation Session or Enhancement Module
+  app.get("/api/admin/export/transcripts", isAdmin, async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const type = String(req.query.type || "");
+      const id = String(req.query.id || "");
+
+      if (type !== "foundation" && type !== "enhancement") {
+        return res.status(400).json({ error: "Invalid type. Must be 'foundation' or 'enhancement'." });
+      }
+
+      const isFoundation = type === "foundation";
+      let label = "";
+      let sessionNumber = 0;
+      let moduleCode = "";
+
+      if (isFoundation) {
+        sessionNumber = parseInt(id);
+        if (![1, 2, 3].includes(sessionNumber)) {
+          return res.status(400).json({ error: "Invalid session number. Must be 1, 2, or 3." });
+        }
+        label = `Foundation Session ${sessionNumber}`;
+      } else {
+        moduleCode = id.toUpperCase();
+        if (!["A", "B", "C"].includes(moduleCode)) {
+          return res.status(400).json({ error: "Invalid module code. Must be A, B, or C." });
+        }
+        label = `Enhancement Module ${moduleCode}`;
+      }
+
+      const allUsers = await storage.getAllUsers();
+      const nonAdminUsers = allUsers.filter((u) => !u.isAdmin && !u.isTestUser);
+      const sortedUsers = [...nonAdminUsers].sort((a, b) =>
+        (a.username || "").localeCompare(b.username || "")
+      );
+
+      const workbook = new ExcelJS.Workbook();
+      workbook.creator = "SLI.pro Admin";
+      workbook.created = new Date();
+
+      const usedSheetNames = new Set<string>();
+      function sanitizeSheetName(email: string): string {
+        let base = email.replace(/[:\\\/\?\*\[\]]/g, "_");
+        if (base.length === 0) base = "user";
+        if (base.length > 31) base = base.slice(0, 31);
+        let candidate = base;
+        let counter = 2;
+        while (usedSheetNames.has(candidate.toLowerCase())) {
+          const suffix = `_${counter}`;
+          const trimmedBase = base.slice(0, Math.max(1, 31 - suffix.length));
+          candidate = trimmedBase + suffix;
+          counter++;
+        }
+        usedSheetNames.add(candidate.toLowerCase());
+        return candidate;
+      }
+
+      const pstFormatter = new Intl.DateTimeFormat("en-US", {
+        timeZone: "America/Los_Angeles",
+        year: "numeric",
+        month: "short",
+        day: "2-digit",
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: true,
+      });
+      function fmtPST(d: Date | string | null | undefined): string {
+        if (!d) return "";
+        const date = d instanceof Date ? d : new Date(d);
+        if (isNaN(date.getTime())) return "";
+        return `${pstFormatter.format(date)} PST`;
+      }
+
+      type SessionRecord = {
+        id: number;
+        userId: number;
+        startedAt: Date | null;
+        completedAt: Date | null;
+        status: string;
+        createdAt: Date;
+      };
+      type TranscriptMessage = {
+        role: string;
+        content: string;
+        createdAt: Date;
+      };
+
+      const userIds = sortedUsers.map((u) => u.id);
+      const recordsByUser = new Map<number, SessionRecord[]>();
+      const messagesByRecord = new Map<number, TranscriptMessage[]>();
+
+      if (userIds.length > 0) {
+        if (isFoundation) {
+          const rows = await db
+            .select()
+            .from(foundationSessions)
+            .where(
+              and(
+                inArray(foundationSessions.userId, userIds),
+                eq(foundationSessions.sessionNumber, sessionNumber),
+              ),
+            );
+          for (const r of rows) {
+            const rec: SessionRecord = {
+              id: r.id,
+              userId: r.userId,
+              startedAt: (r.startedAt as Date | null) ?? null,
+              completedAt: (r.completedAt as Date | null) ?? null,
+              status: r.status,
+              createdAt: r.createdAt as Date,
+            };
+            const list = recordsByUser.get(r.userId) ?? [];
+            list.push(rec);
+            recordsByUser.set(r.userId, list);
+          }
+          const recordIds = rows.map((r) => r.id);
+          if (recordIds.length > 0) {
+            const msgRows = await db
+              .select()
+              .from(foundationSessionMessages)
+              .where(inArray(foundationSessionMessages.sessionId, recordIds))
+              .orderBy(asc(foundationSessionMessages.createdAt));
+            for (const m of msgRows) {
+              const list = messagesByRecord.get(m.sessionId) ?? [];
+              list.push({ role: m.role, content: m.content, createdAt: m.createdAt as Date });
+              messagesByRecord.set(m.sessionId, list);
+            }
+          }
+        } else {
+          const rows = await db
+            .select()
+            .from(enhancementModules)
+            .where(
+              and(
+                inArray(enhancementModules.userId, userIds),
+                eq(enhancementModules.moduleCode, moduleCode),
+              ),
+            );
+          for (const r of rows) {
+            const rec: SessionRecord = {
+              id: r.id,
+              userId: r.userId,
+              startedAt: (r.startedAt as Date | null) ?? null,
+              completedAt: (r.completedAt as Date | null) ?? null,
+              status: r.status,
+              createdAt: r.createdAt as Date,
+            };
+            const list = recordsByUser.get(r.userId) ?? [];
+            list.push(rec);
+            recordsByUser.set(r.userId, list);
+          }
+          const recordIds = rows.map((r) => r.id);
+          if (recordIds.length > 0) {
+            const msgRows = await db
+              .select()
+              .from(enhancementModuleMessages)
+              .where(inArray(enhancementModuleMessages.moduleId, recordIds))
+              .orderBy(asc(enhancementModuleMessages.createdAt));
+            for (const m of msgRows) {
+              const list = messagesByRecord.get(m.moduleId) ?? [];
+              list.push({ role: m.role, content: m.content, createdAt: m.createdAt as Date });
+              messagesByRecord.set(m.moduleId, list);
+            }
+          }
+        }
+      }
+
+      let userCount = 0;
+
+      for (const user of sortedUsers) {
+        const userRecords = (recordsByUser.get(user.id) ?? [])
+          .slice()
+          .sort((a, b) => {
+            const aTime = a.startedAt ? a.startedAt.getTime() : a.createdAt.getTime();
+            const bTime = b.startedAt ? b.startedAt.getTime() : b.createdAt.getTime();
+            return aTime - bTime;
+          });
+
+        const recordsWithMessages = userRecords
+          .map((rec) => ({ rec, messages: messagesByRecord.get(rec.id) ?? [] }))
+          .filter((x) => x.messages.length > 0);
+
+        if (recordsWithMessages.length === 0) continue;
+
+        const sheetName = sanitizeSheetName(user.username || `user-${user.id}`);
+        const sheet = workbook.addWorksheet(sheetName);
+
+        sheet.addRow(["Message #", "Date & Time (PST)", "Sender", "Message"]);
+        const headerRow = sheet.getRow(1);
+        headerRow.font = { bold: true, color: { argb: "FFFFFFFF" } };
+        headerRow.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FF2F5496" } };
+        headerRow.alignment = { vertical: "middle", horizontal: "center", wrapText: true };
+        headerRow.height = 28;
+
+        sheet.getColumn(1).width = 12;
+        sheet.getColumn(2).width = 26;
+        sheet.getColumn(3).width = 12;
+        sheet.getColumn(4).width = 100;
+
+        sheet.views = [{ state: "frozen", xSplit: 0, ySplit: 1 }];
+
+        recordsWithMessages.forEach((item, idx) => {
+          if (recordsWithMessages.length > 1) {
+            const startedTxt = item.rec.startedAt ? fmtPST(item.rec.startedAt) : "unknown";
+            const completedTxt = item.rec.completedAt ? `, completed ${fmtPST(item.rec.completedAt)}` : "";
+            const dividerText = `Conversation ${idx + 1} — started ${startedTxt}${completedTxt} (status: ${item.rec.status})`;
+            const dividerRow = sheet.addRow([dividerText, "", "", ""]);
+            sheet.mergeCells(dividerRow.number, 1, dividerRow.number, 4);
+            const cell = dividerRow.getCell(1);
+            cell.font = { bold: true, color: { argb: "FFFFFFFF" } };
+            cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FF8497B0" } };
+            cell.alignment = { vertical: "middle", horizontal: "left", wrapText: true };
+          }
+          item.messages.forEach((m, i) => {
+            const sender = m.role === "user" ? "User" : "Chatbot";
+            const row = sheet.addRow([i + 1, fmtPST(m.createdAt), sender, m.content]);
+            row.getCell(1).alignment = { vertical: "top", horizontal: "right" };
+            row.getCell(2).alignment = { vertical: "top" };
+            row.getCell(3).alignment = { vertical: "top" };
+            row.getCell(4).alignment = { wrapText: true, vertical: "top" };
+          });
+        });
+
+        userCount++;
+      }
+
+      if (userCount === 0) {
+        const sheet = workbook.addWorksheet("No Data");
+        sheet.addRow([`No transcripts found for ${label}`]);
+      }
+
+      const slug = isFoundation
+        ? `foundation-${sessionNumber}`
+        : `enhancement-${moduleCode.toLowerCase()}`;
+      const today = new Date().toISOString().split("T")[0];
+      const filename = `session-transcripts-${slug}-${today}.xlsx`;
+
+      res.setHeader(
+        "Content-Type",
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+      );
+      res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
 
       await workbook.xlsx.write(res);
       res.end();

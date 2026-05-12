@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { useLocation } from "wouter";
-import { Loader2, Download, FileSpreadsheet, ClipboardList, MessageSquare } from "lucide-react";
+import { Loader2, Download, FileSpreadsheet, ClipboardList, MessageSquare, FileText } from "lucide-react";
 import {
   Card,
   CardContent,
@@ -10,11 +10,28 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { useToast } from "@/hooks/use-toast";
 import AdminLayout from "./layout";
 
 async function triggerDownload(url: string, filename: string) {
   const res = await fetch(url, { credentials: "include" });
-  if (!res.ok) throw new Error("Export failed");
+  if (!res.ok) {
+    let message = "Export failed";
+    try {
+      const data = await res.json();
+      if (data?.error) message = data.error;
+    } catch {
+      // ignore
+    }
+    throw new Error(message);
+  }
   const blob = await res.blob();
   const objectUrl = URL.createObjectURL(blob);
   const a = document.createElement("a");
@@ -32,6 +49,9 @@ export default function AdminReportsPage() {
   const [isExportingIntake, setIsExportingIntake] = useState(false);
   const [isExportingQuestionnaire, setIsExportingQuestionnaire] = useState(false);
   const [isExportingSessions, setIsExportingSessions] = useState(false);
+  const [transcriptSelection, setTranscriptSelection] = useState<string>("foundation:1");
+  const [isExportingTranscripts, setIsExportingTranscripts] = useState(false);
+  const { toast } = useToast();
 
   useEffect(() => {
     if (!authLoading && (!user || !user.isAdmin)) {
@@ -72,6 +92,28 @@ export default function AdminReportsPage() {
       console.error("Sessions export error:", err);
     } finally {
       setIsExportingSessions(false);
+    }
+  }
+
+  async function handleExportTranscripts() {
+    setIsExportingTranscripts(true);
+    try {
+      const [type, id] = transcriptSelection.split(":");
+      const today = new Date().toISOString().split("T")[0];
+      const slug = type === "foundation" ? `foundation-${id}` : `enhancement-${id.toLowerCase()}`;
+      await triggerDownload(
+        `/api/admin/export/transcripts?type=${encodeURIComponent(type)}&id=${encodeURIComponent(id)}`,
+        `session-transcripts-${slug}-${today}.xlsx`,
+      );
+    } catch (err) {
+      console.error("Transcripts export error:", err);
+      toast({
+        title: "Export failed",
+        description: err instanceof Error ? err.message : "Could not generate the transcripts report.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsExportingTranscripts(false);
     }
   }
 
@@ -169,6 +211,45 @@ export default function AdminReportsPage() {
                   <Download className="mr-2 h-4 w-4" />
                 )}
                 {isExportingSessions ? "Generating…" : "Download (.xlsx)"}
+              </Button>
+            </CardContent>
+          </Card>
+
+          <Card className="flex flex-col">
+            <CardHeader className="pb-2">
+              <div className="flex items-center gap-2">
+                <FileText className="h-5 w-5 text-primary" />
+                <CardTitle className="text-base font-semibold">Session Transcripts Export</CardTitle>
+              </div>
+              <CardDescription>
+                Download full chat transcripts for a single Foundation Session or Enhancement Module. The workbook contains one sheet per user (named with their email) with columns: Message #, Date &amp; Time (PST), Sender (User/Chatbot), and Message.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="mt-auto pt-4 space-y-3">
+              <Select value={transcriptSelection} onValueChange={setTranscriptSelection}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Choose a session or module" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="foundation:1">Foundation Session 1</SelectItem>
+                  <SelectItem value="foundation:2">Foundation Session 2</SelectItem>
+                  <SelectItem value="foundation:3">Foundation Session 3</SelectItem>
+                  <SelectItem value="enhancement:A">Enhancement Module A</SelectItem>
+                  <SelectItem value="enhancement:B">Enhancement Module B</SelectItem>
+                  <SelectItem value="enhancement:C">Enhancement Module C</SelectItem>
+                </SelectContent>
+              </Select>
+              <Button
+                className="w-full"
+                onClick={handleExportTranscripts}
+                disabled={isExportingTranscripts}
+              >
+                {isExportingTranscripts ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <Download className="mr-2 h-4 w-4" />
+                )}
+                {isExportingTranscripts ? "Generating…" : "Download (.xlsx)"}
               </Button>
             </CardContent>
           </Card>
