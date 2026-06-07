@@ -169,14 +169,16 @@ The product has two audiences:
    payload is available for signature verification. All other routes use parsed JSON.
 3. `express.json()` and `express.urlencoded()` are applied for the rest of the API.
 4. A request logger logs method, path, status, and duration for `/api/*` requests.
-5. `setupAuth(app)` wires session, Passport, and auth routes.
-6. `registerRoutes(app)` (and the per‑feature `registerXRoutes(app)` functions) mount
-   all API endpoints.
-7. An HTTP server is created and **`setupWebSocketServer(server)`** attaches the
+5. `registerRoutes(app)` (`server/routes.ts`) is the single entry point that mounts the
+   API. Internally it first calls `setupAuth(app)` (session, Passport, auth routes),
+   then registers all core routes and the per‑feature `registerXRoutes(app)` modules
+   (SLI, LinkedIn, freshness, foundation sessions, enhancement modules, homework,
+   payments).
+6. An HTTP server is created and **`setupWebSocketServer(server)`** attaches the
    `/ws/voice` WebSocket server.
-8. In **development** (`app.get("env") === "development"`) Vite is attached in
+7. In **development** (`app.get("env") === "development"`) Vite is attached in
    middleware mode; in **production** the pre‑built client is served statically.
-9. The server listens on **port 5000** (host `0.0.0.0`).
+8. The server listens on **port 5000** (host `0.0.0.0`).
 
 ### Typical request lifecycle
 ```
@@ -253,22 +255,63 @@ export const users = pgTable("users", {
 > `professionalStatus` drives prompt selection (see §9).
 
 #### `experiences`, `education`, `skills`, `languages`
-Profile sub‑records, each `references(() => users.id)`:
+Profile sub‑records, each referencing `users.id`:
 ```ts
-experiences: { id, userId, title, company, startDate, endDate?, description?, current? }
-education:   { id, userId, degree, institution, startYear, endYear?, description? }
-skills:      { id, userId, name }
-languages:   { id, userId, name, proficiency }
+export const experiences = pgTable("experiences", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().references(() => users.id),
+  title: text("title").notNull(),
+  company: text("company").notNull(),
+  startDate: text("start_date").notNull(),
+  endDate: text("end_date"),
+  description: text("description"),
+  current: boolean("current").default(false),
+});
+
+export const education = pgTable("education", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().references(() => users.id),
+  degree: text("degree").notNull(),
+  institution: text("institution").notNull(),
+  startYear: text("start_year").notNull(),
+  endYear: text("end_year"),
+  description: text("description"),
+});
+
+export const skills = pgTable("skills", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().references(() => users.id),
+  name: text("name").notNull(),
+});
+
+export const languages = pgTable("languages", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().references(() => users.id),
+  name: text("name").notNull(),
+  proficiency: text("proficiency").notNull(),
+});
 ```
 
 #### `profiles`
 ```ts
-profiles: { id, userId (unique), completionStep (default 0), isComplete (default false) }
+export const profiles = pgTable("profiles", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().references(() => users.id).unique(),
+  completionStep: integer("completion_step").default(0),
+  isComplete: boolean("is_complete").default(false),
+});
 ```
 
 #### `password_resets`
 ```ts
-password_resets: { id, userId, token (unique), expiresAt, used (default false), createdAt }
+export const passwordResets = pgTable("password_resets", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().references(() => users.id),
+  token: text("token").notNull().unique(),
+  expiresAt: timestamp("expires_at").notNull(),
+  used: boolean("used").default(false).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
 ```
 
 ### 5.3 Documents & questionnaire
@@ -291,24 +334,48 @@ export const documents = pgTable("documents", {
 
 #### `questionnaires`
 ```ts
-questionnaires: {
-  id, userId,
-  industry?, background?, goals?, aspirations?, challenges?, interests?, timeframe?,
-  rawAnswers? (jsonb), isDraft (default false), createdAt, updatedAt
-}
+export const questionnaires = pgTable("questionnaires", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().references(() => users.id),
+  industry: text("industry"),
+  background: text("background"),
+  goals: text("goals"),
+  aspirations: text("aspirations"),
+  challenges: text("challenges"),
+  interests: text("interests"),
+  timeframe: text("timeframe"),
+  rawAnswers: jsonb("raw_answers"),
+  isDraft: boolean("is_draft").default(false),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
 ```
 
 ### 5.4 Conversations & summaries
 
 #### `conversations` / `messages`
 ```ts
-conversations: { id, userId, title (default "New Conversation"), createdAt, updatedAt }
-messages:      { id, conversationId, role ("user"|"assistant"), content, createdAt }
+export const conversations = pgTable("conversations", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().references(() => users.id),
+  title: text("title").notNull().default("New Conversation"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const messages = pgTable("messages", {
+  id: serial("id").primaryKey(),
+  conversationId: integer("conversation_id").notNull().references(() => conversations.id),
+  role: text("role").notNull(), // "user" or "assistant"
+  content: text("content").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
 ```
 
 #### `conversation_summaries`
 Rich, structured AI summary of a coaching conversation. All sections are typed
-`jsonb` and `notNull`:
+`jsonb` and `notNull`. The block below is **abridged** (field names per `jsonb`
+section); see `shared/schema.ts` for the full inline `$type<…>()` definitions:
 ```ts
 conversation_summaries: {
   id, conversationId (cascade), userId (cascade),
@@ -328,92 +395,174 @@ conversation_summaries: {
 
 #### `monthly_check_ins`
 ```ts
-monthly_check_ins: {
-  id, userId, month ("YYYY-MM"),
-  contentPosts (int), contentLinks (string[]), contentScreenshots ({name,data}[]),
-  engagementFrequency, engagementScreenshot? (base64),
-  updatedProfileVisuals (bool), profileScreenshot? (base64),
-  newConnections (int), targetConnectionPercentage,
-  recommendationImplementation, implementationChallenges?, createdAt
-}
+export const monthlyCheckIns = pgTable("monthly_check_ins", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().references(() => users.id),
+  month: text("month").notNull(), // Format: YYYY-MM
+  contentPosts: integer("content_posts").notNull(), // Number of posts published
+  contentLinks: jsonb("content_links").$type<string[]>().default([]),
+  contentScreenshots: jsonb("content_screenshots").$type<{name: string, data: string}[]>().default([]),
+  engagementFrequency: text("engagement_frequency").notNull(), // "daily", "3-5/week", "1-2/week", "less-than-1/week", "none"
+  engagementScreenshot: text("engagement_screenshot"), // Base64 encoded image
+  updatedProfileVisuals: boolean("updated_profile_visuals").default(false),
+  profileScreenshot: text("profile_screenshot"), // Base64 encoded image
+  newConnections: integer("new_connections").notNull(),
+  targetConnectionPercentage: text("target_connection_percentage").notNull(), // "0-25%", "26-50%", "51-75%", "76-100%"
+  recommendationImplementation: text("recommendation_implementation").notNull(), // "fully", "mostly", "partially", "minimally", "not-yet"
+  implementationChallenges: text("implementation_challenges"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
 ```
 
 #### `freshness_reports`
 ```ts
-freshness_reports: {
-  id, userId,
-  questionnaireAnalysis (jsonb), resumeAnalysis (jsonb), linkedinAnalysis (jsonb),
-  additionalDocumentsAnalysis (jsonb[] default []), finalSynthesis (jsonb),
-  createdAt
-}
+export const freshnessReports = pgTable("freshness_reports", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().references(() => users.id),
+  questionnaireAnalysis: jsonb("questionnaire_analysis").$type<Record<string, any>>(),
+  resumeAnalysis: jsonb("resume_analysis").$type<Record<string, any>>(),
+  linkedinAnalysis: jsonb("linkedin_analysis").$type<Record<string, any>>(),
+  additionalDocumentsAnalysis: jsonb("additional_documents_analysis").$type<Record<string, any>[]>().default([]),
+  finalSynthesis: jsonb("final_synthesis").$type<Record<string, any>>(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
 ```
 
 ### 5.6 LinkedIn content
 
 #### `linkedin_content_drafts`
 ```ts
-linkedin_content_drafts: {
-  id, userId (cascade),
-  post1Type, post1Content: { hook, body, closing, hashtags },
-  post2Type, post2Content: { hook, body, closing, hashtags },
-  createdAt
-}
+export const linkedinContentDrafts = pgTable("linkedin_content_drafts", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
+  post1Type: text("post1_type").notNull(), // Type of first post (experiential, news, trend, resource)
+  post1Content: jsonb("post1_content").$type<{
+    hook: string;
+    body: string;
+    closing: string;
+    hashtags: string;
+  }>().notNull(),
+  post2Type: text("post2_type").notNull(), // Type of second post
+  post2Content: jsonb("post2_content").$type<{
+    hook: string;
+    body: string;
+    closing: string;
+    hashtags: string;
+  }>().notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
 ```
 
 #### `linkedin_post_shares`
 ```ts
-linkedin_post_shares: {
-  id, draftId (cascade), postNumber (1|2), shareCount (default 0), lastSharedAt?
-}
+export const linkedinPostShares = pgTable("linkedin_post_shares", {
+  id: serial("id").primaryKey(),
+  draftId: integer("draft_id").notNull().references(() => linkedinContentDrafts.id, { onDelete: 'cascade' }),
+  postNumber: integer("post_number").notNull(), // 1 or 2
+  shareCount: integer("share_count").default(0).notNull(),
+  lastSharedAt: timestamp("last_shared_at"),
+});
 ```
 
 #### `linkedin_optimizations`
 ```ts
-linkedin_optimizations: {
-  id, userId (cascade),
-  alignmentAssessment?,
-  headlineOptimization:  { currentHeadline?, recommendedHeadline?, rationale? },
-  aboutSection:          { currentAnalysis?, recommendations?, suggestedStructure?, keyElements?, draftContent? },
-  profileEnhancements:   { experienceSection?, skillsEndorsements?, activityEngagement?, visualImprovements? },
-  contentStrategy:       { themes?, postIdeas?, engagementTips? },
-  implementationPriorities?, createdAt
-}
+export const linkedinOptimizations = pgTable("linkedin_optimizations", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
+  alignmentAssessment: text("alignment_assessment"), // Claude's evaluation of profile alignment with SLI
+  headlineOptimization: jsonb("headline_optimization").$type<{
+    currentHeadline?: string;
+    recommendedHeadline?: string;
+    rationale?: string;
+  }>(),
+  aboutSection: jsonb("about_section").$type<{
+    currentAnalysis?: string;
+    recommendations?: string;
+    suggestedStructure?: string;
+    keyElements?: string;
+    draftContent?: string;
+  }>(),
+  profileEnhancements: jsonb("profile_enhancements").$type<{
+    experienceSection?: string;
+    skillsEndorsements?: string;
+    activityEngagement?: string;
+    visualImprovements?: string;
+  }>(),
+  contentStrategy: jsonb("content_strategy").$type<{
+    themes?: string;
+    postIdeas?: string;
+    engagementTips?: string;
+  }>(),
+  implementationPriorities: text("implementation_priorities"), // Prioritized roadmap for changes
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
 ```
 
 ### 5.7 Coaching artifacts (admin)
 
 #### `coaching_notes`
 ```ts
-coaching_notes: { id, userId, adminId, content, createdAt, updatedAt }
+export const coachingNotes = pgTable("coaching_notes", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().references(() => users.id),
+  adminId: integer("admin_id").notNull().references(() => users.id), // The admin who wrote the note
+  content: text("content").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
 ```
 
 #### `slis` (Single Lasting Impressions)
 Three AI‑generated candidate SLIs plus selection & refinement state:
 ```ts
-slis: {
-  id, userId (cascade), adminId,
-  title1, statement1, rationale1,
-  title2, statement2, rationale2,
-  title3, statement3, rationale3,
-  selectedSliIndex?,            // 1|2|3 (null = none/custom)
-  customSliText?,               // user-authored SLI
-  refinedSliText?,              // Claude refinement
-  refinementRationale?, implementationGuidance?, refinedAt?,
-  refinementCount (default 0),  // max 3 refinements
-  createdAt, updatedAt
-}
+export const slis = pgTable("slis", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
+  adminId: integer("admin_id").notNull().references(() => users.id), // The admin who generated the SLIs
+  title1: text("title1").notNull(),
+  statement1: text("statement1").notNull(),
+  rationale1: text("rationale1").notNull(),
+  title2: text("title2").notNull(),
+  statement2: text("statement2").notNull(),
+  rationale2: text("rationale2").notNull(),
+  title3: text("title3").notNull(),
+  statement3: text("statement3").notNull(),
+  rationale3: text("rationale3").notNull(),
+  selectedSliIndex: integer("selected_sli_index"), // 1, 2, or 3, null if not selected yet or if custom SLI
+  customSliText: text("custom_sli_text"), // Custom SLI text if user chooses to write their own
+
+  // SLI Refinement fields
+  refinedSliText: text("refined_sli_text"), // The refined SLI created by Claude
+  refinementRationale: text("refinement_rationale"), // Explanation of the refinement
+  implementationGuidance: text("implementation_guidance"), // Guidance on implementing the refined SLI
+  refinedAt: timestamp("refined_at"), // When the SLI was refined
+  refinementCount: integer("refinement_count").default(0), // Track number of times SLI has been refined (max 3)
+
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
 // updateSliSchema = insert schema, .omit(id, userId, adminId, timestamps).partial()
 ```
 
 #### `homework_assignments`
 ```ts
-homework_assignments: { id, userId, adminId, questionText, answerText?, createdAt, updatedAt }
+export const homeworkAssignments = pgTable("homework_assignments", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
+  adminId: integer("admin_id").notNull().references(() => users.id), // The admin who assigned the homework
+  questionText: text("question_text").notNull(),
+  answerText: text("answer_text"), // User's answer (initially null)
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
 ```
 
 ### 5.8 Guided coaching: Foundation Sessions & Enhancement Modules
 
 #### `foundation_sessions`
-Sessions **1–3**, each with a typed `completionData` payload that differs per session:
+Sessions **1–3**, each with a typed `completionData` payload that differs per session.
+The block below is **abridged** for the large `completionData` `$type<…>()` union; all
+other columns are shown exactly. See `shared/schema.ts` for the full payload type:
 ```ts
 foundation_sessions: {
   id, userId (cascade), sessionNumber (1..3),
@@ -441,15 +590,23 @@ foundation_sessions: {
 
 #### `foundation_session_messages`
 ```ts
-foundation_session_messages: {
-  id, sessionId (cascade), role (message_role), content, createdAt
-}
-// index(sessionId, createdAt)
+export const foundationSessionMessages = pgTable("foundation_session_messages", {
+  id: serial("id").primaryKey(),
+  sessionId: integer("session_id").notNull().references(() => foundationSessions.id, { onDelete: 'cascade' }),
+  role: messageRoleEnum("role").notNull(),
+  content: text("content").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => ({
+  // Index for efficient chronological message retrieval
+  sessionTimeIndex: index("foundation_session_messages_session_time_idx").on(table.sessionId, table.createdAt),
+}));
 ```
 
 #### `enhancement_modules`
 Independent modules **A / B / C** (no locked state — all `available` by default).
-`completionData` carries module‑specific fields plus legacy/back‑compat fields:
+`completionData` carries module‑specific fields plus legacy/back‑compat fields. The
+block below is **abridged** for the large `completionData` `$type<…>()`; all other
+columns are shown exactly. See `shared/schema.ts` for the full payload type:
 ```ts
 enhancement_modules: {
   id, userId (cascade), moduleCode (varchar(1): 'A'|'B'|'C'),
@@ -470,33 +627,50 @@ enhancement_modules: {
 
 #### `enhancement_module_messages`
 ```ts
-enhancement_module_messages: {
-  id, moduleId (cascade), role (message_role), content, createdAt
-}
-// index(moduleId, createdAt)
+export const enhancementModuleMessages = pgTable("enhancement_module_messages", {
+  id: serial("id").primaryKey(),
+  moduleId: integer("module_id").notNull().references(() => enhancementModules.id, { onDelete: 'cascade' }),
+  role: messageRoleEnum("role").notNull(),
+  content: text("content").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => ({
+  // Index for efficient chronological message retrieval
+  moduleTimeIndex: index("enhancement_module_messages_module_time_idx").on(table.moduleId, table.createdAt),
+}));
 ```
 
 ### 5.9 Payments & intake
 
 #### `transactions`
 ```ts
-transactions: {
-  id, userId, stripePaymentId?, stripeSessionId?,
-  amount (int, cents), currency (default "usd"),
-  tier (subscription_tier), status (payment_status, default "pending"),
-  createdAt, updatedAt
-}
+export const transactions = pgTable("transactions", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().references(() => users.id),
+  stripePaymentId: text("stripe_payment_id"),
+  stripeSessionId: text("stripe_session_id"),
+  amount: integer("amount").notNull(), // Amount in cents
+  currency: text("currency").default("usd").notNull(),
+  tier: subscriptionTierEnum("tier").notNull(),
+  status: paymentStatusEnum("status").default("pending").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
 ```
 
 #### `branding_intakes`
 Platform‑specific multi‑stage intake form (one per user):
 ```ts
-branding_intakes: {
-  id, userId (unique), platform (branding_intake_platform),
-  currentStage (int, default 1), responses (jsonb, default {}),
-  completed (bool, default false), marketingOptIn (bool, default false),
-  createdAt, updatedAt
-}
+export const brandingIntakes = pgTable("branding_intakes", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().references(() => users.id).unique(),
+  platform: brandingIntakePlatformEnum("platform").notNull(),
+  currentStage: integer("current_stage").default(1).notNull(),
+  responses: jsonb("responses").default({}).notNull(),
+  completed: boolean("completed").default(false).notNull(),
+  marketingOptIn: boolean("marketing_opt_in").default(false),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
 ```
 
 ### 5.10 Composite read type — `UserProfile`
@@ -653,7 +827,7 @@ isAdmin(req,res,next)          // 401 if not logged in, 403 if !req.user.isAdmin
 |--------|------|-------|---------|
 | GET | `/api/questionnaire` | 🔒 | Get questionnaire |
 | POST | `/api/questionnaire` | 🔒 | Create questionnaire |
-| POST | `/api/questionnaire/...` (draft) | 🔒 | Save draft (see file) |
+| POST | `/api/questionnaire/draft` | 🔒 | Save questionnaire draft |
 | PUT | `/api/questionnaire` | 🔒 | Update questionnaire |
 
 ### 8.4 Documents (`server/routes.ts`)
@@ -917,7 +1091,9 @@ malformed Claude response does not abort the whole job.
 Voice‑to‑text powers the Foundation Session and Enhancement Module chat pages.
 
 - **Frontend**: `useVoiceRecording` hook (`client/src/hooks/use-voice-recording.tsx`)
-  uses the `MediaRecorder` API to capture audio and opens a WebSocket to `/ws/voice`.
+  uses the `MediaRecorder` API to capture audio and opens a WebSocket to
+  `/ws/voice?userId=…&sessionNumber=…&moduleCode=…`. The flow is single‑pass: connect,
+  record, and send the captured audio when recording stops.
 - **Server upgrade** (`server/realtime/websocket-handler.ts`): the HTTP `upgrade`
   event is intercepted for path `/ws/voice`. The session cookie is replayed through
   the same `express-session` middleware to authenticate the user (rejects with
@@ -929,8 +1105,10 @@ Voice‑to‑text powers the Foundation Session and Enhancement Module chat page
   - server → `{ type: "transcription_complete", text }` or `{ type: "error", error }`.
 - **Transcription** (`server/realtime/openai-realtime.ts`): uses the OpenAI SDK with
   model **`whisper-1`**. Requires `OPENAI_API_KEY`.
-- Frontend retry logic: exponential backoff (1s/2s/3s), 3 attempts, 30s timeout, audio
-  cached in memory so retries don't require re‑recording.
+- The hook reports errors via toast and cleans up the WebSocket / MediaRecorder on
+  stop or error. (Note: the `replit.md` overview describes an exponential‑backoff retry
+  mechanism; the current `use-voice-recording.tsx` implements a single‑pass flow, not
+  the retry/backoff/timeout logic described there.)
 
 ---
 
