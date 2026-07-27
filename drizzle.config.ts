@@ -1,14 +1,14 @@
+import "dotenv/config";
 import { defineConfig } from "drizzle-kit";
 
-if (!process.env.DATABASE_URL) {
-  throw new Error("DATABASE_URL, ensure the database is provisioned");
-}
-
+// `drizzle-kit generate` only needs the schema, so DATABASE_URL is not required
+// to generate migrations. `db:push` / `db:migrate` do need it and will fail
+// with a clear connection error if it is empty.
 export default defineConfig({
   out: "./migrations",
   schema: "./shared/schema.ts",
   dialect: "postgresql",
   dbCredentials: {
-    url: process.env.DATABASE_URL,
+    url: process.env.DATABASE_URL ?? "",
   },
 });

@@ -16,6 +16,9 @@ import { registerFoundationSessionsRoutes } from "./foundation-sessions-routes";
 import { setupEnhancementModulesRoutes } from "./enhancement-modules-routes";
 import { setupWebSocketServer } from "./realtime/websocket-handler";
 import { registerPaymentRoutes } from "./payment-routes";
+import * as blobStorage from "./blob-storage";
+import { getDocumentBase64 } from "./document-data";
+import * as orchestrator from "./orchestrator";
 import {
   insertExperienceSchema,
   insertEducationSchema,
@@ -69,18 +72,18 @@ async function generateDocumentSummary(documentId: number, docType: string, file
 
     const userPrompt = `Here is the ${docType === "resume" ? "resume" : "LinkedIn profile"} content:\n\n${cleanText}\n\nPlease provide a concise professional summary.`;
 
-    const response = await anthropicClient.messages.create({
-      model: CLAUDE_MODEL,
+    // Document summarisation is an analysis task -> mid tier.
+    const { text } = await orchestrator.complete({
+      tier: "mid",
       system: systemPrompt,
       messages: [{ role: "user", content: userPrompt }],
-      max_tokens: 1024,
+      maxTokens: 1024,
       temperature: 0.3,
     });
 
-    const textContent = response.content.find((item) => item.type === "text");
-    if (textContent && "text" in textContent) {
-      await storage.updateDocument(documentId, { analysisContent: textContent.text });
-      console.log(`[summary] Summary saved for document ${documentId} (${textContent.text.length} chars)`);
+    if (text) {
+      await storage.updateDocument(documentId, { analysisContent: text });
+      console.log(`[summary] Summary saved for document ${documentId} (${text.length} chars)`);
     }
   } catch (error) {
     console.error(`[summary] Error generating summary for document ${documentId}:`, error);
@@ -627,6 +630,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ message: "Unauthorized" });
       }
 
+      // The client expects `fileData` (base64) to render/download the PDF.
+      // Hydrate it from Blob when the row only carries a key.
+      if (!document.fileData && document.blobKey) {
+        const fileData = await getDocumentBase64(document);
+        return res.json({ ...document, fileData });
+      }
+
       res.json(document);
     } catch (error) {
       next(error);
@@ -647,13 +657,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      const document = await storage.createDocument(validationResult.data);
+      // Move the payload to Blob storage when configured; the database keeps
+      // only the key. Falls back to inline base64 if Blob isn't set up (local
+      // dev), so behaviour is unchanged in that case.
+      const payload = { ...validationResult.data } as typeof validationResult.data & {
+        blobKey?: string | null;
+      };
+      const incomingBase64 = payload.fileData;
+
+      if (blobStorage.isConfigured() && incomingBase64) {
+        payload.blobKey = await blobStorage.uploadBase64(
+          blobStorage.CONTAINERS.documents,
+          incomingBase64,
+          {
+            fileName: payload.fileName,
+            contentType: "application/pdf",
+            prefix: `user-${req.user.id}`,
+          },
+        );
+        payload.fileData = null; // no longer stored inline
+      }
+
+      const document = await storage.createDocument(payload);
       res.status(201).json(document);
 
       if (document.type === "resume" || document.type === "linkedin") {
-        generateDocumentSummary(document.id, document.type, document.fileData, document.fileName).catch(err => {
-          console.error(`Background summary generation failed for document ${document.id}:`, err);
-        });
+        // The background job needs the bytes; use the in-memory copy we already
+        // have rather than re-fetching from Blob.
+        const dataForSummary = incomingBase64 ?? document.fileData;
+        if (dataForSummary) {
+          generateDocumentSummary(document.id, document.type, dataForSummary, document.fileName).catch(err => {
+            console.error(`Background summary generation failed for document ${document.id}:`, err);
+          });
+        }
       }
     } catch (error) {
       next(error);
@@ -671,6 +707,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       if (document.userId !== req.user.id) {
         return res.status(403).json({ message: "Unauthorized" });
+      }
+
+      // Remove the blob too, so deleting a document doesn't orphan storage.
+      if (document.blobKey && blobStorage.isConfigured()) {
+        try {
+          await blobStorage.deleteBlob(blobStorage.CONTAINERS.documents, document.blobKey);
+        } catch (err) {
+          console.error(`Failed to delete blob ${document.blobKey}:`, err);
+        }
       }
 
       await storage.deleteDocument(documentId);

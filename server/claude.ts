@@ -3,6 +3,8 @@ import { log } from "./vite";
 import { storage } from "./storage";
 import { InsertConversationSummary, Document } from "@shared/schema";
 import { extractDocumentText, validateExtractedText } from "./document-extractor";
+import { getDocumentBase64, hasContent } from "./document-data";
+import * as orchestrator from "./orchestrator";
 // Update imports to use namespace import syntax for compatibility
 
 // Check if API key is available
@@ -175,25 +177,15 @@ export async function generateClaudeResponse(
 
     log(`Sending request to Claude for user ${userId}`, "claude");
 
-    const response = await anthropic.messages.create({
-      model: CLAUDE_MODEL,
+    const { text } = await orchestrator.complete({
+      tier: "flagship", // coaching conversation — quality-critical surface
       system: systemPrompt,
       messages: messages,
-      max_tokens: 4096,
+      maxTokens: 4096,
       temperature: 0.5,
     });
 
-    // Return the text content from the response
-    if (response.content && response.content.length > 0) {
-      const textContent = response.content.filter(
-        (item) => item.type === "text",
-      );
-      if (textContent.length > 0 && "text" in textContent[0]) {
-        return textContent[0].text;
-      }
-    }
-
-    return "Sorry, I wasn't able to generate a response.";
+    return text || "Sorry, I wasn't able to generate a response.";
   } catch (error) {
     log(`Error calling Claude API: ${error}`, "claude");
     throw new Error(`Failed to generate response: ${error}`);
@@ -238,8 +230,8 @@ async function callWithRetry<T>(
 
 export async function analyzeDocument(document: Document): Promise<string | null> {
   try {
-    // Skip analysis if no fileData is present
-    if (!document.fileData) {
+    // Skip analysis if the document has no retrievable content (inline or Blob)
+    if (!hasContent(document)) {
       log(`No file data available for document ${document.id}`, "claude");
       return null;
     }
@@ -312,7 +304,7 @@ export async function analyzeDocument(document: Document): Promise<string | null
 
     // Extract readable text from the document using proper parsing libraries
     log(`Extracting text from document: ${document.fileName}`, "claude");
-    const extractedText = await extractDocumentText(document.fileData, document.fileName);
+    const extractedText = await extractDocumentText(await getDocumentBase64(document), document.fileName);
     const cleanedText = validateExtractedText(extractedText);
     
     log(`Successfully extracted ${cleanedText.length} characters of text`, "claude");

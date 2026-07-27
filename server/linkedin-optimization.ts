@@ -130,10 +130,10 @@ Structure your response in the following format:
   let userPrompt = `I need comprehensive LinkedIn optimization recommendations for a client based on their finalized Single Lasting Impression (SLI).
 
 Resume content:
-${resumeDocument.analysisContent || resumeDocument.fileData}
+${resumeDocument.analysisContent || "(no analysis available for this resume)"}
 
 LinkedIn content:
-${linkedinDocument.analysisContent || linkedinDocument.fileData}
+${linkedinDocument.analysisContent || "(no analysis available for this LinkedIn profile)"}
 `;
 
   // Add foundation session 1 context if available

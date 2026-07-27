@@ -1,4 +1,4 @@
-import { pgTable, text, serial, integer, boolean, timestamp, jsonb, pgEnum, unique, check, index, varchar } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, boolean, timestamp, json, jsonb, pgEnum, unique, check, index, varchar } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
@@ -28,6 +28,21 @@ export const messageRoleEnum = pgEnum("message_role", ["user", "assistant"]);
 export const subscriptionTierEnum = pgEnum("subscription_tier", ["free", "premium", "subscription"]);
 export const subscriptionStatusEnum = pgEnum("subscription_status", ["active", "expired", "canceled"]);
 export const paymentStatusEnum = pgEnum("payment_status", ["pending", "succeeded", "failed", "refunded"]);
+
+/**
+ * Session store table for connect-pg-simple (express-session).
+ *
+ * Managed here rather than via the loose create-sessions-table.sql so it ships
+ * with the versioned migrations and exists in every environment automatically.
+ * Shape must match what connect-pg-simple expects: sid / sess / expire.
+ */
+export const sessions = pgTable("sessions", {
+  sid: varchar("sid").primaryKey(),
+  sess: json("sess").notNull(),
+  expire: timestamp("expire", { precision: 6 }).notNull(),
+}, (table) => ({
+  expireIdx: index("IDX_sessions_expire").on(table.expire),
+}));
 
 export const users = pgTable("users", {
   id: serial("id").primaryKey(),
@@ -209,7 +224,12 @@ export const documents = pgTable("documents", {
   name: text("name").notNull(),
   type: text("type").notNull(), // document type: "resume", "linkedin", "certificate", etc.
   fileName: text("file_name").notNull(),
-  fileData: text("file_data").notNull(), // Base64 encoded PDF data
+  // LEGACY: base64 payload stored inline. Nullable now — new uploads go to
+  // Azure Blob and set blobKey instead. Existing rows keep working until the
+  // data-migration phase moves them out.
+  fileData: text("file_data"),
+  // Azure Blob key in the "documents" container.
+  blobKey: text("blob_key"),
   uploadedAt: timestamp("uploaded_at").defaultNow().notNull(),
   analysisContent: text("analysis_content"), // AI-generated analysis of document content
 });

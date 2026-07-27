@@ -2,6 +2,7 @@ import { Anthropic } from '@anthropic-ai/sdk';
 import { InsertSli, UserProfile } from '@shared/schema';
 import { log } from './vite';
 import { analyzeDocument } from './claude';
+import { hasContent } from './document-data';
 
 const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY;
 const CLAUDE_MODEL = process.env.CLAUDE_MODEL || 'claude-sonnet-4-20250514';
@@ -77,7 +78,7 @@ async function summarizeResume(document: any): Promise<string> {
     }
     
     // If the fileData is available, analyze it with Claude
-    if (document.fileData) {
+    if (hasContent(document)) {
       log(`Analyzing resume content for document: ${document.name}`, "claude");
       
       // Use the shared document analysis function
@@ -111,7 +112,7 @@ async function summarizeLinkedIn(document: any): Promise<string> {
     }
     
     // If the fileData is available, analyze it with Claude
-    if (document.fileData) {
+    if (hasContent(document)) {
       log(`Analyzing LinkedIn profile content for document: ${document.name}`, "claude");
       
       // Use the shared document analysis function
@@ -150,7 +151,7 @@ async function summarizeAdditionalDocs(documents: any[]): Promise<string> {
       }
       
       // If the fileData is available, analyze it with Claude
-      if (doc.fileData) {
+      if (hasContent(doc)) {
         log(`Analyzing additional document content for: ${doc.name}`, "claude");
         
         // Use the shared document analysis function

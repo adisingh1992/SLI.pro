@@ -2,6 +2,7 @@ import Anthropic from "@anthropic-ai/sdk";
 import { log } from "./vite";
 import { Document } from "@shared/schema";
 import { extractDocumentText, validateExtractedText } from "./document-extractor";
+import { getDocumentBase64 } from "./document-data";
 
 // Initialize Anthropic client
 const anthropic = new Anthropic({
@@ -464,7 +465,7 @@ The JSON output must strictly follow this structure:
 }`;
 
     // Extract readable text from document using proper parsing libraries
-    const extractedText = await extractDocumentText(document.fileData, document.fileName);
+    const extractedText = await extractDocumentText(await getDocumentBase64(document), document.fileName);
     const documentText = validateExtractedText(extractedText);
     
     const userPrompt = `Here is the client's additional document (${document.type}) content:

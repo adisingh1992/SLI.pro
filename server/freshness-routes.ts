@@ -4,6 +4,7 @@ import { z } from "zod";
 import { insertFreshnessReportSchema, MonthlyCheckIn } from "@shared/schema";
 import { generateQuestionnaireSummary, generateResumeSummary, generateLinkedInSummary, generateAdditionalDocsSummary, generateFinalSynthesis } from "./freshness-report";
 import { extractDocumentText, validateExtractedText } from "./document-extractor";
+import { getDocumentBase64 } from "./document-data";
 
 
 // Middleware to check if user is authenticated
@@ -142,7 +143,7 @@ export function registerFreshnessRoutes(app: Express) {
         try {
           if (resumeDocument) {
             // Extract readable text from resume document using proper parsing
-            const extractedText = await extractDocumentText(resumeDocument.fileData, resumeDocument.fileName);
+            const extractedText = await extractDocumentText(await getDocumentBase64(resumeDocument), resumeDocument.fileName);
             const resumeText = validateExtractedText(extractedText);
             resumeAnalysis = await generateResumeSummary(resumeText, questionnaireAnalysis);
           } else {
@@ -161,7 +162,7 @@ export function registerFreshnessRoutes(app: Express) {
         try {
           if (linkedinDocument) {
             // Extract readable text from LinkedIn document using proper parsing
-            const extractedText = await extractDocumentText(linkedinDocument.fileData, linkedinDocument.fileName);
+            const extractedText = await extractDocumentText(await getDocumentBase64(linkedinDocument), linkedinDocument.fileName);
             const linkedinText = validateExtractedText(extractedText);
             linkedinAnalysis = await generateLinkedInSummary(linkedinText, questionnaireAnalysis, resumeAnalysis);
           } else {

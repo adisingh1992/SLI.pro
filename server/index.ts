@@ -1,6 +1,6 @@
 import express, { type Request, Response, NextFunction } from "express";
-import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
+import { loadConfig, config } from "./config";
 
 const app = express();
 
@@ -42,6 +42,11 @@ app.use((req, res, next) => {
 });
 
 (async () => {
+  // Load secrets from Key Vault (if configured) and validate required config
+  // BEFORE importing route modules, which read process.env at import time.
+  await loadConfig();
+  const { registerRoutes } = await import("./routes");
+
   const server = await registerRoutes(app);
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
@@ -52,19 +57,20 @@ app.use((req, res, next) => {
     throw err;
   });
 
-  // importantly only setup vite in development and after
-  // setting up all the other routes so the catch-all route
-  // doesn't interfere with the other routes
+  // The SPA is hosted on Azure Static Web Apps in staging/production, so this
+  // process serves the API (and WebSocket) only. In development we still run
+  // Vite; set SERVE_CLIENT=true to also serve the built client from this
+  // process (e.g. a single-container fallback). The catch-all client routes
+  // must be registered last so they don't shadow the API routes.
   if (app.get("env") === "development") {
     await setupVite(app, server);
-  } else {
+  } else if (config.serveClient) {
     serveStatic(app);
   }
 
-  // ALWAYS serve the app on port 5000
-  // this serves both the API and the client.
-  // It is the only port that is not firewalled.
-  const port = 5000;
+  // Port comes from the environment (Container Apps sets PORT); default 5000
+  // preserves local/Replit behaviour.
+  const port = config.port;
   server.listen({
     port,
     host: "0.0.0.0",
