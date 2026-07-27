@@ -4,13 +4,8 @@ import {
   insertFoundationSessionMessageSchema,
   updateFoundationSessionSchema,
 } from "../shared/schema";
-import Anthropic from "@anthropic-ai/sdk";
 import { getPromptSet } from "./prompts";
-
-const CLAUDE_MODEL = process.env.CLAUDE_MODEL || "claude-sonnet-4-20250514";
-const anthropic = new Anthropic({
-  apiKey: process.env.ANTHROPIC_API_KEY,
-});
+import * as orchestrator from "./orchestrator";
 
 const isAuthenticated = (req: Request, res: Response, next: NextFunction) => {
   if (req.isAuthenticated()) {
@@ -201,17 +196,16 @@ async function checkSessionCompletion(
     );
 
 
-    const response = await anthropic.messages.create({
-      model: CLAUDE_MODEL,
+    // Structured analysis of the transcript -> mid tier.
+    const { text: analysisContent } = await orchestrator.complete({
+      tier: "mid",
       system:
         "You are an expert at analyzing coaching conversations. Always respond with valid JSON only.",
       messages: [{ role: "user", content: analysisPrompt }],
-      max_tokens: 1000,
+      maxTokens: 1000,
       temperature: 0.1,
     });
 
-    const analysisContent =
-      response.content[0].type === "text" ? response.content[0].text : "";
     const analysis = JSON.parse(analysisContent);
 
     if (analysis.isComplete && analysis.primaryFunction) {
@@ -744,28 +738,22 @@ export function registerFoundationSessionsRoutes(app: Express) {
         });
 
 
-        const response = await anthropic.messages.create({
-          model: CLAUDE_MODEL,
+        // Foundation Session conversation — quality-critical -> flagship tier.
+        const stream = orchestrator.completeStream({
+          tier: "flagship",
           system: systemPrompt,
           messages: formattedMessages,
-          max_tokens: 4096,
+          maxTokens: 4096,
           temperature: 0.7,
-          stream: true,
         });
 
-        for await (const chunk of response) {
-          if (
-            chunk.type === "content_block_delta" &&
-            chunk.delta.type === "text_delta"
-          ) {
-            const content = chunk.delta.text;
-            assistantContent += content;
+        for await (const content of stream) {
+          assistantContent += content;
 
-            // Send the chunk to the client
-            res.write(
-              `data: ${JSON.stringify({ type: "chunk", content })}\n\n`,
-            );
-          }
+          // Send the chunk to the client
+          res.write(
+            `data: ${JSON.stringify({ type: "chunk", content })}\n\n`,
+          );
         }
 
         // Save complete assistant message

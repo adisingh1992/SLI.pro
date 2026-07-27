@@ -1,16 +1,8 @@
-import { Anthropic } from '@anthropic-ai/sdk';
 import { InsertSli, UserProfile } from '@shared/schema';
 import { log } from './vite';
 import { analyzeDocument } from './claude';
 import { hasContent } from './document-data';
-
-const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY;
-const CLAUDE_MODEL = process.env.CLAUDE_MODEL || 'claude-sonnet-4-20250514';
-
-// Initialize Anthropic client
-const anthropic = new Anthropic({
-  apiKey: ANTHROPIC_API_KEY!,
-});
+import * as orchestrator from "./orchestrator";
 
 // Helper function for exponential backoff retries
 async function callWithRetry<T>(
@@ -213,10 +205,10 @@ async function generateFoundationSessionsSummary(foundationSessions: any[]): Pro
     const userMessage = `Please create a concise professional summary of these foundation sessions completion data for SLI generation:\n\n${JSON.stringify(sessionsData, null, 2)}\n\nProvide a clean, structured summary without special formatting characters.`;
     
     const response = await callWithRetry(
-      () => anthropic.messages.create({
-        model: CLAUDE_MODEL,
+      () => orchestrator.complete({
+        tier: "mid", // summarisation
         system: systemPrompt,
-        max_tokens: 1000,
+        maxTokens: 1000,
         temperature: 0.3,
         messages: [{ role: "user", content: userMessage }]
       }),
@@ -224,8 +216,8 @@ async function generateFoundationSessionsSummary(foundationSessions: any[]): Pro
       30000,  // initial backoff of 30 seconds
       "foundation sessions summarization"
     );
-    
-    const summaryContent = response.content.find(item => item.type === 'text')?.text || 'Foundation sessions summary not available';
+
+    const summaryContent = response.text || 'Foundation sessions summary not available';
     
     log(`Generated foundation sessions summary: ${summaryContent.length} characters`, "claude");
     return summaryContent;
@@ -379,10 +371,10 @@ Please generate three distinct, compelling SLI options that this person can use 
     
     log(`Sending to Claude API - contains foundation sessions: ${hasFoundationSections}, section length: ${sectionLength} chars`, "claude");
     const response = await callWithRetry(
-      () => anthropic.messages.create({
-        model: CLAUDE_MODEL,
+      () => orchestrator.complete({
+        tier: "flagship", // SLI generation is quality-critical
         system: systemPrompt + "\n\nIMPORTANT: Return ONLY valid JSON. No additional text or explanations. Ensure all strings are properly escaped.",
-        max_tokens: 4096,
+        maxTokens: 4096,
         temperature: 0.1,  // Very low temperature for reliable JSON
         messages: [
           { role: "user", content: userMessage + "\n\nReturn only the JSON object with no additional text." }
@@ -394,7 +386,7 @@ Please generate three distinct, compelling SLI options that this person can use 
     );
 
     // Parse the response content to extract and sanitize JSON
-    const responseContent = response.content.find(item => item.type === 'text')?.text || '';
+    const responseContent = response.text || '';
     
     // Extract JSON from the response (it might be wrapped in code blocks)
     let jsonStr = responseContent;

@@ -1,26 +1,11 @@
-import Anthropic from "@anthropic-ai/sdk";
 import { log } from "./vite";
 import { storage } from "./storage";
 import { InsertConversationSummary, Document } from "@shared/schema";
 import { extractDocumentText, validateExtractedText } from "./document-extractor";
 import { getDocumentBase64, hasContent } from "./document-data";
 import * as orchestrator from "./orchestrator";
-// Update imports to use namespace import syntax for compatibility
 
-// Check if API key is available
-if (!process.env.ANTHROPIC_API_KEY) {
-  log("WARNING: ANTHROPIC_API_KEY environment variable is not set", "claude");
-} else {
-  log("ANTHROPIC_API_KEY is available", "claude");
-}
-
-const CLAUDE_MODEL = process.env.CLAUDE_MODEL || 'claude-sonnet-4-20250514';
-log(`Using Claude model: ${CLAUDE_MODEL}`, "claude");
-
-// Initialize Anthropic client
-const anthropic = new Anthropic({
-  apiKey: process.env.ANTHROPIC_API_KEY,
-});
+log(`LLM provider: ${orchestrator.activeProvider()}`, "orchestrator");
 
 // Define the system prompt template to be used with each conversation
 const getSystemPrompt = (userData: {
@@ -312,15 +297,15 @@ export async function analyzeDocument(document: Document): Promise<string | null
 
     // Use callWithRetry for API calls with exponential backoff
     const response = await callWithRetry(
-      () => anthropic.messages.create({
-        model: CLAUDE_MODEL,
+      () => orchestrator.complete({
+        tier: "mid", // document analysis
         messages: [
-          { 
-            role: "user", 
+          {
+            role: "user",
             content: fullPrompt
           }
         ],
-        max_tokens: 4096,
+        maxTokens: 4096,
         temperature: 0.5,
       }),
       5,  // max retries
@@ -329,14 +314,10 @@ export async function analyzeDocument(document: Document): Promise<string | null
     );
 
     // Extract the analysis text from the response
-    if (response.content && response.content.length > 0) {
-      // Get the correct text content based on type
-      const block = response.content[0];
-      let textContent = '';
-      
-      if (block.type === 'text' && 'text' in block) {
-        textContent = block.text;
-        
+    if (response.text) {
+      {
+        const textContent = response.text;
+
         // Save the analysis to the database
         if (textContent) {
           try {
@@ -481,10 +462,10 @@ Timeframe: ${q.timeframe || "Not specified"}
 
     // Call Claude with the request using retry mechanism
     const response = await callWithRetry(
-      () => anthropic.messages.create({
-        model: CLAUDE_MODEL,
+      () => orchestrator.complete({
+        tier: "mid", // structured summarisation
         system: systemPrompt,
-        max_tokens: 4096,
+        maxTokens: 4096,
         temperature: 0.5,
         messages: summaryRequest,
       }),
@@ -497,20 +478,14 @@ Timeframe: ${q.timeframe || "Not specified"}
     let summaryData: any;
 
     try {
-      if (response.content && response.content.length > 0) {
-        const block = response.content[0];
-        if (block.type === "text" && "text" in block) {
-          const content = block.text;
-          // Find JSON content - it should be the entire response, but let's be safe
-          const jsonMatch = content.match(/\{[\s\S]*\}/);
-          if (jsonMatch) {
-            summaryData = JSON.parse(jsonMatch[0]);
-          } else {
-            console.error("Could not extract JSON from Claude's response");
-            return null;
-          }
+      if (response.text) {
+        const content = response.text;
+        // Find JSON content - it should be the entire response, but let's be safe
+        const jsonMatch = content.match(/\{[\s\S]*\}/);
+        if (jsonMatch) {
+          summaryData = JSON.parse(jsonMatch[0]);
         } else {
-          console.error("Unexpected response format from Claude");
+          console.error("Could not extract JSON from the model response");
           return null;
         }
       }
@@ -558,16 +533,16 @@ export async function generateStreamingClaudeResponse(
     const initialBackoff = 60000; // 60 seconds
 
     let stream;
-    
+
     while (true) {
       try {
-        stream = await anthropic.messages.create({
-          model: CLAUDE_MODEL,
+        // Coaching conversation -> flagship tier.
+        stream = orchestrator.completeStream({
+          tier: "flagship",
           system: systemPrompt,
           messages: messages,
-          max_tokens: 4096,
+          maxTokens: 4096,
           temperature: 0.5,
-          stream: true,
         });
         break; // If successful, exit the loop
       } catch (error: any) {
@@ -592,15 +567,8 @@ export async function generateStreamingClaudeResponse(
       }
     }
 
-    for await (const chunk of stream) {
-      if (
-        chunk.type === "content_block_delta" &&
-        chunk.delta &&
-        "text" in chunk.delta &&
-        chunk.delta.text
-      ) {
-        onChunk(chunk.delta.text);
-      }
+    for await (const text of stream) {
+      onChunk(text);
     }
   } catch (error) {
     log(`Error in Claude streaming API: ${error}`, "claude");

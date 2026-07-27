@@ -38,7 +38,6 @@ import {
 import { db } from "./db";
 import { and, asc, eq, inArray } from "drizzle-orm";
 import { extractDocumentText, validateExtractedText } from "./document-extractor";
-import Anthropic from "@anthropic-ai/sdk";
 
 const scryptAsync = promisify(scrypt);
 
@@ -48,11 +47,6 @@ async function hashPassword(password: string) {
   const buf = (await scryptAsync(password, salt, 64)) as Buffer;
   return `${buf.toString("hex")}.${salt}`;
 }
-
-const anthropicClient = new Anthropic({
-  apiKey: process.env.ANTHROPIC_API_KEY,
-});
-const CLAUDE_MODEL = process.env.CLAUDE_MODEL || "claude-sonnet-4-20250514";
 
 async function generateDocumentSummary(documentId: number, docType: string, fileData: string, fileName: string) {
   try {

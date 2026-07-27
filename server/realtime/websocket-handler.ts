@@ -4,7 +4,7 @@ import { IncomingMessage } from 'http';
 import { parse } from 'url';
 import session from 'express-session';
 import { storage } from '../storage';
-import { OpenAIRealtimeSession } from './openai-realtime';
+import { VoiceTranscriptionSession } from './voice-transcription';
 
 // Get session from request
 async function getSessionFromRequest(request: IncomingMessage): Promise<any> {
@@ -76,7 +76,7 @@ export function setupWebSocketServer(server: Server) {
     const userId = (request as any).userId;
     console.log(`[WebSocket] Voice connection opened for user ${userId}`);
     
-    let openaiSession: OpenAIRealtimeSession | null = null;
+    let openaiSession: VoiceTranscriptionSession | null = null;
 
     ws.on('message', async (data: Buffer) => {
       try {
@@ -86,7 +86,7 @@ export function setupWebSocketServer(server: Server) {
           console.log(`[WebSocket] Starting voice session for user ${userId}`);
           
           // Create OpenAI session
-          openaiSession = new OpenAIRealtimeSession({
+          openaiSession = new VoiceTranscriptionSession({
             onTranscriptionComplete: (text: string) => {
               ws.send(JSON.stringify({
                 type: 'transcription_complete',

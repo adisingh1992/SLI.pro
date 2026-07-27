@@ -1,15 +1,8 @@
-import Anthropic from "@anthropic-ai/sdk";
 import { log } from "./vite";
 import { Document } from "@shared/schema";
 import { extractDocumentText, validateExtractedText } from "./document-extractor";
 import { getDocumentBase64 } from "./document-data";
-
-// Initialize Anthropic client
-const anthropic = new Anthropic({
-  apiKey: process.env.ANTHROPIC_API_KEY,
-});
-
-const CLAUDE_MODEL = "claude-sonnet-4-20250514";
+import * as orchestrator from "./orchestrator";
 
 // Helper function to make Claude API calls with retry logic for rate limits
 async function callClaude(systemPrompt: string, userPrompt: string, maxRetries = 3, initialBackoff = 60000) {
@@ -32,22 +25,19 @@ async function callClaude(systemPrompt: string, userPrompt: string, maxRetries =
       // Add retry information to logs
       log(`Sending request to Claude for freshness report analysis (Attempt ${attempt + 1}/${maxRetries})`, "claude");
 
-      const response = await anthropic.messages.create({
-        model: CLAUDE_MODEL,
+      // Freshness report analysis -> mid tier.
+      const response = await orchestrator.complete({
+        tier: "mid",
         system: systemPrompt,
         messages: [{ role: "user", content: truncatedUserPrompt }],
-        max_tokens: 4096,
+        maxTokens: 4096,
         temperature: 0.5
       });
 
       // Return the text content from the response
-      if (response.content && response.content.length > 0) {
-        const textContent = response.content.filter(
-          (item) => item.type === "text",
-        );
-        
-        if (textContent.length > 0 && "text" in textContent[0]) {
-          const rawText = textContent[0].text;
+      if (response.text) {
+        {
+          const rawText = response.text;
           
           // Extract JSON from the response, handling potential markdown code blocks
           let jsonText = rawText;

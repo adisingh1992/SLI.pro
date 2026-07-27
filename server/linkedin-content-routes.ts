@@ -1,25 +1,14 @@
 import { Request, Response, NextFunction, Express } from "express";
 import { eq } from "drizzle-orm";
 import { db } from "./db";
-import { Anthropic } from "@anthropic-ai/sdk";
 import { IStorage } from "./storage";
 import { storage } from "./storage";
+import * as orchestrator from "./orchestrator";
 
 // Import the logging function
 const log = (message: string, tag = "express") => {
   console.log(`${new Date().toLocaleTimeString()} [${tag}] ${message}`);
 };
-
-const CLAUDE_MODEL = process.env.CLAUDE_MODEL || "claude-sonnet-4-20250514";
-const apiKey = process.env.ANTHROPIC_API_KEY;
-
-if (!apiKey) {
-  console.error("ANTHROPIC_API_KEY is not set in environment variables");
-}
-
-const anthropic = new Anthropic({
-  apiKey,
-});
 
 const isAuthenticated = (req: Request, res: Response, next: NextFunction) => {
   if (req.isAuthenticated()) {
@@ -223,10 +212,10 @@ Stay optimistic, insightful, and grounded—avoiding political or divisive topic
     // Call Claude API with retry for rate limits
     log(`Calling Claude API to generate LinkedIn content drafts`, "claude");
     const response = await callWithRetry(
-      () => anthropic.messages.create({
-        model: CLAUDE_MODEL,
+      () => orchestrator.complete({
+        tier: "mid", // content drafting
         system: systemPrompt,
-        max_tokens: 4096,
+        maxTokens: 4096,
         temperature: 0.7,
         messages: [{ role: "user", content: userPrompt }]
       }),
@@ -235,12 +224,11 @@ Stay optimistic, insightful, and grounded—avoiding political or divisive topic
       "LinkedIn content drafts generation"
     );
 
-    if (!response.content || response.content.length === 0) {
-      throw new Error("Empty response from Claude");
+    if (!response.text) {
+      throw new Error("Empty response from the model");
     }
 
-    // Process Claude's response
-    const responseText = response.content[0].text;
+    const responseText = response.text;
     
     // Extract post types and content
     const post1TypeMatch = responseText.match(/### Post 1: \[(.*?)\]/);

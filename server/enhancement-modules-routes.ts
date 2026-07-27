@@ -4,13 +4,8 @@ import {
   insertEnhancementModuleMessageSchema,
   updateEnhancementModuleSchema,
 } from "../shared/schema";
-import Anthropic from "@anthropic-ai/sdk";
 import { getModulePromptSet } from "./enhancement-module-prompts";
-
-const CLAUDE_MODEL = process.env.CLAUDE_MODEL || "claude-sonnet-4-20250514";
-const anthropic = new Anthropic({
-  apiKey: process.env.ANTHROPIC_API_KEY,
-});
+import * as orchestrator from "./orchestrator";
 
 const isAuthenticated = (req: Request, res: Response, next: NextFunction) => {
   if (req.isAuthenticated()) {
@@ -748,10 +743,10 @@ async function checkModuleCompletion(
     );
 
 
-    // Call Claude to analyze completion
-    const completion = await anthropic.messages.create({
-      model: CLAUDE_MODEL,
-      max_tokens: 2000,
+    // Module completion analysis -> mid tier.
+    const { text: responseText } = await orchestrator.complete({
+      tier: "mid",
+      maxTokens: 2000,
       messages: [
         {
           role: "user",
@@ -759,9 +754,6 @@ async function checkModuleCompletion(
         },
       ],
     });
-
-    const responseText =
-      completion.content[0].type === "text" ? completion.content[0].text : "";
 
     try {
       // Extract JSON from response - handle potential prose and code fences
@@ -1057,26 +1049,19 @@ export function setupEnhancementModulesRoutes(app: Express) {
         });
 
         try {
-          // Stream response from Claude
-          const stream = await anthropic.messages.create({
-            model: CLAUDE_MODEL,
-            max_tokens: 1500,
+          // Enhancement Module coaching conversation -> flagship tier.
+          const stream = orchestrator.completeStream({
+            tier: "flagship",
+            maxTokens: 1500,
             system: systemPrompt,
             messages: formattedMessages,
-            stream: true,
           });
 
-          for await (const chunk of stream) {
-            if (
-              chunk.type === "content_block_delta" &&
-              chunk.delta.type === "text_delta"
-            ) {
-              const text = chunk.delta.text;
-              assistantContent += text;
-              res.write(
-                `data: ${JSON.stringify({ type: "chunk", content: text })}\n\n`,
-              );
-            }
+          for await (const text of stream) {
+            assistantContent += text;
+            res.write(
+              `data: ${JSON.stringify({ type: "chunk", content: text })}\n\n`,
+            );
           }
 
           // Save assistant response
@@ -1199,17 +1184,17 @@ export function setupEnhancementModulesRoutes(app: Express) {
           content: msg.content,
         }));
 
-        const completion = await anthropic.messages.create({
-          model: CLAUDE_MODEL,
-          max_tokens: 1000,
+        // Non-streaming fallback for the same coaching surface -> flagship.
+        const { text: completionText } = await orchestrator.complete({
+          tier: "flagship",
+          maxTokens: 1000,
           system: systemPrompt,
           messages: userMessages,
         });
 
         const assistantResponse =
-          completion.content[0].type === "text"
-            ? completion.content[0].text
-            : "I apologize, but I encountered an error generating a response.";
+          completionText ||
+          "I apologize, but I encountered an error generating a response.";
 
         // Save assistant message
         await storage.createEnhancementModuleMessage({

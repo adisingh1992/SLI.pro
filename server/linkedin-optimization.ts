@@ -1,12 +1,6 @@
-import Anthropic from "@anthropic-ai/sdk";
 import type { Document, FreshnessReport, Sli } from "@shared/schema";
 import { storage } from "./storage";
-
-// Initialize Anthropic client
-const apiKey = process.env.ANTHROPIC_API_KEY;
-const anthropic = new Anthropic({
-  apiKey,
-});
+import * as orchestrator from "./orchestrator";
 
 // Helper function to safely call Claude with retries
 async function callWithRetry<T>(
@@ -213,12 +207,11 @@ ${freshnessReport.finalSynthesis?.contentRecommendations?.linkedInEnhancements?.
 Please analyze this information and provide detailed, actionable recommendations to optimize the client's LinkedIn profile to align with and reinforce their SLI.`;
 
   return await callWithRetry(async () => {
-    console.log("[claude] Calling Anthropic API with model:", process.env.CLAUDE_MODEL || "claude-sonnet-4-20250514");
-    
     try {
-      const response = await anthropic.messages.create({
-        model: process.env.CLAUDE_MODEL || "claude-sonnet-4-20250514",
-        max_tokens: 4000,
+      // LinkedIn profile optimization -> mid tier.
+      const response = await orchestrator.complete({
+        tier: "mid",
+        maxTokens: 4000,
         system: systemPrompt,
         messages: [
           {
@@ -228,17 +221,15 @@ Please analyze this information and provide detailed, actionable recommendations
         ],
       });
 
-      console.log("[claude] Received response from Anthropic API:", 
+      console.log("[orchestrator] LinkedIn optimization response:",
         JSON.stringify({
-          id: response.id,
+          provider: response.provider,
           model: response.model,
-          contentTypes: response.content.map(c => c.type),
           usage: response.usage
         })
       );
 
-      // Get the text content from Claude's response
-      let content = response.content.find(c => c.type === 'text')?.text || '';
+      let content = response.text || '';
       console.log("[claude] Extracted text content:", content.substring(0, 200) + "...");
       
       // Clean up the response if it's wrapped in markdown code blocks

@@ -2,7 +2,7 @@ import { Express, Request, Response, NextFunction } from 'express';
 import { InsertSli, UpdateSli, Sli } from '@shared/schema';
 import { IStorage } from './storage';
 import { generateSLIs } from './sli';
-import Anthropic from '@anthropic-ai/sdk';
+import * as orchestrator from "./orchestrator";
 
 export function registerSliRoutes(app: Express, storage: IStorage) {
   // Middleware to check if user is authenticated
@@ -319,12 +319,7 @@ export function registerSliRoutes(app: Express, storage: IStorage) {
         return res.status(400).json({ message: "Selected SLI statement not found" });
       }
       
-      // Create Claude client
-      const anthropic = new Anthropic({
-        apiKey: process.env.ANTHROPIC_API_KEY || '',
-      });
-  
-      // Construct prompt for Claude
+      // Construct prompt for the model
       const systemPrompt = `You are a professional branding expert for SLI.pro, helping a client refine their chosen Single Lasting Impression (SLI) based on their feedback. Use the original SLI options and the client's specific feedback to create an optimized version that precisely meets their needs.
 
 Create a refined SLI that incorporates the client's feedback while maintaining the integrity and effectiveness of the statement. Your response should include:
@@ -370,21 +365,17 @@ Please provide a refined SLI statement, rationale, and implementation guidance b
 
       console.log('Calling Claude API for SLI refinement...');
       
-      // Call Claude API
-      const completion = await anthropic.messages.create({
-        model: "claude-3-opus-20240229",
+      // SLI refinement is quality-critical -> flagship tier.
+      // (Previously pinned to claude-3-opus-20240229 in code.)
+      const { text: claudeResponse } = await orchestrator.complete({
+        tier: "flagship",
         system: systemPrompt,
         messages: [
           { role: "user", content: userPrompt }
         ],
-        max_tokens: 2500,
+        maxTokens: 2500,
         temperature: 0.7,
       });
-      
-      // Get the response text
-      const claudeResponse = completion.content[0].type === 'text' 
-        ? completion.content[0].text 
-        : '';
       
       // Process Claude's response to extract the refined SLI, rationale, and guidance
       // This is a simple extraction - a more robust solution might use regex

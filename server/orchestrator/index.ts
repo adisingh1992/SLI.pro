@@ -1,6 +1,7 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { AzureOpenAI } from "openai";
 import { DefaultAzureCredential, getBearerTokenProvider } from "@azure/identity";
+import { createReadStream } from "fs";
 
 /**
  * LLM orchestrator — the single place the application talks to a model.
@@ -251,6 +252,156 @@ export async function complete(
       outputTokens: response.usage?.output_tokens,
     },
   };
+}
+
+/**
+ * Streaming variant of `complete`. Yields text deltas as they arrive, so the
+ * caller can forward them to the client (SSE / WebSocket) without knowing which
+ * provider produced them.
+ */
+export async function* completeStream(
+  request: CompletionRequest,
+): AsyncGenerator<string, void, unknown> {
+  const tier = request.tier ?? "mid";
+  const maxTokens = request.maxTokens ?? 4096;
+  const provider = activeProvider();
+
+  if (provider === "azure") {
+    const model = azureDeployment(tier);
+    const messages = [
+      ...(request.system ? [{ role: "system" as const, content: request.system }] : []),
+      ...request.messages,
+    ];
+
+    const buildParams = (withTemperature: boolean) => ({
+      model,
+      messages,
+      max_completion_tokens: maxTokens,
+      stream: true as const,
+      ...(withTemperature && request.temperature !== undefined
+        ? { temperature: request.temperature }
+        : {}),
+    });
+
+    const client = getAzureClient();
+    let stream;
+    try {
+      stream = await client.chat.completions.create(
+        buildParams(!fixedTemperatureDeployments.has(model)),
+      );
+    } catch (err: any) {
+      const isFixedTemperature =
+        err?.status === 400 &&
+        (err?.param === "temperature" || /temperature/i.test(err?.message ?? "")) &&
+        /unsupported/i.test(err?.message ?? "");
+      if (isFixedTemperature && !fixedTemperatureDeployments.has(model)) {
+        fixedTemperatureDeployments.add(model);
+        stream = await client.chat.completions.create(buildParams(false));
+      } else {
+        throw err;
+      }
+    }
+
+    for await (const chunk of stream) {
+      const delta = chunk.choices[0]?.delta?.content;
+      if (delta) yield delta;
+    }
+    return;
+  }
+
+  const stream = await getAnthropicClient().messages.create({
+    model: anthropicModel(tier),
+    max_tokens: maxTokens,
+    ...(request.system ? { system: request.system } : {}),
+    ...(request.temperature !== undefined ? { temperature: request.temperature } : {}),
+    messages: request.messages,
+    stream: true,
+  });
+
+  for await (const event of stream) {
+    if (
+      event.type === "content_block_delta" &&
+      "text" in event.delta &&
+      event.delta.text
+    ) {
+      yield event.delta.text;
+    }
+  }
+}
+
+/**
+ * Speech-to-text (Whisper), single-pass record-then-transcribe — the Tier 1
+ * voice flow. Routes to the Azure Whisper deployment when configured, and
+ * falls back to OpenAI directly only if AZURE_OPENAI_DEPLOYMENT_WHISPER is
+ * unset but OPENAI_API_KEY is present.
+ *
+ * (Live streaming transcription via Azure AI Speech is the later swap; the
+ * WebSocket service that calls this stays as-is when that happens.)
+ */
+export async function transcribe(
+  filePath: string,
+  opts: { language?: string } = {},
+): Promise<string> {
+  // Named generically because the underlying model keeps changing: whisper-1,
+  // gpt-4o-transcribe and gpt-4o-mini-transcribe all retired around June 2026;
+  // gpt-4o-transcribe-diarize is the current GA successor. Any of them work —
+  // set the deployment name and the call is identical.
+  const deployment =
+    process.env.AZURE_OPENAI_DEPLOYMENT_TRANSCRIBE ||
+    process.env.AZURE_OPENAI_DEPLOYMENT_WHISPER; // legacy alias
+
+  // Fallback is opt-out: it sends audio to OpenAI directly, which leaves the
+  // Azure boundary. Set TRANSCRIBE_FALLBACK_TO_OPENAI=false to forbid that.
+  const fallbackAllowed =
+    Boolean(process.env.OPENAI_API_KEY) &&
+    process.env.TRANSCRIBE_FALLBACK_TO_OPENAI !== "false";
+
+  const transcribeWithOpenAI = async (reason: string): Promise<string> => {
+    console.warn(
+      `[orchestrator] Transcribing via OpenAI directly (${reason}). ` +
+        `NOTE: audio leaves the Azure boundary on this path.`,
+    );
+    const { default: OpenAI } = await import("openai");
+    const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+    const result = await openai.audio.transcriptions.create({
+      file: createReadStream(filePath), // fresh stream per attempt
+      model: process.env.OPENAI_TRANSCRIBE_MODEL || "whisper-1",
+      ...(opts.language ? { language: opts.language } : {}),
+    });
+    return result.text;
+  };
+
+  if (deployment) {
+    try {
+      const result = await getAzureClient().audio.transcriptions.create({
+        file: createReadStream(filePath), // fresh stream per attempt
+        model: deployment, // deployment name in Azure
+        ...(opts.language ? { language: opts.language } : {}),
+      });
+      return result.text;
+    } catch (err: any) {
+      const detail = `Azure deployment '${deployment}' failed: ${err?.status ?? ""} ${
+        err?.message ?? err
+      }`;
+      if (fallbackAllowed) {
+        return transcribeWithOpenAI(detail);
+      }
+      throw new Error(
+        `${detail}. No fallback available (set OPENAI_API_KEY, or ` +
+          `TRANSCRIBE_FALLBACK_TO_OPENAI is false).`,
+      );
+    }
+  }
+
+  if (fallbackAllowed) {
+    return transcribeWithOpenAI("no Azure transcription deployment configured");
+  }
+
+  throw new Error(
+    "No transcription provider configured. Deploy a speech-to-text model in Azure AI " +
+      "Foundry (gpt-4o-transcribe-diarize is the current GA option) and set " +
+      "AZURE_OPENAI_DEPLOYMENT_TRANSCRIBE, or set OPENAI_API_KEY to fall back.",
+  );
 }
 
 /** Embeddings for the memory / journal / drift vector stores (pgvector). */
