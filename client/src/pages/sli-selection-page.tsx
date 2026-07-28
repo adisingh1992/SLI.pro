@@ -1,112 +1,105 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { Sli } from "@shared/schema";
 import { queryClient } from "@/lib/queryClient";
 import { useLocation } from "wouter";
 import { useToast } from "@/hooks/use-toast";
 import NavBar from "@/components/nav-bar";
-import { 
-  ArrowLeft, 
-  Award, 
+import {
+  ArrowLeft,
+  Award,
   CheckCircle2,
 } from "lucide-react";
 
-import { 
-  Card, 
-  CardContent, 
-  CardDescription, 
-  CardHeader, 
-  CardTitle 
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle
 } from "@/components/ui/card";
-import { 
-  RadioGroup, 
-  RadioGroupItem 
+import {
+  RadioGroup,
+  RadioGroupItem
 } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Loader2 } from "lucide-react";
 import { scrollToTop } from "@/lib/utils";
 
+/**
+ * Wing SLI record. Each candidate, custom statement and refinement is its own
+ * row with lineage, replacing the MVP's single row of title1/statement1/…
+ */
+type SliRecord = {
+  id: number;
+  title: string;
+  statement: string;
+  rationale: string | null;
+  source: "generated" | "custom" | "refined" | "refresh";
+  status: "candidate" | "selected" | "active" | "superseded";
+  parentSliId: number | null;
+  refinementCount: number;
+  createdAt: string;
+};
+
 export default function SliSelectionPage() {
   const { user } = useAuth();
   const { toast } = useToast();
   const [, navigate] = useLocation();
-  const [selectedSliIndex, setSelectedSliIndex] = useState<number | null>(null);
+  const [selectedId, setSelectedId] = useState<number | null>(null);
 
-  // Fetch user's SLIs
-  const { data: slis, isLoading: slisLoading } = useQuery<Sli[]>({
+  const { data: slis, isLoading: slisLoading } = useQuery<SliRecord[]>({
     queryKey: ["/api/user/slis"],
     queryFn: async () => {
-      const res = await fetch(`/api/user/slis`);
+      const res = await fetch("/api/user/slis", { credentials: "include" });
+      if (res.status === 404) return [];
       if (!res.ok) throw new Error("Failed to fetch SLIs");
       return res.json();
     },
     enabled: !!user,
   });
 
-  // Update SLI selection
-  const updateSliMutation = useMutation({
-    mutationFn: async ({ id, selectedSliIndex, customSliText }: { id: number; selectedSliIndex: number | null; customSliText?: string }) => {
+  const candidates = (slis ?? []).filter((s) => s.status === "candidate");
+  const active = (slis ?? []).find(
+    (s) => s.status === "active" || s.status === "selected",
+  );
+  // A refinement descends from a parent; showing both tells the story.
+  const parentOfActive =
+    active?.parentSliId != null
+      ? (slis ?? []).find((s) => s.id === active.parentSliId)
+      : undefined;
+
+  /** Activation is now "mark this record active", not "set an index". */
+  const selectSliMutation = useMutation({
+    mutationFn: async (id: number) => {
       const res = await fetch(`/api/user/slis/${id}`, {
         method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          selectedSliIndex,
-          customSliText,
-        }),
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ activate: true }),
       });
-      
       if (!res.ok) {
-        const errorData = await res.json();
+        const errorData = await res.json().catch(() => ({}));
         throw new Error(errorData.message || "Failed to update SLI selection");
       }
-      
       return res.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/user/slis"] });
       queryClient.invalidateQueries({ queryKey: ["/api/user/sli"] });
-      
       toast({
         title: "Success",
         description: "Your SLI selection has been updated",
       });
-      
-      // Navigate back to home page after successful update
-      // setTimeout(() => {
-      //   scrollToTop();
-      //   navigate("/");
-      // }, 1500);
     },
-    onError: (error) => {
-      toast({
-        title: "Error",
-        description: error.message,
-        variant: "destructive",
-      });
+    onError: (error: Error) => {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
     },
   });
 
-  const handleSliSelection = (value: string) => {
-    setSelectedSliIndex(parseInt(value));
-  };
-
   const handleSubmit = () => {
-    if (!slis || slis.length === 0) {
-      toast({
-        title: "Error",
-        description: "No SLIs found to select from",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    const sli = slis[0]; // Use the first SLI since that's the most recent one
-
-    if (selectedSliIndex === null) {
+    if (!selectedId) {
       toast({
         title: "Error",
         description: "Please select an SLI option",
@@ -114,34 +107,16 @@ export default function SliSelectionPage() {
       });
       return;
     }
-
-    updateSliMutation.mutate({
-      id: sli.id,
-      selectedSliIndex,
-      customSliText: undefined
-    });
+    selectSliMutation.mutate(selectedId);
   };
 
-  // Redirect to home if no SLIs are available
-  if (!slisLoading && (!slis || slis.length === 0)) {
-    toast({
-      title: "No SLIs Available",
-      description: "You don't have any SLIs available to select from.",
-    });
-    navigate("/");
-    return null;
-  }
+  // Pre-select whatever is currently in force.
+  useEffect(() => {
+    if (active) setSelectedId(active.id);
+  }, [active?.id]);
 
-  // Initialize selection based on existing data
-  React.useEffect(() => {
-    if (slis && slis.length > 0) {
-      const sli = slis[0]; // Use the first SLI
-      
-      if (sli.selectedSliIndex !== null) {
-        setSelectedSliIndex(sli.selectedSliIndex);
-      }
-    }
-  }, [slis]);
+  const hasAny = (slis ?? []).length > 0;
+  const isRefined = active?.source === "refined";
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
@@ -167,7 +142,7 @@ export default function SliSelectionPage() {
             <Loader2 className="h-8 w-8 animate-spin text-primary" />
             <span className="ml-2">Loading your SLIs...</span>
           </div>
-        ) : slis && slis.length > 0 ? (
+        ) : hasAny ? (
           <div className="space-y-8">
             <Card>
               <CardHeader>
@@ -180,8 +155,7 @@ export default function SliSelectionPage() {
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                {/* Show a message when an SLI has been refined */}
-                {slis[0]?.refinedSliText ? (
+                {isRefined ? (
                   <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-lg">
                     <div className="flex items-start">
                       <CheckCircle2 className="h-5 w-5 text-green-500 mt-0.5 mr-2" />
@@ -190,84 +164,57 @@ export default function SliSelectionPage() {
                         <p className="text-sm text-green-700 mt-1">
                           You've already selected and refined your SLI. You can view your refined SLI on the home page.
                         </p>
-                        {/* Original SLI */}
-                        <div className="mt-3 mb-2">
-                          <h4 className="text-xs font-medium uppercase text-green-700">Original SLI</h4>
-                          <div className="mt-1 p-3 bg-white border border-green-100 rounded-md">
-                            <p className="text-sm text-gray-600">
-                              {slis[0].selectedSliIndex === 1 && slis[0].statement1}
-                              {slis[0].selectedSliIndex === 2 && slis[0].statement2}
-                              {slis[0].selectedSliIndex === 3 && slis[0].statement3}
-                            </p>
+
+                        {parentOfActive && (
+                          <div className="mt-3 mb-2">
+                            <h4 className="text-xs font-medium uppercase text-green-700">Original SLI</h4>
+                            <div className="mt-1 p-3 bg-white border border-green-100 rounded-md">
+                              <p className="text-sm text-gray-600">{parentOfActive.statement}</p>
+                            </div>
                           </div>
-                        </div>
-                        
-                        {/* Refined SLI */}
+                        )}
+
                         <div>
                           <h4 className="text-xs font-medium uppercase text-green-700">Refined SLI</h4>
                           <div className="mt-1 p-3 bg-white border border-green-100 rounded-md">
-                            <p className="font-medium text-secondary">{slis[0].refinedSliText}</p>
+                            <p className="font-medium text-secondary">{active?.statement}</p>
                           </div>
                         </div>
                       </div>
                     </div>
                   </div>
                 ) : (
-                  <RadioGroup 
-                    className="space-y-6" 
-                    value={selectedSliIndex?.toString()}
-                    onValueChange={handleSliSelection}
+                  <RadioGroup
+                    className="space-y-6"
+                    value={selectedId?.toString()}
+                    onValueChange={(v) => setSelectedId(parseInt(v))}
                   >
-                    {/* SLI Option 1 */}
-                    <div className="border rounded-lg p-4 bg-white hover:bg-gray-50 transition-colors">
-                      <div className="flex items-start space-x-2">
-                        <RadioGroupItem value="1" id="sli-1" className="mt-1" />
-                        <div className="space-y-2 flex-1">
-                          <Label htmlFor="sli-1" className="text-base font-medium">
-                            {slis[0].title1}
-                          </Label>
-                          <p className="text-lg font-semibold text-secondary">{slis[0].statement1}</p>
-                          <div className="mt-3 pt-3 border-t border-gray-100">
-                            <h4 className="text-sm font-medium text-primary mb-1">Why this works:</h4>
-                            <p className="text-sm text-gray-600">{slis[0].rationale1}</p>
+                    {(candidates.length ? candidates : (slis ?? [])).map((sli, i) => (
+                      <div
+                        key={sli.id}
+                        className="border rounded-lg p-4 bg-white hover:bg-gray-50 transition-colors"
+                      >
+                        <div className="flex items-start space-x-2">
+                          <RadioGroupItem
+                            value={sli.id.toString()}
+                            id={`sli-${sli.id}`}
+                            className="mt-1"
+                          />
+                          <div className="space-y-2 flex-1">
+                            <Label htmlFor={`sli-${sli.id}`} className="text-base font-medium">
+                              {sli.title}
+                            </Label>
+                            <p className="text-lg font-semibold text-secondary">{sli.statement}</p>
+                            {sli.rationale && (
+                              <div className="mt-3 pt-3 border-t border-gray-100">
+                                <h4 className="text-sm font-medium text-primary mb-1">Why this works:</h4>
+                                <p className="text-sm text-gray-600">{sli.rationale}</p>
+                              </div>
+                            )}
                           </div>
                         </div>
                       </div>
-                    </div>
-
-                    {/* SLI Option 2 */}
-                    <div className="border rounded-lg p-4 bg-white hover:bg-gray-50 transition-colors">
-                      <div className="flex items-start space-x-2">
-                        <RadioGroupItem value="2" id="sli-2" className="mt-1" />
-                        <div className="space-y-2 flex-1">
-                          <Label htmlFor="sli-2" className="text-base font-medium">
-                            {slis[0].title2}
-                          </Label>
-                          <p className="text-lg font-semibold text-secondary">{slis[0].statement2}</p>
-                          <div className="mt-3 pt-3 border-t border-gray-100">
-                            <h4 className="text-sm font-medium text-primary mb-1">Why this works:</h4>
-                            <p className="text-sm text-gray-600">{slis[0].rationale2}</p>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* SLI Option 3 */}
-                    <div className="border rounded-lg p-4 bg-white hover:bg-gray-50 transition-colors">
-                      <div className="flex items-start space-x-2">
-                        <RadioGroupItem value="3" id="sli-3" className="mt-1" />
-                        <div className="space-y-2 flex-1">
-                          <Label htmlFor="sli-3" className="text-base font-medium">
-                            {slis[0].title3}
-                          </Label>
-                          <p className="text-lg font-semibold text-secondary">{slis[0].statement3}</p>
-                          <div className="mt-3 pt-3 border-t border-gray-100">
-                            <h4 className="text-sm font-medium text-primary mb-1">Why this works:</h4>
-                            <p className="text-sm text-gray-600">{slis[0].rationale3}</p>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
+                    ))}
                   </RadioGroup>
                 )}
 
@@ -279,45 +226,36 @@ export default function SliSelectionPage() {
                       navigate("/");
                     }}
                   >
-                    {slis[0]?.refinedSliText ? "Return to Home" : "Cancel"}
+                    {isRefined ? "Return to Home" : "Cancel"}
                   </Button>
-                  
-                  {/* Only show action buttons if the SLI hasn't been refined */}
-                  {!slis[0]?.refinedSliText && (
+
+                  {!isRefined && (
                     <div className="space-x-3">
                       <Button
                         variant="secondary"
-                        disabled={updateSliMutation.isPending || !selectedSliIndex}
+                        disabled={selectSliMutation.isPending || !selectedId}
                         onClick={() => {
-                          // Save the current selection before redirecting
-                          if (selectedSliIndex) {
-                            const sli = slis[0];
-                            updateSliMutation.mutate({
-                              id: sli.id,
-                              selectedSliIndex,
-                              customSliText: undefined
-                            }, {
-                              onSuccess: () => {
-                                scrollToTop();
-                                navigate("/sli-refinement");
-                              }
-                            });
-                          } else {
+                          if (!selectedId) {
                             toast({
                               title: "Selection Required",
                               description: "Please select an SLI first before refining.",
-                              variant: "destructive"
+                              variant: "destructive",
                             });
+                            return;
                           }
+                          // Activate the choice, then move to refinement.
+                          selectSliMutation.mutate(selectedId, {
+                            onSuccess: () => {
+                              scrollToTop();
+                              navigate("/sli-refinement");
+                            },
+                          });
                         }}
                       >
                         Refine SLI
                       </Button>
-                      <Button
-                        onClick={handleSubmit}
-                        disabled={updateSliMutation.isPending}
-                      >
-                        {updateSliMutation.isPending ? (
+                      <Button onClick={handleSubmit} disabled={selectSliMutation.isPending}>
+                        {selectSliMutation.isPending ? (
                           <>
                             <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                             Saving...

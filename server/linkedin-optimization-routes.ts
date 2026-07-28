@@ -1,6 +1,9 @@
 import { Express, Request, Response, NextFunction } from "express";
 import { storage } from "./storage";
+import * as sliStore from "./wing/sli-store";
+import * as artifactStore from "./wing/artifact-store";
 import { generateLinkedInOptimization } from "./linkedin-optimization";
+import * as docStore from "./wing/document-store";
 
 // Middleware to check if user is authenticated
 const isAuthenticated = (req: Request, res: Response, next: NextFunction) => {
@@ -15,7 +18,7 @@ export function registerLinkedinOptimizationRoutes(app: Express) {
   app.get("/api/linkedin-optimizations", isAuthenticated, async (req, res) => {
     try {
       const userId = req.user!.id;
-      const optimizations = await storage.getLinkedinOptimizations(userId);
+      const optimizations = await artifactStore.getLinkedinOptimizations(userId);
       res.json(optimizations);
     } catch (error) {
       console.error("Error fetching LinkedIn optimizations:", error);
@@ -48,14 +51,15 @@ export function registerLinkedinOptimizationRoutes(app: Express) {
         return;
       }
       
-      const optimization = await storage.getLinkedinOptimization(optimizationId);
+      const optimization = await artifactStore.getLinkedinOptimization(optimizationId);
       if (!optimization) {
         res.status(404).json({ error: "LinkedIn optimization not found" });
         return;
       }
       
       // Check if the optimization belongs to the current user
-      if (optimization.userId !== req.user!.id) {
+      const callerStudentId = await artifactStore.studentIdForUser(req.user!.id);
+      if (optimization.studentId !== callerStudentId && !req.user!.isAdmin) {
         res.status(403).json({ error: "Not authorized to access this optimization" });
         return;
       }
@@ -74,7 +78,7 @@ export function registerLinkedinOptimizationRoutes(app: Express) {
       console.log(`[LinkedIn Optimization] Starting generation for user ${userId}`);
       
       // Check if the user has the necessary documents
-      const documents = await storage.getDocuments(userId);
+      const documents = await docStore.getDocuments(userId);
       console.log(`[LinkedIn Optimization] User has ${documents.length} documents`);
       
       const resumeDoc = documents.find(doc => doc.type === "resume");
@@ -89,11 +93,9 @@ export function registerLinkedinOptimizationRoutes(app: Express) {
       
       console.log(`[LinkedIn Optimization] Found resume doc ID ${resumeDoc.id} and LinkedIn doc ID ${linkedinDoc.id}`);
       
-      // Check if the user has a SLI
-      const slis = await storage.getSlisByUserId(userId);
-      console.log(`[LinkedIn Optimization] User has ${slis.length} SLIs`);
-      
-      const selectedSli = slis.find(sli => sli.selectedSliIndex !== null || sli.refinedSliText);
+      // The SLI in force — one row, no reconstruction from packed columns.
+      const selectedSli = await sliStore.getActive(userId);
+      console.log(`[LinkedIn Optimization] Active SLI: ${selectedSli?.id ?? "none"}`);
       
       if (!selectedSli) {
         const error = "A selected or refined SLI is required";
@@ -165,7 +167,7 @@ export function registerLinkedinOptimizationRoutes(app: Express) {
       
       // Save the optimization to the database
       console.log(`[LinkedIn Optimization] Saving data to database...`);
-      const newOptimization = await storage.createLinkedinOptimization({
+      const newOptimization = await artifactStore.createLinkedinOptimization({
         userId,
         contentStrategy: optimizationData.contentStrategy,
         alignmentAssessment: optimizationData.alignmentAssessment,

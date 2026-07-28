@@ -1,6 +1,8 @@
 import type { Document, FreshnessReport, Sli } from "@shared/schema";
 import { storage } from "./storage";
+import * as wingStore from "./wing/session-store";
 import * as orchestrator from "./orchestrator";
+import * as identity from "./wing/identity-store";
 
 // Helper function to safely call Claude with retries
 async function callWithRetry<T>(
@@ -40,11 +42,15 @@ async function callWithRetry<T>(
 /**
  * Generate LinkedIn optimization recommendations based on resume, LinkedIn, SLI, freshness report, and foundation sessions
  */
+/** Only the analysis text is used from documents, so accept any doc shape
+ *  (wing DocumentView or a legacy row) rather than binding to one table. */
+type AnalysedDocument = { analysisContent?: string | null };
+
 export async function generateLinkedInOptimization(
   userId: number,
-  resumeDocument: Document, 
-  linkedinDocument: Document,
-  sli: Sli,
+  resumeDocument: AnalysedDocument,
+  linkedinDocument: AnalysedDocument,
+  sli: { statement: string; title?: string },
   freshnessReport: FreshnessReport
 ): Promise<{
   alignmentAssessment: string;
@@ -73,16 +79,14 @@ export async function generateLinkedInOptimization(
   };
   implementationPriorities: string;
 }> {
-  // Prepare SLI text (either refined or selected)
-  const sliText = sli.refinedSliText || 
-    (sli.selectedSliIndex === 1 ? sli.statement1 : 
-     sli.selectedSliIndex === 2 ? sli.statement2 : 
-     sli.selectedSliIndex === 3 ? sli.statement3 : 
-     sli.customSliText);
+  // One row, one statement — no reconstruction from packed columns.
+  const sliText = sli.statement;
 
-  // Fetch foundation sessions 1 & 2
-  const session1 = await storage.getFoundationSession(userId, 1);
-  const session2 = await storage.getFoundationSession(userId, 2);
+  // Foundation Sessions now live in the wing schema; outcomes come from
+  // typed artifacts rather than a completionData column.
+  const luser = await identity.getUser(userId);
+  const session1 = luser ? await wingStore.getFoundationSessionForUser(luser, 1) : null;
+  const session2 = luser ? await wingStore.getFoundationSessionForUser(luser, 2) : null;
   const session1Data = session1?.completionData;
   const session2Data = session2?.completionData;
 
@@ -151,10 +155,10 @@ Foundation Session 1 - Functional Focus:
       userPrompt += `Commitment Statement: ${session1Data.commitmentStatement}\n`;
     }
     if (Array.isArray(session1Data.functionalLanguageExamples) && session1Data.functionalLanguageExamples.length > 0) {
-      userPrompt += `Functional Language Examples:\n${session1Data.functionalLanguageExamples.map(ex => `- ${ex}`).join('\n')}\n`;
+      userPrompt += `Functional Language Examples:\n${session1Data.functionalLanguageExamples.map((ex: string) => `- ${ex}`).join('\n')}\n`;
     }
     if (Array.isArray(session1Data.keyInsights) && session1Data.keyInsights.length > 0) {
-      userPrompt += `Key Insights:\n${session1Data.keyInsights.map(insight => `- ${insight}`).join('\n')}\n`;
+      userPrompt += `Key Insights:\n${session1Data.keyInsights.map((insight: string) => `- ${insight}`).join('\n')}\n`;
     }
     userPrompt += '\n';
   }
@@ -171,13 +175,13 @@ Foundation Session 2 - Credibility Framework:
       userPrompt += `Brand Claim: ${session2Data.brandClaim}\n`;
     }
     if (Array.isArray(session2Data.proofBullets) && session2Data.proofBullets.length > 0) {
-      userPrompt += `Proof Points:\n${session2Data.proofBullets.map(bullet => `- ${bullet}`).join('\n')}\n`;
+      userPrompt += `Proof Points:\n${session2Data.proofBullets.map((bullet: string) => `- ${bullet}`).join('\n')}\n`;
     }
     if (session2Data.checkWorthyReason) {
       userPrompt += `Check-Worthy Reason: ${session2Data.checkWorthyReason}\n`;
     }
     if (Array.isArray(session2Data.nextSteps) && session2Data.nextSteps.length > 0) {
-      userPrompt += `Next Steps:\n${session2Data.nextSteps.map(step => `- ${step}`).join('\n')}\n`;
+      userPrompt += `Next Steps:\n${session2Data.nextSteps.map((step: string) => `- ${step}`).join('\n')}\n`;
     }
     userPrompt += '\n';
   }

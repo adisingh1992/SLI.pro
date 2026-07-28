@@ -22,6 +22,27 @@
       "when": 1785152372290,
       "tag": "0002_pale_white_queen",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1785162211751,
+      "tag": "0003_optimal_spyke",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1785163174940,
+      "tag": "0004_familiar_king_cobra",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1785225150560,
+      "tag": "0005_milky_calypso",
+      "breakpoints": true
     }
   ]
 }

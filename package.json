@@ -11,7 +11,9 @@
     "db:push": "drizzle-kit push",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "tsx server/migrate.ts",
-    "db:verify": "tsx server/verify-db.ts"
+    "db:verify": "tsx server/verify-db.ts",
+    "wing:migrate-identity": "tsx server/wing/migrate-identity.ts",
+    "wing:migrate-data": "tsx server/wing/migrate-data.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.37.0",

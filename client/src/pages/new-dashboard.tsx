@@ -27,6 +27,7 @@ import SessionCard from "@/components/dashboard/SessionCard";
 import ToolCard from "@/components/dashboard/ToolCard";
 import UserAvatar from "@/components/user-avatar";
 import "@/assets/css/new-dashboard.css";
+import { hasSelectedSli, hasRefinedSli } from "@/lib/sli";
 
 const SESSION_CONTENT = [
   {
@@ -136,8 +137,8 @@ function buildSidebarSections(
 
   const hasSli = toolsData?.userSlis && toolsData.userSlis.length > 0;
   const hasSliSelected =
-    hasSli && toolsData.userSlis![0]?.selectedSliIndex !== null;
-  const hasSliRefined = hasSli && !!toolsData.userSlis![0]?.refinedSliText;
+    hasSli && hasSelectedSli(toolsData.userSlis);
+  const hasSliRefined = hasSli && hasRefinedSli(toolsData.userSlis);
   const hasFreshnessReport = !!toolsData?.latestFreshnessReport;
   const hasLinkedInOpt = !!toolsData?.latestLinkedinOptimization;
   const canGenerateLinkedIn =
@@ -394,8 +395,8 @@ export default function NewDashboardPage() {
   );
 
   const hasSli = userSlis && userSlis.length > 0;
-  const hasSliSelected = hasSli && userSlis[0]?.selectedSliIndex !== null;
-  const hasSliRefined = hasSli && !!userSlis[0]?.refinedSliText;
+  const hasSliSelected = hasSli && hasSelectedSli(userSlis);
+  const hasSliRefined = hasSli && hasRefinedSli(userSlis);
   const canGenerateLinkedIn =
     status.isDocumentsComplete &&
     (hasSliSelected || hasSliRefined) &&

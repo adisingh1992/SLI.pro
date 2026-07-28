@@ -46,6 +46,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { PaymentModal } from "@/components/payment-modal";
 import { Crown } from "lucide-react";
+import { getSliStatement, hasSelectedSli, hasRefinedSli } from "@/lib/sli";
 
 export default function HomePage() {
   const { user } = useAuth();
@@ -184,9 +185,9 @@ export default function HomePage() {
                                userProfile?.documents?.some(doc => doc.type === 'linkedin');
   
   // Check if SLI exists and is selected/refined
-  const hasSli = userSlis && Array.isArray(userSlis) && userSlis.length > 0;
-  const hasSliSelected = hasSli && Array.isArray(userSlis) && userSlis[0] && userSlis[0].selectedSliIndex !== null;
-  const hasSliRefined = hasSli && Array.isArray(userSlis) && userSlis[0] && userSlis[0].refinedSliText !== null && userSlis[0].refinedSliText !== "";
+  const hasSli = Array.isArray(userSlis) && userSlis.length > 0;
+  const hasSliSelected = hasSelectedSli(userSlis);
+  const hasSliRefined = hasRefinedSli(userSlis);
   
   // Check if user can generate LinkedIn Optimization
   const canGenerateLinkedInOptimization = 
@@ -978,13 +979,7 @@ export default function HomePage() {
                   </h3>
                   <div className="p-3 bg-white border border-primary/10 rounded-md">
                     <p className="text-sm font-medium text-gray-800">
-                      {hasSliRefined 
-                        ? userSlis[0].refinedSliText 
-                        : userSlis[0].selectedSliIndex === 1 
-                          ? userSlis[0].statement1 
-                          : userSlis[0].selectedSliIndex === 2 
-                            ? userSlis[0].statement2 
-                            : userSlis[0].statement3}
+                      {getSliStatement(userSlis)}
                     </p>
                   </div>
                 </div>

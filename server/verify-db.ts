@@ -50,6 +50,50 @@ async function main() {
     }`,
   );
 
+  // ── Wing schema (post-migration data model) ──────────────────────────────
+  const wingTables = await q(
+    `SELECT tablename FROM pg_tables WHERE schemaname = 'wing' ORDER BY tablename`,
+  );
+  console.log(`\n[wing] tables: ${wingTables.length} (expected 44)`);
+  if (wingTables.length) {
+    const enums = await q(
+      `SELECT t.typname FROM pg_type t
+       JOIN pg_namespace n ON n.oid = t.typnamespace
+       WHERE n.nspname = 'wing' AND t.typtype = 'e'`,
+    );
+    console.log(`[wing] enum types: ${enums.length} (expected 47)`);
+
+    const hnsw = await q(
+      `SELECT indexname FROM pg_indexes
+       WHERE schemaname = 'wing' AND indexdef ILIKE '%hnsw%'`,
+    );
+    console.log(
+      `[wing] HNSW vector index: ${hnsw.length ? hnsw[0].indexname : "MISSING"}`,
+    );
+
+    // The two non-negotiables from the spec.
+    const turnCols = await q(
+      `SELECT column_name FROM information_schema.columns
+       WHERE table_schema='wing' AND table_name='transcript_turns'
+       ORDER BY ordinal_position`,
+    );
+    console.log(
+      `[wing] transcript_turns columns: ${turnCols.map((c: any) => c.column_name).join(", ")}`,
+    );
+
+    const turnTypes = await q(
+      `SELECT e.enumlabel FROM pg_enum e
+       JOIN pg_type t ON t.oid = e.enumtypid
+       JOIN pg_namespace n ON n.oid = t.typnamespace
+       WHERE n.nspname='wing' AND t.typname='turn_type' ORDER BY e.enumsortorder`,
+    );
+    console.log(
+      `[wing] turn_type values: ${turnTypes.map((r: any) => r.enumlabel).join(" · ")}`,
+    );
+  } else {
+    console.log("[wing] schema not found — run: npm run db:migrate");
+  }
+
   await pool.end();
 }
 

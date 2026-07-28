@@ -6,7 +6,8 @@ import { defineConfig } from "drizzle-kit";
 // with a clear connection error if it is empty.
 export default defineConfig({
   out: "./migrations",
-  schema: "./shared/schema.ts",
+  // Legacy MVP tables (public) + the Wing post-migration model (wing schema).
+  schema: ["./shared/schema.ts", "./shared/wing-schema.ts"],
   dialect: "postgresql",
   dbCredentials: {
     url: process.env.DATABASE_URL ?? "",

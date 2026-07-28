@@ -1,34 +1,42 @@
-import type { Document } from "@shared/schema";
 import * as blob from "./blob-storage";
 
 /**
  * Single accessor for a document's bytes, wherever they live.
  *
- * Documents uploaded before the Azure migration hold base64 inline in
- * `fileData`. New uploads store bytes in Blob and set `blobKey`. Every consumer
- * (claude.ts, sli.ts, freshness-report.ts, linkedin-optimization.ts, ...) should
- * call this instead of reading `document.fileData` directly, so the storage
- * location stays an implementation detail.
+ * Wing documents keep content in Azure Blob and carry `blobUri`. A small
+ * number of pre-migration rows may still hold inline base64 (`fileData`) or
+ * the interim `blobKey`; all three are handled so callers never care.
  *
- * Returns base64 to match what the existing callers already expect.
+ * Consumers (claude.ts, sli.ts, freshness-report.ts, ...) should call this
+ * rather than reading a content field directly.
  */
-export async function getDocumentBase64(
-  document: Pick<Document, "fileData" | "blobKey" | "fileName">,
-): Promise<string> {
-  if (document.blobKey) {
-    return blob.downloadBase64(blob.CONTAINERS.documents, document.blobKey);
+
+export type DocumentLike = {
+  fileName?: string | null;
+  name?: string | null;
+  /** Wing: Blob object key. */
+  blobUri?: string | null;
+  /** Interim column used before the wing cutover. */
+  blobKey?: string | null;
+  /** Legacy inline base64. */
+  fileData?: string | null;
+};
+
+/** Returns base64 — the shape existing callers expect. */
+export async function getDocumentBase64(document: DocumentLike): Promise<string> {
+  const key = document.blobUri || document.blobKey;
+  if (key) {
+    return blob.downloadBase64(blob.CONTAINERS.documents, key);
   }
   if (document.fileData) {
     return document.fileData; // legacy inline row
   }
   throw new Error(
-    `Document '${document.fileName}' has neither blobKey nor inline fileData`,
+    `Document '${document.fileName ?? document.name ?? "unknown"}' has no retrievable content`,
   );
 }
 
-/** True when the document has retrievable content in either location. */
-export function hasContent(
-  document: Pick<Document, "fileData" | "blobKey">,
-): boolean {
-  return Boolean(document.blobKey || document.fileData);
+/** True when the document has content in any supported location. */
+export function hasContent(document: DocumentLike): boolean {
+  return Boolean(document.blobUri || document.blobKey || document.fileData);
 }

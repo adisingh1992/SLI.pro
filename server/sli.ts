@@ -262,7 +262,7 @@ function sanitizeJsonString(str: string): string {
 /**
  * Generate SLIs for a user
  */
-export async function generateSLIs(userProfile: UserProfile): Promise<InsertSli | null> {
+export async function generateSLIs(userProfile: any): Promise<InsertSli | null> {
   try {
     log(`Generating SLIs for user: ${userProfile.id}`, "claude");
     
@@ -270,22 +270,22 @@ export async function generateSLIs(userProfile: UserProfile): Promise<InsertSli 
     const questionnaireSummary = await summarizeQuestionnaire(userProfile.questionnaire);
     
     // Extract resume data
-    const resumeDocument = userProfile.documents?.find(doc => doc.type === 'resume');
+    const resumeDocument = userProfile.documents?.find((doc: any) => doc.type === 'resume');
     const resumeSummary = await summarizeResume(resumeDocument);
     
     // Extract LinkedIn data
-    const linkedInDocument = userProfile.documents?.find(doc => doc.type === 'linkedin');
+    const linkedInDocument = userProfile.documents?.find((doc: any) => doc.type === 'linkedin');
     const linkedInSummary = await summarizeLinkedIn(linkedInDocument);
     
     // Extract additional documents
-    const additionalDocs = userProfile.documents?.filter(doc => doc.type !== 'resume' && doc.type !== 'linkedin') || [];
+    const additionalDocs = userProfile.documents?.filter((doc: any) => doc.type !== 'resume' && doc.type !== 'linkedin') || [];
     const additionalDocsSummary = await summarizeAdditionalDocs(additionalDocs);
     
     // Get foundation sessions summary using Claude
     const foundationSessionsSummary = await generateFoundationSessionsSummary(userProfile.foundationSessions || []);
     
     // Log foundation sessions data being sent to Claude
-    const completedCount = userProfile.foundationSessions?.filter(s => s.status === 'completed').length || 0;
+    const completedCount = userProfile.foundationSessions?.filter((s: any) => s.status === 'completed').length || 0;
     log(`Foundation sessions: ${userProfile.foundationSessions?.length || 0} total, ${completedCount} completed, summary: ${foundationSessionsSummary.length} chars`, "claude");
     
     // Log full content only in debug mode to avoid PII exposure

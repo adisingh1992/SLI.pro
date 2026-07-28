@@ -38,11 +38,13 @@ export class DatabaseStorage implements IStorage {
   sessionStore: session.Store;
 
   constructor() {
-    // Create PostgreSQL-backed session store
+    // Server-side sessions now live in wing.user_sessions (spec §6). The
+    // authentication model is unchanged — only the storage location moves.
     const PgStore = PgSession(session);
     this.sessionStore = new PgStore({
       pool: pool,
-      tableName: "sessions"
+      schemaName: "wing",
+      tableName: "user_sessions",
     });
   }
 

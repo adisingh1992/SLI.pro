@@ -2,7 +2,9 @@ import type { Express, Request, Response } from "express";
 import express from "express";
 import Stripe from "stripe";
 import { storage } from "./storage";
+import * as commerce from "./wing/commerce-store";
 import QRCode from "qrcode";
+import * as identity from "./wing/identity-store";
 
 if (!process.env.STRIPE_SECRET_KEY) {
   throw new Error('Missing required Stripe secret: STRIPE_SECRET_KEY');
@@ -98,22 +100,26 @@ export function registerPaymentRoutes(app: Express) {
         return res.status(400).json({ message: "Invalid tier specified" });
       }
 
-      // Check if user already has this tier
-      if (user.subscriptionTier === tier) {
+      // Commercial state now lives in entitlements, not on the user row.
+      const current = await commerce.getActiveEntitlement(user.id);
+
+      if (current?.planCode === tier) {
         return res.status(400).json({ message: "You already have this tier" });
       }
 
-      // Prevent downgrade from subscription to premium
-      if (user.subscriptionTier === 'subscription' && tier === 'premium' && user.subscriptionStatus === 'active') {
+      if (current?.planCode === 'subscription' && tier === 'premium') {
         return res.status(400).json({ message: "Cannot downgrade from Subscription to Premium. Please cancel your subscription first." });
       }
 
-      // Determine price and mode based on tier
-      const amount = tier === 'premium' ? 12900 : 3900; // $129 for premium, $39 for subscription (in cents)
-      const mode = tier === 'premium' ? 'payment' : 'subscription';
+      // Price comes from the plan row — configurable without a deploy.
+      const plan = await commerce.getPlanByCode(tier);
+      if (!plan) {
+        return res.status(400).json({ message: `Pricing plan '${tier}' is not available` });
+      }
+      const amount = plan.amountCents;
 
-      // Create Stripe customer if not exists
-      let stripeCustomerId = user.stripeCustomerId;
+      // Reuse the Stripe customer we already hold for this user, if any.
+      let stripeCustomerId = await commerce.getStripeCustomerId(user.id);
       if (!stripeCustomerId) {
         const customer = await stripe.customers.create({
           email: user.username,
@@ -123,7 +129,7 @@ export function registerPaymentRoutes(app: Express) {
           }
         });
         stripeCustomerId = customer.id;
-        await storage.updateUser(user.id, { stripeCustomerId });
+        // Persisted on the entitlement when the purchase completes.
       }
 
       const protocol = req.headers['x-forwarded-proto'] || req.protocol;
@@ -198,13 +204,13 @@ export function registerPaymentRoutes(app: Express) {
       // Generate QR code for the checkout URL
       const qrCodeDataUrl = await QRCode.toDataURL(session.url || '');
 
-      // Create transaction record
-      await storage.createTransaction({
+      // Transactions record activity against a plan, not a hardcoded tier.
+      await commerce.createTransaction({
         userId: user.id,
+        planCode: tier,
         stripeSessionId: session.id,
-        amount: amount,
+        amountCents: amount,
         currency: 'usd',
-        tier: tier as 'premium' | 'subscription',
         status: 'pending',
       });
 
@@ -228,22 +234,17 @@ export function registerPaymentRoutes(app: Express) {
         return res.status(401).json({ message: "Unauthorized" });
       }
       
-      // Check if subscription has expired
-      if (user.subscriptionTier === 'subscription' && user.subscriptionExpiresAt) {
-        const now = new Date();
-        if (now > user.subscriptionExpiresAt && user.subscriptionStatus === 'active') {
-          await storage.updateUser(user.id, { subscriptionStatus: 'expired' });
-        }
-      }
+      // getActiveEntitlement lazily expires a lapsed window, so a stale
+      // 'active' row is never reported.
+      const entitlement = await commerce.getActiveEntitlement(user.id);
 
-      // Get updated user
-      const updatedUser = await storage.getUser(user.id);
-      
       res.json({
-        tier: updatedUser?.subscriptionTier || 'free',
-        status: updatedUser?.subscriptionStatus || 'active',
-        expiresAt: updatedUser?.subscriptionExpiresAt,
-        premiumPurchasedAt: updatedUser?.premiumPurchasedAt,
+        tier: entitlement?.planCode || 'free',
+        status: entitlement?.status || 'active',
+        expiresAt: entitlement?.expiresAt ?? null,
+        premiumPurchasedAt:
+          entitlement?.planCode === 'premium' ? entitlement.startsAt : null,
+        source: entitlement?.source ?? null,
       });
     } catch (error) {
       next(error);
@@ -259,22 +260,23 @@ export function registerPaymentRoutes(app: Express) {
         return res.status(401).json({ message: "Unauthorized" });
       }
 
-      if (user.subscriptionTier !== 'subscription') {
+      const entitlement = await commerce.getActiveEntitlement(user.id);
+
+      if (entitlement?.planCode !== 'subscription') {
         return res.status(400).json({ message: "No active subscription to cancel" });
       }
 
-      if (!user.stripeSubscriptionId) {
+      if (!entitlement.stripeSubscriptionId) {
         return res.status(400).json({ message: "No Stripe subscription found" });
       }
 
-      // Cancel the subscription at period end
-      await stripe.subscriptions.update(user.stripeSubscriptionId, {
+      // Cancel at period end; the entitlement keeps its expiry so access
+      // continues until the paid window closes.
+      await stripe.subscriptions.update(entitlement.stripeSubscriptionId, {
         cancel_at_period_end: true,
       });
 
-      await storage.updateUser(user.id, {
-        subscriptionStatus: 'canceled',
-      });
+      await commerce.cancelEntitlement(user.id, entitlement.expiresAt);
 
       res.json({ message: "Subscription will be canceled at period end" });
     } catch (error) {
@@ -294,28 +296,24 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
     return;
   }
 
-  const user = await storage.getUser(userId);
+  const user = await identity.getUser(userId);
   if (!user) {
     console.error(`User ${userId} not found`);
     return;
   }
 
-  // Update transaction status
-  const transactions = await storage.getTransactions(userId);
-  const transaction = transactions.find(t => t.stripeSessionId === session.id);
-  if (transaction) {
-    await storage.updateTransaction(transaction.id, {
-      status: 'succeeded',
-      stripePaymentId: session.payment_intent as string,
-    });
-  }
+  await commerce.markTransactionSucceeded(
+    session.id,
+    session.payment_intent as string,
+  );
 
-  // Update user's subscription tier
   if (tier === 'premium') {
-    await storage.updateUser(userId, {
-      subscriptionTier: 'premium',
-      subscriptionStatus: 'active',
-      premiumPurchasedAt: new Date(),
+    // One-time purchase: no expiry.
+    await commerce.grantEntitlement({
+      userId,
+      planCode: 'premium',
+      source: 'purchase',
+      stripeCustomerId: session.customer as string,
     });
   } else if (tier === 'subscription') {
     // Get subscription details
@@ -333,11 +331,13 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
       }
     }
 
-    await storage.updateUser(userId, {
-      subscriptionTier: 'subscription',
-      subscriptionStatus: 'active',
+    await commerce.grantEntitlement({
+      userId,
+      planCode: 'subscription',
+      source: 'purchase',
+      stripeCustomerId: session.customer as string,
       stripeSubscriptionId: subscriptionId,
-      subscriptionExpiresAt: expiresAt,
+      expiresAt: expiresAt ?? null,
     });
   }
 }
@@ -354,7 +354,7 @@ async function handleSubscriptionUpdate(subscription: Stripe.Subscription) {
     userId = parseInt(customer.metadata.userId);
   }
 
-  const user = await storage.getUser(userId);
+  const user = await identity.getUser(userId);
   if (!user) return;
 
   // Safely handle the current_period_end timestamp
@@ -368,15 +368,10 @@ async function handleSubscriptionUpdate(subscription: Stripe.Subscription) {
     }
   }
   
-  if (subscription.status === 'active') {
-    await storage.updateUser(userId, {
-      subscriptionStatus: 'active',
-      subscriptionExpiresAt: expiresAt,
-    });
+  if (subscription.status === 'active' && expiresAt) {
+    await commerce.extendEntitlement(userId, expiresAt);
   } else if (subscription.status === 'canceled' || subscription.cancel_at_period_end) {
-    await storage.updateUser(userId, {
-      subscriptionStatus: 'canceled',
-    });
+    await commerce.cancelEntitlement(userId, expiresAt ?? null);
   }
 }
 
@@ -400,18 +395,17 @@ async function handleInvoicePaymentSucceeded(invoice: Stripe.Invoice) {
     }
   }
   
-  await storage.updateUser(userId, {
-    subscriptionStatus: 'active',
-    subscriptionExpiresAt: expiresAt,
-  });
+  // Renewal: extend the entitlement's window.
+  if (expiresAt) {
+    await commerce.extendEntitlement(userId, expiresAt);
+  }
 
-  // Record the transaction
-  await storage.createTransaction({
-    userId: userId,
+  await commerce.createTransaction({
+    userId,
+    planCode: 'subscription',
     stripePaymentId: (invoice as any).payment_intent as string,
-    amount: invoice.amount_paid,
+    amountCents: invoice.amount_paid,
     currency: invoice.currency,
-    tier: 'subscription',
     status: 'succeeded',
   });
 }
@@ -425,17 +419,16 @@ async function handleInvoicePaymentFailed(invoice: Stripe.Invoice) {
   
   if (!userId) return;
 
-  await storage.updateUser(userId, {
-    subscriptionStatus: 'expired',
-  });
+  // Payment failed: the entitlement lapses at its current expiry rather than
+  // being revoked instantly, so a retry within the window keeps access.
+  await commerce.cancelEntitlement(userId);
 
-  // Record the failed transaction
-  await storage.createTransaction({
-    userId: userId,
+  await commerce.createTransaction({
+    userId,
+    planCode: 'subscription',
     stripePaymentId: ((invoice as any).payment_intent as string) || '',
-    amount: invoice.amount_due,
+    amountCents: invoice.amount_due,
     currency: invoice.currency,
-    tier: 'subscription',
     status: 'failed',
   });
 }

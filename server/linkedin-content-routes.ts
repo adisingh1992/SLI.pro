@@ -3,7 +3,12 @@ import { eq } from "drizzle-orm";
 import { db } from "./db";
 import { IStorage } from "./storage";
 import { storage } from "./storage";
+import * as wingStore from "./wing/session-store";
+import * as artifactStore from "./wing/artifact-store";
+import * as sliStore from "./wing/sli-store";
 import * as orchestrator from "./orchestrator";
+import * as profileStore from "./wing/profile-store";
+import * as identity from "./wing/identity-store";
 
 // Import the logging function
 const log = (message: string, tag = "express") => {
@@ -58,7 +63,7 @@ async function callWithRetry<T>(
 async function generateLinkedinContentDrafts(userId: number) {
   try {
     // Get the user profile to collect context data
-    const userProfile = await storage.getUserProfile(userId);
+    const userProfile = await profileStore.getUserProfile(userId);
     if (!userProfile) {
       throw new Error("User profile not found");
     }
@@ -68,15 +73,8 @@ async function generateLinkedinContentDrafts(userId: number) {
     const linkedinDoc = userProfile.documents?.find(doc => doc.type === "linkedin");
     const otherDocs = userProfile.documents?.filter(doc => doc.type !== "resume" && doc.type !== "linkedin");
     
-    // Get SLI context
-    const slis = userProfile.slis || [];
-    const selectedSli = slis.find(sli => sli.selectedSliIndex !== null || sli.customSliText);
-    const refinedSli = selectedSli?.refinedSliText;
-    const sliText = refinedSli || 
-                   (selectedSli?.selectedSliIndex === 1 ? selectedSli.statement1 : 
-                    selectedSli?.selectedSliIndex === 2 ? selectedSli.statement2 : 
-                    selectedSli?.selectedSliIndex === 3 ? selectedSli.statement3 : 
-                    selectedSli?.customSliText || "No SLI available");
+    // The SLI in force — one row, no reconstruction from packed columns.
+    const sliText = (await sliStore.getActiveStatement(userId)) || "No SLI available";
     
     // Get questionnaire data
     const questionnaire = userProfile.questionnaire;
@@ -88,8 +86,11 @@ async function generateLinkedinContentDrafts(userId: number) {
       new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
     )[0];
     
-    // Get foundation session 3 data
-    const foundationSession3 = await storage.getFoundationSession(userId, 3);
+    // Foundation Session 3 outcome, read from the wing artifact.
+    const luser = await identity.getUser(userId);
+    const foundationSession3 = luser
+      ? await wingStore.getFoundationSessionForUser(luser, 3)
+      : null;
     const session3Data = foundationSession3?.completionData;
     
     // Format context for Claude
@@ -141,7 +142,7 @@ async function generateLinkedinContentDrafts(userId: number) {
       // Add content angles if available
       if (session3Data.contentAngles && session3Data.contentAngles.length > 0) {
         context += `### Content Angles\n`;
-        session3Data.contentAngles.forEach((angle, index) => {
+        session3Data.contentAngles.forEach((angle: string, index: number) => {
           context += `${index + 1}. ${angle}\n`;
         });
         context += `\n`;
@@ -264,9 +265,22 @@ Stay optimistic, insightful, and grounded—avoiding political or divisive topic
       }
     };
     
-    // Save to database
-    const savedContentDraft = await storage.createLinkedinContentDraft(contentDraft);
-    return savedContentDraft;
+    // One row per post (spec §12) rather than two posts in a single row —
+    // this is what lets the Tier 2 Feature Article module iterate on a draft.
+    const saved = [];
+    for (const [type, content] of [
+      [contentDraft.post1Type, contentDraft.post1Content],
+      [contentDraft.post2Type, contentDraft.post2Content],
+    ] as const) {
+      saved.push(
+        await artifactStore.createContentDraft({
+          userId,
+          draftType: "post",
+          content: { postType: type, ...(content as object) },
+        }),
+      );
+    }
+    return saved;
   } catch (error) {
     console.error("Error generating LinkedIn content drafts:", error);
     throw error;
@@ -278,7 +292,7 @@ export function registerLinkedinContentRoutes(app: Express) {
   app.get("/api/linkedin-content-drafts", isAuthenticated, async (req, res) => {
     try {
       const userId = req.user!.id;
-      const contentDrafts = await storage.getLinkedinContentDrafts(userId);
+      const contentDrafts = await artifactStore.getContentDrafts(userId);
       res.json(contentDrafts);
     } catch (error) {
       console.error("Error fetching LinkedIn content drafts:", error);
@@ -311,14 +325,15 @@ export function registerLinkedinContentRoutes(app: Express) {
         return;
       }
       
-      const contentDraft = await storage.getLinkedinContentDraft(contentDraftId);
+      const contentDraft = await artifactStore.getContentDraft(contentDraftId);
       if (!contentDraft) {
         res.status(404).json({ error: "LinkedIn content draft not found" });
         return;
       }
       
-      // Check if the content draft belongs to the current user
-      if (contentDraft.userId !== req.user!.id) {
+      // Authorise by student id (forward comparison).
+      const callerStudentId = await artifactStore.studentIdForUser(req.user!.id);
+      if (contentDraft.studentId !== callerStudentId) {
         res.status(403).json({ error: "Not authorized to access this content draft" });
         return;
       }
@@ -336,7 +351,7 @@ export function registerLinkedinContentRoutes(app: Express) {
       const userId = req.user!.id;
       
       // Check prerequisites
-      const userProfile = await storage.getUserProfile(userId);
+      const userProfile = await profileStore.getUserProfile(userId);
       
       if (!userProfile) {
         return res.status(404).json({ error: "User profile not found" });
@@ -357,7 +372,8 @@ export function registerLinkedinContentRoutes(app: Express) {
       }
       
       // Check if user has a selected or refined SLI
-      const hasSli = userProfile.slis?.some(sli => sli.selectedSliIndex !== null || sli.customSliText || sli.refinedSliText);
+      // 'has an SLI' now means one is in force (active/selected).
+      const hasSli = !!(await sliStore.getActive(userId));
       
       if (!hasSli) {
         return res.status(400).json({ 
@@ -398,7 +414,7 @@ export function registerLinkedinContentRoutes(app: Express) {
       }
 
       // Get the user to access their LinkedIn access token
-      const user = await storage.getUser(userId);
+      const user = await identity.getUser(userId);
       if (!user || !user.linkedinAccessToken) {
         return res.status(400).json({ error: "LinkedIn not connected. Please authenticate with LinkedIn first." });
       }
@@ -409,8 +425,9 @@ export function registerLinkedinContentRoutes(app: Express) {
       }
 
       // Verify the content draft belongs to the user
-      const contentDraft = await storage.getLinkedinContentDraft(draftId);
-      if (!contentDraft || contentDraft.userId !== userId) {
+      const contentDraft = await artifactStore.getContentDraft(draftId);
+      const callerStudentId = await artifactStore.studentIdForUser(req.user!.id);
+      if (!contentDraft || contentDraft.studentId !== callerStudentId) {
         return res.status(403).json({ error: "Not authorized to access this content draft" });
       }
 
@@ -476,12 +493,13 @@ export function registerLinkedinContentRoutes(app: Express) {
       }
 
       // Verify the content draft belongs to the user
-      const contentDraft = await storage.getLinkedinContentDraft(draftId);
+      const contentDraft = await artifactStore.getContentDraft(draftId);
       if (!contentDraft) {
         return res.status(404).json({ error: "Content draft not found" });
       }
       
-      if (contentDraft.userId !== userId) {
+      const callerStudentId = await artifactStore.studentIdForUser(req.user!.id);
+      if (contentDraft.studentId !== callerStudentId) {
         return res.status(403).json({ error: "Not authorized to access this content draft" });
       }
 

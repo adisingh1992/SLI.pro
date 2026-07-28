@@ -388,10 +388,19 @@ const DocumentUpload = () => {
     }
   };
 
-  const handleViewDocument = (document: Document) => {
+  const handleViewDocument = async (document: Document) => {
     try {
-      // Create a blob from the base64 data
-      const byteCharacters = atob(document.fileData);
+      // Content lives in Azure Blob, so the document list no longer carries
+      // base64. Fetch the single document, which hydrates `fileData` on read.
+      const response = await fetch(`/api/documents/${document.id}`, {
+        credentials: "include",
+      });
+      if (!response.ok) throw new Error("Failed to load document");
+      const full = await response.json();
+
+      if (!full.fileData) throw new Error("Document has no retrievable content");
+
+      const byteCharacters = atob(full.fileData);
       const byteNumbers = new Array(byteCharacters.length);
 
       for (let i = 0; i < byteCharacters.length; i++) {

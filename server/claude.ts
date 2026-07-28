@@ -4,6 +4,9 @@ import { InsertConversationSummary, Document } from "@shared/schema";
 import { extractDocumentText, validateExtractedText } from "./document-extractor";
 import { getDocumentBase64, hasContent } from "./document-data";
 import * as orchestrator from "./orchestrator";
+import * as docStore from "./wing/document-store";
+import * as profileStore from "./wing/profile-store";
+import * as identity from "./wing/identity-store";
 
 log(`LLM provider: ${orchestrator.activeProvider()}`, "orchestrator");
 
@@ -321,7 +324,7 @@ export async function analyzeDocument(document: Document): Promise<string | null
         // Save the analysis to the database
         if (textContent) {
           try {
-            await storage.updateDocument(document.id, { analysisContent: textContent });
+            await docStore.updateDocument(document.id, { analysisContent: textContent });
             log(`Saved analysis for document: ${document.name}`, "claude");
           } catch (saveError) {
             log(`Error saving document analysis: ${saveError}`, "claude");
@@ -352,7 +355,7 @@ export async function generateConversationSummary(
     }
 
     // Get user questionnaire data to provide context
-    const userProfile = await storage.getUserProfile(userId);
+    const userProfile = await profileStore.getUserProfile(userId);
     if (!userProfile) {
       console.error("User profile not found for user", userId);
       return null;

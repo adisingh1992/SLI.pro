@@ -30,6 +30,27 @@ export const subscriptionStatusEnum = pgEnum("subscription_status", ["active", "
 export const paymentStatusEnum = pgEnum("payment_status", ["pending", "succeeded", "failed", "refunded"]);
 
 /**
+ * TRANSITIONAL — migration bookkeeping, not part of the Wing specification.
+ *
+ * During the parallel-run period the app writes to both the legacy MVP tables
+ * and the new `wing` schema. This table links a legacy row to the wing row it
+ * was mirrored into, so the dual-write is idempotent and Phase 2's scripted
+ * migration can tell what has already been carried across.
+ *
+ * Dropped after cutover, together with the legacy tables.
+ */
+export const wingMigrationLinks = pgTable("wing_migration_links", {
+  id: serial("id").primaryKey(),
+  legacyType: text("legacy_type").notNull(), // 'user' | 'foundation_session' | ...
+  legacyId: integer("legacy_id").notNull(),
+  wingId: integer("wing_id").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => ({
+  legacyUnique: unique().on(table.legacyType, table.legacyId),
+  lookupIdx: index("wing_migration_links_lookup_idx").on(table.legacyType, table.legacyId),
+}));
+
+/**
  * Session store table for connect-pg-simple (express-session).
  *
  * Managed here rather than via the loose create-sessions-table.sql so it ships

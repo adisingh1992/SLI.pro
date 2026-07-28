@@ -482,10 +482,16 @@ export default function UserDetailPage() {
                         <Button
                           size="sm"
                           variant="outline"
-                          onClick={() => {
+                          onClick={async () => {
                             try {
-                              // Create a data URL directly from the base64 data
-                              const dataUrl = `data:application/pdf;base64,${doc.fileData}`;
+                              // Content lives in Blob; fetch the single
+                              // document, which hydrates fileData on read.
+                              const res = await fetch(`/api/documents/${doc.id}`, {
+                                credentials: "include",
+                              });
+                              if (!res.ok) throw new Error("Failed to load document");
+                              const full = await res.json();
+                              const dataUrl = `data:application/pdf;base64,${full.fileData}`;
 
                               // Create a temporary link and trigger download
                               const downloadLink = document.createElement("a");

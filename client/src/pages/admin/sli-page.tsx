@@ -11,6 +11,7 @@ import Layout from "./layout";
 import { ArrowLeft, RefreshCw, CheckCircle2 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { Badge } from "@/components/ui/badge";
+import type { SliRecord } from "@/lib/sli";
 
 export default function SliPage() {
   const { user } = useAuth();
@@ -73,15 +74,14 @@ export default function SliPage() {
 
   // Update SLI
   const updateSliMutation = useMutation({
-    mutationFn: async ({ id, selectedSliIndex }: { id: number; selectedSliIndex: number | null }) => {
+    mutationFn: async ({ id }: { id: number }) => {
       const res = await fetch(`/api/admin/slis/${id}`, {
         method: "PATCH",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({
-          selectedSliIndex,
-        }),
+        credentials: "include",
+        body: JSON.stringify({ activate: true }),
       });
       
       if (!res.ok) {
@@ -207,158 +207,74 @@ export default function SliPage() {
             </Card>
           ) : (
             <div className="space-y-8">
-              {slis.map((sli: Sli) => (
+              {slis.map((sli: SliRecord) => (
                 <Card key={sli.id} className="overflow-hidden">
                   <CardHeader className="bg-muted/50">
                     <div className="flex justify-between items-center">
                       <div>
-                        <CardTitle className="text-xl">SLI Set</CardTitle>
+                        <CardTitle className="text-xl">{sli.title}</CardTitle>
                         <CardDescription>
-                          Generated on {formatDate(sli.createdAt.toString())} ({formatDistanceToNow(new Date(sli.createdAt), { addSuffix: true })})
+                          Created {formatDate(sli.createdAt.toString())} ({formatDistanceToNow(new Date(sli.createdAt), { addSuffix: true })})
                         </CardDescription>
                       </div>
                       <div className="flex items-center gap-2">
-                        {sli.selectedSliIndex !== null && (
+                        {/* Source and status are first-class now, rather than
+                            inferred from which column happened to be set. */}
+                        <Badge variant="outline">{sli.source}</Badge>
+
+                        {(sli.status === "active" || sli.status === "selected") && (
                           <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
                             <CheckCircle2 className="h-3 w-3 mr-1" />
-                            Selected
+                            In force
                           </Badge>
                         )}
-                        <Button 
-                          variant="outline" 
-                          size="sm"
-                          onClick={() => deleteSliMutation.mutate(sli.id)}
-                          className="text-destructive hover:text-destructive"
-                        >
-                          Delete
-                        </Button>
+                        {sli.status === "superseded" && (
+                          <Badge variant="outline" className="bg-muted text-muted-foreground">
+                            Superseded
+                          </Badge>
+                        )}
+
+                        {sli.status !== "active" && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => updateSliMutation.mutate({ id: sli.id })}
+                          >
+                            Make active
+                          </Button>
+                        )}
+
+                        {/* Only candidates are deletable: selected and
+                            superseded records are retained as part of the
+                            longitudinal record (spec 12). */}
+                        {sli.status === "candidate" && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => deleteSliMutation.mutate(sli.id)}
+                            className="text-destructive hover:text-destructive"
+                          >
+                            Delete
+                          </Button>
+                        )}
                       </div>
                     </div>
                   </CardHeader>
                   <CardContent className="pt-6">
-                    {sli.refinedSliText && (
-                      <div className="mb-6">
-                        <div className="p-5 rounded-lg border-2 border-primary bg-primary/5">
-                          <div className="flex justify-between items-center mb-3">
-                            <h3 className="text-lg font-semibold text-primary">Refined SLI</h3>
-                            {sli.refinedAt && (
-                              <Badge variant="outline" className="bg-primary/10 text-primary border-primary/20">
-                                Refined {formatDistanceToNow(new Date(sli.refinedAt), { addSuffix: true })}
-                              </Badge>
-                            )}
-                          </div>
-                          <p className="mb-4 font-medium">{sli.refinedSliText}</p>
-                          
-                          {sli.refinementRationale && (
-                            <div className="bg-white p-3 rounded-md mb-3">
-                              <h4 className="text-sm font-medium mb-1">Refinement Rationale:</h4>
-                              <p className="text-sm text-muted-foreground">{sli.refinementRationale}</p>
-                            </div>
-                          )}
-                          
-                          {sli.implementationGuidance && (
-                            <div className="bg-white p-3 rounded-md">
-                              <h4 className="text-sm font-medium mb-1">Implementation Guidance:</h4>
-                              <p className="text-sm text-muted-foreground">{sli.implementationGuidance}</p>
-                            </div>
-                          )}
-                        </div>
+                    <p className="mb-4 text-lg font-medium text-secondary">{sli.statement}</p>
+
+                    {sli.rationale && (
+                      <div className="bg-muted/40 p-3 rounded-md mb-3">
+                        <h4 className="text-sm font-medium mb-1">Rationale:</h4>
+                        <p className="text-sm text-muted-foreground">{sli.rationale}</p>
                       </div>
                     )}
-                    
-                    <div className="space-y-4">
-                      <div className="grid grid-cols-1 gap-6">
-                        <div className={`p-4 rounded-lg border ${sli.selectedSliIndex === 1 ? 'border-2 border-green-500 bg-green-50' : 'bg-card'}`}>
-                          <div className="flex justify-between items-center">
-                            <h3 className="text-lg font-medium text-secondary mb-2">{sli.title1}</h3>
-                            {sli.selectedSliIndex === 1 ? (
-                              <Badge className="bg-green-500">Selected</Badge>
-                            ) : (
-                              <Button 
-                                variant="outline" 
-                                size="sm" 
-                                onClick={() => updateSliMutation.mutate({ id: sli.id, selectedSliIndex: 1 })}
-                                disabled={updateSliMutation.isPending}
-                              >
-                                Select this SLI
-                              </Button>
-                            )}
-                          </div>
-                          <p className="mb-4">{sli.statement1}</p>
-                          <div className="bg-muted/40 p-3 rounded-md">
-                            <h4 className="text-sm font-medium mb-1">Rationale:</h4>
-                            <p className="text-sm text-muted-foreground">{sli.rationale1}</p>
-                          </div>
-                        </div>
-                        
-                        <div className={`p-4 rounded-lg border ${sli.selectedSliIndex === 2 ? 'border-2 border-green-500 bg-green-50' : 'bg-card'}`}>
-                          <div className="flex justify-between items-center">
-                            <h3 className="text-lg font-medium text-secondary mb-2">{sli.title2}</h3>
-                            {sli.selectedSliIndex === 2 ? (
-                              <Badge className="bg-green-500">Selected</Badge>
-                            ) : (
-                              <Button 
-                                variant="outline" 
-                                size="sm" 
-                                onClick={() => updateSliMutation.mutate({ id: sli.id, selectedSliIndex: 2 })}
-                                disabled={updateSliMutation.isPending}
-                              >
-                                Select this SLI
-                              </Button>
-                            )}
-                          </div>
-                          <p className="mb-4">{sli.statement2}</p>
-                          <div className="bg-muted/40 p-3 rounded-md">
-                            <h4 className="text-sm font-medium mb-1">Rationale:</h4>
-                            <p className="text-sm text-muted-foreground">{sli.rationale2}</p>
-                          </div>
-                        </div>
-                        
-                        <div className={`p-4 rounded-lg border ${sli.selectedSliIndex === 3 ? 'border-2 border-green-500 bg-green-50' : 'bg-card'}`}>
-                          <div className="flex justify-between items-center">
-                            <h3 className="text-lg font-medium text-secondary mb-2">{sli.title3}</h3>
-                            {sli.selectedSliIndex === 3 ? (
-                              <Badge className="bg-green-500">Selected</Badge>
-                            ) : (
-                              <Button 
-                                variant="outline"
-                                size="sm" 
-                                onClick={() => updateSliMutation.mutate({ id: sli.id, selectedSliIndex: 3 })}
-                                disabled={updateSliMutation.isPending}
-                              >
-                                Select this SLI
-                              </Button>
-                            )}
-                          </div>
-                          <p className="mb-4">{sli.statement3}</p>
-                          <div className="bg-muted/40 p-3 rounded-md">
-                            <h4 className="text-sm font-medium mb-1">Rationale:</h4>
-                            <p className="text-sm text-muted-foreground">{sli.rationale3}</p>
-                          </div>
-                        </div>
-                        
-                        {sli.customSliText && (
-                          <div className={`p-4 rounded-lg border ${sli.selectedSliIndex === null ? 'border-2 border-green-500 bg-green-50' : 'bg-card'}`}>
-                            <div className="flex justify-between items-center">
-                              <h3 className="text-lg font-medium text-secondary mb-2">Custom SLI</h3>
-                              {sli.selectedSliIndex === null ? (
-                                <Badge className="bg-green-500">Selected</Badge>
-                              ) : (
-                                <Button 
-                                  variant="outline" 
-                                  size="sm" 
-                                  onClick={() => updateSliMutation.mutate({ id: sli.id, selectedSliIndex: null })}
-                                  disabled={updateSliMutation.isPending}
-                                >
-                                  Select Custom SLI
-                                </Button>
-                              )}
-                            </div>
-                            <p className="mb-4">{sli.customSliText}</p>
-                          </div>
-                        )}
-                      </div>
-                    </div>
+
+                    {sli.parentSliId != null && (
+                      <p className="text-xs text-muted-foreground">
+                        Refinement #{sli.refinementCount} of SLI #{sli.parentSliId}
+                      </p>
+                    )}
                   </CardContent>
                 </Card>
               ))}

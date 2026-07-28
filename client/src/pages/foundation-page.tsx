@@ -10,15 +10,17 @@ import { Progress } from "@/components/ui/progress";
 import { Loader2, Lock, Play, CheckCircle, MessageSquare, ArrowLeft } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
+/** Wing session shape. `sessionNumber` is derived from session_type by the API. */
 type FoundationSession = {
   id: number;
-  userId: number;
+  sessionType: string;
   sessionNumber: number;
   title: string;
   description: string;
-  status: 'locked' | 'available' | 'in_progress' | 'completed';
+  status: 'locked' | 'available' | 'in_progress' | 'completed' | 'ended_early';
   startedAt?: string;
   completedAt?: string;
+  timerElapsedSeconds?: number;
   progress?: number;
 };
 
@@ -62,7 +64,8 @@ export default function FoundationPage() {
       locked: { variant: "secondary" as const, icon: Lock, text: "Locked" },
       available: { variant: "default" as const, icon: Play, text: "Available" },
       in_progress: { variant: "outline" as const, icon: MessageSquare, text: "In Progress" },
-      completed: { variant: "destructive" as const, icon: CheckCircle, text: "Completed" }
+      completed: { variant: "destructive" as const, icon: CheckCircle, text: "Completed" },
+      ended_early: { variant: "outline" as const, icon: CheckCircle, text: "Ended Early" }
     };
     
     const config = variants[status];

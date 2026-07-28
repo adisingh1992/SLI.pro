@@ -1,7 +1,7 @@
 import { useAuth } from '@/hooks/use-auth';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiRequest } from '@/lib/queryClient';
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useMemo } from 'react';
 import { useLocation, useParams, Link } from 'wouter';
 import NavBar from "@/components/nav-bar";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -23,12 +23,62 @@ import { useToast } from "@/hooks/use-toast";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import SessionTimer from "@/components/ui/session-timer";
 
-import type { FoundationSession, FoundationSessionMessage } from '@shared/schema';
-
-type SessionWithMessages = {
-  session: FoundationSession;
-  messages: FoundationSessionMessage[];
+/**
+ * Wing session API shapes.
+ *
+ * The server now returns turns (with provenance) rather than user/assistant
+ * messages, and typed artifacts rather than a completionData blob. The chat UI
+ * still renders a simple role/content list, so turns are adapted to that shape
+ * at the query boundary rather than rewriting the whole component.
+ */
+type WingSession = {
+  id: number;
+  sessionType: string;
+  sessionNumber: number;
+  status: 'locked' | 'available' | 'in_progress' | 'completed' | 'ended_early';
+  startedAt?: string | null;
+  completedAt?: string | null;
+  timerElapsedSeconds: number;
 };
+
+type WingTurn = {
+  id: number;
+  position: number;
+  turnType: string;
+  provenanceTag: string;
+  content: string;
+  createdAt: string;
+};
+
+type WingArtifact = {
+  id: number;
+  artifactType: string;
+  content: any;
+  version: number;
+};
+
+type SessionResponse = {
+  session: WingSession;
+  turns: WingTurn[];
+  artifacts: WingArtifact[];
+};
+
+/** What the chat UI renders. */
+type ChatMessage = {
+  id: number;
+  role: 'user' | 'assistant';
+  content: string;
+  createdAt?: string;
+};
+
+const turnToMessage = (t: WingTurn): ChatMessage => ({
+  id: t.id,
+  // Provenance is the source of truth for who spoke: ai_generated covers both
+  // ai_prompt and ai_adapted turns.
+  role: t.provenanceTag === 'ai_generated' ? 'assistant' : 'user',
+  content: t.content,
+  createdAt: t.createdAt,
+});
 
 export default function FoundationSessionChatPage() {
   const { user } = useAuth();
@@ -41,7 +91,7 @@ export default function FoundationSessionChatPage() {
   const [currentMessage, setCurrentMessage] = useState('');
   const [isStreaming, setIsStreaming] = useState(false);
   const [streamingResponse, setStreamingResponse] = useState('');
-  const [optimisticMessage, setOptimisticMessage] = useState<FoundationSessionMessage | null>(null);
+  const [optimisticMessage, setOptimisticMessage] = useState<ChatMessage | null>(null);
   const [allowContinue, setAllowContinue] = useState(false);
   const [showEndSessionDialog, setShowEndSessionDialog] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -66,11 +116,24 @@ export default function FoundationSessionChatPage() {
     return null;
   }
 
-  // Fetch session with messages
-  const { data: sessionData, isLoading, error } = useQuery<SessionWithMessages>({
+  // Fetch session with turns + artifacts
+  const { data: sessionData, isLoading, error } = useQuery<SessionResponse>({
     queryKey: ['/api/foundation-sessions', sessionNumber],
     enabled: !!user,
   });
+
+  // Adapt provenance-tagged turns to the role/content list the UI renders.
+  const messages: ChatMessage[] = useMemo(
+    () => (sessionData?.turns ?? []).map(turnToMessage),
+    [sessionData?.turns],
+  );
+
+  // The session's outcome artifact (functional_identity / credibility_assessment
+  // / signature_story), replacing the MVP's completionData blob.
+  const sessionArtifact = useMemo<any>(
+    () => sessionData?.artifacts?.[0]?.content ?? null,
+    [sessionData?.artifacts],
+  );
 
   // End session early - mirrors normal auto-completion flow
   const endSessionEarlyMutation = useMutation({
@@ -79,24 +142,28 @@ export default function FoundationSessionChatPage() {
       return await response.json();
     },
     onSuccess: (data: any) => {
-      const completionData = data?.completionData;
+      // The server runs the analysis on early exit too, so an outcome may have
+      // been captured even though the session is marked ended_early.
+      const outcome = data?.content;
       let description = '';
       if (sessionNumber === 1) {
-        description = completionData?.primaryFunction
-          ? `Foundation Session 1 completed. Your primary function has been identified as ${completionData.primaryFunction}.`
-          : `Foundation Session 1 has been ended and marked complete.`;
+        description = outcome?.primaryFunction
+          ? `Session ended. Your primary function was identified as ${outcome.primaryFunction}.`
+          : `Foundation Session 1 has been ended. Your progress is saved.`;
       } else if (sessionNumber === 2) {
-        const tier = completionData?.credibilityTier;
-        const brandClaim = completionData?.brandClaim;
+        const tier = outcome?.credibilityTier;
+        const brandClaim = outcome?.brandClaim;
         description = tier
-          ? `Professional Credibility Assessment completed. Achieved Tier ${tier} evidence strength${brandClaim ? `: ${brandClaim}` : ''}.`
-          : `Foundation Session 2 has been ended and marked complete.`;
+          ? `Session ended. Credibility assessed at Tier ${tier}${brandClaim ? `: ${brandClaim}` : ''}.`
+          : `Foundation Session 2 has been ended. Your progress is saved.`;
       } else {
-        description = `Foundation Session ${sessionNumber} has been completed successfully.`;
+        description = outcome
+          ? `Session ended and your positioning work was captured.`
+          : `Foundation Session ${sessionNumber} has been ended. Your progress is saved.`;
       }
 
       toast({
-        title: "Session Completed!",
+        title: data?.methodologyComplete ? "Session Completed!" : "Session Ended",
         description,
         duration: 5000,
       });
@@ -149,7 +216,7 @@ export default function FoundationSessionChatPage() {
     setStreamingResponse('');
     
     // Track message count before streaming starts
-    messageCountBeforeStreamRef.current = sessionData?.messages?.length || 0;
+    messageCountBeforeStreamRef.current = messages.length;
     
     // Store the message content for optimistic display
     const messageContent = content.trim();
@@ -202,10 +269,9 @@ export default function FoundationSessionChatPage() {
                 // Optimistically display user message immediately
                 setOptimisticMessage({
                   id: eventData.id,
-                  sessionId: sessionData?.session.id || 0,
                   role: 'user',
                   content: messageContent,
-                  createdAt: new Date()
+                  createdAt: new Date().toISOString(),
                 });
               } else if (eventData.type === 'chunk') {
                 setStreamingResponse(prev => prev + eventData.content);
@@ -220,10 +286,10 @@ export default function FoundationSessionChatPage() {
                 // Session-specific completion messages
                 let description = '';
                 if (eventData.sessionNumber === 1) {
-                  description = `Foundation Session 1 completed automatically. Your primary function has been identified as ${eventData.completionData?.primaryFunction}.`;
+                  description = `Foundation Session 1 completed automatically. Your primary function has been identified as ${eventData.content?.primaryFunction}.`;
                 } else if (eventData.sessionNumber === 2) {
-                  const tier = eventData.completionData?.credibilityTier;
-                  const brandClaim = eventData.completionData?.brandClaim;
+                  const tier = eventData.content?.credibilityTier;
+                  const brandClaim = eventData.content?.brandClaim;
                   description = `Professional Credibility Assessment completed. Achieved Tier ${tier} evidence strength${brandClaim ? `: ${brandClaim}` : ''}.`;
                 } else {
                   description = `Foundation Session ${eventData.sessionNumber} has been completed successfully.`;
@@ -271,31 +337,31 @@ export default function FoundationSessionChatPage() {
 
   // Clear optimistic message and streaming response when real messages appear in fetched data
   useEffect(() => {
-    if (optimisticMessage && sessionData?.messages) {
-      const messageExists = sessionData.messages.some(msg => msg.id === optimisticMessage.id);
+    if (optimisticMessage && sessionData?.turns) {
+      const messageExists = messages.some(msg => msg.id === optimisticMessage.id);
       if (messageExists) {
         setOptimisticMessage(null);
       }
     }
     
     // Clear streaming response when new assistant message appears
-    if (streamingResponse && sessionData?.messages) {
+    if (streamingResponse && sessionData?.turns) {
       // Check if we have more messages than before streaming started
-      const currentMessageCount = sessionData.messages.length;
+      const currentMessageCount = messages.length;
       if (currentMessageCount > messageCountBeforeStreamRef.current) {
-        const lastMessage = sessionData.messages[sessionData.messages.length - 1];
+        const lastMessage = messages[messages.length - 1];
         // If the last message is from assistant, the stream has been saved
         if (lastMessage.role === 'assistant') {
           setStreamingResponse('');
         }
       }
     }
-  }, [sessionData?.messages, optimisticMessage, streamingResponse]);
+  }, [messages, optimisticMessage, streamingResponse]);
 
   // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [sessionData?.messages, streamingResponse, optimisticMessage]);
+  }, [messages, streamingResponse, optimisticMessage]);
 
   // Handle message submission
   const handleSendMessage = async (e: React.FormEvent) => {
@@ -373,7 +439,7 @@ export default function FoundationSessionChatPage() {
     );
   }
 
-  const { session, messages } = sessionData;
+  const { session } = sessionData;
 
   // Check if session is locked
   if (session.status === 'locked') {
@@ -486,7 +552,7 @@ export default function FoundationSessionChatPage() {
                       <p className={`text-xs text-muted-foreground mt-1 ${
                         message.role === 'user' ? 'text-right' : ''
                       }`}>
-                        {message.role === 'user' ? 'You' : 'SLI'} • {new Date(message.createdAt).toLocaleTimeString()}
+                        {message.role === 'user' ? 'You' : 'SLI'} • {message.createdAt ? new Date(message.createdAt).toLocaleTimeString() : ""}
                       </p>
                     </div>
                   </div>
@@ -506,7 +572,7 @@ export default function FoundationSessionChatPage() {
                         <p className="text-sm whitespace-pre-wrap break-words">{optimisticMessage.content}</p>
                       </div>
                       <p className="text-xs text-muted-foreground mt-1 text-right">
-                        You • {new Date(optimisticMessage.createdAt).toLocaleTimeString()}
+                        You • {optimisticMessage.createdAt ? new Date(optimisticMessage.createdAt).toLocaleTimeString() : ""}
                       </p>
                     </div>
                   </div>
@@ -626,7 +692,7 @@ export default function FoundationSessionChatPage() {
                   isSessionCompleted={session.status === 'completed'}
                   className="border-0 bg-transparent p-0"
                   sessionNumber={sessionNumber}
-                  initialTimerElapsed={session.timerElapsed || 0}
+                  initialTimerElapsed={session.timerElapsedSeconds || 0}
                 />
                 {session.status === 'in_progress' && (
                   <Button
@@ -659,24 +725,34 @@ export default function FoundationSessionChatPage() {
               </div>
             )}
 
-            {/* Completion Data */}
-            {session.status === 'completed' && session.completionData && (
+            {/* Session outcome — read from the typed artifact */}
+            {session.status === 'completed' && sessionArtifact && (
               <div className="space-y-2">
                 <h4 className="text-sm font-medium">Results</h4>
                 <div className="space-y-2 text-sm">
-                  {session.completionData.primaryFunction && (
+                  {sessionArtifact.primaryFunction && (
                     <div>
-                      <span className="font-medium">Primary:</span> {session.completionData.primaryFunction}
+                      <span className="font-medium">Primary:</span> {sessionArtifact.primaryFunction}
                     </div>
                   )}
-                  {session.completionData.secondaryFunction && (
+                  {sessionArtifact.secondaryFunction && (
                     <div>
-                      <span className="font-medium">Secondary:</span> {session.completionData.secondaryFunction}
+                      <span className="font-medium">Secondary:</span> {sessionArtifact.secondaryFunction}
                     </div>
                   )}
-                  {session.completionData.confidence && (
+                  {sessionArtifact.credibilityTier && (
                     <div>
-                      <span className="font-medium">Confidence:</span> {session.completionData.confidence}%
+                      <span className="font-medium">Credibility Tier:</span> {sessionArtifact.credibilityTier}
+                    </div>
+                  )}
+                  {sessionArtifact.brandClaim && (
+                    <div>
+                      <span className="font-medium">Brand Claim:</span> {sessionArtifact.brandClaim}
+                    </div>
+                  )}
+                  {sessionArtifact.confidence && (
+                    <div>
+                      <span className="font-medium">Confidence:</span> {sessionArtifact.confidence}%
                     </div>
                   )}
                 </div>

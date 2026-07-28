@@ -1,10 +1,12 @@
 import { Express, Request, Response, NextFunction } from "express";
 import { storage } from "./storage";
+import * as artifactStore from "./wing/artifact-store";
 import { z } from "zod";
 import { insertFreshnessReportSchema, MonthlyCheckIn } from "@shared/schema";
 import { generateQuestionnaireSummary, generateResumeSummary, generateLinkedInSummary, generateAdditionalDocsSummary, generateFinalSynthesis } from "./freshness-report";
 import { extractDocumentText, validateExtractedText } from "./document-extractor";
 import { getDocumentBase64 } from "./document-data";
+import * as profileStore from "./wing/profile-store";
 
 
 // Middleware to check if user is authenticated
@@ -20,7 +22,7 @@ export function registerFreshnessRoutes(app: Express) {
   app.get("/api/freshness-reports", isAuthenticated, async (req, res) => {
     try {
       const userId = req.user!.id;
-      const reports = await storage.getFreshnessReports(userId);
+      const reports = await artifactStore.getFreshnessReports(userId);
       res.json(reports);
     } catch (error) {
       console.error("Error fetching freshness reports:", error);
@@ -50,7 +52,7 @@ export function registerFreshnessRoutes(app: Express) {
     try {
       const userId = req.user!.id;
       // Get all reports for the user
-      const reports = await storage.getFreshnessReports(userId);
+      const reports = await artifactStore.getFreshnessReports(userId);
       
       // Sort reports by creation date (newest first)
       const sortedReports = reports.sort((a, b) => 
@@ -74,14 +76,15 @@ export function registerFreshnessRoutes(app: Express) {
   app.get("/api/freshness-reports/:id", isAuthenticated, async (req, res) => {
     try {
       const reportId = parseInt(req.params.id);
-      const report = await storage.getFreshnessReport(reportId);
+      const report = await artifactStore.getFreshnessReport(reportId);
       
       if (!report) {
         return res.status(404).json({ error: "Freshness report not found" });
       }
       
       // Check if the report belongs to the authenticated user
-      if (report.userId !== req.user!.id) {
+      const callerStudentId = await artifactStore.studentIdForUser(req.user!.id);
+      if (report.studentId !== callerStudentId && !req.user!.isAdmin) {
         return res.status(403).json({ error: "Unauthorized access to this report" });
       }
       
@@ -96,7 +99,7 @@ export function registerFreshnessRoutes(app: Express) {
   app.post("/api/freshness-reports", isAuthenticated, async (req, res) => {
     try {
       const userId = req.user!.id;
-      const userProfile = await storage.getUserProfile(userId);
+      const userProfile = await profileStore.getUserProfile(userId);
       
       if (!userProfile) {
         return res.status(404).json({ error: "User profile not found" });
@@ -208,7 +211,7 @@ export function registerFreshnessRoutes(app: Express) {
         let previousReport = null;
         try {
           // Get all reports for the user
-          const reports = await storage.getFreshnessReports(userId);
+          const reports = await artifactStore.getFreshnessReports(userId);
           
           // Sort reports by creation date (newest first)
           const sortedReports = reports.sort((a, b) => 
@@ -273,7 +276,7 @@ export function registerFreshnessRoutes(app: Express) {
         console.log('Step 8: Storing report in database...');
         let createdReport;
         try {
-          createdReport = await storage.createFreshnessReport(validatedReport);
+          createdReport = await artifactStore.createFreshnessReport(validatedReport);
           console.log('Step 8: Report stored successfully with ID:', createdReport.id);
         } catch (storageError) {
           console.error('Step 8: Error storing report:', storageError);
@@ -309,14 +312,15 @@ export function registerFreshnessRoutes(app: Express) {
   app.delete("/api/freshness-reports/:id", isAuthenticated, async (req, res) => {
     try {
       const reportId = parseInt(req.params.id);
-      const report = await storage.getFreshnessReport(reportId);
+      const report = await artifactStore.getFreshnessReport(reportId);
       
       if (!report) {
         return res.status(404).json({ error: "Freshness report not found" });
       }
       
       // Check if the report belongs to the authenticated user
-      if (report.userId !== req.user!.id) {
+      const callerStudentId = await artifactStore.studentIdForUser(req.user!.id);
+      if (report.studentId !== callerStudentId && !req.user!.isAdmin) {
         return res.status(403).json({ error: "Unauthorized access to this report" });
       }
       

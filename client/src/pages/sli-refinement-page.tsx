@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { Sli } from "@shared/schema";
+import { getActiveSli, hasRefinedSli, type SliRecord } from "@/lib/sli";
 import { queryClient } from "@/lib/queryClient";
 import { useLocation } from "wouter";
 import { useToast } from "@/hooks/use-toast";
@@ -41,17 +41,31 @@ export default function SliRefinementPage() {
   const [feedback, setFeedback] = useState<string>("");
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [showFeedbackForm, setShowFeedbackForm] = useState<boolean>(false);
+  // The refine endpoint returns rationale + implementation guidance. Rationale
+  // is persisted on the record; guidance is not a column in sli_records, so we
+  // hold the most recent one for display.
+  const [lastRefinement, setLastRefinement] = useState<{
+    refinementRationale?: string;
+    implementationGuidance?: string;
+  } | null>(null);
 
   // Fetch user's selected SLI
-  const { data: slis, isLoading: slisLoading } = useQuery<Sli[]>({
+  const { data: slis, isLoading: slisLoading } = useQuery<SliRecord[]>({
     queryKey: ["/api/user/slis"],
     queryFn: async () => {
-      const res = await fetch(`/api/user/slis`);
+      const res = await fetch(`/api/user/slis`, { credentials: "include" });
+      if (res.status === 404) return [];
       if (!res.ok) throw new Error("Failed to fetch SLIs");
       return res.json();
     },
     enabled: !!user,
   });
+
+  // The SLI in force is the one that gets refined; a refinement creates a new
+  // record descending from it rather than mutating it.
+  const activeSli = getActiveSli(slis);
+  const refinementsUsed = activeSli?.refinementCount ?? 0;
+  const isRefined = hasRefinedSli(slis);
 
   // Function to handle refinement submission
   const handleSubmitRefinement = async () => {
@@ -73,10 +87,10 @@ export default function SliRefinementPage() {
       return;
     }
 
-    const sli = slis[0]; // Use the first SLI since that's the most recent one
-    
+    const sli = activeSli;
+
     // Ensure an SLI is selected
-    if (sli.selectedSliIndex === null) {
+    if (!sli) {
       toast({
         title: "Error",
         description: "Please select an SLI first before refining",
@@ -97,8 +111,7 @@ export default function SliRefinementPage() {
         },
         body: JSON.stringify({
           sliId: sli.id,
-          feedback: feedback,
-          selectedSliIndex: sli.selectedSliIndex
+          feedback,
         }),
       });
 
@@ -108,7 +121,8 @@ export default function SliRefinementPage() {
       }
 
       const data = await res.json();
-      
+      setLastRefinement(data?.refinementResponse ?? null);
+
       // Invalidate queries to refresh data
       queryClient.invalidateQueries({ queryKey: ["/api/user/slis"] });
       
@@ -130,25 +144,14 @@ export default function SliRefinementPage() {
     }
   };
 
-  // Helper function to get the selected SLI statement
+  // The statement being refined — for a refinement, show its parent's text.
   const getSelectedSliStatement = (): string => {
-    if (!slis || slis.length === 0 || slis[0].selectedSliIndex === null) {
-      return "";
+    if (!activeSli) return "";
+    if (activeSli.parentSliId != null && Array.isArray(slis)) {
+      const parent = slis.find((s) => s.id === activeSli.parentSliId);
+      if (parent) return parent.statement;
     }
-    
-    const sli = slis[0];
-    const index = sli.selectedSliIndex;
-    
-    switch(index) {
-      case 1:
-        return sli.statement1;
-      case 2:
-        return sli.statement2;
-      case 3:
-        return sli.statement3;
-      default:
-        return "";
-    }
+    return activeSli.statement;
   };
 
   // Redirect to home if no SLIs are available
@@ -185,10 +188,10 @@ export default function SliRefinementPage() {
             <Loader2 className="h-8 w-8 animate-spin text-primary" />
             <span className="ml-2">Loading your SLIs...</span>
           </div>
-        ) : slis && slis.length > 0 && slis[0].selectedSliIndex !== null ? (
+        ) : activeSli ? (
           <div className="space-y-8">
             {/* Show different views based on whether the SLI has been refined already */}
-            {slis[0].refinedSliText && !showFeedbackForm ? (
+            {isRefined && !showFeedbackForm ? (
               <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
@@ -215,7 +218,7 @@ export default function SliRefinementPage() {
                             <span>Final SLI Statement</span>
                           </AlertTitle>
                           <AlertDescription className="mt-2 text-lg font-medium">
-                            {slis[0].refinedSliText}
+                            {activeSli?.statement}
                           </AlertDescription>
                         </Alert>
                         
@@ -239,7 +242,9 @@ export default function SliRefinementPage() {
                         </div>
                         <ScrollArea className="h-[300px] rounded-md">
                           <div className="p-2 whitespace-pre-line">
-                            {slis[0].refinementRationale || "No rationale provided."}
+                            {lastRefinement?.refinementRationale ||
+                              activeSli?.rationale ||
+                              "No rationale provided."}
                           </div>
                         </ScrollArea>
                       </div>
@@ -253,7 +258,9 @@ export default function SliRefinementPage() {
                         </div>
                         <ScrollArea className="h-[300px] rounded-md">
                           <div className="p-2 whitespace-pre-line">
-                            {slis[0].implementationGuidance || "No implementation guidance provided."}
+                            {lastRefinement?.implementationGuidance ||
+                              activeSli?.implementationGuidance ||
+                              "No implementation guidance provided."}
                           </div>
                         </ScrollArea>
                       </div>
@@ -282,13 +289,13 @@ export default function SliRefinementPage() {
                   </div>
                   
                   {/* Re-refinement section */}
-                  {slis[0]?.refinementCount < 3 ? (
+                  {refinementsUsed < 3 ? (
                     <div className="pt-2 border-t border-gray-100 mt-2 w-full">
                       <div className="flex justify-between items-center">
                         <div>
                           <h4 className="text-sm font-medium">Not quite right?</h4>
                           <p className="text-xs text-muted-foreground">
-                            You can refine your SLI {3 - (slis[0]?.refinementCount || 0)} more {(3 - (slis[0]?.refinementCount || 0)) === 1 ? 'time' : 'times'}.
+                            You can refine your SLI {3 - refinementsUsed} more {(3 - refinementsUsed) === 1 ? 'time' : 'times'}.
                           </p>
                         </div>
                         <Button 
@@ -355,7 +362,7 @@ export default function SliRefinementPage() {
                   </div>
 
                   <div className="flex justify-between mt-8">
-                    {showFeedbackForm && slis[0].refinedSliText ? (
+                    {showFeedbackForm && isRefined ? (
                       <Button
                         variant="outline"
                         onClick={() => {
@@ -388,7 +395,7 @@ export default function SliRefinementPage() {
                       ) : (
                         <>
                           <Sparkles className="h-4 w-4" />
-                          {showFeedbackForm && slis[0].refinedSliText ? "Re-refine My SLI" : "Refine My SLI"}
+                          {showFeedbackForm && isRefined ? "Re-refine My SLI" : "Refine My SLI"}
                         </>
                       )}
                     </Button>

@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import NavBar from "@/components/nav-bar";
+import type { SliRecord } from "@/lib/sli";
 
 export default function LinkedinOptimizationGeneratePage() {
   const [_, navigate] = useLocation();
@@ -19,7 +20,8 @@ export default function LinkedinOptimizationGeneratePage() {
   });
 
   // Fetch user's SLI
-  const { data: sli, isLoading: isSliLoading } = useQuery({
+  // Returns the single SLI in force (or 404 when none selected yet).
+  const { data: sli, isLoading: isSliLoading } = useQuery<SliRecord | null>({
     queryKey: ["/api/user/sli"],
   });
 
@@ -102,7 +104,7 @@ export default function LinkedinOptimizationGeneratePage() {
   const hasRequiredDocuments = !!resumeDoc && !!linkedinDoc;
 
   // Check if user has a selected SLI
-  const hasSli = !!sli && (sli.selectedSliIndex !== null || sli.refinedSliText);
+  const hasSli = !!sli;
 
   // Check if user has a freshness report
   const hasFreshnessReport = !!freshnessReport;
@@ -198,14 +200,7 @@ export default function LinkedinOptimizationGeneratePage() {
                       <p className="text-sm text-muted-foreground">
                         {hasSli
                           ? `You have selected or refined an SLI: "${
-                              (sli?.refinedSliText) ||
-                              (sli?.selectedSliIndex === 1 
-                                ? sli?.statement1 
-                                : sli?.selectedSliIndex === 2 
-                                ? sli?.statement2 
-                                : sli?.selectedSliIndex === 3 
-                                ? sli?.statement3 
-                                : sli?.customSliText || "Custom SLI")
+                              sli?.statement
                             }"`
                           : "You need to select an SLI statement"}
                       </p>

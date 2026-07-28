@@ -6,6 +6,14 @@ import {
 } from "../shared/schema";
 import { getModulePromptSet } from "./enhancement-module-prompts";
 import * as orchestrator from "./orchestrator";
+import * as moduleStore from "./wing/enhancement-store";
+import * as store from "./wing/session-store";
+import type { ArtifactType } from "./wing/session-store";
+import * as docStore from "./wing/document-store";
+import * as intakeStore from "./wing/intake-store";
+import * as sliStore from "./wing/sli-store";
+import * as profileStore from "./wing/profile-store";
+import * as identity from "./wing/identity-store";
 
 const isAuthenticated = (req: Request, res: Response, next: NextFunction) => {
   if (req.isAuthenticated()) {
@@ -199,7 +207,7 @@ CRITICAL: The user has already provided this information in their questionnaire.
 // Format resume documents into a summary for system prompt context
 async function formatResumeSummary(userId: number): Promise<string> {
   try {
-    const documents = await storage.getDocuments(userId);
+    const documents = await docStore.getDocuments(userId);
     const resumeDocuments = documents.filter((doc) => doc.type === "resume");
 
     if (!resumeDocuments || resumeDocuments.length === 0) {
@@ -233,29 +241,29 @@ CRITICAL: The user has already uploaded their resume. Use this information to pr
 // Format SLI (Single Lasting Impression) data for system prompt context
 async function formatSliSummary(userId: number): Promise<string> {
   try {
-    const sliRecords = await storage.getSlisByUserId(userId);
-    if (!sliRecords || sliRecords.length === 0) {
-      return "";
-    }
+    const all = await sliStore.listByUser(userId);
+    if (!all.length) return "";
 
-    const latestSli = sliRecords[0];
+    const active = await sliStore.getActive(userId);
+    const candidates = all.filter((s) => s.status === "candidate");
 
-    const selectedText = latestSli.selectedSliIndex
-      ? `Selected SLI Option: #${latestSli.selectedSliIndex}`
-      : latestSli.customSliText
-        ? `Custom SLI: ${latestSli.customSliText}`
-        : "No SLI selected yet";
+    // The SLI in force is what coaching should build on; candidates are
+    // context for how the student got there.
+    const activeText = active
+      ? `IN FORCE: "${active.title}" — ${active.statement}` +
+        (active.rationale ? `\n  Rationale: ${active.rationale}` : "") +
+        (active.source === "refined"
+          ? `\n  (refinement ${active.refinementCount} of the original)`
+          : active.source === "custom"
+            ? `\n  (written by the student)`
+            : "")
+      : "No SLI selected yet";
 
-    const refinedText = latestSli.refinedSliText
-      ? `\nRefined SLI: ${latestSli.refinedSliText}`
-      : "";
-
-    const refinementRationale = latestSli.refinementRationale
-      ? `\nRefinement Rationale: ${latestSli.refinementRationale}`
-      : "";
-
-    const implementationGuidance = latestSli.implementationGuidance
-      ? `\nImplementation Guidance: ${latestSli.implementationGuidance}`
+    const candidateText = candidates.length
+      ? "\n\nCandidates considered:\n" +
+        candidates
+          .map((c, i) => `  Option ${i + 1}: "${c.title}" — ${c.statement}`)
+          .join("\n")
       : "";
 
     return `
@@ -263,16 +271,7 @@ async function formatSliSummary(userId: number): Promise<string> {
 USER'S SINGLE LASTING IMPRESSION (SLI)
 ═══════════════════════════════════════════════════════════════
 
-SLI Option 1: "${latestSli.title1}" - ${latestSli.statement1}
-  Rationale: ${latestSli.rationale1}
-
-SLI Option 2: "${latestSli.title2}" - ${latestSli.statement2}
-  Rationale: ${latestSli.rationale2}
-
-SLI Option 3: "${latestSli.title3}" - ${latestSli.statement3}
-  Rationale: ${latestSli.rationale3}
-
-${selectedText}${refinedText}${refinementRationale}${implementationGuidance}
+${activeText}${candidateText}
 
 CRITICAL: The user's SLI has been established. All coaching should reinforce and build upon this Single Lasting Impression. Reference it naturally when discussing positioning, content strategy, and networking.
 ═══════════════════════════════════════════════════════════════
@@ -383,7 +382,7 @@ CRITICAL: This summary is from the user's AI coaching conversations. Do not repe
 // Format branding intake data for system prompt context
 async function formatBrandingIntakeContext(userId: number): Promise<string> {
   try {
-    const intake = await storage.getBrandingIntake(userId);
+    const intake = await intakeStore.getBrandingIntake(userId);
     if (!intake) {
       return "";
     }
@@ -508,28 +507,56 @@ CRITICAL: LinkedIn optimization recommendations have already been generated. Ref
   }
 }
 
+/**
+ * Completed Foundation Sessions with their outcome artifacts, read from wing.
+ * Returns the shape the summary formatter below expects
+ * ({ sessionNumber, completionData }), so only the source changes.
+ */
+async function foundationOutcomes(
+  userId: number,
+): Promise<Array<{ sessionNumber: number; completionData: any }>> {
+  const user = await identity.getUser(userId);
+  if (!user) return [];
+
+  const studentId = await store.studentIdFor(user as any);
+  const rows = await store.listSessions(studentId, store.FOUNDATION_TYPES);
+
+  const artifactFor: Record<number, ArtifactType> = {
+    1: "functional_identity",
+    2: "credibility_assessment",
+    3: "signature_story",
+  };
+
+  const out: Array<{ sessionNumber: number; completionData: any }> = [];
+  for (const row of rows) {
+    if (row.status !== "completed") continue;
+    const n = store.foundationNumber(row.sessionType);
+    const artifact = await store.getArtifact(row.id, artifactFor[n]);
+    if (artifact?.content) {
+      out.push({ sessionNumber: n, completionData: artifact.content });
+    }
+  }
+  return out;
+}
+
 // Format foundation sessions 1, 2, 3 data into a concise combined summary
 async function formatFoundationSessionsSummary(
   userId: number,
 ): Promise<string> {
   try {
-    // Fetch all foundation sessions for the user
-    const sessions = await storage.getFoundationSessions(userId);
+    // Foundation Sessions now live in the wing schema, with their outcomes as
+    // typed artifacts rather than a completionData column. Reading them here is
+    // what closes the gap the feature list flags in A3: Enhancement Modules
+    // must have full context from completed Foundation Sessions.
+    const sessions = await foundationOutcomes(userId);
 
     if (!sessions || sessions.length === 0) {
       return "";
     }
 
-    // Find completed sessions
-    const session1 = sessions.find(
-      (s) => s.sessionNumber === 1 && s.status === "completed",
-    );
-    const session2 = sessions.find(
-      (s) => s.sessionNumber === 2 && s.status === "completed",
-    );
-    const session3 = sessions.find(
-      (s) => s.sessionNumber === 3 && s.status === "completed",
-    );
+    const session1 = sessions.find((s) => s.sessionNumber === 1);
+    const session2 = sessions.find((s) => s.sessionNumber === 2);
+    const session3 = sessions.find((s) => s.sessionNumber === 3);
 
     if (!session1 && !session2 && !session3) {
       return "";
@@ -647,7 +674,7 @@ async function formatPreviousModulesAnalysisContext(
 
     // For Module B, include Module A summary
     if (currentModuleCode === "B") {
-      const moduleA = await storage.getEnhancementModule(userId, "A");
+      const moduleA = await moduleStore.getEnhancementModule(userId, "A");
       if (moduleA?.status === "completed" && moduleA.completionData) {
         const data = moduleA.completionData;
         context += `
@@ -667,8 +694,8 @@ NOTE: User completed Module A covering digital behavior and LinkedIn strategy. C
 
     // For Module C, include Module A and B summaries
     if (currentModuleCode === "C") {
-      const moduleA = await storage.getEnhancementModule(userId, "A");
-      const moduleB = await storage.getEnhancementModule(userId, "B");
+      const moduleA = await moduleStore.getEnhancementModule(userId, "A");
+      const moduleB = await moduleStore.getEnhancementModule(userId, "B");
 
       if (moduleA?.status === "completed" && moduleA.completionData) {
         const data = moduleA.completionData;
@@ -715,15 +742,17 @@ async function checkModuleCompletion(
     return { shouldComplete: false };
   }
 
-  // Check if we have enough conversation for meaningful analysis
-  if (messages.length < 10) {
-    // Need at least 5 back-and-forth exchanges for a complete conversation
+  // No turn-count gate: the methodology decides when a module is complete,
+  // not an arbitrary message threshold. Modules are also explicitly allowed to
+  // end at any natural stopping point (feature list A3).
+  // Only guard against analysing an empty transcript.
+  if (messages.length === 0) {
     return { shouldComplete: false };
   }
 
   try {
     // Fetch context for analysis
-    const questionnaire = await storage.getQuestionnaire(userId);
+    const questionnaire = await intakeStore.getQuestionnaire(userId);
     const questionnaireContext =
       formatQuestionnaireAnalysisContext(questionnaire);
     const foundationSessionsContext =
@@ -807,7 +836,7 @@ export function setupEnhancementModulesRoutes(app: Express) {
     isAuthenticated,
     async (req: Request, res: Response) => {
       try {
-        const modules = await storage.getEnhancementModulesForUser(
+        const modules = await moduleStore.getEnhancementModulesForUser(
           req.user!.id,
         );
         res.json(modules);
@@ -830,7 +859,7 @@ export function setupEnhancementModulesRoutes(app: Express) {
           return res.status(400).json({ error: "Invalid module code" });
         }
 
-        const moduleData = await storage.getEnhancementModuleWithMessages(
+        const moduleData = await moduleStore.getEnhancementModuleWithMessages(
           req.user!.id,
           moduleCode,
         );
@@ -860,14 +889,14 @@ export function setupEnhancementModulesRoutes(app: Express) {
         }
 
         // Check if module already exists
-        let module = await storage.getEnhancementModule(
+        let module = await moduleStore.getEnhancementModule(
           req.user!.id,
           moduleCode,
         );
 
         if (!module) {
           // Create new module
-          module = await storage.createEnhancementModule({
+          module = await moduleStore.createEnhancementModule({
             userId: req.user!.id,
             moduleCode: moduleCode as "A" | "B" | "C",
             status: "in_progress",
@@ -877,7 +906,7 @@ export function setupEnhancementModulesRoutes(app: Express) {
           // Add initial guidance message
           const initialMessage = getModulePromptSet(req.user!.professionalStatus).getInitialGuidanceMessage(moduleCode);
           if (initialMessage) {
-            await storage.createEnhancementModuleMessage({
+            await moduleStore.createEnhancementModuleMessage({
               moduleId: module.id,
               role: "assistant",
               content: initialMessage,
@@ -885,19 +914,19 @@ export function setupEnhancementModulesRoutes(app: Express) {
           }
         } else if (module.status === "available") {
           // Update status to in_progress if it was available
-          await storage.updateEnhancementModule(module.id, {
+          await moduleStore.updateEnhancementModule(module.id, {
             status: "in_progress",
             startedAt: new Date(),
           });
 
           // Check if module has any messages, if not add initial guidance message
-          const existingMessages = await storage.getEnhancementModuleMessages(
+          const existingMessages = await moduleStore.getEnhancementModuleMessages(
             module.id,
           );
           if (existingMessages.length === 0) {
             const initialMessage = getModulePromptSet(req.user!.professionalStatus).getInitialGuidanceMessage(moduleCode);
             if (initialMessage) {
-              await storage.createEnhancementModuleMessage({
+              await moduleStore.createEnhancementModuleMessage({
                 moduleId: module.id,
                 role: "assistant",
                 content: initialMessage,
@@ -929,7 +958,7 @@ export function setupEnhancementModulesRoutes(app: Express) {
             .json({ error: "Invalid module code. Must be A, B, or C" });
         }
 
-        const module = await storage.getEnhancementModule(userId, moduleCode);
+        const module = await moduleStore.getEnhancementModule(userId, moduleCode);
         if (!module) {
           return res.status(404).json({ error: "Module not found" });
         }
@@ -946,14 +975,14 @@ export function setupEnhancementModulesRoutes(app: Express) {
         }
 
         // Save user message
-        const userMessage = await storage.createEnhancementModuleMessage({
+        const userMessage = await moduleStore.createEnhancementModuleMessage({
           moduleId: module.id,
           role: "user",
           content: content.trim(),
         });
 
         // Get all messages from this module for context
-        const messages = await storage.getEnhancementModuleMessages(module.id);
+        const messages = await moduleStore.getEnhancementModuleMessages(module.id);
 
         // Format messages for Claude API
         const formattedMessages = messages.map((msg) => ({
@@ -962,10 +991,10 @@ export function setupEnhancementModulesRoutes(app: Express) {
         }));
 
         // Get user profile data for context
-        const userProfile = await storage.getUserProfile(userId);
+        const userProfile = await profileStore.getUserProfile(userId);
 
         // Fetch all context data in parallel for efficiency
-        const questionnaire = await storage.getQuestionnaire(userId);
+        const questionnaire = await intakeStore.getQuestionnaire(userId);
         const questionnaireSummary = formatQuestionnaireSummary(questionnaire);
 
         const [
@@ -990,14 +1019,14 @@ export function setupEnhancementModulesRoutes(app: Express) {
         let previousModuleData = null;
         let moduleAData = null;
         if (moduleCode === "B") {
-          const moduleA = await storage.getEnhancementModule(userId, "A");
+          const moduleA = await moduleStore.getEnhancementModule(userId, "A");
           if (moduleA?.status === "completed" && moduleA.completionData) {
             previousModuleData = moduleA.completionData;
           }
         } else if (moduleCode === "C") {
           const [moduleA, moduleB] = await Promise.all([
-            storage.getEnhancementModule(userId, "A"),
-            storage.getEnhancementModule(userId, "B"),
+            moduleStore.getEnhancementModule(userId, "A"),
+            moduleStore.getEnhancementModule(userId, "B"),
           ]);
           if (moduleB?.status === "completed" && moduleB.completionData) {
             previousModuleData = moduleB.completionData;
@@ -1065,7 +1094,7 @@ export function setupEnhancementModulesRoutes(app: Express) {
           }
 
           // Save assistant response
-          const assistantMessage = await storage.createEnhancementModuleMessage(
+          const assistantMessage = await moduleStore.createEnhancementModuleMessage(
             {
               moduleId: module.id,
               role: "assistant",
@@ -1074,7 +1103,7 @@ export function setupEnhancementModulesRoutes(app: Express) {
           );
 
           // Check for automatic completion
-          const allMessages = await storage.getEnhancementModuleMessages(
+          const allMessages = await moduleStore.getEnhancementModuleMessages(
             module.id,
           );
           const completionCheck = await checkModuleCompletion(
@@ -1090,7 +1119,7 @@ export function setupEnhancementModulesRoutes(app: Express) {
             completionCheck.completionData
           ) {
             // Mark module as completed
-            await storage.updateEnhancementModule(module.id, {
+            await moduleStore.updateEnhancementModule(module.id, {
               status: "completed",
               completedAt: new Date(),
               completionData: completionCheck.completionData,
@@ -1146,7 +1175,7 @@ export function setupEnhancementModulesRoutes(app: Express) {
         }
 
         // Get the module
-        const module = await storage.getEnhancementModule(
+        const module = await moduleStore.getEnhancementModule(
           req.user!.id,
           moduleCode,
         );
@@ -1159,14 +1188,14 @@ export function setupEnhancementModulesRoutes(app: Express) {
         }
 
         // Save user message
-        await storage.createEnhancementModuleMessage({
+        await moduleStore.createEnhancementModuleMessage({
           moduleId: module.id,
           role: "user",
           content,
         });
 
         // Get all messages for context
-        const messages = await storage.getEnhancementModuleMessages(module.id);
+        const messages = await moduleStore.getEnhancementModuleMessages(module.id);
 
         // Generate AI response (placeholder for now - you'll add real prompts later)
         const systemPrompt = `You are a professional coaching assistant helping with ${
@@ -1197,15 +1226,15 @@ export function setupEnhancementModulesRoutes(app: Express) {
           "I apologize, but I encountered an error generating a response.";
 
         // Save assistant message
-        await storage.createEnhancementModuleMessage({
+        await moduleStore.createEnhancementModuleMessage({
           moduleId: module.id,
           role: "assistant",
           content: assistantResponse,
         });
 
         // Check for completion
-        const userProfile = await storage.getUserProfile(req.user!.id);
-        const allMessages = await storage.getEnhancementModuleMessages(
+        const userProfile = await profileStore.getUserProfile(req.user!.id);
+        const allMessages = await moduleStore.getEnhancementModuleMessages(
           module.id,
         );
         const completionCheck = await checkModuleCompletion(
@@ -1217,7 +1246,7 @@ export function setupEnhancementModulesRoutes(app: Express) {
         );
 
         if (completionCheck.shouldComplete && completionCheck.completionData) {
-          await storage.updateEnhancementModule(module.id, {
+          await moduleStore.updateEnhancementModule(module.id, {
             status: "completed",
             completedAt: new Date(),
             completionData: completionCheck.completionData,
@@ -1250,7 +1279,7 @@ export function setupEnhancementModulesRoutes(app: Express) {
 
         const updateData = updateEnhancementModuleSchema.parse(req.body);
 
-        const module = await storage.getEnhancementModule(
+        const module = await moduleStore.getEnhancementModule(
           req.user!.id,
           moduleCode,
         );
@@ -1258,7 +1287,7 @@ export function setupEnhancementModulesRoutes(app: Express) {
           return res.status(404).json({ error: "Module not found" });
         }
 
-        await storage.updateEnhancementModule(module.id, updateData);
+        await moduleStore.updateEnhancementModule(module.id, updateData);
 
         res.json({ success: true });
       } catch (error) {
@@ -1280,7 +1309,7 @@ export function setupEnhancementModulesRoutes(app: Express) {
           return res.status(400).json({ error: "Invalid user ID" });
         }
 
-        const modules = await storage.getEnhancementModulesForUser(userId);
+        const modules = await moduleStore.getEnhancementModulesForUser(userId);
         res.json(modules);
       } catch (error) {
         console.error("Error fetching enhancement modules for user:", error);

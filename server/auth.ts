@@ -6,13 +6,18 @@ import session from "express-session";
 import { scrypt, randomBytes, timingSafeEqual } from "crypto";
 import { promisify } from "util";
 import { storage } from "./storage";
-import { User as SelectUser, insertUserSchema, insertPasswordResetSchema } from "@shared/schema";
+import * as identity from "./wing/identity-store";
+import { insertUserSchema, insertPasswordResetSchema } from "@shared/schema";
+import type { AuthUser } from "./wing/identity-store";
 import { z } from "zod";
 import { sendPasswordResetEmail } from "./email-service";
+import * as profileStore from "./wing/profile-store";
 
 declare global {
   namespace Express {
-    interface User extends SelectUser {}
+    // req.user is a wing user after the identity cutover. `username` and
+    // `isAdmin` are exposed as derived fields so existing handlers keep working.
+    interface User extends AuthUser {}
   }
 }
 
@@ -66,7 +71,10 @@ const registerSchema = insertUserSchema.extend({
 });
 
 export function setupAuth(app: Express) {
-  const isProduction = process.env.NODE_ENV === 'production' || process.env.REPLIT_DEPLOYMENT === '1';
+  // Secure cookies whenever we are not in local development. Behind Azure
+  // Front Door the app is always served over HTTPS, so this must be true in
+  // staging as well as production (the old REPLIT_DEPLOYMENT check is gone).
+  const isProduction = process.env.NODE_ENV !== 'development';
   
   const sessionSettings: session.SessionOptions = {
     secret: process.env.SESSION_SECRET || "supersecretkey",
@@ -89,8 +97,8 @@ export function setupAuth(app: Express) {
   passport.use(
     new LocalStrategy(async (username, password, done) => {
       try {
-        const user = await storage.getUserByUsername(username);
-        if (!user || !user.password || !(await comparePasswords(password, user.password))) {
+        const user = await identity.getUserByEmail(username);
+        if (!user || !user.passwordHash || !(await comparePasswords(password, user.passwordHash))) {
           return done(null, false);
         } else {
           return done(null, user);
@@ -104,7 +112,11 @@ export function setupAuth(app: Express) {
   if (!process.env.LINKEDIN_CLIENT_ID || !process.env.LINKEDIN_CLIENT_SECRET) {
     console.error("LinkedIn OAuth credentials not configured. LinkedIn login will not be available.");
   } else {
-    const callbackURL = process.env.LINKEDIN_CALLBACK_URL || `${process.env.REPLIT_DEV_DOMAIN ? `https://${process.env.REPLIT_DEV_DOMAIN}` : 'http://localhost:5000'}/api/auth/linkedin/callback`;
+    // Set LINKEDIN_CALLBACK_URL to the Front Door domain in staging/production
+    // and register it in the LinkedIn app; the fallback is local dev only.
+    const callbackURL =
+      process.env.LINKEDIN_CALLBACK_URL ||
+      `http://localhost:${process.env.PORT || 5000}/api/auth/linkedin/callback`;
     
     // LinkedIn OpenID Connect Strategy
     const linkedInStrategy = new OAuth2Strategy(
@@ -139,19 +151,19 @@ export function setupAuth(app: Express) {
           const firstName = profileData.given_name || "";
           const lastName = profileData.family_name || "";
 
-          let user = await storage.getUserByLinkedinId(linkedinId);
+          let user = await identity.getUserByLinkedinId(linkedinId);
 
           if (!user && email) {
-            user = await storage.getUserByUsername(email);
+            user = await identity.getUserByEmail(email);
             
             if (user) {
-              user = await storage.updateUser(user.id, { linkedinId });
+              user = await identity.updateUser(user.id, { linkedinId });
             }
           }
 
           if (!user) {
-            user = await storage.createUser({
-              username: email || `linkedin_${linkedinId}@placeholder.com`,
+            user = await identity.createUser({
+              email: email || `linkedin_${linkedinId}@placeholder.com`,
               firstName,
               lastName,
               linkedinId,
@@ -184,7 +196,7 @@ export function setupAuth(app: Express) {
   passport.serializeUser((user, done) => done(null, user.id));
   passport.deserializeUser(async (id: number, done) => {
     try {
-      const user = await storage.getUser(id);
+      const user = await identity.getUser(id);
       done(null, user);
     } catch (err) {
       done(err);
@@ -204,14 +216,14 @@ export function setupAuth(app: Express) {
       
       const { username, password, firstName, lastName, phoneNumber, professionalStatus, discoverySource, discoverySourceOther } = validationResult.data;
       
-      const existingUser = await storage.getUserByUsername(username);
+      const existingUser = await identity.getUserByEmail(username);
       if (existingUser) {
         return res.status(400).json({ message: "Username already exists" });
       }
 
-      const user = await storage.createUser({
-        username,
-        password: await hashPassword(password),
+      const user = await identity.createUser({
+        email: username,
+        passwordHash: await hashPassword(password),
         firstName,
         lastName,
         phoneNumber,
@@ -227,7 +239,7 @@ export function setupAuth(app: Express) {
         isComplete: false
       });
 
-      const { password: _, ...userWithoutPassword } = user;
+      const { passwordHash: _, ...userWithoutPassword } = user;
       res.status(201).json(userWithoutPassword);
     } catch (error) {
       next(error);
@@ -241,9 +253,9 @@ export function setupAuth(app: Express) {
       
       // Update the lastLoginAt timestamp
       try {
-        await storage.updateUser(user.id, { lastLoginAt: new Date() });
+        await identity.recordLogin(user.id);
         // Refresh the user data with updated lastLoginAt
-        user = await storage.getUser(user.id);
+        user = await identity.getUser(user.id);
       } catch (updateError) {
         console.error("Error updating last login time:", updateError);
       }
@@ -251,7 +263,7 @@ export function setupAuth(app: Express) {
       req.login(user, (err: any) => {
         if (err) return next(err);
         // Remove password before sending to client
-        const { password, ...userWithoutPassword } = user;
+        const { passwordHash, ...userWithoutPassword } = user;
         res.status(200).json(userWithoutPassword);
       });
     })(req, res, next);
@@ -266,7 +278,7 @@ export function setupAuth(app: Express) {
 
   app.get("/api/user", (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
-    const { password, ...userWithoutPassword } = req.user;
+    const { passwordHash, ...userWithoutPassword } = req.user;
     res.json(userWithoutPassword);
   });
 
@@ -274,12 +286,12 @@ export function setupAuth(app: Express) {
     try {
       if (!req.isAuthenticated()) return res.sendStatus(401);
       
-      const userProfile = await storage.getUserProfile(req.user.id);
+      const userProfile = await profileStore.getUserProfile(req.user.id);
       if (!userProfile) {
         return res.status(404).json({ message: "Profile not found" });
       }
       
-      const { password, ...profileWithoutPassword } = userProfile;
+      const { passwordHash, ...profileWithoutPassword } = userProfile;
       res.json(profileWithoutPassword);
     } catch (error) {
       next(error);
@@ -302,7 +314,7 @@ export function setupAuth(app: Express) {
       }
 
       const { username } = validationResult.data;
-      const user = await storage.getUserByUsername(username);
+      const user = await identity.getUserByEmail(username);
       
       // Even if the user is not found, we return success to prevent user enumeration
       if (!user) {
@@ -319,12 +331,7 @@ export function setupAuth(app: Express) {
       expiresAt.setHours(expiresAt.getHours() + 1);
       
       // Create password reset token
-      await storage.createPasswordReset({
-        userId: user.id,
-        token,
-        expiresAt,
-        used: false
-      });
+      await identity.createPasswordReset({ userId: user.id, token, expiresAt });
 
       // Determine the base URL from the request
       const protocol = req.headers['x-forwarded-proto'] || req.protocol;
@@ -391,7 +398,7 @@ export function setupAuth(app: Express) {
       const { token, password } = validationResult.data;
       
       // Find the reset token
-      const passwordReset = await storage.getPasswordResetByToken(token);
+      const passwordReset = await identity.getPasswordReset(token);
       if (!passwordReset) {
         return res.status(400).json({ message: "Invalid or expired reset token" });
       }
@@ -400,10 +407,10 @@ export function setupAuth(app: Express) {
       const hashedPassword = await hashPassword(password);
       
       // Update the user's password
-      await storage.updateUserPassword(passwordReset.userId, hashedPassword);
+      await identity.updateUser(passwordReset.userId, { passwordHash: hashedPassword });
       
       // Mark the token as used
-      await storage.markPasswordResetAsUsed(passwordReset.id);
+      await identity.markPasswordResetUsed(passwordReset.id);
       
       res.status(200).json({ message: "Password has been reset successfully" });
     } catch (error) {
@@ -441,7 +448,7 @@ export function setupAuth(app: Express) {
           }
           
           try {
-            await storage.updateUser(user.id, { lastLoginAt: new Date() });
+            await identity.recordLogin(user.id);
             res.redirect("/");
           } catch (error) {
             console.error("Error updating last login:", error);

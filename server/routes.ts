@@ -19,6 +19,11 @@ import { registerPaymentRoutes } from "./payment-routes";
 import * as blobStorage from "./blob-storage";
 import { getDocumentBase64 } from "./document-data";
 import * as orchestrator from "./orchestrator";
+import * as wingStore from "./wing/session-store";
+import * as identity from "./wing/identity-store";
+import * as sliStore from "./wing/sli-store";
+import * as artifactStore from "./wing/artifact-store";
+import * as wingModuleStore from "./wing/enhancement-store";
 import {
   insertExperienceSchema,
   insertEducationSchema,
@@ -38,6 +43,9 @@ import {
 import { db } from "./db";
 import { and, asc, eq, inArray } from "drizzle-orm";
 import { extractDocumentText, validateExtractedText } from "./document-extractor";
+import * as docStore from "./wing/document-store";
+import * as intakeStore from "./wing/intake-store";
+import * as profileStore from "./wing/profile-store";
 
 const scryptAsync = promisify(scrypt);
 
@@ -76,7 +84,7 @@ async function generateDocumentSummary(documentId: number, docType: string, file
     });
 
     if (text) {
-      await storage.updateDocument(documentId, { analysisContent: text });
+      await docStore.updateDocument(documentId, { analysisContent: text });
       console.log(`[summary] Summary saved for document ${documentId} (${text.length} chars)`);
     }
   } catch (error) {
@@ -138,14 +146,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      // Update user data
-      if (req.body.headline || req.body.bio || req.body.location) {
-        await storage.updateUser(userId, {
-          headline: req.body.headline,
-          bio: req.body.bio,
-          location: req.body.location,
-        });
-      }
+      // headline / bio / location have no column in wing.users: the LinkedIn
+      // upload is the profile source now (feature list A2), and the legacy
+      // structured profile sub-records are archived to legacy_records (§14).
+      // Accepted and ignored rather than failing the request.
 
       // Update profile data
       const updatedProfile = await storage.updateProfile(userId, {
@@ -168,7 +172,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "professionalStatus and discoverySource are required" });
       }
 
-      const updatedUser = await storage.updateUser(req.user.id, {
+      const updatedUser = await identity.updateUser(req.user.id, {
         professionalStatus,
         discoverySource,
         ...(discoverySourceOther ? { discoverySourceOther } : {}),
@@ -457,7 +461,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Questionnaire routes
   app.get("/api/questionnaire", isAuthenticated, async (req, res, next) => {
     try {
-      const questionnaire = await storage.getQuestionnaire(req.user.id);
+      const questionnaire = await intakeStore.getQuestionnaire(req.user.id);
       if (!questionnaire) {
         return res.status(404).json({ message: "Questionnaire not found" });
       }
@@ -470,7 +474,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/questionnaire", isAuthenticated, async (req, res, next) => {
     try {
       // Check if user already has a questionnaire
-      const existingQuestionnaire = await storage.getQuestionnaire(req.user.id);
+      const existingQuestionnaire = await intakeStore.getQuestionnaire(req.user.id);
 
       const validationResult = insertQuestionnaireSchema.safeParse({
         ...req.body,
@@ -512,7 +516,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     async (req, res, next) => {
       try {
         // Check if user already has a questionnaire
-        const existingQuestionnaire = await storage.getQuestionnaire(
+        const existingQuestionnaire = await intakeStore.getQuestionnaire(
           req.user.id,
         );
 
@@ -561,7 +565,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.put("/api/questionnaire", isAuthenticated, async (req, res, next) => {
     try {
       // Check if user has a questionnaire to update
-      const existingQuestionnaire = await storage.getQuestionnaire(req.user.id);
+      const existingQuestionnaire = await intakeStore.getQuestionnaire(req.user.id);
       if (!existingQuestionnaire) {
         return res.status(404).json({ message: "Questionnaire not found" });
       }
@@ -589,8 +593,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Combined profile route for client - get user profile data including questionnaire
   app.get("/api/user/profile", isAuthenticated, async (req, res, next) => {
     try {
-      const userProfile = await storage.getUserProfile(req.user.id);
-      const questionnaire = await storage.getQuestionnaire(req.user.id);
+      const userProfile = await profileStore.getUserProfile(req.user.id);
+      const questionnaire = await intakeStore.getQuestionnaire(req.user.id);
 
       res.json({
         ...userProfile,
@@ -604,7 +608,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Document routes
   app.get("/api/documents", isAuthenticated, async (req, res, next) => {
     try {
-      const documents = await storage.getDocuments(req.user.id);
+      const documents = await docStore.getDocuments(req.user.id);
       res.json(documents);
     } catch (error) {
       next(error);
@@ -614,24 +618,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/documents/:id", isAuthenticated, async (req, res, next) => {
     try {
       const documentId = parseInt(req.params.id);
-      const document = await storage.getDocument(documentId);
+      const document = await docStore.getDocument(documentId);
 
       if (!document) {
         return res.status(404).json({ message: "Document not found" });
       }
 
-      if (document.userId !== req.user.id) {
+      // Authorise by comparing student ids forward (robust), not by
+      // reverse-resolving a legacy user id from the student.
+      const callerStudentId = await docStore.studentIdForUser(req.user.id);
+      if (document.studentId !== callerStudentId && !req.user.isAdmin) {
         return res.status(403).json({ message: "Unauthorized" });
       }
 
-      // The client expects `fileData` (base64) to render/download the PDF.
-      // Hydrate it from Blob when the row only carries a key.
-      if (!document.fileData && document.blobKey) {
-        const fileData = await getDocumentBase64(document);
-        return res.json({ ...document, fileData });
+      // Content lives in Blob; the client still expects base64 to render the
+      // PDF, so hydrate it on this single-document read only (never on list).
+      try {
+        const fileData = await docStore.getDocumentBase64(document);
+        res.json({ ...document, fileData });
+      } catch (err) {
+        console.error(
+          `[documents] failed to read blob '${document.blobUri}' for document ${document.id}:`,
+          err,
+        );
+        return res
+          .status(502)
+          .json({ message: "Document content could not be retrieved from storage" });
       }
-
-      res.json(document);
     } catch (error) {
       next(error);
     }
@@ -651,36 +664,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      // Move the payload to Blob storage when configured; the database keeps
-      // only the key. Falls back to inline base64 if Blob isn't set up (local
-      // dev), so behaviour is unchanged in that case.
-      const payload = { ...validationResult.data } as typeof validationResult.data & {
-        blobKey?: string | null;
-      };
-      const incomingBase64 = payload.fileData;
+      // The store owns Blob upload; content is never stored inline (spec §3).
+      const incomingBase64 = validationResult.data.fileData;
+      const document = await docStore.createDocument({
+        userId: req.user.id,
+        name: validationResult.data.name,
+        fileName: validationResult.data.fileName,
+        type: validationResult.data.type,
+        fileData: incomingBase64,
+      });
 
-      if (blobStorage.isConfigured() && incomingBase64) {
-        payload.blobKey = await blobStorage.uploadBase64(
-          blobStorage.CONTAINERS.documents,
-          incomingBase64,
-          {
-            fileName: payload.fileName,
-            contentType: "application/pdf",
-            prefix: `user-${req.user.id}`,
-          },
-        );
-        payload.fileData = null; // no longer stored inline
-      }
-
-      const document = await storage.createDocument(payload);
       res.status(201).json(document);
 
       if (document.type === "resume" || document.type === "linkedin") {
-        // The background job needs the bytes; use the in-memory copy we already
-        // have rather than re-fetching from Blob.
-        const dataForSummary = incomingBase64 ?? document.fileData;
-        if (dataForSummary) {
-          generateDocumentSummary(document.id, document.type, dataForSummary, document.fileName).catch(err => {
+        // Use the bytes we already have rather than re-fetching from Blob.
+        if (incomingBase64) {
+          generateDocumentSummary(document.id, document.type, incomingBase64, document.fileName).catch(err => {
             console.error(`Background summary generation failed for document ${document.id}:`, err);
           });
         }
@@ -693,26 +692,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.delete("/api/documents/:id", isAuthenticated, async (req, res, next) => {
     try {
       const documentId = parseInt(req.params.id);
-      const document = await storage.getDocument(documentId);
+      const document = await docStore.getDocument(documentId);
 
       if (!document) {
         return res.status(404).json({ message: "Document not found" });
       }
 
-      if (document.userId !== req.user.id) {
+      const callerStudentId = await docStore.studentIdForUser(req.user.id);
+      if (document.studentId !== callerStudentId && !req.user.isAdmin) {
         return res.status(403).json({ message: "Unauthorized" });
       }
 
-      // Remove the blob too, so deleting a document doesn't orphan storage.
-      if (document.blobKey && blobStorage.isConfigured()) {
-        try {
-          await blobStorage.deleteBlob(blobStorage.CONTAINERS.documents, document.blobKey);
-        } catch (err) {
-          console.error(`Failed to delete blob ${document.blobKey}:`, err);
-        }
-      }
-
-      await storage.deleteDocument(documentId);
+      // The store removes the blob as well, so no storage is orphaned.
+      await docStore.deleteDocument(documentId);
       res.sendStatus(204);
     } catch (error) {
       next(error);
@@ -722,14 +714,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.patch("/api/documents/:id/analysis", isAuthenticated, async (req, res, next) => {
     try {
       const documentId = parseInt(req.params.id);
-      const document = await storage.getDocument(documentId);
+      const document = await docStore.getDocument(documentId);
 
       if (!document) {
         return res.status(404).json({ message: "Document not found" });
       }
 
       // Only admins or document owners can update the analysis
-      if (document.userId !== req.user.id && !req.user.isAdmin) {
+      const callerStudentId2 = await docStore.studentIdForUser(req.user.id);
+      if (document.studentId !== callerStudentId2 && !req.user.isAdmin) {
         return res.status(403).json({ message: "Unauthorized" });
       }
 
@@ -738,7 +731,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Analysis content must be a string" });
       }
 
-      const updatedDocument = await storage.updateDocument(documentId, { analysisContent });
+      const updatedDocument = await docStore.updateDocument(documentId, { analysisContent });
       res.json(updatedDocument);
     } catch (error) {
       next(error);
@@ -893,44 +886,46 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Helper function to determine user status
   async function getUserStatus(userId: number): Promise<string> {
     // Check LinkedIn Optimization
-    const linkedinOptimizations = await storage.getLinkedinOptimizations(userId);
+    const linkedinOptimizations = await artifactStore.getLinkedinOptimizations(userId);
     if (linkedinOptimizations.length > 0) {
       return "LinkedIn Optimization Done";
     }
     
     // Check SLI
-    const slis = await storage.getSlisByUserId(userId);
+    const slis = await sliStore.listByUser(userId);
     if (slis.length > 0) {
       return "SLI Generated";
     }
     
     // Check Freshness Report
-    const freshnessReports = await storage.getFreshnessReports(userId);
+    const freshnessReports = await artifactStore.getFreshnessReports(userId);
     if (freshnessReports.length > 0) {
       return "Freshness Report Generated";
     }
 
-    // Check Enhancement Modules (C > B > A) — use individual lookups to avoid auto-creation side effects
-    const [moduleC, moduleB, moduleA] = await Promise.all([
-      storage.getEnhancementModule(userId, 'C'),
-      storage.getEnhancementModule(userId, 'B'),
-      storage.getEnhancementModule(userId, 'A'),
-    ]);
-    if (moduleC?.status === 'completed') return "Enhancement Module C Completed";
-    if (moduleB?.status === 'completed') return "Enhancement Module B Completed";
-    if (moduleA?.status === 'completed') return "Enhancement Module A Completed";
+    // Sessions and modules now live in the wing schema. Read them there, or
+    // this reports stale progress for every student.
+    const user = await identity.getUser(userId);
+    if (user) {
+      const studentId = await wingStore.studentIdFor(user as any);
+      const wingSessions = await wingStore.listSessions(studentId);
+      const completed = new Set(
+        wingSessions.filter((s) => s.status === "completed").map((s) => s.sessionType),
+      );
 
-    // Check Foundation Sessions (3 > 2 > 1)
-    const foundationSessions = await storage.getFoundationSessions(userId);
-    const completedSessions = foundationSessions
-      .filter(s => s.status === 'completed')
-      .map(s => s.sessionNumber);
-    if (completedSessions.includes(3)) return "Foundation Session 3 Completed";
-    if (completedSessions.includes(2)) return "Foundation Session 2 Completed";
-    if (completedSessions.includes(1)) return "Foundation Session 1 Completed";
+      // Enhancement Modules (C > B > A)
+      if (completed.has("enhancement_c")) return "Enhancement Module C Completed";
+      if (completed.has("enhancement_b")) return "Enhancement Module B Completed";
+      if (completed.has("enhancement_a")) return "Enhancement Module A Completed";
+
+      // Foundation Sessions (3 > 2 > 1)
+      if (completed.has("foundation_3")) return "Foundation Session 3 Completed";
+      if (completed.has("foundation_2")) return "Foundation Session 2 Completed";
+      if (completed.has("foundation_1")) return "Foundation Session 1 Completed";
+    }
 
     // Check Documents
-    const documents = await storage.getDocuments(userId);
+    const documents = await docStore.getDocuments(userId);
     const hasResume = documents.some(doc => doc.type === 'resume');
     const hasLinkedin = documents.some(doc => doc.type === 'linkedin');
     if (hasResume && hasLinkedin) {
@@ -938,13 +933,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
 
     // Check Branding Intake
-    const brandingIntake = await storage.getBrandingIntake(userId);
+    const brandingIntake = await intakeStore.getBrandingIntake(userId);
     if (brandingIntake?.completed) {
       return "Registration Intake Completed";
     }
 
     // Check Questionnaire
-    const questionnaire = await storage.getQuestionnaire(userId);
+    const questionnaire = await intakeStore.getQuestionnaire(userId);
     if (questionnaire && !questionnaire.isDraft) {
       return "Questionnaire Completed";
     }
@@ -964,9 +959,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Enhance each user with their status and branding intake data
       const enhancedUsers = await Promise.all(nonAdminUsers.map(async (user) => {
-        const { password, ...userWithoutPassword } = user;
+        const { passwordHash, ...userWithoutPassword } = user as any;
         const status = await getUserStatus(user.id);
-        const brandingIntake = await storage.getBrandingIntake(user.id);
+        const brandingIntake = await intakeStore.getBrandingIntake(user.id);
         const responses = (brandingIntake?.responses as Record<string, unknown>) ?? {};
         const school =
           (responses.university_name as string) ||
@@ -1010,22 +1005,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/admin/users/:id", isAdmin, async (req, res, next) => {
     try {
       const userId = parseInt(req.params.id);
-      const user = await storage.getUser(userId);
+      const user = await identity.getUser(userId);
 
       if (!user) {
         return res.status(404).json({ message: "User not found" });
       }
 
       // Get full user profile
-      const userProfile = await storage.getUserProfile(userId);
+      const userProfile = await profileStore.getUserProfile(userId);
       if (!userProfile) {
         // If profile doesn't exist, just return the user
-        const { password, ...userWithoutPassword } = user;
+        const { passwordHash, ...userWithoutPassword } = user;
         return res.json(userWithoutPassword);
       }
 
       // Remove password before sending
-      const { password, ...profileWithoutPassword } = userProfile;
+      const { passwordHash, ...profileWithoutPassword } = userProfile;
       res.json(profileWithoutPassword);
     } catch (error) {
       next(error);
@@ -1091,7 +1086,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       );
 
       for (const user of sortedUsers) {
-        const intake = await storage.getBrandingIntake(user.id);
+        const intake = await intakeStore.getBrandingIntake(user.id);
         if (!intake) continue;
 
         const platform = intake.platform as string;
@@ -1187,7 +1182,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const userQuestionnaires: Map<number, Record<string, RawEntry>> = new Map();
 
       for (const user of sortedUsers) {
-        const questionnaire = await storage.getQuestionnaire(user.id);
+        const questionnaire = await intakeStore.getQuestionnaire(user.id);
         if (!questionnaire?.rawAnswers) continue;
         const raw = questionnaire.rawAnswers as Record<string, RawEntry>;
         userQuestionnaires.set(user.id, raw);
@@ -1445,8 +1440,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       for (const user of sortedUsers) {
         const [foundationList, moduleList] = await Promise.all([
-          storage.getFoundationSessions(user.id),
-          storage.getEnhancementModulesForUser(user.id),
+          wingStore.getFoundationSessionsForUser(user),
+          wingModuleStore.getEnhancementModulesForUser(user.id),
         ]);
 
         const fsMap: Record<number, typeof foundationList[number]> = {};
@@ -1776,41 +1771,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/admin/users/:userId/foundation-sessions", isAdmin, async (req, res, next) => {
     try {
       const userId = parseInt(req.params.userId);
-      
-      // Initialize foundation sessions for the user if they don't exist
-      const existingSessions = await storage.getFoundationSessions(userId);
-      
-      // If user doesn't have sessions, create them
-      if (existingSessions.length === 0) {
-        const sessionsToCreate = [
-          {
-            userId,
-            sessionNumber: 1,
-            status: "available" as const, // Session 1 is available by default
-          },
-          {
-            userId,
-            sessionNumber: 2,
-            status: "locked" as const, // Sessions 2 and 3 are locked initially
-          },
-          {
-            userId,
-            sessionNumber: 3,
-            status: "locked" as const,
-          }
-        ];
 
-        for (const sessionData of sessionsToCreate) {
-          await storage.createFoundationSession(sessionData);
+      const target = await identity.getUser(userId);
+      if (!target) return res.status(404).json({ error: "User not found" });
+
+      // Sessions live in wing; create the arc on first access (1 available,
+      // 2 and 3 locked until their prerequisite completes).
+      const studentId = await wingStore.studentIdFor(target as any);
+      const existing = await wingStore.listSessions(studentId, wingStore.FOUNDATION_TYPES);
+      if (existing.length < 3) {
+        const present = new Set(existing.map((s) => s.sessionType));
+        for (const n of [1, 2, 3]) {
+          const type = `foundation_${n}` as (typeof wingStore.FOUNDATION_TYPES)[number];
+          if (present.has(type)) continue;
+          await wingStore.ensureSession(studentId, type, n === 1 ? "available" : "locked");
         }
-        
-        // Fetch the newly created sessions
-        const sessions = await storage.getFoundationSessions(userId);
-        res.json(sessions);
-      } else {
-        // Return existing sessions
-        res.json(existingSessions);
       }
+
+      res.json(await wingStore.getFoundationSessionsForUser(target));
     } catch (error) {
       console.error("Error fetching admin foundation sessions:", error);
       next(error);
@@ -1822,12 +1800,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const userId = parseInt(req.params.userId);
       const sessionNumber = parseInt(req.params.sessionNumber);
-      const session = await storage.getFoundationSession(userId, sessionNumber);
+      const target = await identity.getUser(userId);
+      if (!target) return res.json({ session: null, messages: [] });
+
+      const session = await wingStore.getFoundationSessionForUser(target, sessionNumber);
       if (!session) {
         return res.json({ session: null, messages: [] });
       }
-      const messages = await storage.getFoundationSessionMessages(session.id);
-      res.json({ session, messages });
+      // Turns carry provenance; the admin transcript view shows them in order.
+      const turns = await wingStore.getTurns(session.id);
+      res.json({ session, messages: turns, turns });
     } catch (error) {
       next(error);
     }
@@ -1837,7 +1819,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const userId = parseInt(req.params.userId);
       const { moduleCode } = req.params;
-      const result = await storage.getEnhancementModuleWithMessages(userId, moduleCode);
+      const result = await wingModuleStore.getEnhancementModuleWithMessages(userId, moduleCode);
       if (!result) {
         return res.json({ module: null, messages: [] });
       }
@@ -1934,30 +1916,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Force update the admin user on server start for debugging
   (async () => {
     try {
+      // Identity lives in wing.users; admin is a ROLE now, not a boolean.
       const adminEmail = "dcara@sli.pro";
-      let adminUser = await storage.getUserByUsername(adminEmail);
-      
+      let adminUser = await identity.getUserByEmail(adminEmail);
+
       if (!adminUser) {
-        // Create admin user with default credentials
-        adminUser = await storage.createUser({
-          username: adminEmail,
-          password: await hashPassword(adminEmail), // Using email as password as specified
+        adminUser = await identity.createUser({
+          email: adminEmail,
+          passwordHash: await hashPassword(adminEmail),
           firstName: "Admin",
           lastName: "User",
           phoneNumber: "123-456-7890",
-          isAdmin: true // Make sure this is a boolean true, not a string
+          role: "platform_admin",
         });
-
-        // Create an empty profile for admin
-        await storage.createProfile({
-          userId: adminUser.id,
-          completionStep: 0,
-          isComplete: false
-        });
+      } else if (adminUser.role !== "platform_admin") {
+        await identity.updateUser(adminUser.id, { role: "platform_admin" });
       }
-      
-      // Always force update the isAdmin flag for this user to ensure it's set properly
-      const updatedUser = await storage.updateUser(adminUser.id, { isAdmin: true });      
     } catch (error) {
       console.error("Error setting up users:", error);
     }
@@ -1967,7 +1941,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/branding-intake", isAuthenticated, async (req, res, next) => {
     try {
       const userId = req.user!.id;
-      const intake = await storage.getBrandingIntake(userId);
+      const intake = await intakeStore.getBrandingIntake(userId);
       res.json(intake || null);
     } catch (error) {
       next(error);
@@ -1992,7 +1966,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
       const { platform, currentStage, responses, completed, marketingOptIn } = parsed.data;
-      const intake = await storage.upsertBrandingIntake(userId, {
+      const intake = await intakeStore.upsertBrandingIntake(userId, {
         platform,
         currentStage,
         responses,

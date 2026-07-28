@@ -419,7 +419,7 @@ Please analyze the LinkedIn profile content in relation to their questionnaire r
 
 // 4. Analyze additional documents
 export async function generateAdditionalDocsSummary(
-  documents: Document[],
+  documents: any[],
   questionnaireAnalysis: any,
   resumeAnalysis: any,
   linkedinAnalysis: any

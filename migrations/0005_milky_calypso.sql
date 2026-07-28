@@ -1,0 +1,1 @@
+ALTER TABLE "wing"."sli_records" ADD COLUMN "implementation_guidance" text;

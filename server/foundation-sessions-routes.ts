@@ -1,36 +1,84 @@
 import { Express, Request, Response, NextFunction } from "express";
 import { storage } from "./storage";
-import {
-  insertFoundationSessionMessageSchema,
-  updateFoundationSessionSchema,
-} from "../shared/schema";
 import { getPromptSet } from "./prompts";
 import * as orchestrator from "./orchestrator";
+import * as store from "./wing/session-store";
+import type { WingSessionType, ArtifactType } from "./wing/session-store";
+import type { PriorSessionContext } from "./prompts/types";
+import * as docStore from "./wing/document-store";
+import * as intakeStore from "./wing/intake-store";
+import * as profileStore from "./wing/profile-store";
+
+/**
+ * Foundation Sessions — running natively on the Wing schema.
+ *
+ * Sessions, transcripts, turns and artifacts all live in `wing`; the MVP's
+ * foundation_sessions / foundation_session_messages tables are no longer used.
+ *
+ * API SHAPE (follows the new model):
+ *   GET  /api/foundation-sessions            -> WingSession[]
+ *   GET  /api/foundation-sessions/:n         -> { session, turns, artifacts }
+ *   POST /api/foundation-sessions/:n/start
+ *   POST /api/foundation-sessions/:n/messages
+ *   POST /api/foundation-sessions/:n/messages/stream   (SSE)
+ *   POST /api/foundation-sessions/:n/end-early
+ *   PATCH /api/foundation-sessions/:n
+ *   PATCH /api/foundation-sessions/:n/timer
+ *
+ * `:n` remains 1|2|3 in the URL — it is the product's language for the arc —
+ * and maps to session_type foundation_1..3 internally.
+ *
+ * Turns carry provenance assigned at capture; there is no separate mirroring
+ * step any more. Forward-locking is engine logic here in the route layer, per
+ * spec §8 ("prerequisites are engine logic, not schema").
+ */
 
 const isAuthenticated = (req: Request, res: Response, next: NextFunction) => {
-  if (req.isAuthenticated()) {
-    return next();
-  }
+  if (req.isAuthenticated()) return next();
   res.status(401).json({ error: "Not authenticated" });
 };
 
+/** Artifact type produced by each Foundation Session (spec §8). */
+const ARTIFACT_FOR_SESSION: Record<number, ArtifactType> = {
+  1: "functional_identity",
+  2: "credibility_assessment",
+  3: "signature_story",
+};
 
-// Format resume documents into a summary for system prompt context
+function sessionTypeFor(n: number): WingSessionType {
+  return `foundation_${n}` as WingSessionType;
+}
+
+function parseSessionNumber(raw: string): number | null {
+  const n = parseInt(raw);
+  return Number.isNaN(n) || n < 1 || n > 3 ? null : n;
+}
+
+/** Presentation shape for the client — session plus its arc position. */
+function toApiSession(row: any) {
+  return {
+    id: row.id,
+    sessionType: row.sessionType,
+    sessionNumber: store.foundationNumber(row.sessionType),
+    status: row.status,
+    startedAt: row.startedAt,
+    completedAt: row.completedAt,
+    timerElapsedSeconds: row.timerElapsedSeconds,
+    createdAt: row.createdAt,
+  };
+}
+
+/* ── Context builders (unchanged behaviour, wing-backed) ────────────────── */
+
 async function formatResumeSummary(userId: number): Promise<string> {
   try {
-    const documents = await storage.getDocuments(userId);
+    // Documents remain on the legacy table until the documents/intake slice.
+    const documents = await docStore.getDocuments(userId);
     const resumeDocuments = documents.filter((doc) => doc.type === "resume");
+    if (!resumeDocuments.length) return "";
 
-    if (!resumeDocuments || resumeDocuments.length === 0) {
-      return "";
-    }
-
-    // Use the most recent resume (last uploaded)
     const resume = resumeDocuments[resumeDocuments.length - 1];
-
-    if (!resume.analysisContent && !resume.name) {
-      return "";
-    }
+    if (!resume.analysisContent && !resume.name) return "";
 
     return `
 ═══════════════════════════════════════════════════════════════
@@ -49,12 +97,8 @@ CRITICAL: The user has already uploaded their resume. Use this information to pr
   }
 }
 
-// Format questionnaire data into analysis context
 function formatQuestionnaireContext(questionnaire: any): string {
-  if (!questionnaire) {
-    return "";
-  }
-
+  if (!questionnaire) return "";
   return `
 ═══════════════════════════════════════════════════════════════
 BACKGROUND CONTEXT: USER QUESTIONNAIRE
@@ -73,27 +117,30 @@ NOTE: This context was provided by the user in their initial questionnaire. The 
 `;
 }
 
-// Format previous session context for analysis
+/**
+ * Prior-session context, now read from typed artifacts rather than the MVP's
+ * completionData blob.
+ */
 async function formatPreviousSessionsContext(
-  userId: number,
+  studentId: number,
   currentSessionNumber: number,
 ): Promise<string> {
   try {
-    const sessions = await storage.getFoundationSessions(userId);
-
-    if (!sessions || sessions.length === 0) {
-      return "";
-    }
-
     let context = "";
 
-    // For Session 2, include Session 1 summary
-    if (currentSessionNumber === 2) {
-      const session1 = sessions.find(
-        (s) => s.sessionNumber === 1 && s.status === "completed",
-      );
-      if (session1?.completionData) {
-        const data = session1.completionData;
+    const priorNumbers = currentSessionNumber === 2 ? [1]
+      : currentSessionNumber === 3 ? [1, 2]
+      : [];
+
+    for (const n of priorNumbers) {
+      const prior = await store.getSession(studentId, sessionTypeFor(n));
+      if (!prior || prior.status !== "completed") continue;
+
+      const artifact = await store.getArtifact(prior.id, ARTIFACT_FOR_SESSION[n]);
+      const data: any = artifact?.content;
+      if (!data) continue;
+
+      if (n === 1) {
         context += `
 ═══════════════════════════════════════════════════════════════
 BACKGROUND CONTEXT: SESSION 1 (Functional Identity)
@@ -107,47 +154,17 @@ Commitment: ${data.commitmentStatement ?? "Not made"}
 NOTE: The user has already established their functional identity in Session 1. The conversation may reference this without repeating the full exercise.
 ═══════════════════════════════════════════════════════════════
 `;
-      }
-    }
-
-    // For Session 3, include Session 1 and 2 summaries
-    if (currentSessionNumber === 3) {
-      const session1 = sessions.find(
-        (s) => s.sessionNumber === 1 && s.status === "completed",
-      );
-      const session2 = sessions.find(
-        (s) => s.sessionNumber === 2 && s.status === "completed",
-      );
-
-      if (session1?.completionData) {
-        const data = session1.completionData;
+      } else if (n === 2) {
         context += `
 ═══════════════════════════════════════════════════════════════
-BACKGROUND CONTEXT: SESSION 1 (Functional Identity)
+BACKGROUND CONTEXT: SESSION 2 (Professional Credibility)
 ═══════════════════════════════════════════════════════════════
 
-Primary Function: ${data.primaryFunction ?? "Not determined"}
-Commitment: ${data.commitmentStatement ?? "Not made"}
-`;
-      }
-
-      if (session2?.completionData) {
-        const data = session2.completionData;
-        const proofBulletsText =
-          data.proofBullets
-            ?.slice(0, 3)
-            ?.map((bullet: string) => `• ${bullet}`)
-            ?.join("\n") ?? "";
-
-        context += `
-SESSION 2 (Credibility & Proof)
-═══════════════════════════════════════════════════════════════
-
-Credibility Tier: ${data.credibilityTier ? `Tier ${data.credibilityTier}` : "Not assessed"}
+Credibility Tier: ${data.credibilityTier ?? "Not determined"}
 Brand Claim: ${data.brandClaim ?? "Not established"}
-${proofBulletsText ? `Top Proof Points:\n${proofBulletsText}` : ""}
+Proof Points: ${Array.isArray(data.proofBullets) ? data.proofBullets.join("; ") : "Not provided"}
 
-NOTE: The user has completed Sessions 1 & 2 covering functional identity and credibility proof. The conversation may build upon this foundation without repeating prior work.
+NOTE: The user has already established their credibility position in Session 2.
 ═══════════════════════════════════════════════════════════════
 `;
       }
@@ -160,30 +177,92 @@ NOTE: The user has completed Sessions 1 & 2 covering functional identity and cre
   }
 }
 
+/**
+ * Structured prior-session context for prompt assembly.
+ *
+ * The prompt sets expect `PriorSessionContext[]` — the artifact payload plus
+ * the prior conversation — rather than a pre-rendered string, so the prompt
+ * layer decides how to present it.
+ */
+async function buildPriorSessionContexts(
+  studentId: number,
+  currentSessionNumber: number,
+): Promise<PriorSessionContext[]> {
+  const priorNumbers = [1, 2, 3].filter((n) => n < currentSessionNumber);
+  const contexts: PriorSessionContext[] = [];
 
-// Check if a foundation session should be automatically completed
+  for (const n of priorNumbers) {
+    const prior = await store.getSession(studentId, sessionTypeFor(n));
+    if (!prior || prior.status !== "completed") continue;
+
+    const artifact = await store.getArtifact(prior.id, ARTIFACT_FOR_SESSION[n]);
+    const turns = await store.getTurns(prior.id);
+
+    contexts.push({
+      sessionNumber: n,
+      completionData: artifact?.content ?? null,
+      conversationTranscript: turns
+        .map((t) => `${t.provenanceTag === "ai_generated" ? "Wing" : "Student"}: ${t.content}`)
+        .join("\n\n"),
+    });
+  }
+
+  return contexts;
+}
+
+/**
+ * Parses the analysis response into JSON.
+ *
+ * Models frequently wrap JSON in markdown fences or add a sentence of prose
+ * around it, and a bare JSON.parse then throws — which previously surfaced as
+ * "session never completes" rather than as an error, because the caller's
+ * catch swallowed it. Strip fences, then fall back to the first {...} block.
+ */
+function parseAnalysisJson(raw: string): any {
+  let text = (raw ?? "").trim();
+
+  text = text
+    .replace(/^```json\s*/i, "")
+    .replace(/^```\s*/i, "")
+    .replace(/\s*```$/i, "")
+    .trim();
+
+  try {
+    return JSON.parse(text);
+  } catch {
+    const match = text.match(/\{[\s\S]*\}/);
+    if (!match) {
+      throw new Error(
+        `Analysis response was not JSON. First 200 chars: ${text.slice(0, 200)}`,
+      );
+    }
+    return JSON.parse(match[0]);
+  }
+}
+
+/** Decides whether the session is complete, and returns the artifact payload. */
 async function checkSessionCompletion(
-  userId: number,
+  legacyUserId: number,
+  studentId: number,
   sessionNumber: number,
   messages: any[],
   userProfile: any,
 ): Promise<{ shouldComplete: boolean; completionData?: any }> {
-  if (sessionNumber !== 1 && sessionNumber !== 2 && sessionNumber !== 3) {
-    return { shouldComplete: false };
-  }
+  if (![1, 2, 3].includes(sessionNumber)) return { shouldComplete: false };
 
-  // Check if we have enough conversation for meaningful analysis
-  if (messages.length < 10) {
-    // Need at least 5 back-and-forth exchanges for a complete conversation
-    return { shouldComplete: false };
-  }
+  // No turn-count gate: the methodology decides when a session is complete,
+  // not an arbitrary message threshold. The analysis prompt returns
+  // isComplete, and that is the decision.
+  //
+  // One guard remains: an empty transcript has nothing to analyse, and calling
+  // the model on it just burns a request to be told "no".
+  if (messages.length === 0) return { shouldComplete: false };
 
   try {
-    // Fetch questionnaire and previous sessions context for analysis
-    const questionnaire = await storage.getQuestionnaire(userId);
+    const questionnaire = await intakeStore.getQuestionnaire(legacyUserId);
     const questionnaireContext = formatQuestionnaireContext(questionnaire);
     const previousSessionsContext = await formatPreviousSessionsContext(
-      userId,
+      studentId,
       sessionNumber,
     );
 
@@ -195,7 +274,6 @@ async function checkSessionCompletion(
       previousSessionsContext,
     );
 
-
     // Structured analysis of the transcript -> mid tier.
     const { text: analysisContent } = await orchestrator.complete({
       tier: "mid",
@@ -206,64 +284,97 @@ async function checkSessionCompletion(
       temperature: 0.1,
     });
 
-    const analysis = JSON.parse(analysisContent);
+    const analysis = parseAnalysisJson(analysisContent);
 
-    if (analysis.isComplete && analysis.primaryFunction) {
-      let completionData: any = {
-        primaryFunction: analysis.primaryFunction,
-        confidence: analysis.confidence,
-        reasoning: analysis.reasoning,
-        completedAt: new Date().toISOString(),
-      };
-
-      if (sessionNumber === 1) {
-        // Session 1 specific data
-        completionData.secondaryFunction = analysis.secondaryFunction;
-        completionData.functionalSplit = analysis.functionalSplit;
-        completionData.keyInsights = analysis.keyInsights;
-      } else if (sessionNumber === 2) {
-        // Session 2 specific data
-        completionData.credibilityTier = analysis.credibilityTier;
-        completionData.proofBullets = analysis.proofBullets;
-        completionData.brandClaim = analysis.brandClaim;
-        completionData.checkWorthyReason = analysis.checkWorthyReason;
-        completionData.nextSteps = analysis.nextSteps;
-      } else if (sessionNumber === 3) {
-        // Session 3 specific data
-        completionData.signatureStory = analysis.signatureStory;
-        completionData.brandClaim = analysis.brandClaim;
-        completionData.contentAngles = analysis.contentAngles;
-        completionData.methodology = analysis.methodology;
-        completionData.nextSteps = analysis.nextSteps;
-      }
-
-      return {
-        shouldComplete: true,
-        completionData,
-      };
+    if (!analysis.isComplete || !analysis.primaryFunction) {
+      console.log(
+        `[foundation] session ${sessionNumber}: not complete yet ` +
+          `(isComplete=${analysis.isComplete}, primaryFunction=${analysis.primaryFunction ?? "none"})`,
+      );
+      return { shouldComplete: false };
     }
 
-    return { shouldComplete: false };
+    console.log(
+      `[foundation] session ${sessionNumber}: COMPLETE — ${analysis.primaryFunction} ` +
+        `(confidence ${analysis.confidence ?? "n/a"})`,
+    );
+
+    const completionData: any = {
+      primaryFunction: analysis.primaryFunction,
+      confidence: analysis.confidence,
+      reasoning: analysis.reasoning,
+      completedAt: new Date().toISOString(),
+    };
+
+    if (sessionNumber === 1) {
+      completionData.secondaryFunction = analysis.secondaryFunction;
+      completionData.functionalSplit = analysis.functionalSplit;
+      completionData.keyInsights = analysis.keyInsights;
+    } else if (sessionNumber === 2) {
+      completionData.credibilityTier = analysis.credibilityTier;
+      completionData.proofBullets = analysis.proofBullets;
+      completionData.brandClaim = analysis.brandClaim;
+      completionData.checkWorthyReason = analysis.checkWorthyReason;
+      completionData.nextSteps = analysis.nextSteps;
+    } else if (sessionNumber === 3) {
+      completionData.signatureStory = analysis.signatureStory;
+      completionData.brandClaim = analysis.brandClaim;
+      completionData.contentAngles = analysis.contentAngles;
+      completionData.methodology = analysis.methodology;
+      completionData.nextSteps = analysis.nextSteps;
+    }
+
+    return { shouldComplete: true, completionData };
   } catch (error) {
-    console.error("Error checking session completion:", error);
+    // Loud: a swallowed failure here looks like "the session never completes",
+    // which is far harder to diagnose than an error.
+    console.error(
+      `[foundation] session ${sessionNumber}: completion check FAILED —`,
+      error,
+    );
     return { shouldComplete: false };
   }
 }
 
+/**
+ * Creates the three Foundation Session rows on first access.
+ * Session 1 is available; 2 and 3 are locked until prerequisites complete.
+ */
+async function initializeFoundationSessions(studentId: number) {
+  const existing = await store.listSessions(studentId, store.FOUNDATION_TYPES);
+  if (existing.length >= 3) return;
+
+  const present = new Set(existing.map((s) => s.sessionType));
+  for (const n of [1, 2, 3]) {
+    const type = sessionTypeFor(n);
+    if (present.has(type)) continue;
+    await store.ensureSession(studentId, type, n === 1 ? "available" : "locked");
+  }
+}
+
+/** Unlocks the next session in the arc once its prerequisite completes. */
+async function unlockNextSession(studentId: number, completedNumber: number) {
+  if (completedNumber >= 3) return;
+  const next = await store.getSession(studentId, sessionTypeFor(completedNumber + 1));
+  if (next && next.status === "locked") {
+    await store.updateSessionStatus(next.id, "available");
+  }
+}
+
+/* ── Routes ────────────────────────────────────────────────────────────── */
+
 export function registerFoundationSessionsRoutes(app: Express) {
-  // Get all foundation sessions for the current user
+  /** All Foundation Sessions for the current student. */
   app.get(
     "/api/foundation-sessions",
     isAuthenticated,
     async (req: Request, res: Response, next: NextFunction) => {
       try {
-        const userId = req.user!.id;
+        const studentId = await store.studentIdFor(req.user as any);
+        await initializeFoundationSessions(studentId);
 
-        // Initialize foundation sessions for the user if they don't exist
-        await initializeFoundationSessions(userId);
-
-        const sessions = await storage.getFoundationSessions(userId);
-        res.json(sessions);
+        const rows = await store.listSessions(studentId, store.FOUNDATION_TYPES);
+        res.json(rows.map(toApiSession));
       } catch (error) {
         console.error("Error fetching foundation sessions:", error);
         next(error);
@@ -271,38 +382,29 @@ export function registerFoundationSessionsRoutes(app: Express) {
     },
   );
 
-  // Get a specific foundation session with messages
+  /** One session with its turns and artifacts. */
   app.get(
     "/api/foundation-sessions/:sessionNumber",
     isAuthenticated,
     async (req: Request, res: Response, next: NextFunction) => {
       try {
-        const sessionNumber = parseInt(req.params.sessionNumber);
-        const userId = req.user!.id;
-
-        if (isNaN(sessionNumber) || sessionNumber < 1 || sessionNumber > 3) {
-          return res
-            .status(400)
-            .json({ error: "Invalid session number. Must be 1, 2, or 3" });
+        const sessionNumber = parseSessionNumber(req.params.sessionNumber);
+        if (!sessionNumber) {
+          return res.status(400).json({ error: "Invalid session number. Must be 1, 2, or 3" });
         }
 
-        // Initialize foundation sessions for the user if they don't exist
-        await initializeFoundationSessions(userId);
+        const studentId = await store.studentIdFor(req.user as any);
+        await initializeFoundationSessions(studentId);
 
-        const session = await storage.getFoundationSession(
-          userId,
-          sessionNumber,
-        );
-        if (!session) {
-          return res.status(404).json({ error: "Session not found" });
-        }
+        const session = await store.getSession(studentId, sessionTypeFor(sessionNumber));
+        if (!session) return res.status(404).json({ error: "Session not found" });
 
-        const messages = await storage.getFoundationSessionMessages(session.id);
+        const [turns, artifacts] = await Promise.all([
+          store.getTurns(session.id),
+          store.getArtifacts(session.id),
+        ]);
 
-        res.json({
-          session,
-          messages,
-        });
+        res.json({ session: toApiSession(session), turns, artifacts });
       } catch (error) {
         console.error("Error fetching foundation session:", error);
         next(error);
@@ -310,72 +412,41 @@ export function registerFoundationSessionsRoutes(app: Express) {
     },
   );
 
-  // Start a foundation session
+  /** Starts a session and seeds the opening guidance turn. */
   app.post(
     "/api/foundation-sessions/:sessionNumber/start",
     isAuthenticated,
     async (req: Request, res: Response, next: NextFunction) => {
       try {
-        const sessionNumber = parseInt(req.params.sessionNumber);
-        const userId = req.user!.id;
-
-        if (isNaN(sessionNumber) || sessionNumber < 1 || sessionNumber > 3) {
-          return res
-            .status(400)
-            .json({ error: "Invalid session number. Must be 1, 2, or 3" });
+        const sessionNumber = parseSessionNumber(req.params.sessionNumber);
+        if (!sessionNumber) {
+          return res.status(400).json({ error: "Invalid session number. Must be 1, 2, or 3" });
         }
 
-        // Initialize foundation sessions for the user if they don't exist
-        await initializeFoundationSessions(userId);
+        const legacyUserId = req.user!.id;
+        const studentId = await store.studentIdFor(req.user as any);
+        await initializeFoundationSessions(studentId);
 
-        const session = await storage.getFoundationSession(
-          userId,
-          sessionNumber,
-        );
-        if (!session) {
-          return res.status(404).json({ error: "Session not found" });
-        }
+        const session = await store.getSession(studentId, sessionTypeFor(sessionNumber));
+        if (!session) return res.status(404).json({ error: "Session not found" });
 
-        // Check if session can be started
         if (session.status === "locked") {
-          return res.status(403).json({
-            error: "Session is locked. Complete previous sessions first",
-          });
+          return res.status(403).json({ error: "Complete the previous session first" });
         }
 
-        if (session.status === "completed") {
-          return res
-            .status(400)
-            .json({ error: "Session is already completed" });
-        }
+        const updated = await store.startSession(session.id);
 
-        // Update session status to in_progress and set startedAt
-        const updatedSession = await storage.updateFoundationSession(
-          session.id,
-          {
-            status: "in_progress" as const,
-            startedAt: new Date(),
-          },
-        );
-
-        // Create initial guidance message for the session (only if no messages exist)
-        const existingMessages = await storage.getFoundationSessionMessages(
-          session.id,
-        );
-        if (existingMessages.length === 0) {
-          const startUserProfile = await storage.getUserProfile(userId);
-          const startPromptSet = getPromptSet(startUserProfile?.professionalStatus);
-          const initialMessage = startPromptSet.getInitialGuidanceMessage(sessionNumber);
+        // Opening guidance is Wing's first turn — captured as ai_prompt.
+        if ((await store.countTurns(session.id)) === 0) {
+          const profile = await profileStore.getUserProfile(legacyUserId);
+          const promptSet = getPromptSet(profile?.professionalStatus);
+          const initialMessage = promptSet.getInitialGuidanceMessage(sessionNumber);
           if (initialMessage) {
-            await storage.createFoundationSessionMessage({
-              sessionId: session.id,
-              role: "assistant",
-              content: initialMessage,
-            });
+            await store.addAiTurn(session.id, initialMessage);
           }
         }
 
-        res.json(updatedSession);
+        res.json(toApiSession(updated));
       } catch (error) {
         console.error("Error starting foundation session:", error);
         next(error);
@@ -383,135 +454,107 @@ export function registerFoundationSessionsRoutes(app: Express) {
     },
   );
 
-  // Add a message to a foundation session
+  /** Appends a single turn without invoking the model (used by tooling/tests). */
   app.post(
     "/api/foundation-sessions/:sessionNumber/messages",
     isAuthenticated,
     async (req: Request, res: Response, next: NextFunction) => {
       try {
-        const sessionNumber = parseInt(req.params.sessionNumber);
-        const userId = req.user!.id;
-
-        if (isNaN(sessionNumber) || sessionNumber < 1 || sessionNumber > 3) {
-          return res
-            .status(400)
-            .json({ error: "Invalid session number. Must be 1, 2, or 3" });
+        const sessionNumber = parseSessionNumber(req.params.sessionNumber);
+        if (!sessionNumber) {
+          return res.status(400).json({ error: "Invalid session number. Must be 1, 2, or 3" });
         }
 
-        const session = await storage.getFoundationSession(
-          userId,
-          sessionNumber,
-        );
-        if (!session) {
-          return res.status(404).json({ error: "Session not found" });
+        const { content, role } = req.body ?? {};
+        if (!content || typeof content !== "string") {
+          return res.status(400).json({ error: "Message content is required" });
         }
 
-        if (
-          session.status !== "in_progress" &&
-          session.status !== "completed"
-        ) {
-          return res.status(400).json({
-            error: "Session must be in progress or completed to add messages",
-          });
-        }
+        const studentId = await store.studentIdFor(req.user as any);
+        const session = await store.getSession(studentId, sessionTypeFor(sessionNumber));
+        if (!session) return res.status(404).json({ error: "Session not found" });
 
-        // Validate message data
-        const messageValidation =
-          insertFoundationSessionMessageSchema.safeParse({
-            ...req.body,
-            sessionId: session.id,
-          });
+        const turn =
+          role === "assistant"
+            ? await store.addAiTurn(session.id, content.trim())
+            : await store.addHumanTurn(session.id, content.trim());
 
-        if (!messageValidation.success) {
-          return res.status(400).json({
-            error: "Validation failed",
-            details: messageValidation.error.errors,
-          });
-        }
-
-        const message = await storage.createFoundationSessionMessage(
-          messageValidation.data,
-        );
-        res.status(201).json(message);
+        res.status(201).json(turn);
       } catch (error) {
-        console.error("Error adding foundation session message:", error);
+        console.error("Error adding foundation session turn:", error);
         next(error);
       }
     },
   );
 
-  // End a foundation session early - mirrors normal auto-completion flow
+  /** Ends a session early — a distinct status, not a completion. */
   app.post(
     "/api/foundation-sessions/:sessionNumber/end-early",
     isAuthenticated,
     async (req: Request, res: Response, next: NextFunction) => {
       try {
-        const sessionNumber = parseInt(req.params.sessionNumber);
-        const userId = req.user!.id;
-
-        if (isNaN(sessionNumber) || sessionNumber < 1 || sessionNumber > 3) {
-          return res
-            .status(400)
-            .json({ error: "Invalid session number. Must be 1, 2, or 3" });
+        const sessionNumber = parseSessionNumber(req.params.sessionNumber);
+        if (!sessionNumber) {
+          return res.status(400).json({ error: "Invalid session number. Must be 1, 2, or 3" });
         }
 
-        const session = await storage.getFoundationSession(
-          userId,
-          sessionNumber,
-        );
-        if (!session) {
-          return res.status(404).json({ error: "Session not found" });
-        }
+        const legacyUserId = req.user!.id;
+        const studentId = await store.studentIdFor(req.user as any);
+        const session = await store.getSession(studentId, sessionTypeFor(sessionNumber));
+        if (!session) return res.status(404).json({ error: "Session not found" });
 
-        if (session.status !== "in_progress") {
-          return res.status(400).json({
-            error: "Session must be in progress to end early",
-          });
-        }
+        // Ending early is a legitimate stopping point (feature list A3), so we
+        // still run the analysis and capture whatever outcome the conversation
+        // produced. A student who exits at a natural point should not lose the
+        // work — the session is simply marked ended_early rather than completed.
+        const messages = await store.getTurnsAsMessages(session.id);
+        const userProfile = await profileStore.getUserProfile(legacyUserId);
 
-        // Run the same Claude analysis used by normal auto-completion
-        const messages = await storage.getFoundationSessionMessages(session.id);
-        const userProfile = await storage.getUserProfile(userId);
-        const completionCheck = await checkSessionCompletion(
-          userId,
+        const analysis = await checkSessionCompletion(
+          legacyUserId,
+          studentId,
           sessionNumber,
           messages,
           userProfile,
         );
 
-        // Use analyzer's completionData when available; otherwise fall back to a
-        // minimal stub so the session is still marked completed.
-        const completionData = completionCheck.completionData ?? {
-          endedEarly: true,
-          completedAt: new Date().toISOString(),
-        };
-
-        const updatedSession = await storage.updateFoundationSession(
-          session.id,
-          {
-            status: "completed",
-            completedAt: new Date(),
-            completionData,
-          },
-        );
-
-        // Unlock next session if it exists (mirrors auto-completion branch)
-        if (sessionNumber < 3) {
-          const nextSession = await storage.getFoundationSession(
-            userId,
-            sessionNumber + 1,
-          );
-          if (nextSession && nextSession.status === "locked") {
-            await storage.updateFoundationSession(nextSession.id, {
-              status: "available",
-            });
-          }
+        let artifactWritten = false;
+        if (analysis.completionData) {
+          await store.putArtifact({
+            sessionId: session.id,
+            artifactType: ARTIFACT_FOR_SESSION[sessionNumber],
+            content: {
+              ...analysis.completionData,
+              // Mark provenance of the outcome itself: this came from a
+              // truncated conversation, which matters when scoring later.
+              endedEarly: true,
+              complete: analysis.shouldComplete,
+            },
+            sourceType: "ai_generated",
+          });
+          artifactWritten = true;
         }
 
+        // Seal the transcript, then record the distinct end state.
+        await store.completeSession(session.id);
+        const updated = await store.updateSessionStatus(session.id, "ended_early");
+
+        // Only unlock the next session if the methodology considered this one
+        // genuinely complete — ending early should not skip prerequisites.
+        if (analysis.shouldComplete) {
+          await unlockNextSession(studentId, sessionNumber);
+        }
+
+        console.log(
+          `[foundation] session ${sessionNumber}: ended early ` +
+            `(artifact=${artifactWritten}, methodologyComplete=${analysis.shouldComplete})`,
+        );
+
         res.json({
-          session: updatedSession,
-          sessionNumber,
-          completionData,
+          ...toApiSession(updated),
+          artifactType: artifactWritten ? ARTIFACT_FOR_SESSION[sessionNumber] : null,
+          content: analysis.completionData ?? null,
+          methodologyComplete: analysis.shouldComplete,
         });
       } catch (error) {
         console.error("Error ending foundation session early:", error);
@@ -520,99 +563,147 @@ export function registerFoundationSessionsRoutes(app: Express) {
     },
   );
 
-  // Update foundation session (for completion and progress tracking)
+  /** Streaming chat — the main conversational surface. */
+  app.post(
+    "/api/foundation-sessions/:sessionNumber/messages/stream",
+    isAuthenticated,
+    async (req: Request, res: Response, next: NextFunction) => {
+      try {
+        const sessionNumber = parseSessionNumber(req.params.sessionNumber);
+        if (!sessionNumber) {
+          return res.status(400).json({ error: "Invalid session number. Must be 1, 2, or 3" });
+        }
+
+        const legacyUserId = req.user!.id;
+        const studentId = await store.studentIdFor(req.user as any);
+
+        const session = await store.getSession(studentId, sessionTypeFor(sessionNumber));
+        if (!session) return res.status(404).json({ error: "Session not found" });
+
+        if (session.status !== "in_progress" && session.status !== "completed") {
+          return res.status(400).json({
+            error: "Session must be in progress or completed to send messages",
+          });
+        }
+
+        const { content } = req.body ?? {};
+        if (!content || typeof content !== "string") {
+          return res.status(400).json({ error: "Message content is required" });
+        }
+
+        // Human turn — provenance assigned at capture by the deterministic rule.
+        await store.addHumanTurn(session.id, content.trim());
+
+        const conversation = await store.getTurnsAsMessages(session.id);
+
+        const userProfile = await profileStore.getUserProfile(legacyUserId);
+        const promptSet = getPromptSet(userProfile?.professionalStatus);
+        const resumeSummary = await formatResumeSummary(legacyUserId);
+        const priorSessions = await buildPriorSessionContexts(studentId, sessionNumber);
+
+        const systemPrompt = promptSet.getSystemPrompt({
+          sessionNumber,
+          resumeSummary,
+          priorSessions: priorSessions.length > 0 ? priorSessions : undefined,
+        });
+
+        res.setHeader("Content-Type", "text/event-stream");
+        res.setHeader("Cache-Control", "no-cache");
+        res.setHeader("Connection", "keep-alive");
+
+        let assistantContent = "";
+
+        // Foundation Session conversation — quality-critical -> flagship tier.
+        const stream = orchestrator.completeStream({
+          tier: "flagship",
+          system: systemPrompt,
+          messages: conversation,
+          maxTokens: 4096,
+          temperature: 0.7,
+        });
+
+        for await (const chunk of stream) {
+          assistantContent += chunk;
+          res.write(`data: ${JSON.stringify({ type: "chunk", content: chunk })}\n\n`);
+        }
+
+        // Wing's turn: ai_prompt, or ai_adapted if it follows a correction.
+        await store.addAiTurn(session.id, assistantContent);
+
+        // Completion check over the full turn list.
+        const allMessages = await store.getTurnsAsMessages(session.id);
+        const completionCheck = await checkSessionCompletion(
+          legacyUserId,
+          studentId,
+          sessionNumber,
+          allMessages,
+          userProfile,
+        );
+
+        if (completionCheck.shouldComplete) {
+          // completionData becomes a typed artifact, not a JSON blob column.
+          await store.putArtifact({
+            sessionId: session.id,
+            artifactType: ARTIFACT_FOR_SESSION[sessionNumber],
+            content: completionCheck.completionData,
+            sourceType: "ai_generated",
+          });
+
+          await store.completeSession(session.id);
+          await unlockNextSession(studentId, sessionNumber);
+
+          res.write(
+            `data: ${JSON.stringify({
+              type: "session_completed",
+              artifactType: ARTIFACT_FOR_SESSION[sessionNumber],
+              content: completionCheck.completionData,
+            })}\n\n`,
+          );
+        }
+
+        res.write(`data: ${JSON.stringify({ type: "done" })}\n\n`);
+        res.end();
+      } catch (error) {
+        console.error("Error in foundation session stream:", error);
+        if (!res.headersSent) return next(error);
+        res.write(
+          `data: ${JSON.stringify({ type: "error", message: "Stream failed" })}\n\n`,
+        );
+        res.end();
+      }
+    },
+  );
+
+  /** Status updates (e.g. manual completion from admin tooling). */
   app.patch(
     "/api/foundation-sessions/:sessionNumber",
     isAuthenticated,
     async (req: Request, res: Response, next: NextFunction) => {
       try {
-        const sessionNumber = parseInt(req.params.sessionNumber);
-        const userId = req.user!.id;
-
-        if (isNaN(sessionNumber) || sessionNumber < 1 || sessionNumber > 3) {
-          return res
-            .status(400)
-            .json({ error: "Invalid session number. Must be 1, 2, or 3" });
+        const sessionNumber = parseSessionNumber(req.params.sessionNumber);
+        if (!sessionNumber) {
+          return res.status(400).json({ error: "Invalid session number. Must be 1, 2, or 3" });
         }
 
-        const session = await storage.getFoundationSession(
-          userId,
-          sessionNumber,
-        );
-        if (!session) {
-          return res.status(404).json({ error: "Session not found" });
+        const studentId = await store.studentIdFor(req.user as any);
+        const session = await store.getSession(studentId, sessionTypeFor(sessionNumber));
+        if (!session) return res.status(404).json({ error: "Session not found" });
+
+        const { status } = req.body ?? {};
+        const allowed = ["locked", "available", "in_progress", "completed", "ended_early"];
+        if (status && !allowed.includes(status)) {
+          return res.status(400).json({ error: `status must be one of ${allowed.join(", ")}` });
         }
 
-        // Validate update data
-        const updateValidation = updateFoundationSessionSchema.safeParse(
-          req.body,
-        );
-        if (!updateValidation.success) {
-          return res.status(400).json({
-            error: "Validation failed",
-            details: updateValidation.error.errors,
-          });
+        let updated = session;
+        if (status === "completed") {
+          updated = await store.completeSession(session.id);
+          await unlockNextSession(studentId, sessionNumber);
+        } else if (status) {
+          updated = await store.updateSessionStatus(session.id, status);
         }
 
-        const updateData = updateValidation.data;
-
-        // Enforce valid state transitions - prevent bypassing sequential unlocking
-        // Locked sessions cannot be updated at all
-        if (session.status === "locked") {
-          return res.status(403).json({
-            error:
-              "Cannot update locked session. Complete previous sessions first",
-          });
-        }
-
-        if (updateData.status) {
-          // Only allow specific status transitions
-          if (updateData.status === "completed") {
-            // Only sessions that are in_progress can be marked as completed
-            if (session.status !== "in_progress") {
-              return res.status(400).json({
-                error: "Session must be in progress to mark as completed",
-              });
-            }
-          } else if (updateData.status === "in_progress") {
-            // Only available sessions can be started
-            if (session.status !== "available") {
-              return res.status(400).json({
-                error: "Session must be available to start",
-              });
-            }
-          } else {
-            // Disallow other arbitrary status changes
-            return res.status(400).json({
-              error:
-                "Invalid status transition. Use the appropriate endpoints to start or complete sessions",
-            });
-          }
-        }
-
-        // If marking as completed, set completedAt and unlock next session
-        if (updateData.status === "completed") {
-          updateData.completedAt = new Date();
-
-          // Unlock next session if it exists (atomic operation would be better)
-          if (sessionNumber < 3) {
-            const nextSession = await storage.getFoundationSession(
-              userId,
-              sessionNumber + 1,
-            );
-            if (nextSession && nextSession.status === "locked") {
-              await storage.updateFoundationSession(nextSession.id, {
-                status: "available",
-              });
-            }
-          }
-        }
-
-        const updatedSession = await storage.updateFoundationSession(
-          session.id,
-          updateData,
-        );
-        res.json(updatedSession);
+        res.json(toApiSession(updated));
       } catch (error) {
         console.error("Error updating foundation session:", error);
         next(error);
@@ -620,301 +711,33 @@ export function registerFoundationSessionsRoutes(app: Express) {
     },
   );
 
-  // Streaming chat endpoint for Foundation Sessions with Claude integration
-  app.post(
-    "/api/foundation-sessions/:sessionNumber/messages/stream",
-    isAuthenticated,
-    async (req: Request, res: Response, next: NextFunction) => {
-      try {
-        const sessionNumber = parseInt(req.params.sessionNumber);
-        const userId = req.user!.id;
-
-        if (isNaN(sessionNumber) || sessionNumber < 1 || sessionNumber > 3) {
-          return res
-            .status(400)
-            .json({ error: "Invalid session number. Must be 1, 2, or 3" });
-        }
-
-        const session = await storage.getFoundationSession(
-          userId,
-          sessionNumber,
-        );
-        if (!session) {
-          return res.status(404).json({ error: "Session not found" });
-        }
-
-        if (
-          session.status !== "in_progress" &&
-          session.status !== "completed"
-        ) {
-          return res.status(400).json({
-            error: "Session must be in progress or completed to send messages",
-          });
-        }
-
-        const { content } = req.body;
-        if (!content || typeof content !== "string") {
-          return res.status(400).json({ error: "Message content is required" });
-        }
-
-        // Save user message
-        const userMessage = await storage.createFoundationSessionMessage({
-          sessionId: session.id,
-          role: "user",
-          content: content.trim(),
-        });
-
-        // Get all messages from this session for context
-        const messages = await storage.getFoundationSessionMessages(session.id);
-
-        // Format messages for Claude API
-        const formattedMessages = messages.map((msg) => ({
-          role: msg.role as "user" | "assistant",
-          content: msg.content,
-        }));
-
-        // Get user profile data for context
-        const userProfile = await storage.getUserProfile(userId);
-
-        // Get resume summary for context
-        const resumeSummary = await formatResumeSummary(userId);
-
-        // Get ALL prior sessions' completion data and conversation transcripts
-        let allPriorSessionsContext: Array<{
-          sessionNumber: number;
-          completionData: any;
-          conversationTranscript: string;
-        }> = [];
-        if (sessionNumber > 1) {
-          for (let i = 1; i < sessionNumber; i++) {
-            const priorSession = await storage.getFoundationSession(userId, i);
-            if (
-              priorSession?.status === "completed" &&
-              priorSession.completionData
-            ) {
-              const priorMessages = await storage.getFoundationSessionMessages(
-                priorSession.id,
-              );
-              const maxTranscriptChars = 8000;
-              let transcript = priorMessages
-                .map(
-                  (msg) =>
-                    `${msg.role === "user" ? "USER" : "COACH"}: ${msg.content}`,
-                )
-                .join("\n\n");
-              if (transcript.length > maxTranscriptChars) {
-                transcript =
-                  transcript.slice(0, maxTranscriptChars) +
-                  "\n\n[... transcript trimmed for brevity — key details captured in session summary above]";
-              }
-              allPriorSessionsContext.push({
-                sessionNumber: i,
-                completionData: priorSession.completionData,
-                conversationTranscript: transcript,
-              });
-            }
-          }
-        }
-
-        // Set up SSE headers
-        res.setHeader("Content-Type", "text/event-stream");
-        res.setHeader("Cache-Control", "no-cache");
-        res.setHeader("Connection", "keep-alive");
-
-        // Send user message ID first
-        res.write(
-          `data: ${JSON.stringify({ type: "user_message", id: userMessage.id })}\n\n`,
-        );
-
-        // Initialize empty assistant content for accumulation
-        let assistantContent = "";
-
-        // Generate Foundation Session-specific system prompt using profile-aware prompt set
-        const promptSet = getPromptSet(userProfile?.professionalStatus);
-        const systemPrompt = promptSet.getSystemPrompt({
-          sessionNumber,
-          resumeSummary,
-          priorSessions: allPriorSessionsContext.length > 0 ? allPriorSessionsContext : undefined,
-        });
-
-
-        // Foundation Session conversation — quality-critical -> flagship tier.
-        const stream = orchestrator.completeStream({
-          tier: "flagship",
-          system: systemPrompt,
-          messages: formattedMessages,
-          maxTokens: 4096,
-          temperature: 0.7,
-        });
-
-        for await (const content of stream) {
-          assistantContent += content;
-
-          // Send the chunk to the client
-          res.write(
-            `data: ${JSON.stringify({ type: "chunk", content })}\n\n`,
-          );
-        }
-
-        // Save complete assistant message
-        const assistantMessage = await storage.createFoundationSessionMessage({
-          sessionId: session.id,
-          role: "assistant",
-          content: assistantContent,
-        });
-
-        // Check if session should be automatically completed
-        const allMessages = await storage.getFoundationSessionMessages(
-          session.id,
-        );
-        const completionCheck = await checkSessionCompletion(
-          userId,
-          sessionNumber,
-          allMessages,
-          userProfile,
-        );
-
-        if (completionCheck.shouldComplete) {
-          // Automatically complete the session with the extracted data
-          await storage.updateFoundationSession(session.id, {
-            status: "completed",
-            completedAt: new Date(),
-            completionData: completionCheck.completionData,
-          });
-
-          // Unlock next session if it exists
-          if (sessionNumber < 3) {
-            const nextSession = await storage.getFoundationSession(
-              userId,
-              sessionNumber + 1,
-            );
-            if (nextSession && nextSession.status === "locked") {
-              await storage.updateFoundationSession(nextSession.id, {
-                status: "available",
-              });
-            }
-          }
-
-          // Send completion notification
-          res.write(
-            `data: ${JSON.stringify({
-              type: "session_completed",
-              sessionNumber,
-              completionData: completionCheck.completionData,
-            })}\n\n`,
-          );
-        }
-
-        // Send final message with assistant message ID
-        res.write(
-          `data: ${JSON.stringify({
-            type: "complete",
-            id: assistantMessage.id,
-            content: assistantContent,
-          })}\n\n`,
-        );
-
-        res.end();
-      } catch (error) {
-        console.error("Error in Foundation Session streaming chat:", error);
-        res.write(
-          `data: ${JSON.stringify({ type: "error", message: "Failed to generate response" })}\n\n`,
-        );
-        res.end();
-      }
-    },
-  );
-
-  // Update timer elapsed time for a foundation session
+  /** Session timer. */
   app.patch(
     "/api/foundation-sessions/:sessionNumber/timer",
     isAuthenticated,
     async (req: Request, res: Response, next: NextFunction) => {
       try {
-        const sessionNumber = parseInt(req.params.sessionNumber);
-        const userId = req.user!.id;
-        const { timerElapsed } = req.body;
-
-        if (isNaN(sessionNumber) || sessionNumber < 1 || sessionNumber > 3) {
-          return res
-            .status(400)
-            .json({ error: "Invalid session number. Must be 1, 2, or 3" });
+        const sessionNumber = parseSessionNumber(req.params.sessionNumber);
+        if (!sessionNumber) {
+          return res.status(400).json({ error: "Invalid session number. Must be 1, 2, or 3" });
         }
 
-        if (typeof timerElapsed !== "number" || timerElapsed < 0) {
-          return res
-            .status(400)
-            .json({ error: "timerElapsed must be a non-negative number" });
+        const { timerElapsedSeconds, timerElapsed } = req.body ?? {};
+        const seconds = timerElapsedSeconds ?? timerElapsed;
+        if (typeof seconds !== "number" || seconds < 0) {
+          return res.status(400).json({ error: "timerElapsedSeconds must be a non-negative number" });
         }
 
-        const session = await storage.getFoundationSession(
-          userId,
-          sessionNumber,
-        );
-        if (!session) {
-          return res.status(404).json({ error: "Session not found" });
-        }
+        const studentId = await store.studentIdFor(req.user as any);
+        const session = await store.getSession(studentId, sessionTypeFor(sessionNumber));
+        if (!session) return res.status(404).json({ error: "Session not found" });
 
-        // Only update timer for in-progress sessions
-        if (session.status !== "in_progress") {
-          return res.status(400).json({
-            error: "Timer can only be updated for in-progress sessions",
-          });
-        }
-
-        // Update the timer elapsed time
-        const updatedSession = await storage.updateFoundationSession(
-          session.id,
-          {
-            timerElapsed,
-          },
-        );
-
-        res.json({
-          timerElapsed: updatedSession?.timerElapsed || timerElapsed,
-        });
+        const updated = await store.addElapsedSeconds(session.id, seconds);
+        res.json({ timerElapsedSeconds: updated.timerElapsedSeconds });
       } catch (error) {
-        console.error("Error updating foundation session timer:", error);
+        console.error("Error updating session timer:", error);
         next(error);
       }
     },
   );
-}
-
-// Helper function to initialize foundation sessions for a user
-async function initializeFoundationSessions(userId: number) {
-  try {
-    const existingSessions = await storage.getFoundationSessions(userId);
-
-    // If user already has sessions, no need to initialize
-    if (existingSessions.length > 0) {
-      return;
-    }
-
-    // Create the three foundation sessions
-    const sessionsToCreate = [
-      {
-        userId,
-        sessionNumber: 1,
-        status: "available" as const, // Session 1 is available by default
-      },
-      {
-        userId,
-        sessionNumber: 2,
-        status: "locked" as const, // Sessions 2 and 3 are locked initially
-      },
-      {
-        userId,
-        sessionNumber: 3,
-        status: "locked" as const,
-      },
-    ];
-
-    for (const sessionData of sessionsToCreate) {
-      await storage.createFoundationSession(sessionData);
-    }
-  } catch (error) {
-    console.error("Error initializing foundation sessions:", error);
-    throw error;
-  }
 }

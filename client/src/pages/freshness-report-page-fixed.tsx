@@ -11,6 +11,7 @@ import { apiRequest } from "@/lib/queryClient";
 import ReportDisplay from "@/components/freshness-report/report-display";
 import ReportHistory from "@/components/freshness-report/report-history";
 import NavBar from "@/components/nav-bar";
+import { getSliStatement } from "@/lib/sli";
 
 // Interface to define the structure of Freshness Report data
 interface FreshnessReportData {
@@ -74,16 +75,10 @@ const FreshnessReportPage: React.FC = () => {
 
   // Resolve the user's SLI statement text with priority:
   // refined → selected option statement → custom → undefined (fallback to AI-generated)
-  const resolvedUserSliText = React.useMemo(() => {
-    if (!userSliData || userSliData.length === 0) return undefined;
-    const sli = userSliData[0];
-    if (sli.refinedSliText) return sli.refinedSliText;
-    if (sli.selectedSliIndex === 1) return sli.statement1;
-    if (sli.selectedSliIndex === 2) return sli.statement2;
-    if (sli.selectedSliIndex === 3) return sli.statement3;
-    if (sli.customSliText) return sli.customSliText;
-    return undefined;
-  }, [userSliData]);
+  const resolvedUserSliText = React.useMemo(
+    () => getSliStatement(userSliData) ?? undefined,
+    [userSliData],
+  );
 
   // QUERY 1: Fetch all reports for the history list
   const {
