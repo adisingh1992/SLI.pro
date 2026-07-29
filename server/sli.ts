@@ -1,5 +1,5 @@
 import { InsertSli, UserProfile } from '@shared/schema';
-import { log } from './vite';
+import { log } from './logger';
 import { analyzeDocument } from './claude';
 import { hasContent } from './document-data';
 import * as orchestrator from "./orchestrator";

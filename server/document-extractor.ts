@@ -1,5 +1,5 @@
 import mammoth from 'mammoth';
-import { log } from './vite';
+import { log } from './logger';
 
 /**
  * Extract readable text from various document formats

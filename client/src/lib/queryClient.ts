@@ -1,5 +1,24 @@
 import { QueryClient, QueryFunction } from "@tanstack/react-query";
 
+/**
+ * API origin.
+ *
+ * Empty by default, so requests are relative — behind Azure Front Door the SPA
+ * and the API share one hostname (static → Static Web Apps, /api/* → Container
+ * Apps), and relative URLs are exactly right.
+ *
+ * Set VITE_API_BASE_URL only when the client is served from a different origin
+ * than the API — e.g. hitting the Static Web Apps URL directly, bypassing
+ * Front Door.
+ */
+const API_BASE = (import.meta as any).env?.VITE_API_BASE_URL ?? "";
+
+/** Prefixes API paths with the configured origin, if any. */
+export function apiUrl(path: string): string {
+  if (!API_BASE || /^https?:\/\//i.test(path)) return path;
+  return `${API_BASE.replace(/\/$/, "")}${path.startsWith("/") ? path : `/${path}`}`;
+}
+
 async function throwIfResNotOk(res: Response) {
   if (!res.ok) {
     let errorMessage = res.statusText;
@@ -32,7 +51,7 @@ export async function apiRequest(
   url: string,
   data?: unknown | undefined,
 ): Promise<Response> {
-  const res = await fetch(url, {
+  const res = await fetch(apiUrl(url), {
     method,
     headers: data ? { "Content-Type": "application/json" } : {},
     body: data ? JSON.stringify(data) : undefined,
@@ -58,7 +77,7 @@ export const getQueryFn: <T>(options: {
 
     console.log('Making API request to:', url);
     
-    const res = await fetch(url, {
+    const res = await fetch(apiUrl(url), {
       credentials: "include",
     });
 

@@ -1,4 +1,4 @@
-import { log } from "./vite";
+import { log } from "./logger";
 import { Document } from "@shared/schema";
 import { extractDocumentText, validateExtractedText } from "./document-extractor";
 import { getDocumentBase64 } from "./document-data";

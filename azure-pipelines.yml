@@ -1,0 +1,202 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# SLI.pro / Wing — Azure DevOps pipeline (stage)
+#
+# Single-container deployment: the SPA, REST API and voice WebSocket are built
+# into one image and served from one Container App.
+#
+#   validate → build image (ACR) → migrate (job) → deploy revision → health gate
+#
+# Prerequisites (see AZURE_DEVOPS_RUNBOOK.md):
+#   - Service connection `slipro-azure-stage` using workload identity federation
+#   - Variable group `slipro-stage` (values below), optionally Key Vault-linked
+#   - Environment `slipro-stage` with an approval check on schema changes
+# ─────────────────────────────────────────────────────────────────────────────
+
+trigger:
+  branches:
+    include: [main, azure-migration]
+  paths:
+    exclude: ["**/*.md", "attached_assets/**"]
+
+pr:
+  branches:
+    include: [main]
+
+variables:
+  - group: slipro-stage          # AZURE_SUBSCRIPTION, ACR_NAME, RESOURCE_GROUP,
+                                 # CONTAINER_APP_NAME, MIGRATE_JOB_NAME
+  - name: imageName
+    value: slipro-api
+  - name: imageTag
+    value: $(Build.BuildId)-$(Build.SourceVersion)
+  - name: nodeVersion
+    value: '20.x'
+
+stages:
+# ── 1. Validate ──────────────────────────────────────────────────────────────
+- stage: Validate
+  displayName: Validate
+  jobs:
+  - job: check
+    displayName: Typecheck and tests
+    pool:
+      vmImage: ubuntu-latest
+    steps:
+    - task: NodeTool@0
+      inputs:
+        versionSpec: $(nodeVersion)
+      displayName: Use Node $(nodeVersion)
+
+    - task: Cache@2
+      inputs:
+        key: 'npm | "$(Agent.OS)" | package-lock.json'
+        restoreKeys: 'npm | "$(Agent.OS)"'
+        path: $(Pipeline.Workspace)/.npm
+      displayName: Cache npm
+
+    - script: npm ci --cache $(Pipeline.Workspace)/.npm
+      displayName: Install dependencies
+
+    # The MVP carries pre-existing type errors, so this reports without failing.
+    # Tighten to a hard gate once they are cleared.
+    - script: npx tsc --noEmit || echo "##vso[task.logissue type=warning]typecheck reported errors"
+      displayName: Typecheck (advisory)
+
+    # The provenance rule is the mechanism the entire behavioural-data asset
+    # depends on — this one IS a hard gate.
+    - script: npx tsx server/wing/provenance.test.ts
+      displayName: Provenance rule tests
+
+# ── 2. Build image ───────────────────────────────────────────────────────────
+- stage: Build
+  displayName: Build image
+  dependsOn: Validate
+  condition: and(succeeded(), ne(variables['Build.Reason'], 'PullRequest'))
+  jobs:
+  - job: acrBuild
+    displayName: ACR build and push
+    pool:
+      vmImage: ubuntu-latest
+    steps:
+    # Build inside Azure: the image never leaves the tenant and the agent needs
+    # no Docker credentials.
+    - task: AzureCLI@2
+      displayName: az acr build
+      inputs:
+        azureSubscription: slipro-azure-stage
+        scriptType: bash
+        scriptLocation: inlineScript
+        inlineScript: |
+          set -euo pipefail
+          az acr build \
+            --registry "$(ACR_NAME)" \
+            --image "$(imageName):$(imageTag)" \
+            --image "$(imageName):latest" \
+            --file Dockerfile .
+
+# ── 3. Migrate (gated) ───────────────────────────────────────────────────────
+- stage: Migrate
+  displayName: Database migrations
+  dependsOn: Build
+  condition: succeeded()
+  jobs:
+  # Deployment job so the `slipro-stage` environment's approval check applies —
+  # schema changes should be a deliberate act.
+  - deployment: migrate
+    displayName: Apply migrations
+    environment: slipro-stage
+    pool:
+      vmImage: ubuntu-latest
+    strategy:
+      runOnce:
+        deploy:
+          steps:
+          # The database is VNet-only, so a hosted agent cannot reach it.
+          # Migrations run as a Container Apps job inside the VNet, using the
+          # image just built and the app's managed identity.
+          - task: AzureCLI@2
+            displayName: Start migration job
+            inputs:
+              azureSubscription: slipro-azure-stage
+              scriptType: bash
+              scriptLocation: inlineScript
+              inlineScript: |
+                set -euo pipefail
+
+                az containerapp job update \
+                  --name "$(MIGRATE_JOB_NAME)" \
+                  --resource-group "$(RESOURCE_GROUP)" \
+                  --image "$(ACR_NAME).azurecr.io/$(imageName):$(imageTag)"
+
+                EXEC=$(az containerapp job start \
+                  --name "$(MIGRATE_JOB_NAME)" \
+                  --resource-group "$(RESOURCE_GROUP)" \
+                  --query name -o tsv)
+                echo "Started execution: $EXEC"
+
+                # Poll to completion — a silent migration failure followed by a
+                # successful app rollout is the worst possible outcome.
+                for i in $(seq 1 60); do
+                  STATUS=$(az containerapp job execution show \
+                    --name "$(MIGRATE_JOB_NAME)" \
+                    --resource-group "$(RESOURCE_GROUP)" \
+                    --job-execution-name "$EXEC" \
+                    --query properties.status -o tsv)
+                  echo "  status: $STATUS"
+                  case "$STATUS" in
+                    Succeeded) exit 0 ;;
+                    Failed|Degraded) echo "Migration failed"; exit 1 ;;
+                  esac
+                  sleep 10
+                done
+                echo "Migration did not finish within 10 minutes"; exit 1
+
+# ── 4. Deploy ────────────────────────────────────────────────────────────────
+- stage: Deploy
+  displayName: Deploy application
+  dependsOn: Migrate
+  condition: succeeded()
+  jobs:
+  - deployment: containerApp
+    displayName: Container Apps revision
+    environment: slipro-stage
+    pool:
+      vmImage: ubuntu-latest
+    strategy:
+      runOnce:
+        deploy:
+          steps:
+          - task: AzureCLI@2
+            displayName: Deploy revision and gate on health
+            inputs:
+              azureSubscription: slipro-azure-stage
+              scriptType: bash
+              scriptLocation: inlineScript
+              inlineScript: |
+                set -euo pipefail
+
+                # Revision-based: a bad rollout is reverted by activating the
+                # previous revision, with no rebuild.
+                az containerapp update \
+                  --name "$(CONTAINER_APP_NAME)" \
+                  --resource-group "$(RESOURCE_GROUP)" \
+                  --image "$(ACR_NAME).azurecr.io/$(imageName):$(imageTag)"
+
+                FQDN=$(az containerapp show \
+                  --name "$(CONTAINER_APP_NAME)" \
+                  --resource-group "$(RESOURCE_GROUP)" \
+                  --query properties.configuration.ingress.fqdn -o tsv)
+
+                echo "Probing https://$FQDN/api/health"
+                for i in $(seq 1 30); do
+                  if curl -fsS "https://$FQDN/api/health" > /dev/null; then
+                    echo "Application healthy"
+                    curl -sS "https://$FQDN/api/health/ready" || true
+                    exit 0
+                  fi
+                  sleep 10
+                done
+
+                echo "Revision did not become healthy within 5 minutes."
+                echo "Roll back with: az containerapp revision activate ..."
+                exit 1
