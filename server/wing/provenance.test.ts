@@ -3,16 +3,17 @@
  *
  * Run: npx tsx server/wing/provenance.test.ts
  *
- * No database required: the deterministic rule is a pure function, which is
- * why it is isolated in provenance.ts. This is the mechanism the entire
- * behavioural-data asset depends on, so it gets an explicit test.
+ * No database required: the rule is a pure function isolated in turn-type.ts
+ * precisely so this test can run anywhere, including on a CI agent with no
+ * database access. This is the mechanism the entire behavioural-data asset
+ * depends on, so it gets an explicit test.
  */
 
 import {
   deriveTurnType,
   provenanceForTurnType,
   type TurnTypeValue,
-} from "./provenance";
+} from "./turn-type";
 
 let failures = 0;
 

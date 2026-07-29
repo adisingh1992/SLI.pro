@@ -5,6 +5,25 @@ import {
   transcripts,
   transcriptTurns,
 } from "@shared/wing-schema";
+import {
+  deriveTurnType,
+  provenanceForTurnType,
+  type CaptureChannelValue,
+  type ProvenanceTagValue,
+  type TurnOrigin,
+  type TurnTypeValue,
+} from "./turn-type";
+
+// The capture rule lives in ./turn-type (no imports, so it is testable without
+// a database). Re-exported here so callers have one import site.
+export {
+  deriveTurnType,
+  provenanceForTurnType,
+  type CaptureChannelValue,
+  type ProvenanceTagValue,
+  type TurnOrigin,
+  type TurnTypeValue,
+};
 
 /**
  * Turn-level provenance capture — the separation mechanism.
@@ -31,29 +50,6 @@ import {
  * Nothing in the session turn waits on classification.
  */
 
-export type TurnOrigin = "human" | "ai";
-
-export type CaptureChannelValue =
-  | "in_app"
-  | "voice"
-  | "email_reply"
-  | "sms_reply"
-  | "legacy_import";
-
-export type TurnTypeValue =
-  | "ai_prompt"
-  | "human_elicited_response"
-  | "human_spontaneous"
-  | "human_correction"
-  | "ai_adapted";
-
-export type ProvenanceTagValue =
-  | "ai_generated"
-  | "human_elicited"
-  | "human_spontaneous"
-  | "human_correction"
-  | "provenance_unknown";
-
 export interface RecordTurnParams {
   sessionId: number;
   content: string;
@@ -67,37 +63,6 @@ export interface RecordTurnParams {
    * principally `human_correction`. Provenance is derived from it.
    */
   turnType?: TurnTypeValue;
-}
-
-/** Provenance is a pure function of turn type — never set independently. */
-export function provenanceForTurnType(turnType: TurnTypeValue): ProvenanceTagValue {
-  switch (turnType) {
-    case "ai_prompt":
-    case "ai_adapted": // ★ still ai_generated; still excluded from memory
-      return "ai_generated";
-    case "human_elicited_response":
-      return "human_elicited";
-    case "human_spontaneous":
-      return "human_spontaneous";
-    case "human_correction":
-      return "human_correction";
-  }
-}
-
-/** The deterministic capture rule, isolated so it is unit-testable. */
-export function deriveTurnType(
-  origin: TurnOrigin,
-  previousTurnType: TurnTypeValue | null,
-): TurnTypeValue {
-  if (origin === "ai") {
-    // The AI turn immediately following a human correction is the moment Wing
-    // changes course because a human pushed back — worth marking at capture,
-    // because retro-tagging would mean reprocessing the corpus.
-    return previousTurnType === "human_correction" ? "ai_adapted" : "ai_prompt";
-  }
-  return previousTurnType === "ai_prompt"
-    ? "human_elicited_response"
-    : "human_spontaneous";
 }
 
 /** Returns the session's transcript, creating it on first turn. */
