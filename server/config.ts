@@ -78,6 +78,47 @@ export async function loadSecretFromVault(envName: string): Promise<boolean> {
   return true;
 }
 
+/**
+ * The secrets a script needs before it can call the LLM orchestrator.
+ *
+ * `activeProvider()` decides between Azure and Anthropic by looking for
+ * AZURE_OPENAI_ENDPOINT. A script that hydrates only DATABASE_URL therefore
+ * silently falls through to Anthropic and fails on a missing key — the
+ * provider choice is made from an environment that was never populated.
+ */
+export const LLM_SECRETS = [
+  "AZURE_OPENAI_ENDPOINT",
+  "AZURE_OPENAI_KEY",
+  "AZURE_OPENAI_DEPLOYMENT_FLAGSHIP",
+  "AZURE_OPENAI_DEPLOYMENT_MID",
+  "AZURE_OPENAI_DEPLOYMENT_NANO",
+  "AZURE_OPENAI_DEPLOYMENT_EMBEDDINGS",
+  "OPENAI_API_KEY",
+] as const;
+
+/**
+ * Hydrates several secrets, tolerating ones that are absent.
+ *
+ * Returns the names that could NOT be resolved, so the caller can decide
+ * whether that matters — an absent OPENAI_API_KEY is fine when Azure is the
+ * provider, while an absent AZURE_OPENAI_ENDPOINT changes which provider is
+ * chosen at all.
+ */
+export async function loadSecretsFromVault(
+  envNames: readonly string[],
+): Promise<string[]> {
+  const missing: string[] = [];
+  for (const name of envNames) {
+    try {
+      if (!(await loadSecretFromVault(name))) missing.push(name);
+    } catch {
+      // A secret absent from the vault is expected for optional providers.
+      missing.push(name);
+    }
+  }
+  return missing;
+}
+
 export async function loadConfig(): Promise<void> {
   if (loaded) return;
 

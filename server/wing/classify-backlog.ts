@@ -39,7 +39,9 @@ let db: ScriptDb["db"];
 let pool: ScriptDb["pool"];
 
 async function main() {
-  ({ db, pool } = await initScript());
+  // llm: true — this script calls the orchestrator, so the Azure OpenAI
+  // settings must be hydrated too, not just DATABASE_URL.
+  ({ db, pool } = await initScript({ llm: true }));
   const classifier = await import("./classifier");
 
   if (!Number.isFinite(OLDER_THAN_HOURS) || OLDER_THAN_HOURS < 0) {

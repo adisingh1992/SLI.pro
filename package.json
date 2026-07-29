@@ -18,7 +18,8 @@
     "build:client": "vite build",
     "build:server": "esbuild server/index.ts --platform=node --packages=external --bundle --format=esm --splitting --outdir=dist",
     "build:migrate": "esbuild server/migrate.ts --platform=node --packages=external --bundle --format=esm --outfile=dist/migrate.js",
-    "wing:classify-backlog": "tsx server/wing/classify-backlog.ts"
+    "wing:classify-backlog": "tsx server/wing/classify-backlog.ts",
+    "wing:extract-heuristics": "tsx server/wing/extract-heuristics.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.37.0",

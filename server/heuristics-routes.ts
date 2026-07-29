@@ -31,6 +31,30 @@ const COMPONENT_TYPES: ComponentType[] = [
   "module_mapping", "population_context", "notes",
 ];
 
+/**
+ * Sequence size limits.
+ *
+ * WHY A LIMIT EXISTS AT ALL
+ * The engine builds its detector prompt by concatenating the signal definition
+ * of EVERY card in the active sequence, and runs it on every student turn.
+ * Sequence size is therefore not a matter of taste — it is per-turn latency
+ * and cost on the critical path, measured:
+ *
+ *     10 cards  ~=   360 tokens per turn
+ *     25 cards  ~= 1,000 tokens per turn
+ *     91 cards  ~= 4,500 tokens per turn
+ *
+ * Worse than the cost is the discrimination: a small model asked to pick one
+ * of ninety near-neighbour signals matches far less reliably than one choosing
+ * among a dozen, and every false match logs a heuristic application that
+ * pollutes the evidence base used to validate the methodology.
+ *
+ * A library of hundreds of cards is fine and desirable. A SEQUENCE of hundreds
+ * is not. The sequence is a deliberate selection from the library.
+ */
+const SEQUENCE_SOFT_LIMIT = 15;
+const SEQUENCE_HARD_LIMIT = 40;
+
 const isAdmin = (req: Request, res: Response, next: NextFunction) => {
   if (req.isAuthenticated() && req.user?.isAdmin) return next();
   res.status(403).json({ error: "Admin access required" });
@@ -381,6 +405,31 @@ export function registerHeuristicsRoutes(app: Express) {
         });
       }
 
+      // Size gate — see the limit constants for the measurements behind these.
+      if (ids.length > SEQUENCE_HARD_LIMIT) {
+        return res.status(400).json({
+          error: `A sequence may contain at most ${SEQUENCE_HARD_LIMIT} cards`,
+          detail:
+            `You sent ${ids.length}. Every card's signal definition is sent to the ` +
+            `detector on every student turn, so this would add roughly ` +
+            `${Math.round((ids.length * 173) / 4)} tokens of latency per turn and ` +
+            `badly degrade match accuracy.`,
+          remedy:
+            "Keep the full library as unsequenced cards and select the ones this " +
+            "cohort should actually be coached on. The library is not the sequence.",
+        });
+      }
+
+      const warnings: string[] = [];
+      if (ids.length > SEQUENCE_SOFT_LIMIT) {
+        warnings.push(
+          `${ids.length} cards is above the recommended ${SEQUENCE_SOFT_LIMIT}. ` +
+            "Detection accuracy falls as the detector has more near-neighbour " +
+            "signals to choose between, and every false match adds noise to the " +
+            "evidence used to validate these cards.",
+        );
+      }
+
       const window = evaluationWindowState(cycle as any);
       if (!window.open && force !== true) {
         return res.status(409).json({
@@ -422,6 +471,7 @@ export function registerHeuristicsRoutes(app: Express) {
 
       res.status(201).json({
         sequenceId,
+        warnings,
         cards: await store.getSequenceCards(sequenceId),
       });
     } catch (error) {

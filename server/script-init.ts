@@ -28,14 +28,40 @@ import "dotenv/config";
 
 export type ScriptDb = typeof import("./db");
 
-export async function initScript(): Promise<ScriptDb> {
-  const { loadSecretFromVault } = await import("./config");
+export type InitScriptOptions = {
+  /**
+   * Also hydrate the LLM secrets. Required by any script that calls the
+   * orchestrator: provider selection reads AZURE_OPENAI_ENDPOINT from the
+   * environment, so without these the script silently falls back to Anthropic
+   * and fails on a missing key.
+   */
+  llm?: boolean;
+};
+
+export async function initScript(opts: InitScriptOptions = {}): Promise<ScriptDb> {
+  const { loadSecretFromVault, loadSecretsFromVault, LLM_SECRETS } =
+    await import("./config");
 
   if (!(await loadSecretFromVault("DATABASE_URL"))) {
     throw new Error(
       "DATABASE_URL must be set in the environment, or available as the " +
         "'DATABASE-URL' secret in the vault named by KEY_VAULT_URI",
     );
+  }
+
+  if (opts.llm) {
+    const missing = await loadSecretsFromVault(LLM_SECRETS);
+
+    // Absent optional providers are fine; an absent endpoint is not, because
+    // it silently changes which provider gets used.
+    if (!process.env.AZURE_OPENAI_ENDPOINT && !process.env.ANTHROPIC_API_KEY) {
+      throw new Error(
+        "No LLM provider is configured. Neither AZURE_OPENAI_ENDPOINT nor " +
+          "ANTHROPIC_API_KEY resolved from the environment or Key Vault " +
+          `(unresolved: ${missing.join(", ") || "none"}). ` +
+          "Check KEY_VAULT_URI and that the identity has Key Vault Secrets User.",
+      );
+    }
   }
 
   // Imported only now — see above.

@@ -93,6 +93,35 @@ remain `origin = 'direct'` and have no `institution_id`, so institutional
 reporting is unaffected — **filter reports on `origin`, never on "has an
 institution".**
 
+### The library is not the sequence
+
+This is the most important operational rule here.
+
+You may have **hundreds** of cards. That is good — it is the methodology
+written down. But a **sequence** should hold roughly **10–15**.
+
+The reason is mechanical. The engine builds its detector prompt by
+concatenating the signal definition of *every card in the active sequence*, and
+runs it on **every student turn**:
+
+| Sequence size | Added per turn |
+|---|---|
+| 10 cards | ~360 tokens |
+| 25 cards | ~1,000 tokens |
+| 91 cards | ~4,500 tokens |
+
+Cost is the smaller problem. The real one is discrimination: a small model
+asked to choose among ninety near-neighbour signals matches far less reliably
+than one choosing among a dozen — and every false match writes a heuristic
+application that **pollutes the very evidence you use to decide which cards
+work**.
+
+The API warns above 15 and refuses above 40.
+
+So: keep everything in the library, and select deliberately into the sequence.
+Cards not in any sequence are completely inert — they cost nothing and reach
+nobody.
+
 ### The evaluation window
 
 Methodology changes belong **between** cohorts, not during them. Republishing a
