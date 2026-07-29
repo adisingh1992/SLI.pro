@@ -67,6 +67,13 @@ stages:
     - script: npx tsx server/wing/provenance.test.ts
       displayName: Provenance rule tests
 
+    # The engine's decision rules decide which methodology fires at students and
+    # how the evidence that validates it accumulates. A silent regression here
+    # would corrupt the corpus rather than break anything visibly, so it is a
+    # hard gate too. Both suites are pure functions — no database, no LLM.
+    - script: npx tsx server/wing/engine-rules.test.ts
+      displayName: Engine rule tests
+
 # ── 2. Build image ───────────────────────────────────────────────────────────
 - stage: Build
   displayName: Build image

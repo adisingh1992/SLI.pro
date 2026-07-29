@@ -1,6 +1,6 @@
 import "dotenv/config";
 import { eq, sql } from "drizzle-orm";
-import { db, pool } from "../db";
+import { initScript, type ScriptDb } from "../script-init";
 import { users as legacyUsers } from "@shared/schema";
 import {
   users as wingUsers,
@@ -30,7 +30,13 @@ function roleFor(user: { isAdmin?: boolean | null }) {
   return user.isAdmin ? ("platform_admin" as const) : ("student" as const);
 }
 
+// Assigned by initScript() before any query runs. ../db builds its pool at
+// module load, so it must not be imported until DATABASE_URL is present.
+let db: ScriptDb["db"];
+let pool: ScriptDb["pool"];
+
 async function main() {
+  ({ db, pool } = await initScript());
   const legacy = await db.select().from(legacyUsers);
   console.log(`[identity] found ${legacy.length} legacy user(s)`);
 

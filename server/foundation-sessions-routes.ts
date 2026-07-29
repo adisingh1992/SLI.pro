@@ -1,4 +1,5 @@
 import { Express, Request, Response, NextFunction } from "express";
+import { parseJsonResponse } from "./json-response";
 import { storage } from "./storage";
 import { getPromptSet } from "./prompts";
 import * as orchestrator from "./orchestrator";
@@ -8,6 +9,8 @@ import type { PriorSessionContext } from "./prompts/types";
 import * as docStore from "./wing/document-store";
 import * as intakeStore from "./wing/intake-store";
 import * as profileStore from "./wing/profile-store";
+import * as engine from "./wing/engine";
+import * as scoring from "./wing/scoring";
 
 /**
  * Foundation Sessions — running natively on the Wing schema.
@@ -218,27 +221,6 @@ async function buildPriorSessionContexts(
  * "session never completes" rather than as an error, because the caller's
  * catch swallowed it. Strip fences, then fall back to the first {...} block.
  */
-function parseAnalysisJson(raw: string): any {
-  let text = (raw ?? "").trim();
-
-  text = text
-    .replace(/^```json\s*/i, "")
-    .replace(/^```\s*/i, "")
-    .replace(/\s*```$/i, "")
-    .trim();
-
-  try {
-    return JSON.parse(text);
-  } catch {
-    const match = text.match(/\{[\s\S]*\}/);
-    if (!match) {
-      throw new Error(
-        `Analysis response was not JSON. First 200 chars: ${text.slice(0, 200)}`,
-      );
-    }
-    return JSON.parse(match[0]);
-  }
-}
 
 /** Decides whether the session is complete, and returns the artifact payload. */
 async function checkSessionCompletion(
@@ -284,7 +266,7 @@ async function checkSessionCompletion(
       temperature: 0.1,
     });
 
-    const analysis = parseAnalysisJson(analysisContent);
+    const analysis = parseJsonResponse(analysisContent, "Session analysis");
 
     if (!analysis.isComplete || !analysis.primaryFunction) {
       console.log(
@@ -556,6 +538,12 @@ export function registerFoundationSessionsRoutes(app: Express) {
           content: analysis.completionData ?? null,
           methodologyComplete: analysis.shouldComplete,
         });
+
+        // Ended-early sessions are scored too: the heuristics that fired
+        // before the student stopped still applied to them, and excluding
+        // truncated sessions would bias the evidence toward sessions that
+        // happened to run long.
+        void scoring.scoreSession(session.id);
       } catch (error) {
         console.error("Error ending foundation session early:", error);
         next(error);
@@ -592,7 +580,7 @@ export function registerFoundationSessionsRoutes(app: Express) {
         }
 
         // Human turn — provenance assigned at capture by the deterministic rule.
-        await store.addHumanTurn(session.id, content.trim());
+        const humanTurn = await store.addHumanTurn(session.id, content.trim());
 
         const conversation = await store.getTurnsAsMessages(session.id);
 
@@ -601,11 +589,28 @@ export function registerFoundationSessionsRoutes(app: Express) {
         const resumeSummary = await formatResumeSummary(legacyUserId);
         const priorSessions = await buildPriorSessionContexts(studentId, sessionNumber);
 
-        const systemPrompt = promptSet.getSystemPrompt({
+        const basePrompt = promptSet.getSystemPrompt({
           sessionNumber,
           resumeSummary,
           priorSessions: priorSessions.length > 0 ? priorSessions : undefined,
         });
+
+        // The real-time engine loop (spec §6): evaluate the turn against the
+        // student's active heuristic sequence before Wing replies, so an
+        // intervention lands on the turn that triggered it. evaluateTurn never
+        // throws and returns null when nothing fires, so the conversation is
+        // unaffected when no methodology is active or detection fails.
+        const guidance = await engine.evaluateTurn({
+          studentId,
+          sessionId: session.id,
+          content: content.trim(),
+          turnId: humanTurn?.id ?? null,
+          recentTurns: conversation,
+        });
+
+        const systemPrompt = guidance
+          ? `${basePrompt}\n\n${guidance.systemPromptFragment}`
+          : basePrompt;
 
         res.setHeader("Content-Type", "text/event-stream");
         res.setHeader("Cache-Control", "no-cache");
@@ -663,6 +668,15 @@ export function registerFoundationSessionsRoutes(app: Express) {
 
         res.write(`data: ${JSON.stringify({ type: "done" })}\n\n`);
         res.end();
+
+        // Post-session scoring (spec §6) — deliberately AFTER res.end(). It
+        // makes several LLM calls, and the student has finished; making them
+        // wait for bookkeeping would be indefensible. scoreSession never
+        // throws, so a floating promise here cannot produce an unhandled
+        // rejection.
+        if (completionCheck.shouldComplete) {
+          void scoring.scoreSession(session.id);
+        }
       } catch (error) {
         console.error("Error in foundation session stream:", error);
         if (!res.headersSent) return next(error);

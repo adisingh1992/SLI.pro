@@ -16,6 +16,7 @@ import { registerFoundationSessionsRoutes } from "./foundation-sessions-routes";
 import { setupEnhancementModulesRoutes } from "./enhancement-modules-routes";
 import { setupWebSocketServer } from "./realtime/websocket-handler";
 import { registerPaymentRoutes } from "./payment-routes";
+import { registerHeuristicsRoutes } from "./heuristics-routes";
 import * as blobStorage from "./blob-storage";
 import { getDocumentBase64 } from "./document-data";
 import * as orchestrator from "./orchestrator";
@@ -105,6 +106,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   registerFoundationSessionsRoutes(app);
   setupEnhancementModulesRoutes(app);
   registerPaymentRoutes(app);
+  registerHeuristicsRoutes(app);
 
   // Middleware to check if user is authenticated
   const isAuthenticated = (req: Request, res: Response, next: NextFunction) => {
@@ -869,8 +871,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       next(error);
     }
   });
-
-  registerFreshnessRoutes(app);
 
   // Helper function to get all users for admin routes
   async function getAllUsers(excludeAdmins: boolean = false): Promise<User[]> {

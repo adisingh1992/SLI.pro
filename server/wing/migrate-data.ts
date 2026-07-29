@@ -1,10 +1,10 @@
 import "dotenv/config";
 import { asc, eq, sql } from "drizzle-orm";
-import { db, pool } from "../db";
+import { initScript, type ScriptDb } from "../script-init";
 import * as legacy from "@shared/schema";
 import * as wing from "@shared/wing-schema";
 import * as blob from "../blob-storage";
-import * as commerce from "./commerce-store";
+
 
 /**
  * Data migration: public (MVP) -> wing
@@ -547,7 +547,17 @@ async function archiveLegacyRecords(students: Map<number, number>, users: Map<nu
 
 /* ── Main ───────────────────────────────────────────────────────────────── */
 
+// Assigned by initScript() before any query runs. ../db builds its pool at
+// module load, so it must not be imported until DATABASE_URL is present.
+// commerce-store imports ../db statically, so it is loaded dynamically too —
+// importing it at the top would evaluate db.ts before DATABASE_URL exists.
+let commerce: typeof import("./commerce-store");
+let db: ScriptDb["db"];
+let pool: ScriptDb["pool"];
+
 async function main() {
+  ({ db, pool } = await initScript());
+  commerce = await import("./commerce-store");
   console.log(`\n=== public -> wing data migration ${DRY_RUN ? "(DRY RUN)" : ""} ===\n`);
 
   const users = await buildUserMap();
