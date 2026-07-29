@@ -43,6 +43,41 @@ const REQUIRED_KEYS = ["DATABASE_URL", "SESSION_SECRET"];
 
 let loaded = false;
 
+/**
+ * Hydrates ONE secret from Key Vault into process.env.
+ *
+ * Standalone entrypoints — currently the migration job — need a single value
+ * and must not run the full loadConfig(): that fetches every secret and throws
+ * unless the whole app's required config is present. A migration should not
+ * fail because, say, SESSION_SECRET is missing.
+ *
+ * A value already in the environment always wins, so local runs and CI can
+ * override without touching the vault. Returns true if the value is available
+ * afterwards, by whatever route.
+ */
+export async function loadSecretFromVault(envName: string): Promise<boolean> {
+  if (process.env[envName]) return true;
+
+  const vaultUri = process.env.KEY_VAULT_URI;
+  if (!vaultUri) return false;
+
+  const secretName = Object.entries(SECRET_MAP).find(
+    ([, env]) => env === envName,
+  )?.[0];
+  if (!secretName) {
+    throw new Error(`[config] '${envName}' has no Key Vault secret mapping`);
+  }
+
+  const credential = new DefaultAzureCredential({
+    managedIdentityClientId: process.env.AZURE_MANAGED_IDENTITY_CLIENT_ID,
+  });
+  const secret = await new SecretClient(vaultUri, credential).getSecret(secretName);
+
+  if (!secret.value) return false;
+  process.env[envName] = secret.value;
+  return true;
+}
+
 export async function loadConfig(): Promise<void> {
   if (loaded) return;
 
