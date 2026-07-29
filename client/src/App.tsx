@@ -38,6 +38,9 @@ import AdminSliPage from "@/pages/admin/sli-page";
 import AdminHomeworkPage from "@/pages/admin/homework-page";
 import AdminUserTranscriptsPage from "@/pages/admin/user-transcripts-page";
 import AdminReportsPage from "@/pages/admin/reports-page";
+import AdminHeuristicsPage from "@/pages/admin/heuristics-page";
+import AdminHeuristicDetailPage from "@/pages/admin/heuristic-detail-page";
+import AdminSequencesPage from "@/pages/admin/sequences-page";
 
 function Router() {
   return (
@@ -100,6 +103,9 @@ function Router() {
       <Route path="/admin/users/:userId/sli" component={AdminSliPage} />
       <Route path="/admin/users/:userId/homework" component={AdminHomeworkPage} />
       <Route path="/admin/users/:userId/transcripts" component={AdminUserTranscriptsPage} />
+      <Route path="/admin/heuristics" component={AdminHeuristicsPage} />
+      <Route path="/admin/heuristics/:id" component={AdminHeuristicDetailPage} />
+      <Route path="/admin/sequences" component={AdminSequencesPage} />
       <Route path="/admin/reports" component={AdminReportsPage} />
       
       {/* Auth and fallback routes */}

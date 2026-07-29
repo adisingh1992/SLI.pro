@@ -17,7 +17,8 @@
     "wing:seed-methodology": "tsx server/wing/seed-methodology.ts",
     "build:client": "vite build",
     "build:server": "esbuild server/index.ts --platform=node --packages=external --bundle --format=esm --splitting --outdir=dist",
-    "build:migrate": "esbuild server/migrate.ts --platform=node --packages=external --bundle --format=esm --outfile=dist/migrate.js"
+    "build:migrate": "esbuild server/migrate.ts --platform=node --packages=external --bundle --format=esm --outfile=dist/migrate.js",
+    "wing:classify-backlog": "tsx server/wing/classify-backlog.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.37.0",

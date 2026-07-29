@@ -8,7 +8,8 @@ import {
   Home,
   Menu,
   X,
-  FileBarChart2
+  FileBarChart2,
+  BookOpen
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
@@ -44,6 +45,13 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
       icon: Users,
       href: "/admin/users",
       active: isActive("/admin/users"),
+    },
+    {
+      // The methodology library — cards and the sequences that make them live.
+      title: "Methodology",
+      icon: BookOpen,
+      href: "/admin/heuristics",
+      active: isActive("/admin/heuristics") || isActive("/admin/sequences"),
     },
   ];
 

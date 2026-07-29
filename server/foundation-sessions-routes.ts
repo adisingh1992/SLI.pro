@@ -11,6 +11,7 @@ import * as intakeStore from "./wing/intake-store";
 import * as profileStore from "./wing/profile-store";
 import * as engine from "./wing/engine";
 import * as scoring from "./wing/scoring";
+import * as classifier from "./wing/classifier";
 
 /**
  * Foundation Sessions — running natively on the Wing schema.
@@ -539,11 +540,13 @@ export function registerFoundationSessionsRoutes(app: Express) {
           methodologyComplete: analysis.shouldComplete,
         });
 
-        // Ended-early sessions are scored too: the heuristics that fired
-        // before the student stopped still applied to them, and excluding
-        // truncated sessions would bias the evidence toward sessions that
-        // happened to run long.
-        void scoring.scoreSession(session.id);
+        // Ended-early sessions are classified and scored too: the heuristics
+        // that fired before the student stopped still applied to them, and
+        // excluding truncated sessions would bias the evidence toward sessions
+        // that happened to run long. Classification precedes scoring.
+        void classifier
+          .classifySession(session.id)
+          .then(() => scoring.scoreSession(session.id));
       } catch (error) {
         console.error("Error ending foundation session early:", error);
         next(error);
@@ -675,7 +678,12 @@ export function registerFoundationSessionsRoutes(app: Express) {
         // throws, so a floating promise here cannot produce an unhandled
         // rejection.
         if (completionCheck.shouldComplete) {
-          void scoring.scoreSession(session.id);
+          // Classify BEFORE scoring: scoring's deterministic correction branch
+          // reads turn types, and human_correction only exists after the
+          // classifier has run. Reversed, corrections would never be scored.
+          void classifier
+            .classifySession(session.id)
+            .then(() => scoring.scoreSession(session.id));
         }
       } catch (error) {
         console.error("Error in foundation session stream:", error);
