@@ -10,8 +10,10 @@
 
 import {
   interpretClassification,
+  splitTagged,
   RECLASSIFY_CONFIDENCE,
   CONFIRM_CONFIDENCE,
+  HOLDOUT_EVERY,
 } from "./classifier-rules";
 
 let failures = 0;
@@ -125,6 +127,72 @@ check(
   interpretClassification({ turnType: "  human_correction  ", confidence: 0.9 }, "human_spontaneous")
     .accepted,
   true,
+);
+
+console.log("\nsplitTagged — examples must never be the exam\n");
+
+const mk = (id: number, turnType: string) => ({ id, turnType });
+
+{
+  const turns = [
+    ...Array.from({ length: 9 }, (_, i) => mk(i + 1, "human_elicited_response")),
+    ...Array.from({ length: 6 }, (_, i) => mk(i + 100, "human_spontaneous")),
+    ...Array.from({ length: 3 }, (_, i) => mk(i + 200, "human_correction")),
+  ];
+  const { train, holdout } = splitTagged(turns);
+
+  check(
+    "no turn appears in both sides",
+    train.some((t) => holdout.some((h) => h.id === t.id)),
+    false,
+  );
+
+  check(
+    "every turn lands somewhere",
+    train.length + holdout.length,
+    turns.length,
+  );
+
+  check(
+    "the rare class is represented on BOTH sides",
+    holdout.some((t) => t.turnType === "human_correction") &&
+      train.some((t) => t.turnType === "human_correction"),
+    true,
+  );
+
+  check(
+    "the split is deterministic",
+    JSON.stringify(splitTagged(turns).holdout.map((t) => t.id)),
+    JSON.stringify(holdout.map((t) => t.id)),
+  );
+
+  check(
+    "query order does not change the split",
+    JSON.stringify(
+      splitTagged([...turns].reverse()).holdout.map((t) => t.id).sort((a, b) => a - b),
+    ),
+    JSON.stringify(holdout.map((t) => t.id).sort((a, b) => a - b)),
+  );
+}
+
+check(
+  "a class too small to measure is spent on examples, not on validation",
+  splitTagged([mk(1, "human_correction"), mk(2, "human_correction")]),
+  { train: [mk(1, "human_correction"), mk(2, "human_correction")], holdout: [] },
+);
+
+check(
+  "an empty set splits into two empty sets rather than throwing",
+  splitTagged([]),
+  { train: [], holdout: [] },
+);
+
+check(
+  "roughly one in HOLDOUT_EVERY is held out",
+  splitTagged(
+    Array.from({ length: 30 }, (_, i) => mk(i + 1, "human_elicited_response")),
+  ).holdout.length,
+  30 / HOLDOUT_EVERY,
 );
 
 console.log(

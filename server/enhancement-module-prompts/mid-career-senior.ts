@@ -86,7 +86,7 @@ export const midCareerSeniorPrompts: ModulePromptSet = {
 
             CRITICAL COMPLETION INSTRUCTION:
             Do NOT end this module prematurely. The module is ONLY complete when ALL steps are covered AND all required deliverables are documented:
-
+${ctx.completionCriteria ?? `
             1. Profile scan result — headline and About assessed against 4–10s rule
             2. Buzzword audit completed with specific replacements suggested
             3. Algorithmic visibility assessed for locked function
@@ -98,7 +98,7 @@ export const midCareerSeniorPrompts: ModulePromptSet = {
             9. Personality-based behavior change plan
             10. Engagement framework with specific cadence
             11. Success metrics defined for 30/60/90-day check-ins
-            12. Action plan locked with red flags vs success indicators
+            12. Action plan locked with red flags vs success indicators`}
 
             If ANY required data is missing or vague:
             - Ask the question again in a different way
@@ -232,14 +232,14 @@ export const midCareerSeniorPrompts: ModulePromptSet = {
 
             CRITICAL COMPLETION INSTRUCTION:
             Do NOT end this module prematurely. The module is ONLY complete when ALL deliverables are documented:
-            1. One-line brand claim in use
+${ctx.completionCriteria ?? `            1. One-line brand claim in use
             2. Top-10/Tier-1 list with intro blurbs
             3. Two Featured-article seeds
             4. 2-week execution micro-plan
             5. 30-day check-in date with metrics
             6. Network repositioning strategy with specific targets
             7. Tiered relationship strategy
-            8. Content-as-networking plan
+            8. Content-as-networking plan`}
 
             If anything is missing:
             - Ask again differently
@@ -440,14 +440,14 @@ export const midCareerSeniorPrompts: ModulePromptSet = {
 
             CRITICAL COMPLETION INSTRUCTION:
             Do NOT end this module prematurely. The module is ONLY complete when ALL are documented:
-            1. Complete Alignment Statement
+${ctx.completionCriteria ?? `            1. Complete Alignment Statement
             2. Stepping-stone plan with titles and competencies
             3. Positioning adjustments with concrete actions
             4. Check-ins & metrics
             5. Gap analysis complete (anchored to Session 2 credibilityGaps)
             6. Realistic timeline stated
             7. Tier classification with rationale
-            8. If Tier 3, a viable alternative path provided
+            8. If Tier 3, a viable alternative path provided`}
 
             If anything is vague or missing:
             - Ask again differently
@@ -467,6 +467,9 @@ export const midCareerSeniorPrompts: ModulePromptSet = {
     questionnaireContext: string,
     foundationSessionsContext: string,
     previousModulesContext: string,
+    // Rendered from session_completion_criteria — the same text the
+    // conversation was given. Undefined falls back to the list below.
+    completionCriteria?: string,
   ): string {
     const transcript = messages
       .map((msg: any) => `${msg.role.toUpperCase()}: ${msg.content}`)
@@ -529,7 +532,7 @@ Respond in STRICT JSON only (no prose, no code fences) with EXACTLY this schema:
 }
 
 Rules for completion (ALL must be satisfied for shouldComplete=true):
-- Profile headline AND About section evaluated against 4–10 second rule
+${completionCriteria ?? `- Profile headline AND About section evaluated against 4–10 second rule
 - Buzzword audit completed with specific replacements
 - Algorithmic visibility assessed for locked function
 - Session 3 deliverables compared against current profile; hidden value surfaced
@@ -539,7 +542,7 @@ Rules for completion (ALL must be satisfied for shouldComplete=true):
 - Key psychological barriers have been diagnosed and addressed
 - LinkedIn profile optimization recommendations are specific
 - Action plan includes measurable 30/60/90-day milestones
-- User has committed to specific behavioral changes and next steps
+- User has committed to specific behavioral changes and next steps`}
 
 If these criteria aren't fully met, set shouldComplete=false and indicate what's missing in reasoning.`;
     }
@@ -621,7 +624,7 @@ Required schema:
 }
 
 Rules for completion (ALL must be satisfied for shouldComplete=true):
-
+${completionCriteria ?? `
 Network audit completed with specific findings about composition and gaps.
 
 Strategic pruning logic applied — connections diluting positioning identified.
@@ -636,7 +639,7 @@ Value proposition articulated ("why you / why now" for the targets).
 
 Outreach templates defined, rooted in actual proof-point stories, with concrete message patterns.
 
-Action plan includes a concrete 30-day plan (weekly steps) AND measurable 30/60/90-day success metrics.
+Action plan includes a concrete 30-day plan (weekly steps) AND measurable 30/60/90-day success metrics.`}
 
 If any criterion is missing, set shouldComplete=false and use reasoning to state exactly what's missing.`;
     }
@@ -700,7 +703,10 @@ Extract these fields from the conversation and return JSON:
   }
 }
 
-Mark shouldComplete as true ONLY if ALL completion criteria are satisfied with specific, actionable content (no generic placeholders).
+${completionCriteria ? `Rules for completion (ALL must be satisfied for shouldComplete=true):
+${completionCriteria}
+
+` : ""}Mark shouldComplete as true ONLY if ALL completion criteria are satisfied with specific, actionable content (no generic placeholders).
 
 RETURN STRICT JSON ONLY. No prose, no explanation, just the JSON object.`;
     }

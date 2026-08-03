@@ -86,7 +86,7 @@ export const undergraduateRecentGradPrompts: ModulePromptSet = {
 
             CRITICAL COMPLETION INSTRUCTION:
             Do NOT end this module prematurely. The module is ONLY complete when ALL steps are covered AND all required deliverables are documented:
-
+${ctx.completionCriteria ?? `
             1. Profile existence confirmed (or creation guided)
             2. Headline and About assessed against 4–10s rule (or written from scratch)
             3. Buzzword audit completed with specific replacements
@@ -98,7 +98,7 @@ export const undergraduateRecentGradPrompts: ModulePromptSet = {
             9. LinkedIn optimization checklist completed
             10. Personality-based behavior change plan
             11. Engagement framework with specific cadence
-            12. Action plan locked with success indicators
+            12. Action plan locked with success indicators`}
 
             If ANY required data is missing or vague:
             - Ask the question again in a different way
@@ -200,12 +200,12 @@ export const undergraduateRecentGradPrompts: ModulePromptSet = {
 
             CRITICAL COMPLETION INSTRUCTION:
             Do NOT end this module prematurely. The module is ONLY complete when ALL deliverables are documented:
-            1. Connection targets identified (10–20 intentional, not volume)
+${ctx.completionCriteria ?? `            1. Connection targets identified (10–20 intentional, not volume)
             2. Three outreach templates produced, rooted in actual proof-point stories
             3. Step-by-step LinkedIn instructions provided for finding and connecting with targets
             4. 30-day week-by-week plan
             5. Success metrics defined (at student level)
-            6. Positioning signal confirmed (headline and About ready for outreach)
+            6. Positioning signal confirmed (headline and About ready for outreach)`}
 
             If anything is missing:
             - Ask again with explicit step-by-step guidance
@@ -366,13 +366,13 @@ export const undergraduateRecentGradPrompts: ModulePromptSet = {
 
             CRITICAL COMPLETION INSTRUCTION:
             Do NOT end this module prematurely. The module is ONLY complete when ALL are documented:
-            1. Short Alignment Statement
+${ctx.completionCriteria ?? `            1. Short Alignment Statement
             2. 2–3 stepping-stone plan with titles and competencies
             3. Positioning adjustments with concrete, achievable actions
             4. Check-ins & metrics (student-appropriate)
             5. Gap analysis complete (anchored to Session 2 credibilityGaps)
             6. Reality check completed — is the first target realistic?
-            7. If Achievement Orientation Paralysis detected, roadmap redirected to authentic interests
+            7. If Achievement Orientation Paralysis detected, roadmap redirected to authentic interests`}
 
             If anything is vague or missing:
             - Ask again with simple, direct language
@@ -391,6 +391,9 @@ export const undergraduateRecentGradPrompts: ModulePromptSet = {
     questionnaireContext: string,
     foundationSessionsContext: string,
     previousModulesContext: string,
+    // Rendered from session_completion_criteria — the same text the
+    // conversation was given. Undefined falls back to the list below.
+    completionCriteria?: string,
   ): string {
     const transcript = messages
       .map((msg: any) => `${msg.role.toUpperCase()}: ${msg.content}`)
@@ -454,7 +457,7 @@ Respond in STRICT JSON only (no prose, no code fences) with EXACTLY this schema:
 }
 
 Rules for completion (ALL must be satisfied for shouldComplete=true):
-- Profile existence confirmed or creation guided
+${completionCriteria ?? `- Profile existence confirmed or creation guided
 - Headline and About assessed against 4–10 second rule (or written from scratch)
 - Buzzword audit completed with specific replacements
 - Algorithmic visibility assessed for locked function
@@ -464,7 +467,7 @@ Rules for completion (ALL must be satisfied for shouldComplete=true):
 - Content strategy includes low-friction formats
 - Key psychological barriers diagnosed and addressed
 - Action plan includes achievable milestones
-- User has committed to specific next steps
+- User has committed to specific next steps`}
 
 If these criteria aren't fully met, set shouldComplete=false and indicate what's missing in reasoning.`;
     }
@@ -538,7 +541,7 @@ Required schema:
 }
 
 Rules for completion (ALL must be satisfied for shouldComplete=true):
-
+${completionCriteria ?? `
 Network reality assessed without penalising low count.
 
 10–20 intentional targets identified (not 50).
@@ -551,7 +554,7 @@ Step-by-step LinkedIn instructions provided.
 
 30-day week-by-week plan at student level defined.
 
-Success metrics adjusted for starting network.
+Success metrics adjusted for starting network.`}
 
 If any criterion is missing, set shouldComplete=false and use reasoning to state exactly what's missing.`;
     }
@@ -604,7 +607,10 @@ Extract these fields from the conversation and return JSON:
   }
 }
 
-Mark shouldComplete as true ONLY if ALL completion criteria are satisfied with specific, achievable content appropriate for an undergraduate or recent graduate.
+${completionCriteria ? `Rules for completion (ALL must be satisfied for shouldComplete=true):
+${completionCriteria}
+
+` : ""}Mark shouldComplete as true ONLY if ALL completion criteria are satisfied with specific, achievable content appropriate for an undergraduate or recent graduate.
 
 RETURN STRICT JSON ONLY. No prose, no explanation, just the JSON object.`;
     }

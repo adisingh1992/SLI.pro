@@ -92,6 +92,16 @@ let anthropicClient: Anthropic | null = null;
 const fixedTemperatureDeployments = new Set<string>();
 
 /**
+ * Minimum token budget a deployment has been observed to need.
+ *
+ * Reasoning deployments spend max_completion_tokens on thinking before any
+ * output appears, so a budget that is fine for a non-reasoning model returns
+ * nothing at all. Learned on first empty completion and applied thereafter, so
+ * the failure happens at most once per deployment per process.
+ */
+const minimumTokensByDeployment = new Map<string, number>();
+
+/**
  * The OpenAI SDK wants the *resource* endpoint and builds the request path
  * itself. Foundry hands out several other URLs that look plausible but 404:
  *   - project endpoint:  https://<res>.services.ai.azure.com/api/projects/<proj>
@@ -156,11 +166,15 @@ export async function complete(
   request: CompletionRequest,
 ): Promise<CompletionResult> {
   const tier = request.tier ?? "mid";
-  const maxTokens = request.maxTokens ?? 4096;
   const provider = activeProvider();
 
   if (provider === "azure") {
     const model = azureDeployment(tier);
+    // Respect any floor learned from a previous empty completion.
+    const maxTokens = Math.max(
+      request.maxTokens ?? 4096,
+      minimumTokensByDeployment.get(model) ?? 0,
+    );
     const messages = [
       ...(request.system ? [{ role: "system" as const, content: request.system }] : []),
       ...request.messages,
@@ -218,8 +232,66 @@ export async function complete(
       }
     }
 
+    let text = response.choices[0]?.message?.content ?? "";
+    let finishReason = response.choices[0]?.finish_reason;
+
+    // ── Empty completion from a reasoning model ───────────────────────────
+    //
+    // Reasoning deployments (the same ones that reject an explicit
+    // temperature) count REASONING tokens against max_completion_tokens. If
+    // the budget is spent thinking, the API returns finish_reason 'length'
+    // with completely empty content and no error.
+    //
+    // Left alone this is close to undebuggable: the caller gets "" and fails
+    // several layers away parsing it as JSON, with nothing pointing at the
+    // real cause. So retry once with a much larger budget, and remember the
+    // floor for this deployment — the same learn-at-runtime approach used for
+    // the temperature restriction above.
+    if (!text.trim() && finishReason === "length") {
+      const reasoningTokens =
+        (response.usage as any)?.completion_tokens_details?.reasoning_tokens;
+      const retryTokens = Math.min(Math.max(maxTokens * 4, 4000), 16000);
+
+      console.warn(
+        `[orchestrator] deployment '${model}' returned an EMPTY completion: the ` +
+          `${maxTokens}-token budget was consumed` +
+          (reasoningTokens ? ` by ${reasoningTokens} reasoning tokens` : "") +
+          `. Retrying with ${retryTokens} and raising the floor for this deployment.`,
+      );
+
+      minimumTokensByDeployment.set(model, retryTokens);
+
+      const retry = await client.chat.completions.create({
+        ...buildParams(!fixedTemperatureDeployments.has(model)),
+        max_completion_tokens: retryTokens,
+      });
+      text = retry.choices[0]?.message?.content ?? "";
+      finishReason = retry.choices[0]?.finish_reason;
+      response = retry;
+    }
+
+    if (!text.trim()) {
+      // Still empty. Fail here, where the cause is known, rather than letting
+      // an empty string travel to a JSON parser that can only report that ""
+      // is not JSON.
+      throw new Error(
+        `Azure OpenAI returned an empty completion.\n` +
+          `  deployment:    ${model} (tier '${tier}')\n` +
+          `  finish_reason: ${finishReason ?? "unknown"}\n` +
+          `  token budget:  ${maxTokens}\n` +
+          (finishReason === "length"
+            ? `The budget was exhausted before any output was produced. On reasoning ` +
+              `deployments, max_completion_tokens covers reasoning as well as output — ` +
+              `raise maxTokens at the call site.`
+            : finishReason === "content_filter"
+              ? `The response was blocked by the content filter.`
+              : `No output was produced and the reason is not 'length'. Inspect the ` +
+                `deployment in Azure AI Foundry.`),
+      );
+    }
+
     return {
-      text: response.choices[0]?.message?.content ?? "",
+      text,
       provider,
       model,
       usage: {
@@ -230,9 +302,10 @@ export async function complete(
   }
 
   const model = anthropicModel(tier);
+  // Anthropic's max_tokens counts output only, so no learned floor applies.
   const response = await getAnthropicClient().messages.create({
     model,
-    max_tokens: maxTokens,
+    max_tokens: request.maxTokens ?? 4096,
     ...(request.system ? { system: request.system } : {}),
     ...(request.temperature !== undefined ? { temperature: request.temperature } : {}),
     messages: request.messages,
@@ -263,11 +336,15 @@ export async function* completeStream(
   request: CompletionRequest,
 ): AsyncGenerator<string, void, unknown> {
   const tier = request.tier ?? "mid";
-  const maxTokens = request.maxTokens ?? 4096;
   const provider = activeProvider();
 
   if (provider === "azure") {
     const model = azureDeployment(tier);
+    // Respect any floor learned from a previous empty completion.
+    const maxTokens = Math.max(
+      request.maxTokens ?? 4096,
+      minimumTokensByDeployment.get(model) ?? 0,
+    );
     const messages = [
       ...(request.system ? [{ role: "system" as const, content: request.system }] : []),
       ...request.messages,
@@ -311,7 +388,7 @@ export async function* completeStream(
 
   const stream = await getAnthropicClient().messages.create({
     model: anthropicModel(tier),
-    max_tokens: maxTokens,
+    max_tokens: request.maxTokens ?? 4096,
     ...(request.system ? { system: request.system } : {}),
     ...(request.temperature !== undefined ? { temperature: request.temperature } : {}),
     messages: request.messages,

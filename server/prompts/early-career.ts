@@ -238,13 +238,12 @@ REMINDERS
 
 CRITICAL COMPLETION INSTRUCTION:
 Do NOT end this session prematurely. The session is ONLY complete when ALL of the following are definitively established:
-1. Primary function is clearly locked (Finance, Operations, Sales, Marketing, or Product)
+${ctx.completionCriteria ?? `1. Primary function is clearly locked (Finance, Operations, Sales, Marketing, or Product)
 2. Professional has confirmed this matches where they create the most value
 3. If applicable, secondary function (20%) is identified
 4. Functional split is explicitly stated and agreed upon
 5. If career changer: pivot direction (from → toward) is documented
-6. Coach has delivered the closing line and the professional has responded positively
-
+6. Coach has delivered the closing line and the professional has responded positively`}
 If ANY required data is missing or the professional has given vague/incomplete answers:
 - Ask the question again in a different way
 - Use their specific work history as evidence
@@ -344,12 +343,11 @@ GUARDRAILS
 
 CRITICAL COMPLETION INSTRUCTION:
 Do NOT end this session prematurely. The session is ONLY complete when ALL of the following are definitively established:
-1. At least 2–3 specific credibility claims are documented within the locked function
+${ctx.completionCriteria ?? `1. At least 2–3 specific credibility claims are documented within the locked function
 2. Each claim references a business outcome the professional personally moved
 3. At least one claim includes a metric (%, $, time, scale, growth rate)
 4. Claims are clearly differentiated from employer brand or team effort
-5. Coach has delivered the closing line and the professional has responded positively
-
+5. Coach has delivered the closing line and the professional has responded positively`}
 If ANY required claims are missing or lack sufficient specificity:
 - Use the skeptical hiring manager lens
 - Escalate on the specificity ladder
@@ -478,14 +476,13 @@ REMINDERS
 
 CRITICAL COMPLETION INSTRUCTION:
 Do NOT end this session prematurely. The session is ONLY complete when ALL of the following are present:
-1. At least 2 stories that meet all five quality criteria
+${ctx.completionCriteria ?? `1. At least 2 stories that meet all five quality criteria
 2. At least 2 experience bullet rewrites produced
 3. A 70/20/10 content direction with specific angles is articulated
 4. A one-sentence positioning direction is stated
 5. A LinkedIn headline draft is produced
 6. The closing is delivered as a declarative statement — not a question
-7. The professional has acknowledged the closing
-
+7. The professional has acknowledged the closing`}
 If anything is missing:
 - Probe for the missing story element, rewrite, or deliverable
 - Do NOT deliver the closing until all seven criteria are met
@@ -501,6 +498,10 @@ function getAnalysisPrompt(
   messages: MessageItem[],
   questionnaireContext: string,
   previousSessionsContext: string,
+  // Rendered from session_completion_criteria — the SAME text the conversation
+  // prompt was given. Undefined falls back to the list written below, so this
+  // can be adopted one session at a time.
+  completionCriteria?: string,
 ): string {
   if (sessionNumber === 1) {
     return `${questionnaireContext}You are evaluating a Session 1 "Functional Identity Lock-In" coaching conversation for an early career professional (2–7 years of experience). The valid functions are: Finance, Operations, Sales, Marketing, Product. Use the conversation transcript and the methodology below to determine whether functional identity has been locked.
@@ -569,12 +570,11 @@ Rules for setting fields:
 - keyInsights: include EC-specific flags such as "founder flag: dominant function = Operations", "career changer: pivoting from Marketing toward Product", "concurrent grad: coursework used as signal", "industry substitution corrected: 'I work in tech' → Product function identified", "strategic hedging resolved after coach pushed twice"
 
 Keep the isComplete flow EXACTLY as follows (all must be satisfied to set isComplete=true):
-- A primary function has been clearly identified with high confidence (80%+)
+${completionCriteria ?? `- A primary function has been clearly identified with high confidence (80%+)
 - The reasoning is grounded in work-experience evidence from the transcript
 - The professional has explicitly acknowledged or agreed with the identification
 - The coach has delivered the closing line and the professional has responded positively
-- No unresolved industry/employer-brand substitutions remain
-
+- No unresolved industry/employer-brand substitutions remain`}
 Edge handling:
 - If industry or employer brand is substituted for function without resolution, isComplete=false
 - If professional remains in "general management" or "leadership" framing without a function, isComplete=false
@@ -651,11 +651,10 @@ Return ONLY the JSON object, nothing else.`;
         - isComplete: true ONLY if credibilityTier is 1 or 2 AND at least 2 specific claims are documented AND at least one has a metric AND coach delivered closing line
 
         Keep the isComplete flow EXACTLY as follows (all must be satisfied to set isComplete=true):
-        - At least 2 specific credibility claims documented within the locked function
+${completionCriteria ?? `        - At least 2 specific credibility claims documented within the locked function
         - Each claim references a business outcome personally driven (not employer brand or team)
         - At least one claim includes a measurable metric
-        - Coach has delivered the closing line
-
+        - Coach has delivered the closing line`}
         Edge handling:
         - If claims are primarily task descriptions without outcomes, keep isComplete=false
         - If only one specific claim exists, keep isComplete=false
@@ -741,14 +740,13 @@ Rules for setting fields:
 - isComplete: true ONLY if at least 2 complete stories, at least 2 bullet rewrites, content direction, positioning sentence, LinkedIn headline, and declarative closing are all present
 
 Keep the isComplete flow EXACTLY as follows (all must be satisfied to set isComplete=true):
-- At least 2 stories with all five quality elements
+${completionCriteria ?? `- At least 2 stories with all five quality elements
 - At least 2 experience bullet rewrites produced
 - 70/20/10 content direction with specific angles articulated
 - Positioning direction sentence stated
 - LinkedIn headline draft produced
 - Session closes with a declarative statement covering all six required elements
-- Professional has acknowledged the closing
-
+- Professional has acknowledged the closing`}
 Edge handling:
 - If session ends with a question, isComplete=false regardless of story quality
 - If fewer than 2 stories meet all five criteria, isComplete=false

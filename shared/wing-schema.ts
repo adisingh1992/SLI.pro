@@ -695,6 +695,59 @@ export const patternDetectionQueue = wing.table("pattern_detection_queue", {
  * corpus while these tables carry the feature-level record.
  * ══════════════════════════════════════════════════════════════════════════ */
 
+/**
+ * Session completion criteria — methodology, editable without a deploy.
+ *
+ * WHY THIS TABLE EXISTS (a deliberate addition beyond the 44-table spec)
+ *
+ * Completion criteria decide when a Foundation Session is finished. They are
+ * methodology, not code — but they were written TWICE per session per
+ * population, once in the conversation prompt and once in the analysis prompt.
+ * Eighteen copies, kept in sync by hand across three 800-line prompt files.
+ *
+ * They drifted, and it was not theoretical: a mid-career Session 2 that had
+ * plainly met its stated bar would not complete, because the analysis required
+ * something the conversation was never instructed to pursue. Five of the nine
+ * pairs also gate on the student replying AFTER the closing message, which the
+ * completion check cannot see because it runs before any reply exists.
+ *
+ * One row per (population, session type) is the single definition both prompts
+ * render from, so that class of drift stops being possible. Versioned and
+ * published like heuristics and classifier prompts: a past session stays
+ * explicable by the criteria that were live when it ran.
+ */
+export const sessionCompletionCriteria = wing.table(
+  "session_completion_criteria",
+  {
+    id: id(),
+    /** Matches users.professional_status, which selects the prompt set. */
+    populationTag: text("population_tag").notNull(),
+    sessionType: sessionType("session_type").notNull(),
+    versionNumber: integer("version_number").notNull().default(1),
+    status: publishStatus("status").notNull().default("draft"),
+    /**
+     * [{ id, text, reachable, note }] — `reachable` records whether the
+     * conversation prompt is actually instructed to achieve the criterion.
+     * A criterion the session never pursues can only be met by luck.
+     */
+    criteria: jsonb("criteria").notNull(),
+    /** Why this version exists. Shown in the version history. */
+    changeNote: text("change_note"),
+    createdBy: fk("created_by").references(() => users.id),
+    createdAt: tsNow("created_at"),
+    publishedAt: ts("published_at"),
+  },
+  (t) => ({
+    lookupIdx: index("session_completion_criteria_lookup_idx")
+      .on(t.populationTag, t.sessionType, t.status),
+    // At most one published version per population/session — the resolution
+    // path must never have to choose between two live definitions.
+    publishedUnique: uniqueIndex("session_completion_criteria_published_unique")
+      .on(t.populationTag, t.sessionType)
+      .where(sql`${t.status} = 'published'`),
+  }),
+);
+
 /** Build now · Rotating categorized prompt library, configurable without a
  *  deploy. The "no repeat within 14 days" rule is a query against
  *  message_events.prompt_id, not an unbounded array column. */

@@ -34,6 +34,59 @@ export const RECLASSIFY_CONFIDENCE = 0.75;
  */
 export const CONFIRM_CONFIDENCE = 0.5;
 
+/** One in every N tagged turns per class is reserved for validation. */
+export const HOLDOUT_EVERY = 3;
+
+/**
+ * Splits hand-tagged turns into examples-for-the-prompt and turns-to-test-on.
+ *
+ * WHY THIS EXISTS AT ALL
+ * Few-shot examples are drawn from hand-tagged turns, and the classifier is
+ * validated against hand-tagged turns. If those are the same turns, the model
+ * is shown the answers to its own exam: accuracy rises, real performance does
+ * not, and the number becomes actively misleading — worse than no number,
+ * because someone will act on it.
+ *
+ * STRATIFIED, not random. `human_correction` is the rarest class and the one
+ * everything downstream depends on. A naive 1-in-3 split across the whole set
+ * could put every correction on one side, leaving either no correction
+ * examples or no way to measure correction accuracy.
+ *
+ * DETERMINISTIC. Same input, same split, every time — so scores are comparable
+ * across runs, which is the whole point when the question is "did my prompt
+ * edit help?".
+ */
+export function splitTagged<T extends { id: number; turnType: string }>(
+  turns: readonly T[],
+): { train: T[]; holdout: T[] } {
+  const byType = new Map<string, T[]>();
+  for (const t of turns) {
+    const bucket = byType.get(t.turnType) ?? [];
+    bucket.push(t);
+    byType.set(t.turnType, bucket);
+  }
+
+  const train: T[] = [];
+  const holdout: T[] = [];
+
+  for (const bucket of Array.from(byType.values())) {
+    // Sorted by id so the split never depends on query order.
+    const ordered = [...bucket].sort((a, b) => a.id - b.id);
+    ordered.forEach((t, i) => {
+      // A class with fewer turns than the stride contributes nothing useful to
+      // validation. Better to spend them as examples than to measure a class
+      // on a single turn and then quote the percentage.
+      if (ordered.length >= HOLDOUT_EVERY && (i + 1) % HOLDOUT_EVERY === 0) {
+        holdout.push(t);
+      } else {
+        train.push(t);
+      }
+    });
+  }
+
+  return { train, holdout };
+}
+
 export type ClassificationVerdict =
   | { accepted: true; turnType: ClassifiedType; confidence: number; rationale: string; changed: boolean }
   | { accepted: false; reason: "malformed" | "unknown_type" | "low_confidence" };

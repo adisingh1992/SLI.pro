@@ -42,6 +42,48 @@ const isAuthenticated = (req: Request, res: Response, next: NextFunction) => {
   res.status(401).json({ error: "Not authenticated" });
 };
 
+/**
+ * The published completion criteria for a population/session, rendered for the
+ * surface that asked.
+ *
+ * Returns undefined when nothing is published, which makes the prompt file fall
+ * back to its own hardcoded list — so this is adoptable one session at a time
+ * and an empty table changes nothing.
+ *
+ * `professionalStatus` maps to the prompt set via getPromptSet; the default
+ * there is mid_career_or_senior, and this must agree with it or a student
+ * would get one set's criteria inside another set's prompt.
+ */
+async function resolveCompletionCriteria(
+  professionalStatus: string | null | undefined,
+  sessionNumber: number,
+  surface: "conversation" | "analysis",
+): Promise<string | undefined> {
+  try {
+    const criteriaStore = await import("./wing/completion-criteria-store");
+    const populationTag =
+      professionalStatus === "undergraduate_or_recent_grad" ||
+      professionalStatus === "early_career"
+        ? professionalStatus
+        : "mid_career_or_senior";
+
+    const published = await criteriaStore.getPublished(
+      populationTag,
+      sessionTypeFor(sessionNumber),
+    );
+    if (!published) return undefined;
+
+    return surface === "conversation"
+      ? criteriaStore.renderForConversation(published.criteria)
+      : criteriaStore.renderForAnalysis(published.criteria);
+  } catch (error) {
+    // Never break a session over this — the prompt file's own list is the
+    // safe fallback, and it is what ran before the table existed.
+    console.error("[criteria] resolution failed, using prompt defaults:", error);
+    return undefined;
+  }
+}
+
 /** Artifact type produced by each Foundation Session (spec §8). */
 const ARTIFACT_FOR_SESSION: Record<number, ArtifactType> = {
   1: "functional_identity",
@@ -224,12 +266,21 @@ async function buildPriorSessionContexts(
  */
 
 /** Decides whether the session is complete, and returns the artifact payload. */
-async function checkSessionCompletion(
+export async function checkSessionCompletion(
   legacyUserId: number,
   studentId: number,
   sessionNumber: number,
   messages: any[],
   userProfile: any,
+  /**
+   * Draft criteria to evaluate INSTEAD of the published ones.
+   *
+   * Used by replay testing: run a proposed edit against sessions that already
+   * completed and see whether they still would. Exported and parameterised
+   * rather than reimplemented so the replay exercises the real completion
+   * path — a separate copy would drift and reassure you about the wrong code.
+   */
+  criteriaOverride?: string,
 ): Promise<{ shouldComplete: boolean; completionData?: any }> {
   if (![1, 2, 3].includes(sessionNumber)) return { shouldComplete: false };
 
@@ -250,30 +301,76 @@ async function checkSessionCompletion(
     );
 
     const promptSet = getPromptSet(userProfile?.professionalStatus);
+
+    // The SAME criteria the conversation was given. When these were written
+    // separately they drifted, and a session could satisfy everything it was
+    // told to achieve while the analysis judged it incomplete.
+    const criteria =
+      criteriaOverride ??
+      (await resolveCompletionCriteria(
+        userProfile?.professionalStatus,
+        sessionNumber,
+        "analysis",
+      ));
+
     const analysisPrompt = promptSet.getAnalysisPrompt(
       sessionNumber,
       messages,
       questionnaireContext,
       previousSessionsContext,
+      criteria,
     );
 
     // Structured analysis of the transcript -> mid tier.
+    //
+    // 4000, not 1000: the mid deployment is a reasoning model, and
+    // max_completion_tokens covers its thinking as well as its output.
+    // Analysing a full transcript exhausted a 1000-token budget on reasoning
+    // and returned nothing at all, which surfaced only as "not JSON".
     const { text: analysisContent } = await orchestrator.complete({
       tier: "mid",
       system:
         "You are an expert at analyzing coaching conversations. Always respond with valid JSON only.",
       messages: [{ role: "user", content: analysisPrompt }],
-      maxTokens: 1000,
+      maxTokens: 4000,
       temperature: 0.1,
     });
 
     const analysis = parseJsonResponse(analysisContent, "Session analysis");
 
     if (!analysis.isComplete || !analysis.primaryFunction) {
+      // Log WHY, not just that. The analysis model returns a `reasoning` field
+      // explaining its verdict and per-session fields showing what it found;
+      // printing only the two booleans made "the conversation is obviously
+      // finished but the session won't close" impossible to diagnose without
+      // re-running by hand.
+      const detail: string[] = [
+        `isComplete=${analysis.isComplete}`,
+        `primaryFunction=${analysis.primaryFunction ?? "none"}`,
+        `confidence=${analysis.confidence ?? "n/a"}`,
+      ];
+
+      if (sessionNumber === 2) {
+        detail.push(
+          `credibilityTier=${analysis.credibilityTier ?? "n/a"}`,
+          `proofBullets=${Array.isArray(analysis.proofBullets) ? analysis.proofBullets.length : 0}`,
+        );
+        if (Array.isArray(analysis.credibilityGaps) && analysis.credibilityGaps.length) {
+          detail.push(`gaps=[${analysis.credibilityGaps.join("; ")}]`);
+        }
+      }
+
+      if (sessionNumber === 3 && Array.isArray(analysis.stories)) {
+        detail.push(`stories=${analysis.stories.length}`);
+      }
+
       console.log(
-        `[foundation] session ${sessionNumber}: not complete yet ` +
-          `(isComplete=${analysis.isComplete}, primaryFunction=${analysis.primaryFunction ?? "none"})`,
+        `[foundation] session ${sessionNumber}: NOT COMPLETE — ${detail.join(", ")}`,
       );
+      if (analysis.reasoning) {
+        console.log(`[foundation] session ${sessionNumber}: reasoning — ${analysis.reasoning}`);
+      }
+
       return { shouldComplete: false };
     }
 
@@ -596,6 +693,13 @@ export function registerFoundationSessionsRoutes(app: Express) {
           sessionNumber,
           resumeSummary,
           priorSessions: priorSessions.length > 0 ? priorSessions : undefined,
+          // Same row the analysis reads, rendered for the conversation. This
+          // pairing is the whole point: one definition, two renderings.
+          completionCriteria: await resolveCompletionCriteria(
+            userProfile?.professionalStatus,
+            sessionNumber,
+            "conversation",
+          ),
         });
 
         // The real-time engine loop (spec §6): evaluate the turn against the

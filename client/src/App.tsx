@@ -41,6 +41,11 @@ import AdminReportsPage from "@/pages/admin/reports-page";
 import AdminHeuristicsPage from "@/pages/admin/heuristics-page";
 import AdminHeuristicDetailPage from "@/pages/admin/heuristic-detail-page";
 import AdminSequencesPage from "@/pages/admin/sequences-page";
+import AdminTaggingPage from "@/pages/admin/tagging-page";
+import AdminTaggingSessionPage from "@/pages/admin/tagging-session-page";
+import AdminTaggingValidatePage from "@/pages/admin/tagging-validate-page";
+import AdminClassifierPage from "@/pages/admin/classifier-page";
+import AdminCriteriaPage from "@/pages/admin/criteria-page";
 
 function Router() {
   return (
@@ -106,6 +111,11 @@ function Router() {
       <Route path="/admin/heuristics" component={AdminHeuristicsPage} />
       <Route path="/admin/heuristics/:id" component={AdminHeuristicDetailPage} />
       <Route path="/admin/sequences" component={AdminSequencesPage} />
+      <Route path="/admin/criteria" component={AdminCriteriaPage} />
+      <Route path="/admin/tagging" component={AdminTaggingPage} />
+      <Route path="/admin/tagging/validate" component={AdminTaggingValidatePage} />
+      <Route path="/admin/tagging/classifier" component={AdminClassifierPage} />
+      <Route path="/admin/tagging/sessions/:id" component={AdminTaggingSessionPage} />
       <Route path="/admin/reports" component={AdminReportsPage} />
       
       {/* Auth and fallback routes */}

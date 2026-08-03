@@ -94,7 +94,6 @@ export default function AdminHeuristicsPage() {
   const createMutation = useMutation({
     mutationFn: async (payload: any) => {
       const res = await apiRequest("POST", "/api/admin/heuristics", payload);
-      if (!res.ok) throw new Error((await res.json()).error ?? "Could not create card");
       return res.json();
     },
     onSuccess: (card: Heuristic) => {

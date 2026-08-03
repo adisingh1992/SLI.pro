@@ -9,7 +9,9 @@ import {
   Menu,
   X,
   FileBarChart2,
-  BookOpen
+  BookOpen,
+  Tag,
+  CheckSquare
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
@@ -52,6 +54,20 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
       icon: BookOpen,
       href: "/admin/heuristics",
       active: isActive("/admin/heuristics") || isActive("/admin/sequences"),
+    },
+    {
+      // Hand-tagging: the gold standard the classifier is measured against.
+      title: "Tagging",
+      icon: Tag,
+      href: "/admin/tagging",
+      active: isActive("/admin/tagging"),
+    },
+    {
+      // When a session counts as finished — one definition, both prompts.
+      title: "Completion",
+      icon: CheckSquare,
+      href: "/admin/criteria",
+      active: isActive("/admin/criteria"),
     },
   ];
 

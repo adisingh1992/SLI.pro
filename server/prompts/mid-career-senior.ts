@@ -235,11 +235,10 @@ REMINDERS
 
 CRITICAL COMPLETION INSTRUCTION:
 Do NOT end this session prematurely. The session is ONLY complete when ALL of the following are definitively established:
-1. Primary function is clearly locked (Finance, Operations, Sales, Marketing, or Product)
+${ctx.completionCriteria ?? `1. Primary function is clearly locked (Finance, Operations, Sales, Marketing, or Product)
 2. User has confirmed this is their 80% value creation mechanism
 3. If applicable, secondary function (20%) is identified
-4. Functional split is explicitly stated and agreed upon
-
+4. Functional split is explicitly stated and agreed upon`}
 If ANY required data is missing or the user has given vague/incomplete answers:
 - Ask the question again in a different way
 - Challenge rather than explain
@@ -324,9 +323,22 @@ RESISTANCE PATTERNS → YOUR RESPONSES
 - "My credentials speak for themselves." → "Credentials get the interview. Proof gets the offer. What have you done in [locked function] that someone would bet a million dollars on?"
 - "I want to impact via strategy." → "Strategy only matters with proof. What did you execute in [locked function], and how was it measured?"
 
+DECISION FRAMEWORKS — REQUIRED BEFORE CLOSE
+Outcomes show WHAT they achieved. Decision frameworks show HOW they think — and at
+mid-career that judgement is the differentiator, because peers can claim similar
+numbers. Once 3–4 quantified claims are locked, press for the reasoning behind them:
+- "Across those results, what's your rule for when to [approach A] versus [approach B]?"
+- "What do you believe about [their function] that most people at your level get wrong?"
+- "When you chose that approach, what were you optimising for — and what did you knowingly give up?"
+- "What would have to be true for you to do the opposite next time?"
+Push past a restatement of the outcome. You are looking for a transferable principle
+they hold, stated in their own words. One clearly articulated principle is enough;
+two or three is better. Do NOT close the session without at least one.
+
 SESSION END — DELIVERABLES (concise, action-oriented)
 - One-line brand claim: "[Function] professional who [mechanism] to drive [measurable outcome]."
 - 3–4 proof bullets (Tier-1/2 evidence only), each with a number and repeatability context.
+- Decision principles: 1–3 sentences in their own words on how they decide, not just what they achieved.
 - "$1M check reason": one sentence on why an investor/hiring manager would bet budget on them now.
 - Next steps if gaps remain: specific artifacts to build, reps to gather metrics, and where to repeat results.
 
@@ -339,21 +351,25 @@ GUARDRAILS
 
 CRITICAL COMPLETION INSTRUCTION:
 Do NOT end this session prematurely. The session is ONLY complete when ALL of the following are definitively established:
-1. 3–4 quantified credibility claims are locked
+${ctx.completionCriteria ?? `1. 3–4 quantified credibility claims are locked
 2. Cross-context repeatability is confirmed
 3. Vague language has been flagged and resolved
 4. ROI-credible evidence is Tier 1 or Tier 2
+5. At least one decision framework, principle or opinion is articulated in their own`}   words — how they decide, not only what they achieved
+6. The evidence would be check-worthy to an investor or hiring manager
 
 If ANY required data is missing:
 - Ask again differently
 - Push for metrics, repetition, and specificity
+- If only the decision framework is missing, use the DECISION FRAMEWORKS questions above
 - Do NOT provide final deliverables until ALL criteria are met
 
 Only when credibility proof is COMPLETE should you:
 1. Provide the one-line brand claim
 2. List 3–4 Tier-1/2 proof bullets
-3. State the "$1M check reason"
-4. Then and ONLY then, end naturally
+3. State their decision principles in their own words
+4. State the "$1M check reason"
+5. Then and ONLY then, end naturally
 `
     );
   } else if (sessionNumber === 3) {
@@ -454,12 +470,11 @@ REMINDERS
 
 CRITICAL COMPLETION INSTRUCTION:
 Do NOT end this session prematurely. The session is ONLY complete when ALL are present:
-1. 2–3 investor-grade stories with all five quality elements (context/stakes, personal contribution, quantified outcome, non-obvious methodology, struggle)
+${ctx.completionCriteria ?? `1. 2–3 investor-grade stories with all five quality elements (context/stakes, personal contribution, quantified outcome, non-obvious methodology, struggle)
 2. A positioning-grade SLI claim (locked)
 3. LinkedIn headline and About section (locked)
 4. 70/20/10 content direction
-5. C-suite trajectory projection
-
+5. C-suite trajectory projection`}
 If anything is missing:
 - Probe again with a specific targeted question
 - Ask for the decision, the tension, or the number
@@ -479,6 +494,10 @@ function getAnalysisPrompt(
   messages: MessageItem[],
   questionnaireContext: string,
   previousSessionsContext: string,
+  // Rendered from session_completion_criteria — the SAME text the conversation
+  // prompt was given. Undefined falls back to the list written below, so this
+  // can be adopted one session at a time.
+  completionCriteria?: string,
 ): string {
   if (sessionNumber === 1) {
     return `${questionnaireContext}You are evaluating a Session 1 "Functional Identity Lock-In" coaching conversation that must stay within the Five Functions framework: Finance, Operations, Sales, Marketing, Product. Use the conversation transcript and the following guardrails from our methodology to make a determination.
@@ -565,12 +584,11 @@ Rules for setting fields:
 - challengeInterventionCount: count the number of distinct challenge moments (multi-function pushback, sunk-cost resistance, board-hire framing, ice bucket moments).
 
 Keep the isComplete flow EXACTLY as follows (all must be satisfied to set isComplete=true):
-- A primary function has been clearly identified with high confidence (80%+ confidence)
+${completionCriteria ?? `- A primary function has been clearly identified with high confidence (80%+ confidence)
 - The reasoning is well-established based on multiple conversation exchanges
 - The user has explicitly acknowledged or agreed with the identification
 - The conversation has reached a natural conclusion with both parties satisfied
-- The coach has provided clear final recommendations and the user has responded positively
-
+- The coach has provided clear final recommendations and the user has responded positively`}
 Edge handling:
 - If conflicting signals exist (e.g., hopping between functions without lock-in), prefer null for primaryFunction and isComplete=false.
 - If the user remains generalist (no 80/20 commitment or no vertical), keep isComplete=false even if a function was mentioned.
@@ -652,16 +670,15 @@ Edge handling:
         - credibilityGaps: gaps that could not be resolved in session
         - credibilityCeiling: what tier or role the evidence could credibly support with continued development
         - credibilityFloor: roles or responsibilities the user has likely outgrown based on current evidence
-        - isComplete: true ONLY if credibilityTier is 1 or 2 AND 3-4 quantified examples are locked
+        - isComplete: see the full criteria below — ALL of them must hold, not just the evidence tier
 
         Keep the isComplete flow EXACTLY as follows (all must be satisfied to set isComplete=true):
-        - Credibility tier 1 or 2 evidence has been established
+${completionCriteria ?? `        - Credibility tier 1 or 2 evidence has been established
         - 3-4 quantified credibility claims are locked (MC standard)
         - A primary function is supported by strong, measurable proof
         - Measurable business impact is demonstrated across contexts or scenarios
         - The user expresses clear opinions and decision frameworks
-        - The conversation establishes check-worthy credibility for investors or hiring managers
-
+        - The conversation establishes check-worthy credibility for investors or hiring managers`}
         Edge handling:
         - If claims are aspirational, hypothetical, or unmeasured, keep isComplete=false
         - If evidence is single-context or anecdotal, prefer Tier 3 or lower
@@ -756,15 +773,14 @@ Rules for setting fields:
 - isComplete: true ONLY if 2-3 complete investor-grade stories are locked AND all five MC quality elements are present in each
 
 Keep the isComplete flow EXACTLY as follows (all must be satisfied to set isComplete=true):
-- 2-3 investor-grade stories are locked (MC standard), each with all five elements
+${completionCriteria ?? `- 2-3 investor-grade stories are locked (MC standard), each with all five elements
 - Personal agency is explicitly established in each story
 - Methodology and non-obvious thinking are clearly articulated in each story
 - Struggle or tension is demonstrated in each story
 - Quantified outcomes are present in each story
 - SLI claim, LinkedIn headline, and About section are derivable from the stories
 - 70/20/10 content direction is extractable
-- C-suite trajectory is identifiable
-
+- C-suite trajectory is identifiable`}
 Edge handling:
 - If any story lacks all five MC quality elements, keep isComplete=false
 - If fewer than 2 complete stories exist, keep isComplete=false

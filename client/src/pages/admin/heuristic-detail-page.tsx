@@ -66,7 +66,6 @@ export default function AdminHeuristicDetailPage() {
         `/api/admin/heuristics/${id}/components/${type}`,
         { content },
       );
-      if (!res.ok) throw new Error((await res.json()).error ?? "Could not save");
       return res.json();
     },
     onSuccess: (revised: ComponentRow, { type }) => {
@@ -88,7 +87,6 @@ export default function AdminHeuristicDetailPage() {
   const statusMutation = useMutation({
     mutationFn: async (status: string) => {
       const res = await apiRequest("PATCH", `/api/admin/heuristics/${id}/status`, { status });
-      if (!res.ok) throw new Error((await res.json()).error ?? "Could not change status");
       return res.json();
     },
     onSuccess: (updated: Heuristic) => {

@@ -62,7 +62,7 @@ import { interpretClassification, type ClassifiedType } from "./classifier-rules
 const CONTEXT_TURNS = 4;
 
 /** Fallback rules, used when no classifier prompt is authored for the cycle. */
-const DEFAULT_RULES = [
+export const DEFAULT_RULES = [
   "You classify a single student turn in a professional-branding coaching conversation.",
   "",
   "Choose exactly one type:",
@@ -141,10 +141,28 @@ async function resolvePrompt(
     const examples = components.find((c) => c.componentType === "examples")?.content;
     if (!rules) return { id: null, system: DEFAULT_RULES };
 
+    // Examples are stored structured (turn, preceding turn, correct type) so
+    // they stay queryable and re-renderable. They must be rendered as readable
+    // text here — dumping raw JSON into the prompt would ask a small model to
+    // parse a data structure while also doing the classification, which is the
+    // opposite of making the task easy.
+    const { renderExamples } = await import("./classifier-training");
+
+    const renderedExamples =
+      typeof examples === "string"
+        ? examples
+        : Array.isArray(examples)
+          ? renderExamples(examples as any)
+          : "";
+
     const system = [
       typeof rules === "string" ? rules : JSON.stringify(rules),
-      examples ? `\nExamples:\n${typeof examples === "string" ? examples : JSON.stringify(examples)}` : "",
-    ].join("\n");
+      renderedExamples
+        ? `\nWorked examples — these were labelled by the methodology owner:\n\n${renderedExamples}`
+        : "",
+    ]
+      .filter(Boolean)
+      .join("\n");
 
     return { id: prompt.id, system };
   } catch (err) {
@@ -154,6 +172,29 @@ async function resolvePrompt(
 }
 
 /* ── Classification ─────────────────────────────────────────────────────── */
+
+/**
+ * Runs the classifier over one turn WITHOUT writing anything.
+ *
+ * Used by the validation run: hand-tagged turns are the gold standard, so
+ * measuring the classifier means asking what it *would* say about them and
+ * comparing — never overwriting them. Re-runnable, so it measures the current
+ * prompt rather than whatever the classifier happened to think months ago.
+ */
+export async function dryRunClassify(params: {
+  studentId: number;
+  content: string;
+  currentType: TurnTypeValue;
+  context: Array<{ turnType: string; content: string }>;
+}) {
+  const { system } = await resolvePrompt(params.studentId);
+  return classifyOne({
+    system,
+    content: params.content,
+    currentType: params.currentType,
+    context: params.context,
+  });
+}
 
 async function classifyOne(params: {
   system: string;

@@ -1,4 +1,42 @@
 import { Express, Request, Response, NextFunction } from "express";
+import { parseJsonResponse } from "./json-response";
+
+/**
+ * Published completion criteria for a population/module, rendered for the
+ * surface that asked.
+ *
+ * Undefined means nothing published, so the prompt file's own list is used.
+ * Module C has no list of its own in the analysis prompt — its criteria are
+ * seeded as a DRAFT precisely because publishing them would give the analysis
+ * a bar it has never had.
+ */
+async function resolveModuleCriteria(
+  professionalStatus: string | null | undefined,
+  moduleCode: string,
+  surface: "conversation" | "analysis",
+): Promise<string | undefined> {
+  try {
+    const criteriaStore = await import("./wing/completion-criteria-store");
+    const populationTag =
+      professionalStatus === "undergraduate_or_recent_grad" ||
+      professionalStatus === "early_career"
+        ? professionalStatus
+        : "mid_career_or_senior";
+
+    const published = await criteriaStore.getPublished(
+      populationTag,
+      `enhancement_${moduleCode.toLowerCase()}`,
+    );
+    if (!published) return undefined;
+
+    return surface === "conversation"
+      ? criteriaStore.renderForConversation(published.criteria)
+      : criteriaStore.renderForAnalysis(published.criteria);
+  } catch (error) {
+    console.error("[criteria] module resolution failed, using prompt defaults:", error);
+    return undefined;
+  }
+}
 import { storage } from "./storage";
 import {
   insertEnhancementModuleMessageSchema,
@@ -731,12 +769,20 @@ NOTE: User completed Modules A & B. Conversation may reference prior work withou
 }
 
 // Check if an enhancement module should be automatically completed
-async function checkModuleCompletion(
+export async function checkModuleCompletion(
   userId: number,
   moduleCode: string,
   messages: any[],
   userProfile: any,
   professionalStatus?: string | null,
+  /**
+   * Draft criteria to evaluate INSTEAD of the published ones.
+   *
+   * Exported and parameterised for the same reason as the Foundation Session
+   * equivalent: replay must exercise the real completion path, not a copy that
+   * can drift and reassure you about code nobody runs.
+   */
+  criteriaOverride?: string,
 ): Promise<{ shouldComplete: boolean; completionData?: any }> {
   if (!["A", "B", "C"].includes(moduleCode)) {
     return { shouldComplete: false };
@@ -769,6 +815,8 @@ async function checkModuleCompletion(
       questionnaireContext,
       foundationSessionsContext,
       previousModulesContext,
+      criteriaOverride ??
+        (await resolveModuleCriteria(professionalStatus, moduleCode, "analysis")),
     );
 
 
@@ -784,45 +832,36 @@ async function checkModuleCompletion(
       ],
     });
 
-    try {
-      // Extract JSON from response - handle potential prose and code fences
-      let cleanedText = responseText.trim();
+    // parseJsonResponse, not a hand-rolled parser. The previous version
+    // stripped fences itself and called bare JSON.parse inside a catch that
+    // returned { shouldComplete: false } — so a malformed or EMPTY response
+    // was indistinguishable from "the module is not finished yet". That is
+    // exactly the failure that made a Foundation Session look stuck for a day.
+    //
+    // An unparseable analysis is now a loud, specific error. The module still
+    // does not complete, but the log says why.
+    const analysisResult = parseJsonResponse<{
+      shouldComplete?: boolean;
+      completionData?: any;
+    }>(responseText, `Module ${moduleCode} completion analysis`);
 
-      // Remove code fences with flexible whitespace
-      cleanedText = cleanedText
-        .replace(/^```json\s*\n/i, "")
-        .replace(/\n\s*```\s*$/i, "");
-      cleanedText = cleanedText
-        .replace(/^```\s*\n/i, "")
-        .replace(/\n\s*```\s*$/i, "");
+    console.log(
+      `[Module ${moduleCode}] Completion check - shouldComplete: ${analysisResult.shouldComplete}, ` +
+        `confidence: ${analysisResult.completionData?.confidence ?? "N/A"}`,
+    );
 
-      // Try to find JSON object if there's prose
-      const jsonMatch = cleanedText.match(/\{[\s\S]*\}/);
-      if (jsonMatch) {
-        cleanedText = jsonMatch[0];
-      }
-
-      const analysisResult = JSON.parse(cleanedText);
-
+    if (!analysisResult.shouldComplete && analysisResult.completionData?.reasoning) {
+      // Say WHY, as the Foundation Session path does. "Not complete" with no
+      // reason is unactionable for whoever has to work out if it is correct.
       console.log(
-        `[Module ${moduleCode}] Completion check - shouldComplete: ${analysisResult.shouldComplete}, confidence: ${analysisResult.completionData?.confidence || "N/A"}`,
+        `[Module ${moduleCode}] not complete - reasoning: ${analysisResult.completionData.reasoning}`,
       );
-
-      return {
-        shouldComplete: analysisResult.shouldComplete,
-        completionData: analysisResult.completionData,
-      };
-    } catch (parseError) {
-      console.error(
-        `[Module ${moduleCode}] Failed to parse Claude completion analysis:`,
-        parseError,
-      );
-      console.error(
-        `[Module ${moduleCode}] Response preview:`,
-        responseText.substring(0, 200) + "...",
-      );
-      return { shouldComplete: false };
     }
+
+    return {
+      shouldComplete: Boolean(analysisResult.shouldComplete),
+      completionData: analysisResult.completionData,
+    };
   } catch (error) {
     console.error("Error in checkModuleCompletion:", error);
     return { shouldComplete: false };
@@ -1065,6 +1104,12 @@ export function setupEnhancementModulesRoutes(app: Express) {
 
         // Generate system prompt based on user's professional status
         const systemPrompt = getModulePromptSet(req.user!.professionalStatus).getSystemPrompt(moduleCode, {
+          // Same row the analysis reads — one definition, two renderings.
+          completionCriteria: await resolveModuleCriteria(
+            req.user!.professionalStatus,
+            moduleCode,
+            "conversation",
+          ),
           resumeSummary,
           questionnaireSummary,
           foundationSessionsSummary,

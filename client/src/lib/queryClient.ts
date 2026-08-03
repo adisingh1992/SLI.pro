@@ -22,14 +22,17 @@ export function apiUrl(path: string): string {
 async function throwIfResNotOk(res: Response) {
   if (!res.ok) {
     let errorMessage = res.statusText;
-    
+
     try {
       // Try to parse the response as JSON
       const errorData = await res.json();
-      
-      // If there's a message property, use it
-      if (errorData && errorData.message) {
-        errorMessage = errorData.message;
+
+      // If there's a message property, use it.
+      // `error` is also accepted: the admin/methodology routes return
+      // { error: "..." }, and without this every one of their failures
+      // surfaced as a bare "Conflict" or "Bad Request".
+      if (errorData && (errorData.message || errorData.error)) {
+        errorMessage = errorData.message ?? errorData.error;
       }
     } catch (e) {
       // If JSON parsing fails, try to get the text
@@ -60,6 +63,45 @@ export async function apiRequest(
 
   await throwIfResNotOk(res);
   return res;
+}
+
+/**
+ * Like apiRequest, but NEVER throws — returns the status and parsed body.
+ *
+ * apiRequest throws a plain Error on any non-2xx, which discards two things a
+ * caller sometimes needs:
+ *
+ *   - the STATUS CODE, so it cannot branch on it. The methodology UI has to
+ *     distinguish a 409 (publishing outside the evaluation window, which
+ *     offers an override) from a 400 (a malformed sequence, which does not).
+ *   - the RESPONSE BODY, so structured fields are lost. These routes return
+ *     `remedy`, `missing`, `retired` and `warnings` alongside `error`, and all
+ *     of it is worth showing.
+ *
+ * Use this wherever the failure is part of the interaction rather than an
+ * exception. Use apiRequest where a failure is simply an error.
+ */
+export async function apiFetch<T = any>(
+  method: string,
+  url: string,
+  data?: unknown,
+): Promise<{ ok: boolean; status: number; data: T }> {
+  const res = await fetch(apiUrl(url), {
+    method,
+    headers: data ? { "Content-Type": "application/json" } : {},
+    body: data ? JSON.stringify(data) : undefined,
+    credentials: "include",
+  });
+
+  let body: any = null;
+  try {
+    body = await res.json();
+  } catch {
+    // A body-less response (204, or an upstream error page) is not a failure
+    // of this helper — the caller has the status either way.
+  }
+
+  return { ok: res.ok, status: res.status, data: body as T };
 }
 
 type UnauthorizedBehavior = "returnNull" | "throw";

@@ -4,7 +4,7 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import {
   Loader2, ArrowLeft, ArrowUp, ArrowDown, Plus, X, Lock, Unlock, AlertTriangle,
 } from "lucide-react";
-import { apiRequest, queryClient } from "@/lib/queryClient";
+import { apiRequest, apiFetch, queryClient } from "@/lib/queryClient";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -107,33 +107,56 @@ export default function AdminSequencesPage() {
   }, [sequence]);
 
   const publishMutation = useMutation({
-    mutationFn: async ({ force, reason }: { force?: boolean; reason?: string }) => {
-      const res = await apiRequest("PUT", `/api/admin/cycles/${cycleId}/sequence`, {
+    // apiFetch, not apiRequest: apiRequest throws a bare Error on non-2xx,
+    // which loses the status code AND the body. This handler needs both — a
+    // 409 opens the override dialog, and the body carries `remedy` and
+    // `warnings` that are the most useful part of the response.
+    mutationFn: async ({ force, reason }: { force?: boolean; reason?: string }) =>
+      apiFetch("PUT", `/api/admin/cycles/${cycleId}/sequence`, {
         entries: entries.map((e) => ({ heuristicId: e.heuristicId, weight: e.weight })),
         ...(force ? { force: true, reason } : {}),
-      });
-      const body = await res.json();
-      if (!res.ok) throw Object.assign(new Error(body.error ?? "Could not publish"), { body, status: res.status });
-      return body;
-    },
-    onSuccess: () => {
+      }),
+
+    onSuccess: (res) => {
+      // The evaluation-window gate. Not an error — it is a decision point, so
+      // it opens the override dialog rather than showing a dead-end toast.
+      if (res.status === 409) {
+        setOverrideOpen(true);
+        return;
+      }
+
+      if (!res.ok) {
+        toast({
+          title: res.data?.error ?? "Could not publish",
+          description: [res.data?.detail, res.data?.remedy].filter(Boolean).join(" "),
+          variant: "destructive",
+        });
+        return;
+      }
+
       queryClient.invalidateQueries({ queryKey: [`/api/admin/cycles/${cycleId}/sequence`] });
       queryClient.invalidateQueries({ queryKey: ["/api/admin/cycles"] });
       setDirty(false);
       setOverrideOpen(false);
       setOverrideReason("");
+
+      const warnings: string[] = res.data?.warnings ?? [];
       toast({
         title: "Sequence published",
-        description: "The previous version is kept and remains queryable.",
+        description: warnings.length
+          ? warnings.join(" ")
+          : "The previous version is kept and remains queryable.",
+        variant: warnings.length ? "destructive" : undefined,
       });
     },
-    onError: (error: any) => {
-      if (error.status === 409) {
-        // The window gate. Offer the override path rather than a dead end.
-        setOverrideOpen(true);
-        return;
-      }
-      toast({ title: "Could not publish", description: error.message, variant: "destructive" });
+
+    onError: (error: Error) => {
+      // Only reached on a network-level failure now.
+      toast({
+        title: "Could not reach the server",
+        description: error.message,
+        variant: "destructive",
+      });
     },
   });
 

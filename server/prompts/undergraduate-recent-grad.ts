@@ -234,12 +234,11 @@ REMINDERS
 
 CRITICAL COMPLETION INSTRUCTION:
 Do NOT end this session prematurely. The session is ONLY complete when ALL of the following are definitively established:
-1. Primary function is clearly locked (Finance, Operations, Sales, Marketing, Product, or R&D/Technical)
+${ctx.completionCriteria ?? `1. Primary function is clearly locked (Finance, Operations, Sales, Marketing, Product, or R&D/Technical)
 2. Student has confirmed this matches how they naturally work
 3. If applicable, secondary function (20%) is identified
 4. Functional split is explicitly stated and agreed upon
-5. Coach has delivered the closing line and student has responded positively
-
+5. Coach has delivered the closing line and student has responded positively`}
 If ANY required data is missing or the student has given vague/incomplete answers:
 - Ask the question again in a different way
 - Use their specific background as evidence
@@ -329,11 +328,10 @@ GUARDRAILS
 
 CRITICAL COMPLETION INSTRUCTION:
 Do NOT end this session prematurely. The session is ONLY complete when ALL of the following are definitively established:
-1. At least 2–3 specific, provable credibility claims are documented within the locked function
+${ctx.completionCriteria ?? `1. At least 2–3 specific, provable credibility claims are documented within the locked function
 2. Each claim references something the student actually did (not aspirations or potential)
 3. At least one claim has a measurable or observable outcome
-4. Coach has delivered the closing line and student has responded positively
-
+4. Coach has delivered the closing line and student has responded positively`}
 If ANY required claims are missing or too vague:
 - Ask again in a different way
 - Use the specificity escalation ladder
@@ -434,12 +432,11 @@ REMINDERS
 
 CRITICAL COMPLETION INSTRUCTION:
 Do NOT end this session prematurely. The session is ONLY complete when ALL of the following are present:
-1. At least 2 stories that meet all four quality criteria (context, agency, outcome, differentiation)
+${ctx.completionCriteria ?? `1. At least 2 stories that meet all four quality criteria (context, agency, outcome, differentiation)
 2. A one-sentence positioning direction is articulated
 3. A LinkedIn headline draft is produced
 4. The closing is delivered as a declarative statement — not a question
-5. The student has acknowledged the closing
-
+5. The student has acknowledged the closing`}
 If anything is missing:
 - Probe for the missing story element
 - Ask for the decision, the outcome, or what made them different
@@ -456,6 +453,10 @@ function getAnalysisPrompt(
   messages: MessageItem[],
   questionnaireContext: string,
   previousSessionsContext: string,
+  // Rendered from session_completion_criteria — the SAME text the conversation
+  // prompt was given. Undefined falls back to the list written below, so this
+  // can be adopted one session at a time.
+  completionCriteria?: string,
 ): string {
   if (sessionNumber === 1) {
     return `${questionnaireContext}You are evaluating a Session 1 "Functional Identity Lock-In" coaching conversation for an undergraduate student or recent graduate. The valid functions are: Finance, Operations, Sales, Marketing, Product, R&D/Technical. Use the conversation transcript and the methodology below to determine whether functional identity has been locked.
@@ -522,12 +523,11 @@ Rules for setting fields:
 - keyInsights: include snippets like "lost-track-of-time activity = Operations", "committed after coach pushed twice", "industry (finance sector) correctly separated from function (Operations)", "R&D/Technical locked based on coding project evidence"
 
 Keep the isComplete flow EXACTLY as follows (all must be satisfied to set isComplete=true):
-- A primary function has been clearly identified with high confidence (80%+ confidence)
+${completionCriteria ?? `- A primary function has been clearly identified with high confidence (80%+ confidence)
 - The reasoning is grounded in multiple conversation exchanges, not a single statement
 - The student has explicitly acknowledged or agreed with the identification
 - The coach has delivered the closing line and the student has responded positively
-- The conversation has reached a natural conclusion
-
+- The conversation has reached a natural conclusion`}
 Edge handling:
 - If student remains in exploration mode with no commitment, isComplete=false
 - If student names a function but immediately contradicts it, prefer null and isComplete=false
@@ -599,12 +599,11 @@ Return ONLY the JSON object, nothing else.`;
         - isComplete: true ONLY if credibilityTier is 1, 2, or 3 AND at least 2 specific claims are documented AND coach delivered closing line
 
         Keep the isComplete flow EXACTLY as follows (all must be satisfied to set isComplete=true):
-        - At least 2 specific, provable credibility claims are documented within the locked function
+${completionCriteria ?? `        - At least 2 specific, provable credibility claims are documented within the locked function
         - Each claim references something the student actually did (not aspirations)
         - At least one claim has a measurable or observable outcome
         - The conversation establishes that a recruiter would have reason to engage with this candidate
-        - Coach has delivered the closing line
-
+        - Coach has delivered the closing line`}
         Edge handling:
         - If claims are purely aspirational or hypothetical, keep isComplete=false
         - If only one specific claim exists, keep isComplete=false
@@ -688,12 +687,11 @@ Rules for setting fields:
 - isComplete: true ONLY if at least 2 stories meet all four quality criteria AND the session closes declaratively with all five required elements
 
 Keep the isComplete flow EXACTLY as follows (all must be satisfied to set isComplete=true):
-- At least 2 stories with specific context, personal agency, observable outcome, and differentiation
+${completionCriteria ?? `- At least 2 stories with specific context, personal agency, observable outcome, and differentiation
 - A positioning direction sentence is articulated
 - A LinkedIn headline draft is produced
 - The session closes with a declarative statement covering all five required elements
-- The student has acknowledged the closing
-
+- The student has acknowledged the closing`}
 Edge handling:
 - If session ends with a question, isComplete=false
 - If fewer than 2 stories meet all four quality criteria, isComplete=false

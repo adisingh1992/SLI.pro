@@ -43,6 +43,13 @@
       "when": 1785225150560,
       "tag": "0005_milky_calypso",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1785747625471,
+      "tag": "0006_optimal_princess_powerful",
+      "breakpoints": true
     }
   ]
 }
