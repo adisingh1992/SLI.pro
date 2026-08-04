@@ -10,6 +10,7 @@
     "check": "tsc",
     "test": "tsx server/wing/engine-rules.test.ts && tsx server/wing/classifier-rules.test.ts && tsx server/wing/provenance.test.ts",
     "db:push": "drizzle-kit push",
+    "db:wing-ddl": "psql \"$DATABASE_URL\" -v ON_ERROR_STOP=1 -f migrations/0001_nosy_layla_miller.sql -f migrations/0003_optimal_spyke.sql -f migrations/0004_familiar_king_cobra.sql -f migrations/0005_milky_calypso.sql -f migrations/0006_optimal_princess_powerful.sql -f migrations/0007_content_draft_share_count.sql",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "tsx server/migrate.ts",
     "db:verify": "tsx server/verify-db.ts",

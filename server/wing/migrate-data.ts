@@ -216,9 +216,53 @@ async function importTranscript(
   return position;
 }
 
+/**
+ * Orders legacy sessions so the most advanced one is processed FIRST.
+ *
+ * Both session loops below skip a row when the student already has a session of
+ * that type — which is how duplicate accounts get merged. But "already has"
+ * means whichever row arrived first, and an unordered SELECT has no defined
+ * order at all: Postgres returns physical order, which changes after updates or
+ * a vacuum.
+ *
+ * That is not academic. Production has (at least) one student with two accounts
+ * differing only by the capital letter in her email — no unique constraint on
+ * `username` there to prevent it. One account holds a completed Module A; the
+ * other holds an untouched `available` placeholder. Unordered, whichever the
+ * planner happened to return first would win, and the losing row is skipped
+ * silently. A rehearsal could pass and the production run discard her finished
+ * session.
+ *
+ * Ordering by progress makes the winner the same every time and the right one:
+ * real work beats a placeholder, and an earlier start breaks ties.
+ */
+function byProgress(statusColumn: any, createdAtColumn: any) {
+  return [
+    // ::text is required, not cosmetic. `foundation_sessions.status` is a real
+    // `session_status` enum in production, and that enum has no 'ended_early'
+    // member — so comparing the column directly against these literals makes
+    // Postgres coerce them to the enum type and fail the whole query with
+    // `invalid input value for enum`. Comparing as text also keeps this working
+    // against `enhancement_modules.status`, which is varchar(50) there. The two
+    // legacy tables disagree about the type of the same concept.
+    sql`case ${statusColumn}::text
+          when 'completed'   then 0
+          when 'ended_early' then 1
+          when 'in_progress' then 2
+          else 3
+        end`,
+    asc(createdAtColumn),
+  ];
+}
+
 async function migrateSessions(students: Map<number, number>, users: Map<number, number>) {
   // Foundation sessions
-  const foundation = await db.select().from(legacy.foundationSessions);
+  const foundation = await db
+    .select()
+    .from(legacy.foundationSessions)
+    .orderBy(
+      ...byProgress(legacy.foundationSessions.status, legacy.foundationSessions.createdAt),
+    );
   for (const fs of foundation) {
     const studentId = students.get(users.get(fs.userId)!);
     if (!studentId) { track("sessions", "failed"); continue; }
@@ -266,8 +310,13 @@ async function migrateSessions(students: Map<number, number>, users: Map<number,
     track("sessions", "migrated");
   }
 
-  // Enhancement modules
-  const modules = await db.select().from(legacy.enhancementModules);
+  // Enhancement modules — same first-wins merge, same ordering requirement.
+  const modules = await db
+    .select()
+    .from(legacy.enhancementModules)
+    .orderBy(
+      ...byProgress(legacy.enhancementModules.status, legacy.enhancementModules.createdAt),
+    );
   for (const m of modules) {
     const studentId = students.get(users.get(m.userId)!);
     if (!studentId) { track("sessions", "failed"); continue; }
@@ -459,23 +508,49 @@ async function migrateArtifacts(students: Map<number, number>, users: Map<number
     track("linkedin_optimizations", "migrated");
   }
 
+  // Share counts, keyed (draft_id, post_number) in the MVP. Loaded once and
+  // indexed, because the pairing is only recoverable inside the split loop
+  // below — once a legacy row has become two Wing rows, nothing connects a
+  // count back to the post it belongs to.
+  const sharesByDraftPost = new Map<string, { count: number; lastSharedAt: Date | null }>();
+  for (const s of await db.select().from(legacy.linkedinPostShares)) {
+    sharesByDraftPost.set(`${s.draftId}:${s.postNumber}`, {
+      count: s.shareCount ?? 0,
+      lastSharedAt: s.lastSharedAt ?? null,
+    });
+  }
+
   for (const d of await db.select().from(legacy.linkedinContentDrafts)) {
     const studentId = students.get(users.get(d.userId)!);
     if (!studentId) continue;
     if (DRY_RUN) { track("content_drafts", "migrated"); continue; }
     // Two posts in one row become two rows (spec §12).
+    let postNumber = 0;
     for (const [type, content] of [
       [d.post1Type, d.post1Content],
       [d.post2Type, d.post2Content],
     ] as const) {
+      postNumber++;
       if (!content) continue;
+
+      // Post number is positional in the legacy schema, so it must be counted
+      // even for a null post — otherwise a row with only post 2 populated
+      // would inherit post 1's share count.
+      const share = sharesByDraftPost.get(`${d.id}:${postNumber}`);
+
       await db.insert(wing.contentDrafts).values({
         studentId,
         draftType: "post",
         content: { postType: type, ...(content as object) } as any,
         sourceType: "ai_generated",
+        shareCount: share?.count ?? 0,
+        // A post that was shared was published, and publishedAt carries the
+        // "last shared at" the join table used to hold.
+        status: share?.count ? "published" : "draft",
+        publishedAt: share?.lastSharedAt ?? null,
         createdAt: d.createdAt ?? new Date(),
       });
+      if (share) track("post_shares", "migrated");
     }
     track("content_drafts", "migrated");
   }

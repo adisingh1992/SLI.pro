@@ -11,6 +11,7 @@
 
 import {
   deriveTurnType,
+  isAiTurn,
   provenanceForTurnType,
   type TurnTypeValue,
 } from "./turn-type";
@@ -46,6 +47,49 @@ check("human_spontaneous → human_spontaneous",
   provenanceForTurnType("human_spontaneous"), "human_spontaneous");
 check("human_correction → human_correction",
   provenanceForTurnType("human_correction"), "human_correction");
+
+/*
+ * Speaker attribution — the regression that hid behind a passing migration.
+ *
+ * getTurnsAsMessages used to key the speaker off provenance_tag. That is
+ * correct for live turns, where provenance is a pure function of turn type,
+ * and silently wrong for migrated ones, which are ALL stamped
+ * provenance_unknown on purpose. Every turn of every migrated session came
+ * back as the student, including Wing's own questions — which then went to
+ * the model as conversation history.
+ *
+ * The counts all reconciled. The turn types were right. Only the reader was
+ * looking at the wrong column, so nothing failed and nothing typechecked
+ * wrong. Hence an explicit test on the mapping itself.
+ */
+console.log("\nSpeaker attribution (turn_type, NOT provenance_tag)");
+check("ai_prompt is Wing", isAiTurn("ai_prompt"), true);
+check("★ ai_adapted is Wing", isAiTurn("ai_adapted"), true);
+check("human_elicited_response is the student", isAiTurn("human_elicited_response"), false);
+check("human_spontaneous is the student", isAiTurn("human_spontaneous"), false);
+check("human_correction is the student", isAiTurn("human_correction"), false);
+
+// Every turn type must be classifiable as one speaker or the other; a new
+// member added to the enum without updating isAiTurn would fall through as
+// "student" and reintroduce exactly this bug for live sessions too.
+const ALL_TURN_TYPES: TurnTypeValue[] = [
+  "ai_prompt", "human_elicited_response", "human_spontaneous",
+  "human_correction", "ai_adapted",
+];
+check(
+  "every turn type agrees with provenance for LIVE turns",
+  ALL_TURN_TYPES.every(
+    (t) => isAiTurn(t) === (provenanceForTurnType(t) === "ai_generated"),
+  ),
+  true,
+);
+
+// The migrated case: provenance says nothing, turn type still says who spoke.
+check(
+  "migrated turn keeps its speaker despite provenance_unknown",
+  isAiTurn("ai_prompt"),
+  true,
+);
 
 // The worked example from the Wing Data Architecture spec §5, replayed.
 console.log("\nWorked example — Foundation Session 1 (data spec §5)");

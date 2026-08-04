@@ -1,5 +1,5 @@
 import "dotenv/config";
-import { eq, sql } from "drizzle-orm";
+import { asc, eq, sql } from "drizzle-orm";
 import { initScript, type ScriptDb } from "../script-init";
 import { users as legacyUsers } from "@shared/schema";
 import {
@@ -37,7 +37,18 @@ let pool: ScriptDb["pool"];
 
 async function main() {
   ({ db, pool } = await initScript());
-  const legacy = await db.select().from(legacyUsers);
+
+  // Ascending id, so that when two legacy accounts share an email the NEWER one
+  // is processed last and its values win. Production has no unique constraint
+  // on `username`, so duplicates exist: one student registered twice with the
+  // same address differing only in capitalisation. Both rows match the same
+  // wing user on lowercased email, so the second becomes an update of the
+  // first — and whichever is processed last decides her surviving password
+  // hash, name and profile.
+  //
+  // Unordered, that choice was undefined. Newest-wins is the defensible rule:
+  // it is the account the student most recently chose to use.
+  const legacy = await db.select().from(legacyUsers).orderBy(asc(legacyUsers.id));
   console.log(`[identity] found ${legacy.length} legacy user(s)`);
 
   let created = 0;

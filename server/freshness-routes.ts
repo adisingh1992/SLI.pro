@@ -34,8 +34,12 @@ export function registerFreshnessRoutes(app: Express) {
   app.get("/api/freshness-reports/latest", isAuthenticated, async (req, res) => {
     try {
       const userId = req.user!.id;
-      const latestReport = await storage.getLatestFreshnessReport(userId);
-      
+      // artifactStore (wing), NOT the legacy storage. Reports are written to
+      // wing.freshness_reports; reading the legacy table here made this 404
+      // while GET /api/freshness-reports returned the same report in the same
+      // page load.
+      const latestReport = await artifactStore.getLatestFreshnessReport(userId);
+
       if (!latestReport) {
         return res.status(404).json({ error: "No freshness reports found" });
       }
@@ -324,7 +328,10 @@ export function registerFreshnessRoutes(app: Express) {
         return res.status(403).json({ error: "Unauthorized access to this report" });
       }
       
-      await storage.deleteFreshnessReport(reportId);
+      // artifactStore, not legacy storage. This route read and authorised
+      // against wing, then deleted from public — so it returned 204 while the
+      // wing row survived and the report reappeared on refresh.
+      await artifactStore.deleteFreshnessReport(reportId);
       res.status(204).send();
     } catch (error) {
       console.error("Error deleting freshness report:", error);

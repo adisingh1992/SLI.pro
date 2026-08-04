@@ -64,6 +64,30 @@ export function provenanceForTurnType(turnType: TurnTypeValue): ProvenanceTagVal
   }
 }
 
+/**
+ * Did Wing speak this turn?
+ *
+ * Reads `turn_type`, NOT `provenance_tag`, and the distinction matters.
+ *
+ * For live turns the two agree — provenance is a pure function of turn type
+ * (see above), so `ai_generated` and `ai_prompt`/`ai_adapted` always coincide.
+ * For MIGRATED turns they do not: the data migration stamps every imported
+ * turn `provenance_unknown` regardless of role, deliberately, because the
+ * legacy corpus has no turn-level provenance and pretending otherwise would
+ * poison the behavioural data.
+ *
+ * So provenance cannot answer "who spoke". It answers "how much do we trust
+ * the record". `turn_type` is migrated correctly for both, and is the only
+ * column that survives the import with the speaker intact.
+ *
+ * Reading provenance here caused every turn of every migrated session to
+ * render — and be sent to the model — as though the student had said it,
+ * including Wing's own prior questions.
+ */
+export function isAiTurn(turnType: string): boolean {
+  return turnType === "ai_prompt" || turnType === "ai_adapted";
+}
+
 /** The deterministic capture rule. */
 export function deriveTurnType(
   origin: TurnOrigin,

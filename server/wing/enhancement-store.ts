@@ -1,6 +1,7 @@
 import { storage } from "../storage";
 import * as store from "./session-store";
 import type { WingSessionType } from "./session-store";
+import { isAiTurn } from "./turn-type";
 
 /**
  * Enhancement Modules, backed by the Wing schema.
@@ -81,9 +82,10 @@ export async function getEnhancementModuleMessages(moduleId: number) {
   return turns.map((t) => ({
     id: t.id,
     moduleId,
-    role: (t.provenanceTag === "ai_generated" ? "assistant" : "user") as
-      | "assistant"
-      | "user",
+    // turn_type, not provenance_tag: migrated turns are all provenance_unknown
+    // by design, so keying on provenance showed every migrated module message
+    // as the student. See isAiTurn.
+    role: (isAiTurn(t.turnType) ? "assistant" : "user") as "assistant" | "user",
     content: t.content,
     createdAt: t.createdAt,
     // Wing additions, available to callers that want them.

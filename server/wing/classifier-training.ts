@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, ne } from "drizzle-orm";
+import { and, asc, desc, eq, ne, sql } from "drizzle-orm";
 import { db } from "../db";
 import {
   transcripts,
@@ -61,7 +61,10 @@ export async function loadTaggedTurns(): Promise<TaggedTurn[]> {
     .where(
       and(
         eq(transcriptTurns.classificationStatus, "hand_tagged"),
-        ne(transcriptTurns.provenanceTag, "ai_generated"),
+        // turn_type, not provenance: migrated turns are all provenance_unknown,
+        // so the old test would have admitted a migrated AI turn as a human
+        // training example if one were ever hand-tagged.
+        sql`${transcriptTurns.turnType} not in ('ai_prompt', 'ai_adapted')`,
       ),
     )
     .orderBy(asc(transcriptTurns.id));

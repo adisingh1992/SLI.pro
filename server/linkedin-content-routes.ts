@@ -304,7 +304,9 @@ export function registerLinkedinContentRoutes(app: Express) {
   app.get("/api/linkedin-content-drafts/latest", isAuthenticated, async (req, res) => {
     try {
       const userId = req.user!.id;
-      const contentDraft = await storage.getLatestLinkedinContentDraft(userId);
+      // artifactStore (wing), not legacy storage — drafts are written to
+      // wing.content_drafts, one row per post.
+      const contentDraft = await artifactStore.getLatestContentDraft(userId);
       if (!contentDraft) {
         res.status(404).json({ error: "No LinkedIn content draft found" });
         return;
@@ -394,19 +396,17 @@ export function registerLinkedinContentRoutes(app: Express) {
   });
 
   // Post content to LinkedIn
-  app.post("/api/linkedin-content-drafts/:draftId/post/:postNumber", isAuthenticated, async (req, res) => {
+  // No :postNumber — a wing content_drafts row is one post, so the draft id
+  // identifies it. The MVP needed (draftId, postNumber) only because a legacy
+  // row held two posts in one record.
+  app.post("/api/linkedin-content-drafts/:draftId/post", isAuthenticated, async (req, res) => {
     try {
       const userId = req.user!.id;
       const draftId = parseInt(req.params.draftId);
-      const postNumber = parseInt(req.params.postNumber);
       const { content } = req.body;
 
-      if (isNaN(draftId) || isNaN(postNumber)) {
-        return res.status(400).json({ error: "Invalid draft ID or post number" });
-      }
-
-      if (postNumber !== 1 && postNumber !== 2) {
-        return res.status(400).json({ error: "Post number must be 1 or 2" });
+      if (isNaN(draftId)) {
+        return res.status(400).json({ error: "Invalid draft ID" });
       }
 
       if (!content) {
@@ -467,13 +467,15 @@ export function registerLinkedinContentRoutes(app: Express) {
 
       const linkedinData = await linkedinResponse.json();
 
-      // Increment share count
-      await storage.incrementLinkedinPostShare(draftId, postNumber);
+      // Increment share count on the wing row, and mark it published.
+      const shared = await artifactStore.recordContentDraftShare(draftId);
 
-      res.json({ 
-        success: true, 
+      res.json({
+        success: true,
         linkedinPostId: linkedinData.id,
-        message: "Posted to LinkedIn successfully" 
+        shareCount: shared?.shareCount ?? 0,
+        lastSharedAt: shared?.publishedAt ?? null,
+        message: "Posted to LinkedIn successfully"
       });
     } catch (error) {
       console.error("Error posting to LinkedIn:", error);
@@ -481,15 +483,13 @@ export function registerLinkedinContentRoutes(app: Express) {
     }
   });
 
-  // Get share count for a specific post
-  app.get("/api/linkedin-content-drafts/:draftId/shares/:postNumber", isAuthenticated, async (req, res) => {
+  // Share count for a draft. No :postNumber — see the POST route above.
+  app.get("/api/linkedin-content-drafts/:draftId/shares", isAuthenticated, async (req, res) => {
     try {
-      const userId = req.user!.id;
       const draftId = parseInt(req.params.draftId);
-      const postNumber = parseInt(req.params.postNumber);
 
-      if (isNaN(draftId) || isNaN(postNumber)) {
-        return res.status(400).json({ error: "Invalid draft ID or post number" });
+      if (isNaN(draftId)) {
+        return res.status(400).json({ error: "Invalid draft ID" });
       }
 
       // Verify the content draft belongs to the user
@@ -503,11 +503,11 @@ export function registerLinkedinContentRoutes(app: Express) {
         return res.status(403).json({ error: "Not authorized to access this content draft" });
       }
 
-      const shareData = await storage.getLinkedinPostShare(draftId, postNumber);
-      
-      res.json({ 
-        shareCount: shareData?.shareCount || 0,
-        lastSharedAt: shareData?.lastSharedAt || null
+      // The count lives on the draft row now, so it came back with the
+      // authorisation read above — no second query, no legacy join table.
+      res.json({
+        shareCount: contentDraft.shareCount ?? 0,
+        lastSharedAt: contentDraft.publishedAt ?? null
       });
     } catch (error) {
       console.error("Error fetching share count:", error);

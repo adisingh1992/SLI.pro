@@ -494,7 +494,11 @@ CRITICAL: The user has been assigned homework by their coach. Reference their an
 // Format LinkedIn optimization data for system prompt context
 async function formatLinkedinOptimizationContext(userId: number): Promise<string> {
   try {
-    const optimization = await storage.getLatestLinkedinOptimization(userId);
+    // artifactStore (wing), not legacy storage. This feeds Module A's prompt
+    // context, so reading the legacy table meant the module ran as though the
+    // student had never had an optimisation done.
+    const artifactStore = await import("./wing/artifact-store");
+    const optimization = await artifactStore.getLatestLinkedinOptimization(userId);
     if (!optimization) {
       return "";
     }

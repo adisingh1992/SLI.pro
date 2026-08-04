@@ -73,9 +73,21 @@ type ChatMessage = {
 
 const turnToMessage = (t: WingTurn): ChatMessage => ({
   id: t.id,
-  // Provenance is the source of truth for who spoke: ai_generated covers both
-  // ai_prompt and ai_adapted turns.
-  role: t.provenanceTag === 'ai_generated' ? 'assistant' : 'user',
+  // turn_type decides who spoke — NOT provenance_tag.
+  //
+  // The comment that used to sit here said provenance was "the source of truth
+  // for who spoke". That is true only for live turns, where provenance is a
+  // pure function of turn type. Migrated turns are ALL stamped
+  // provenance_unknown on purpose, because the legacy corpus has no
+  // turn-level provenance — so this rendered every turn of every migrated
+  // session as the student, Wing's own replies included.
+  //
+  // Provenance answers "how far do we trust this record". turn_type answers
+  // "who spoke". They are not interchangeable.
+  role:
+    t.turnType === 'ai_prompt' || t.turnType === 'ai_adapted'
+      ? 'assistant'
+      : 'user',
   content: t.content,
   createdAt: t.createdAt,
 });

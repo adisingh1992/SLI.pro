@@ -919,6 +919,16 @@ export const contentDrafts = wing.table("content_drafts", {
   status: contentStatus("status").notNull().default("draft"),
   publishedUrl: text("published_url"),
   publishedAt: ts("published_at"),
+  /**
+   * How many times this post has been shared to LinkedIn.
+   *
+   * The MVP kept this in `public.linkedin_post_shares`, keyed by
+   * (draft_id, post_number), because a legacy draft row held two posts. In
+   * Wing each row IS a post (spec §12), so the count belongs on the row and
+   * the join table has nothing left to key on. `published_at` carries the
+   * "last shared at" that table also stored.
+   */
+  shareCount: integer("share_count").notNull().default(0),
   sourceType: sourceType("source_type").notNull().default("ai_generated"),
   createdAt: tsNow("created_at"),
   updatedAt: tsNow("updated_at"),

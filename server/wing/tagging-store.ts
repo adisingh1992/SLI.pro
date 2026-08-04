@@ -53,8 +53,13 @@ export async function listTaggableSessions() {
       transcriptId: transcripts.id,
       transcriptStatus: transcripts.status,
       totalTurns: sql<number>`count(${transcriptTurns.id})::int`,
+      // turn_type, not provenance. Migrated turns are all provenance_unknown,
+      // so the old filter counted Wing's turns as human and overstated how
+      // much of each migrated session was actually taggable.
       humanTurns: sql<number>`
-        count(*) filter (where ${transcriptTurns.provenanceTag} <> 'ai_generated')::int`,
+        count(*) filter (
+          where ${transcriptTurns.turnType} not in ('ai_prompt', 'ai_adapted')
+        )::int`,
       handTagged: sql<number>`
         count(*) filter (where ${transcriptTurns.classificationStatus} = 'hand_tagged')::int`,
     })
@@ -238,7 +243,8 @@ export async function runValidation(limit = 200) {
     .where(
       and(
         eq(transcriptTurns.classificationStatus, "hand_tagged"),
-        ne(transcriptTurns.provenanceTag, "ai_generated"),
+        // turn_type, not provenance — see the note on humanTurns above.
+        sql`${transcriptTurns.turnType} not in ('ai_prompt', 'ai_adapted')`,
       ),
     )
     .orderBy(asc(transcriptTurns.id))

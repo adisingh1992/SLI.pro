@@ -201,7 +201,11 @@ export async function getHumanTurns(sessionId: number) {
     .where(
       and(
         eq(transcripts.sessionId, sessionId),
-        sql`${transcriptTurns.provenanceTag} <> 'ai_generated'`,
+        // turn_type, not provenance. `provenance_tag <> 'ai_generated'` reads
+        // like "human", and is — until migrated turns exist. Those are all
+        // stamped provenance_unknown, so that test passed Wing's own turns
+        // into the corpus this function exists to keep human-only.
+        sql`${transcriptTurns.turnType} not in ('ai_prompt', 'ai_adapted')`,
       ),
     )
     .orderBy(transcriptTurns.sequencePosition);

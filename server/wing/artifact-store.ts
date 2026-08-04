@@ -1,4 +1,4 @@
-import { desc, eq } from "drizzle-orm";
+import { desc, eq, sql } from "drizzle-orm";
 import { db } from "../db";
 import { storage } from "../storage";
 import {
@@ -40,7 +40,25 @@ export const studentIdForUser = studentFor;
 
 /* ── LinkedIn optimizations ────────────────────────────────────────────── */
 
-export async function getLinkedinOptimizations(userId: number) {
+/**
+ * holisticReview is spread back out into top-level sections at runtime, but
+ * that spread is `unknown` to the compiler, so the section keys vanish from
+ * the inferred type. The index signature restates what is actually returned —
+ * without it, every legacy consumer reading `.headlineOptimization` fails to
+ * typecheck against a value that is genuinely there.
+ */
+export type LinkedinOptimizationView = {
+  id: number;
+  userId: number;
+  studentId: number;
+  sliId: number | null;
+  createdAt: Date;
+  holisticReview: unknown;
+} & Record<string, any>;
+
+export async function getLinkedinOptimizations(
+  userId: number,
+): Promise<LinkedinOptimizationView[]> {
   const studentId = await studentFor(userId);
   const rows = await db
     .select()
@@ -158,14 +176,33 @@ export async function markContentPublished(id: number, publishedUrl: string) {
 
 /* ── Freshness reports ─────────────────────────────────────────────────── */
 
-export async function getFreshnessReports(userId: number) {
+/**
+ * The analysis columns are jsonb, so Drizzle infers them as `unknown`. Legacy
+ * consumers were written against the old row type and index into them
+ * directly, so the shape is restated here rather than pushed onto every
+ * caller as a cast.
+ */
+export type FreshnessReportView = {
+  id: number;
+  userId: number;
+  studentId: number;
+  createdAt: Date;
+  questionnaireAnalysis: Record<string, any> | null;
+  resumeAnalysis: Record<string, any> | null;
+  linkedinAnalysis: Record<string, any> | null;
+  additionalDocumentsAnalysis: Record<string, any>[] | null;
+  finalSynthesis: Record<string, any> | null;
+  sourceType: "human_originated" | "ai_generated";
+};
+
+export async function getFreshnessReports(userId: number): Promise<FreshnessReportView[]> {
   const studentId = await studentFor(userId);
   const rows = await db
     .select()
     .from(freshnessReports)
     .where(eq(freshnessReports.studentId, studentId))
     .orderBy(desc(freshnessReports.createdAt));
-  return rows.map((r) => ({ ...r, userId }));
+  return rows.map((r) => ({ ...r, userId })) as FreshnessReportView[];
 }
 
 export async function getFreshnessReport(id: number) {
@@ -175,6 +212,69 @@ export async function getFreshnessReport(id: number) {
     .where(eq(freshnessReports.id, id))
     .limit(1);
   return row ?? undefined;
+}
+
+/**
+ * Most recent report for a user, or undefined.
+ *
+ * Exists because the `/latest` route was still calling the legacy
+ * `storage.getLatestFreshnessReport`, which reads `public.freshness_reports`.
+ * Reports are written to `wing` now, so that route 404'd on a report the list
+ * endpoint — already on Wing — was returning in the same page load.
+ */
+export async function getLatestFreshnessReport(userId: number) {
+  const [latest] = await getFreshnessReports(userId);
+  return latest ?? undefined;
+}
+
+/** Deletes a report. Callers authorise first via getFreshnessReport. */
+export async function deleteFreshnessReport(id: number) {
+  await db.delete(freshnessReports).where(eq(freshnessReports.id, id));
+}
+
+/**
+ * Most recent LinkedIn optimisation for a user, or undefined.
+ *
+ * Safe drop-in for the legacy `storage.getLatestLinkedinOptimization`:
+ * getLinkedinOptimizations already spreads `holisticReview` back out into
+ * top-level sections precisely so legacy consumers keep working.
+ */
+export async function getLatestLinkedinOptimization(userId: number) {
+  const [latest] = await getLinkedinOptimizations(userId);
+  return latest ?? undefined;
+}
+
+/** Most recent content draft for a user, or undefined. */
+export async function getLatestContentDraft(userId: number) {
+  const [latest] = await getContentDrafts(userId);
+  return latest ?? undefined;
+}
+
+/**
+ * Records a share of a draft to LinkedIn.
+ *
+ * No post number: in Wing a content_drafts row IS one post, so the draft id
+ * identifies it. The MVP needed (draft_id, post_number) only because a legacy
+ * row carried two posts.
+ *
+ * Incremented in SQL rather than read-modify-write so two shares in flight
+ * cannot lose one another's count.
+ */
+export async function recordContentDraftShare(draftId: number) {
+  const [row] = await db
+    .update(contentDrafts)
+    .set({
+      shareCount: sql`${contentDrafts.shareCount} + 1`,
+      status: "published",
+      publishedAt: new Date(),
+      updatedAt: new Date(),
+    })
+    .where(eq(contentDrafts.id, draftId))
+    .returning({
+      shareCount: contentDrafts.shareCount,
+      publishedAt: contentDrafts.publishedAt,
+    });
+  return row;
 }
 
 export async function createFreshnessReport(data: {

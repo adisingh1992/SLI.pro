@@ -30,7 +30,9 @@ export function registerLinkedinOptimizationRoutes(app: Express) {
   app.get("/api/linkedin-optimizations/latest", isAuthenticated, async (req, res) => {
     try {
       const userId = req.user!.id;
-      const optimization = await storage.getLatestLinkedinOptimization(userId);
+      // artifactStore (wing), not legacy storage — optimisations are written
+      // to wing.linkedin_optimizations.
+      const optimization = await artifactStore.getLatestLinkedinOptimization(userId);
       if (!optimization) {
         res.status(404).json({ error: "No LinkedIn optimization found" });
         return;
@@ -107,7 +109,10 @@ export function registerLinkedinOptimizationRoutes(app: Express) {
       console.log(`[LinkedIn Optimization] Found selected SLI ID ${selectedSli.id}`);
       
       // Check if the user has a freshness report
-      const freshnessReport = await storage.getLatestFreshnessReport(userId);
+      // artifactStore (wing), not legacy storage. Reading the legacy table
+      // here meant the optimisation was generated against a stale or missing
+      // freshness report while the UI showed a current one.
+      const freshnessReport = await artifactStore.getLatestFreshnessReport(userId);
       if (!freshnessReport) {
         const error = "A freshness report is required";
         console.log(`[LinkedIn Optimization] Error: ${error}`);

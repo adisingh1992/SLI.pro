@@ -8,6 +8,7 @@ import {
 } from "@shared/wing-schema";
 import { ensureStudent, studentIdForWingUser } from "./bootstrap";
 import { recordHumanTurn, recordAiTurn, completeTranscript } from "./provenance";
+import { isAiTurn } from "./turn-type";
 
 /**
  * Wing-native session store.
@@ -173,13 +174,19 @@ export async function getTurns(sessionId: number) {
     .orderBy(asc(transcriptTurns.sequencePosition));
 }
 
-/** Turns shaped for prompt assembly (the orchestrator's message list). */
+/**
+ * Turns shaped for prompt assembly (the orchestrator's message list).
+ *
+ * Speaker comes from `turn_type` via `isAiTurn`, never from `provenance_tag`.
+ * Migrated turns are all stamped `provenance_unknown` by design, so keying on
+ * provenance rendered every turn of every migrated session as the student —
+ * including Wing's own prior questions, which it would then be asked to
+ * continue from.
+ */
 export async function getTurnsAsMessages(sessionId: number) {
   const turns = await getTurns(sessionId);
   return turns.map((t) => ({
-    role: (t.provenanceTag === "ai_generated" ? "assistant" : "user") as
-      | "assistant"
-      | "user",
+    role: (isAiTurn(t.turnType) ? "assistant" : "user") as "assistant" | "user",
     content: t.content,
   }));
 }

@@ -68,7 +68,11 @@ export default function AdminTaggingSessionPage() {
     queryFn: async () => (await apiRequest("GET", `/api/admin/tagging/sessions/${id}`)).json(),
   });
 
-  const humanTurns = (data?.turns ?? []).filter((t) => t.provenanceTag !== "ai_generated");
+  // turn_type, not provenance: migrated turns are all provenance_unknown, so
+  // filtering on provenance counted Wing's own turns as human.
+  const humanTurns = (data?.turns ?? []).filter(
+    (t) => t.turnType !== "ai_prompt" && t.turnType !== "ai_adapted",
+  );
 
   // Start on the first turn that still needs a human judgement.
   useEffect(() => {
@@ -213,7 +217,12 @@ export default function AdminTaggingSessionPage() {
 
         <div className="space-y-2">
           {(data?.turns ?? []).map((turn) => {
-            const isAi = turn.provenanceTag === "ai_generated";
+            // turn_type, not provenance_tag. Migrated turns are all stamped
+            // provenance_unknown, so keying on provenance made Wing's own
+            // turns look human — and therefore hand-taggable. Tagging an AI
+            // turn with a human turn type would feed a nonsense example
+            // straight into the classifier's training set.
+            const isAi = turn.turnType === "ai_prompt" || turn.turnType === "ai_adapted";
             const isSelected = turn.id === selected;
             const isTagged = turn.classificationStatus === "hand_tagged";
 

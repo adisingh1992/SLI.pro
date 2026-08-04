@@ -5,6 +5,7 @@ import { getPromptSet } from "./prompts";
 import * as orchestrator from "./orchestrator";
 import * as store from "./wing/session-store";
 import type { WingSessionType, ArtifactType } from "./wing/session-store";
+import { isAiTurn } from "./wing/turn-type";
 import type { PriorSessionContext } from "./prompts/types";
 import * as docStore from "./wing/document-store";
 import * as intakeStore from "./wing/intake-store";
@@ -247,8 +248,12 @@ async function buildPriorSessionContexts(
     contexts.push({
       sessionNumber: n,
       completionData: artifact?.content ?? null,
+      // turn_type, not provenance_tag. Migrated turns are all
+      // provenance_unknown by design, so keying on provenance labelled every
+      // line of a migrated prior session "Student:" — including Wing's own —
+      // and fed that to the next session as its memory of what happened.
       conversationTranscript: turns
-        .map((t) => `${t.provenanceTag === "ai_generated" ? "Wing" : "Student"}: ${t.content}`)
+        .map((t) => `${isAiTurn(t.turnType) ? "Wing" : "Student"}: ${t.content}`)
         .join("\n\n"),
     });
   }
