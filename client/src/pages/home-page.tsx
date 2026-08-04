@@ -1,7 +1,7 @@
 import { useAuth } from "@/hooks/use-auth";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
-import { FreshnessReport, LinkedinOptimization, Sli, UserProfile, ConversationSummary, HomeworkAssignment, FoundationSession } from "@shared/schema";
+import { FreshnessReport, LinkedinOptimization, Sli, UserProfile, HomeworkAssignment, FoundationSession } from "@shared/schema";
 
 type EnhancementModule = {
   id: number;
@@ -92,13 +92,6 @@ export default function HomePage() {
   // Fetch the latest LinkedIn optimization
   const { data: latestLinkedinOptimization } = useQuery<LinkedinOptimization>({
     queryKey: ["/api/linkedin-optimizations/latest"],
-    enabled: !!user,
-    retry: false,
-  });
-  
-  // Fetch conversation summaries to check if user has completed any coaching conversations
-  const { data: conversationSummaries } = useQuery<ConversationSummary[]>({
-    queryKey: ["/api/conversation-summaries"],
     enabled: !!user,
     retry: false,
   });
@@ -280,17 +273,30 @@ export default function HomePage() {
     !!latestLinkedinOptimization
   );
   
-  // Check if user has any conversation summaries for Step 4 enablement
-  const hasConversationSummaries = conversationSummaries && conversationSummaries.length > 0;
-  
   // Check if any foundation sessions are completed
   const hasFoundationSessionsCompleted = foundationSessions && foundationSessions.some(session => session.status === 'completed');
-  
+
   // Check if all 3 foundation sessions are completed
-  const allFoundationSessionsCompleted = foundationSessions && 
-    foundationSessions.length >= 3 && 
+  const allFoundationSessionsCompleted = foundationSessions &&
+    foundationSessions.length >= 3 &&
     foundationSessions.filter(session => session.status === 'completed').length === 3;
-  
+
+  /**
+   * Step 9's prerequisite.
+   *
+   * This used to read `conversationSummaries.length > 0`, from
+   * `/api/conversation-summaries` — an endpoint with no server route. The
+   * request 404'd, the data stayed undefined, and the flag was therefore
+   * always false, so Step 9 was permanently locked for every user including
+   * premium ones. The card's own badge already used foundation-session
+   * completion, so the badge and the gate disagreed.
+   *
+   * Foundation Sessions are the successor to the MVP's discovery
+   * conversations, so completing all three is the same intent expressed
+   * against a surface that still exists.
+   */
+  const hasCompletedDiscovery = !!allFoundationSessionsCompleted;
+
   const foundationSessionsBadge = getStatusBadge(
     isTierAllowed('step3') && !!userProfile?.questionnaire && userProfile.questionnaire.isDraft !== true && !!hasRequiredDocuments,
     !!hasFoundationSessionsCompleted
@@ -1215,19 +1221,19 @@ export default function HomePage() {
 
           {/* Step 9: Schedule Follow-Up Coaching */}
           <Card className={`overflow-hidden shadow-sm flex flex-col h-full ${
-            !isTierAllowed('step9') || !hasConversationSummaries
+            !isTierAllowed('step9') || !hasCompletedDiscovery
               ? "border-gray-200 opacity-75"
               : "border-green-200"
           }`}>
             <CardHeader className={`pb-4 ${
-              !isTierAllowed('step9') || !hasConversationSummaries
+              !isTierAllowed('step9') || !hasCompletedDiscovery
                 ? "bg-gray-50"
                 : "bg-green-50"
             }`}>
               <div className="flex items-center justify-between">
                 <div className="flex items-center">
                   <div className={`p-2 rounded-full mr-3 ${
-                    !isTierAllowed('step9') || !hasConversationSummaries
+                    !isTierAllowed('step9') || !hasCompletedDiscovery
                       ? "bg-gray-100 text-gray-500"
                       : "bg-green-100 text-green-600"
                   }`}>
@@ -1242,17 +1248,17 @@ export default function HomePage() {
               <CardDescription className="mt-2">
                 {!isTierAllowed('step9')
                   ? "Upgrade to Premium to unlock Follow-Up Coaching"
-                  : !hasConversationSummaries
-                    ? "Complete your AI-guided discovery conversations to unlock live coaching"
+                  : !hasCompletedDiscovery
+                    ? "Complete all three Foundation Sessions to unlock live coaching"
                     : "Refine your approach and measure progress"}
               </CardDescription>
             </CardHeader>
             <CardContent className="p-5 flex-grow">
-              <p className={`text-sm ${!isTierAllowed('step9') || !hasConversationSummaries ? "text-muted-foreground/70" : "text-muted-foreground"}`}>
+              <p className={`text-sm ${!isTierAllowed('step9') || !hasCompletedDiscovery ? "text-muted-foreground/70" : "text-muted-foreground"}`}>
                 {!isTierAllowed('step9')
                   ? "Upgrade your account to access follow-up coaching sessions"
-                  : !hasConversationSummaries
-                    ? "You must complete at least one AI coaching conversation first"
+                  : !hasCompletedDiscovery
+                    ? "You must complete all three Foundation Sessions first"
                     : "Refine your approach and measure progress"}
               </p>
             </CardContent>

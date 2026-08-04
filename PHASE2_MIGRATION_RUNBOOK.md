@@ -202,24 +202,33 @@ wrong, for different reasons:
   concluded the 23 public tables should not exist and offered to drop them all.
   There is no safe way to use `push` against a restored production dump.
 
-`db:wing-ddl` runs the real migration SQL, selecting only the files that do not
+`db:wing-ddl` runs the real migration SQL, selecting only the parts that do not
 recreate the legacy tables:
 
-| file | contents | run? |
+| source | contents | run? |
 |---|---|---|
 | `0000` | 26 public tables | no — restored |
-| `0001` | `documents.blob_key`, `file_data` nullable | **yes** |
 | `0002` | `public.sessions` | no — restored |
+| `rehearsal-public-prereqs.sql` | idempotent copies of `0001` and `0004` | yes |
 | `0003` | `CREATE SCHEMA wing` + 44 tables + 47 enums | yes |
-| `0004` | `public.wing_migration_links` | yes |
 | `0005` | column on `wing.sli_records` | yes |
 | `0006` | `wing.session_completion_criteria` | yes |
 | `0007` | `content_drafts.share_count` | yes |
 
-`0001` is not optional. Production predates it, so `documents.blob_key` does
-not exist there — but `shared/schema.ts` declares it, and Drizzle selects every
-declared column. Without `0001` the documents migration dies on its first read
-with `column "blob_key" does not exist`.
+**Why `0001` and `0004` are restated rather than run.** Both use bare
+`ADD COLUMN` / `CREATE TABLE`, so re-running `db:wing-ddl` — which every repeat
+rehearsal does — fails with
+`column "blob_key" of relation "documents" already exists`. The wing files are
+safe to re-run because `DROP SCHEMA wing CASCADE` precedes them; these two
+touch `public`, which only resets when you take a fresh restore. The originals
+must stay non-idempotent for the real `db:migrate` path against an empty
+production database, so the rehearsal keeps its own idempotent copy. **If `0001`
+or `0004` ever change, change `rehearsal-public-prereqs.sql` with them.**
+
+`0001` itself is not optional. Production predates it, so `documents.blob_key`
+does not exist there — but `shared/schema.ts` declares it, and Drizzle selects
+every declared column. Without it the documents migration dies on its first
+read with `column "blob_key" does not exist`.
 
 Verify:
 

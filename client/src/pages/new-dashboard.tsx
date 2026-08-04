@@ -6,7 +6,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { LogOut, User, FileText, ChevronDown } from "lucide-react";
+import { LogOut, User, ChevronDown } from "lucide-react";
 import { useLocation } from "wouter";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
@@ -536,10 +536,6 @@ export default function NewDashboardPage() {
               <DropdownMenuItem onClick={() => navigate("/profile")} className="cursor-pointer">
                 <User className="mr-2 h-4 w-4" />
                 <span>View Profile</span>
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => navigate("/summaries")} className="cursor-pointer">
-                <FileText className="mr-2 h-4 w-4" />
-                <span>Conversation Summary</span>
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem

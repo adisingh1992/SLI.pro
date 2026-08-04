@@ -9,7 +9,6 @@ import ResetPasswordPage from "@/pages/reset-password-page";
 import ProfilePage from "@/pages/profile-page";
 import ProfileCreationPage from "@/pages/profile-creation-page";
 import QuestionnairePage from "@/pages/questionnaire-simple";
-import SummaryPage from "@/pages/summary-page";
 import MonthlyCheckInPage from "@/pages/monthly-check-in-page";
 import FreshnessReportPage from "@/pages/freshness-report-page-fixed";
 import SliSelectionPage from "@/pages/sli-selection-page";
@@ -55,11 +54,6 @@ function Router() {
       <ProtectedRoute path="/profile" component={ProfilePage} />
       <ProtectedRoute path="/profile/create" component={ProfileCreationPage} />
       <ProtectedRoute path="/questionnaire" component={QuestionnairePage} />
-      <ProtectedRoute path="/summaries" component={SummaryPage} />
-      <ProtectedRoute
-        path="/conversations/:id/summary"
-        component={SummaryPage}
-      />
       <ProtectedRoute path="/monthly-check-in" component={MonthlyCheckInPage} />
       <ProtectedRoute
         path="/freshness-report"

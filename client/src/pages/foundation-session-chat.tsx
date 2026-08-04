@@ -2,7 +2,7 @@ import { useAuth } from '@/hooks/use-auth';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiRequest } from '@/lib/queryClient';
 import { useState, useRef, useEffect, useMemo } from 'react';
-import { useLocation, useParams, Link } from 'wouter';
+import { useLocation, useParams } from 'wouter';
 import NavBar from "@/components/nav-bar";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -16,7 +16,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Loader2, Send, ArrowLeft, Lock, CheckCircle, MessageSquare, AlertCircle, FileText, LogOut } from "lucide-react";
+import { Loader2, Send, ArrowLeft, Lock, CheckCircle, MessageSquare, AlertCircle, LogOut } from "lucide-react";
 import VoiceMicButton from "@/components/VoiceMicButton";
 import { useVoiceRecording } from "@/hooks/use-voice-recording";
 import { useToast } from "@/hooks/use-toast";
@@ -771,20 +771,11 @@ export default function FoundationSessionChatPage() {
               </div>
             )}
 
-            {/* PDF Summary Link - Only show when completed */}
-            {session.status === 'completed' && (
-              <div className="pt-4 border-t">
-                <Link href="/summaries">
-                  <a 
-                    className="text-sm text-green-700 dark:text-green-600 font-medium hover:text-green-800 dark:hover:text-green-500 hover:underline flex items-start gap-2 cursor-pointer"
-                    data-testid="link-view-pdf-summary"
-                  >
-                    <FileText className="h-4 w-4 mt-0.5 flex-shrink-0" />
-                    <span>View and Download a PDF summary of this conversation for your records</span>
-                  </a>
-                </Link>
-              </div>
-            )}
+            {/* The "download a PDF summary" link that used to sit here pointed
+                at /summaries, which has no server route — the conversation
+                summaries feature was superseded by Foundation Sessions and its
+                API was removed. It rendered on every completed session and
+                always led to an error page. */}
           </div>
         </div>
       </div>
