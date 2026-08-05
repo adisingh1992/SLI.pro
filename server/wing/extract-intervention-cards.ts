@@ -71,6 +71,22 @@ const HEADING_TO_CODE: Record<string, string> = {
   "CONCURRENT GRAD STUDENT": "special_case_flags",
   "CAREER CHANGER": "special_case_flags",
   "CLOSING": "closing_move",
+
+  // Session 3. These headings were extracted from the prompt files earlier but
+  // left unmapped, so they produced no cards. Adding them here rather than
+  // discovering it after seeding: an objective naming a card that does not
+  // exist renders as nothing, and the beat quietly loses its script.
+  "STORY EXCAVATION": "story_excavation",
+  "STRUGGLE PROBE": "struggle_probe",
+  "METHODOLOGY PROBE": "methodology_probe",
+  "STORY QUALITY GATEKEEPERS": "story_quality_gatekeepers",
+  "STORY QUALITY CHECK": "story_quality_check",
+  "CONTENT IDEATION FROM STORIES": "content_ideation_from_stories",
+  "C-SUITE TRAJECTORY PROJECTION": "c_suite_trajectory_projection",
+  "HOW/WHY/STRUGGLE/INSIGHT FRAMEWORK": "story_quality_check",
+  "WHAT COUNTS AS CREDIBILITY EVIDENCE": "credibility_evidence_standard",
+  "SKEPTICAL HIRING MANAGER LENS": "skeptical_hiring_manager_lens",
+  "EVIDENCE HIERARCHY": "evidence_hierarchy",
 };
 
 type CardSeed = {

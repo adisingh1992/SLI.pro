@@ -277,13 +277,485 @@ const FOUNDATION_1: Objective[] = [
   },
 ];
 
+/*
+ * ── SESSION 2: CREDIBILITY EVIDENCE ──────────────────────────────────────
+ * A different shape from Session 1, which is the point of modelling it second.
+ * Session 1 was six beats with one inapplicable to one population. This is
+ * SEVEN beats with two inapplicable to TWO populations — so the beat model
+ * generalises, but "six beats, one exception" was a fact about Session 1
+ * rather than about sessions.
+ *
+ * The two mid-career-only beats are visible in the criteria and nowhere else:
+ * cross-context repeatability and decision frameworks appear in mid-career's
+ * list and in neither other population's. Early-career and undergraduate stop
+ * at "claims, personally driven, at least one metric".
+ *
+ * `articulate_decision_frameworks` is also the beat behind the original
+ * complaint weeks ago — mid-career Session 2 stalling. As prose it was one
+ * line among six; as a beat it gets its own satisfaction rate.
+ */
+const FOUNDATION_2: Objective[] = [
+  {
+    key: "anchor_to_locked_function",
+    purpose:
+      "Re-establish the function locked in Session 1 and frame this session as proving it.",
+    artifactContribution: ["lockedFunction"],
+    content: {
+      mid_career_or_senior: {
+        intent:
+          "Name the locked function and open with the investor frame: what have they done in " +
+          "it that someone would bet money on.",
+        entryCondition: "From the opening turn.",
+        evidenceRequired:
+          "The locked function has been named and the student has engaged with the question " +
+          "rather than deflecting to a different function.",
+        interventions: ["opening_challenge"],
+        note: "Their opening is explicitly an ROI framing — a VC gives zero consideration to passion.",
+      },
+      early_career: {
+        intent: "Name the locked function and ask what they have actually done in it.",
+        entryCondition: "From the opening turn.",
+        evidenceRequired:
+          "The locked function has been named and the student has begun offering examples.",
+        interventions: ["opening_frame"],
+      },
+      undergraduate_or_recent_grad: {
+        intent: "Name the locked function and ask what they have done that shows it.",
+        entryCondition: "From the opening turn.",
+        evidenceRequired:
+          "The locked function has been named and the student has begun offering examples.",
+        interventions: ["opening_frame"],
+      },
+    },
+  },
+  {
+    key: "surface_candidate_claims",
+    purpose: "Get the student to name specific things they have done in the locked function.",
+    artifactContribution: ["credibilityClaims"],
+    content: {
+      mid_career_or_senior: {
+        intent: "Draw out candidate claims without accepting the first vague one.",
+        entryCondition: "Once the function is anchored.",
+        evidenceRequired:
+          "At least three distinct candidate claims within the locked function have been named.",
+        interventions: ["specificity_ladder"],
+        note: "The MC standard is 3–4 locked claims, so more candidates than that are needed.",
+      },
+      early_career: {
+        intent: "Draw out candidate claims from real work, however early-stage.",
+        entryCondition: "Once the function is anchored.",
+        evidenceRequired:
+          "At least two distinct candidate claims within the locked function have been named.",
+        interventions: ["specificity_ladder"],
+      },
+      undergraduate_or_recent_grad: {
+        intent:
+          "Draw out candidate claims from coursework, projects, clubs or internships.",
+        entryCondition: "Once the function is anchored.",
+        evidenceRequired:
+          "At least two distinct candidate claims within the locked function have been named.",
+        interventions: ["specificity_ladder"],
+      },
+    },
+  },
+  {
+    key: "separate_aspiration_from_achievement",
+    purpose:
+      "Reject what the student wants to do, or oversaw, in favour of what they actually did.",
+    artifactContribution: ["keyInsights"],
+    content: {
+      mid_career_or_senior: {
+        intent:
+          "Name the aspiration/achievement gap fast when it appears — 'I managed teams that', " +
+          "'I oversaw the initiative'.",
+        entryCondition: "The moment a claim is aspirational or ownership is vague.",
+        evidenceRequired:
+          "Every surviving claim describes something the student personally did, not something " +
+          "they wanted, supervised or were adjacent to.",
+        interventions: ["resistance_patterns", "specificity_ladder"],
+      },
+      early_career: {
+        intent: "Separate what they personally drove from what their team or employer did.",
+        entryCondition: "The moment a claim leans on employer brand or team effort.",
+        evidenceRequired:
+          "Every surviving claim references a business outcome the student personally drove.",
+        interventions: ["resistance_patterns"],
+      },
+      undergraduate_or_recent_grad: {
+        intent: "Separate what they actually did from what they hope to do.",
+        entryCondition: "The moment a claim is aspirational.",
+        evidenceRequired:
+          "Every surviving claim references something the student actually did.",
+        interventions: ["resistance_patterns"],
+      },
+    },
+  },
+  {
+    key: "quantify_outcomes",
+    purpose: "Attach a measurable or observable outcome to the claims.",
+    artifactContribution: ["quantifiedClaims", "credibilityTier"],
+    content: {
+      mid_career_or_senior: {
+        intent:
+          "Escalate each surviving claim to a Tier 1 or Tier 2 outcome — money saved, revenue " +
+          "grown, percentage improved.",
+        entryCondition: "Once claims are real rather than aspirational.",
+        evidenceRequired:
+          "3–4 claims carry a quantified business outcome, at Tier 1 or Tier 2 evidence.",
+        interventions: ["specificity_ladder", "credibility_litmus_tests"],
+      },
+      early_career: {
+        intent: "Get a metric onto at least one claim.",
+        entryCondition: "Once claims are real rather than aspirational.",
+        evidenceRequired: "At least one claim includes a measurable metric.",
+        interventions: ["specificity_ladder"],
+      },
+      undergraduate_or_recent_grad: {
+        intent: "Get a measurable or observable outcome onto at least one claim.",
+        entryCondition: "Once claims are real rather than aspirational.",
+        evidenceRequired:
+          "At least one claim has a measurable or observable outcome. A number is not required " +
+          "if the outcome is concrete.",
+        interventions: ["specificity_ladder"],
+      },
+    },
+  },
+  {
+    key: "establish_cross_context",
+    purpose:
+      "Show the result was repeatable rather than a single lucky outcome.",
+    artifactContribution: ["crossContextEvidence"],
+    content: {
+      mid_career_or_senior: {
+        intent:
+          "Push for the same result across companies or materially different scenarios.",
+        entryCondition: "Once at least one claim is quantified.",
+        evidenceRequired:
+          "Measurable impact is demonstrated in more than one company, team or materially " +
+          "different scenario.",
+        interventions: ["credibility_litmus_tests"],
+      },
+      // Cross-context repeatability appears in mid-career's criteria and in
+      // neither other population's — a few years or a degree does not provide
+      // two companies to repeat a result across.
+      early_career: null,
+      undergraduate_or_recent_grad: null,
+    },
+  },
+  {
+    key: "articulate_decision_frameworks",
+    purpose:
+      "Surface the judgement behind the results — why this approach, when, and when not.",
+    artifactContribution: ["decisionFrameworks"],
+    content: {
+      mid_career_or_senior: {
+        intent:
+          "Get them to state a principled stance: when they use one approach over another, and why.",
+        entryCondition: "Once claims are quantified and repeatable.",
+        evidenceRequired:
+          "The student has expressed a clear opinion or decision framework — not just what " +
+          "happened, but the judgement that produced it.",
+        interventions: ["credibility_litmus_tests"],
+        note:
+          "This is the beat behind the original mid-career Session 2 stall. As one line among " +
+          "six criteria it was invisible; as a beat it has its own satisfaction rate.",
+      },
+      // Not in either other population's criteria. Decision frameworks require
+      // enough repetitions to have formed a view.
+      early_career: null,
+      undergraduate_or_recent_grad: null,
+    },
+  },
+  {
+    key: "close_credibility_statement",
+    purpose: "State the established credibility back and close the session.",
+    artifactContribution: ["reasoning", "credibilityStatement"],
+    content: {
+      mid_career_or_senior: {
+        intent:
+          "State the case as an investor or hiring manager would hear it, and confirm it lands.",
+        entryCondition: "Once the claims are quantified and the frameworks are stated.",
+        evidenceRequired:
+          "The conversation has established check-worthy credibility for an investor or hiring " +
+          "manager, stated back to the student.",
+        interventions: ["breakthrough_confirmation"],
+      },
+      early_career: {
+        intent: "Deliver the closing line summarising the claims.",
+        entryCondition: "Once at least two claims are locked with a metric.",
+        evidenceRequired: "The coach has delivered the closing line.",
+        interventions: ["closing_move"],
+      },
+      undergraduate_or_recent_grad: {
+        intent:
+          "Deliver the closing line, framed so a recruiter would have reason to engage.",
+        entryCondition: "Once at least two claims are locked.",
+        evidenceRequired:
+          "The coach has delivered the closing line, and the conversation establishes that a " +
+          "recruiter would have reason to engage with this candidate.",
+        interventions: ["closing_move"],
+      },
+    },
+  },
+];
+
+/*
+ * ── SESSION 3: SIGNATURE STORY ───────────────────────────────────────────
+ * A third shape. Eight beats, and the inapplicability is spread differently
+ * again — three beats absent for undergraduates, one mid-career only.
+ *
+ *   Session 1   6 beats · 1 absent for 1 population
+ *   Session 2   7 beats · 2 absent for 2 populations
+ *   Session 3   8 beats · 3 absent for UG, 1 for MC only
+ *
+ * The undergraduate story bar is visibly lower and it is stated in their own
+ * criteria: they require "specific context, personal agency, observable
+ * outcome, and differentiation" — four elements. Mid-career and early-career
+ * require five, the fifth being struggle. So `probe_struggle` and
+ * `articulate_methodology` are genuinely absent for undergraduates rather than
+ * merely softened, which is why they are null rather than reworded.
+ */
+const FOUNDATION_3: Objective[] = [
+  {
+    key: "excavate_stories",
+    purpose: "Draw out candidate stories that do not already appear on the resume.",
+    artifactContribution: ["stories"],
+    content: {
+      mid_career_or_senior: {
+        intent:
+          "Ask for the outcome they are proudest of that the resume does not capture, and for " +
+          "what they figured out that was in no playbook.",
+        entryCondition: "From the opening turn.",
+        evidenceRequired: "At least two candidate stories have been offered in outline.",
+        interventions: ["story_excavation"],
+      },
+      early_career: {
+        intent: "Draw out stories from real work, however early.",
+        entryCondition: "From the opening turn.",
+        evidenceRequired: "At least two candidate stories have been offered in outline.",
+        interventions: ["story_excavation"],
+      },
+      undergraduate_or_recent_grad: {
+        intent: "Draw out stories from coursework, projects, clubs or internships.",
+        entryCondition: "From the opening turn.",
+        evidenceRequired: "At least two candidate stories have been offered in outline.",
+        interventions: ["story_excavation"],
+      },
+    },
+  },
+  {
+    key: "establish_agency_and_outcome",
+    purpose: "Establish what the student personally did, and what came of it.",
+    artifactContribution: ["personalAgency", "quantifiedOutcomes"],
+    content: {
+      mid_career_or_senior: {
+        intent: "Separate their action from the team's, and attach a quantified outcome.",
+        entryCondition: "Once candidate stories exist.",
+        evidenceRequired:
+          "Each story states what the student personally did and carries a quantified outcome.",
+        interventions: ["story_quality_gatekeepers"],
+      },
+      early_career: {
+        intent: "Separate their action from the team's, and attach an outcome.",
+        entryCondition: "Once candidate stories exist.",
+        evidenceRequired:
+          "Each story states what the student personally did and carries an outcome.",
+        interventions: ["story_quality_check"],
+      },
+      undergraduate_or_recent_grad: {
+        intent: "Establish specific context, what they did, and what was observable as a result.",
+        entryCondition: "Once candidate stories exist.",
+        evidenceRequired:
+          "Each story has specific context, personal agency and an observable outcome.",
+        interventions: ["story_quality_check"],
+      },
+    },
+  },
+  {
+    key: "probe_struggle",
+    purpose: "Surface the tension or near-failure that makes a story more than a resume bullet.",
+    artifactContribution: ["struggle"],
+    content: {
+      mid_career_or_senior: {
+        intent: "Ask what nearly broke, and where it almost failed.",
+        entryCondition: "Once a story has agency and an outcome.",
+        evidenceRequired: "Each story demonstrates struggle or tension, not just success.",
+        interventions: ["struggle_probe"],
+        note: "Their prompt marks this mandatory — without struggle it is just a resume bullet.",
+      },
+      early_career: {
+        intent: "Ask what was hard about it.",
+        entryCondition: "Once a story has agency and an outcome.",
+        evidenceRequired: "Each story demonstrates struggle or tension.",
+        interventions: ["struggle_probe"],
+      },
+      // Undergraduate criteria require four story elements — context, agency,
+      // observable outcome, differentiation. Struggle is not among them.
+      undergraduate_or_recent_grad: null,
+    },
+  },
+  {
+    key: "articulate_methodology",
+    purpose: "Surface the non-obvious thinking — why they did it that way and not the usual way.",
+    artifactContribution: ["methodology"],
+    content: {
+      mid_career_or_senior: {
+        intent:
+          "Ask where their approach differed from what most people in their function would have done.",
+        entryCondition: "Once struggle has been surfaced.",
+        evidenceRequired:
+          "Each story articulates a methodology or a piece of non-obvious thinking.",
+        interventions: ["methodology_probe"],
+      },
+      early_career: {
+        intent: "Ask what they worked out that was not obvious.",
+        entryCondition: "Once struggle has been surfaced.",
+        evidenceRequired: "Each story articulates how they approached it, not just what happened.",
+        interventions: ["methodology_probe"],
+      },
+      // Not in the undergraduate four-element bar.
+      undergraduate_or_recent_grad: null,
+    },
+  },
+  {
+    key: "derive_positioning_assets",
+    purpose: "Turn the stories into the positioning language the student will actually use.",
+    artifactContribution: ["sliClaim", "linkedinHeadline", "aboutSection"],
+    content: {
+      mid_career_or_senior: {
+        intent: "Derive the SLI claim, LinkedIn headline and About section from the stories.",
+        entryCondition: "Once at least two stories meet the quality bar.",
+        evidenceRequired:
+          "An SLI claim, a LinkedIn headline and an About section are derivable from what the " +
+          "stories established.",
+        interventions: ["story_quality_gatekeepers"],
+      },
+      early_career: {
+        intent:
+          "Produce a positioning sentence, a headline draft, and rewrite experience bullets.",
+        entryCondition: "Once at least two stories meet the quality bar.",
+        evidenceRequired:
+          "A positioning direction sentence, a LinkedIn headline draft, and at least two " +
+          "experience bullet rewrites have been produced.",
+        interventions: ["story_quality_gatekeepers"],
+        note: "Bullet rewrites appear only in early-career's criteria.",
+      },
+      undergraduate_or_recent_grad: {
+        intent: "Produce a positioning sentence and a headline draft.",
+        entryCondition: "Once at least two stories meet the quality bar.",
+        evidenceRequired:
+          "A positioning direction sentence and a LinkedIn headline draft have been produced.",
+        interventions: ["story_quality_check"],
+      },
+    },
+  },
+  {
+    key: "extract_content_direction",
+    purpose: "Turn the stories into a content plan the student can act on.",
+    artifactContribution: ["contentDirection"],
+    content: {
+      mid_career_or_senior: {
+        intent: "Extract a 70/20/10 content direction from the story material.",
+        entryCondition: "Once positioning assets exist.",
+        evidenceRequired: "A 70/20/10 content direction is extractable from the stories.",
+        interventions: ["content_ideation_from_stories"],
+      },
+      early_career: {
+        intent: "Extract a 70/20/10 content direction with specific angles.",
+        entryCondition: "Once positioning assets exist.",
+        evidenceRequired: "A 70/20/10 content direction with specific angles is articulated.",
+        interventions: ["content_ideation_from_stories"],
+      },
+      // Absent from undergraduate criteria — content strategy is Module A
+      // territory for them rather than a Session 3 deliverable.
+      undergraduate_or_recent_grad: null,
+    },
+  },
+  {
+    key: "project_trajectory",
+    purpose: "Identify where this positioning points over the next stage of their career.",
+    artifactContribution: ["trajectory"],
+    content: {
+      mid_career_or_senior: {
+        intent: "Project the C-suite or executive trajectory the stories support.",
+        entryCondition: "Once positioning and content direction exist.",
+        evidenceRequired: "A C-suite or executive trajectory is identifiable from the material.",
+        interventions: ["c_suite_trajectory_projection"],
+      },
+      early_career: null,
+      undergraduate_or_recent_grad: null,
+    },
+  },
+  {
+    key: "close_declaratively",
+    purpose: "Close with a declarative statement the student explicitly acknowledges.",
+    artifactContribution: ["reasoning", "closingStatement"],
+    content: {
+      mid_career_or_senior: {
+        intent: "State the positioning back as a conclusion, not a question.",
+        entryCondition: "Once the trajectory is established.",
+        evidenceRequired:
+          "The session closes with a declarative statement and the student has acknowledged it.",
+        interventions: ["breakthrough_confirmation"],
+      },
+      early_career: {
+        intent: "Deliver the declarative close covering all six required elements.",
+        entryCondition: "Once positioning assets and content direction exist.",
+        evidenceRequired:
+          "The session closes with a declarative statement covering all six required elements, " +
+          "and the professional has acknowledged the closing.",
+        interventions: ["closing_move"],
+      },
+      undergraduate_or_recent_grad: {
+        intent: "Deliver the declarative close covering all five required elements.",
+        entryCondition: "Once positioning assets exist.",
+        evidenceRequired:
+          "The session closes with a declarative statement covering all five required elements, " +
+          "and the student has acknowledged the closing.",
+        interventions: ["closing_move"],
+      },
+    },
+  },
+];
+
+/**
+ * Everything this script knows how to seed.
+ *
+ * ── WHY THE ENHANCEMENT MODULES ARE ABSENT ───────────────────────────────
+ * They were examined and deliberately left out. Their criteria are deliverable
+ * checklists, not conversational beats:
+ *
+ *   Module A  11 items — profile evaluated, buzzword audit done, 2 Featured
+ *             article concepts developed, 30/60/90 milestones set …
+ *   Module B   6 items — pruning logic applied, ≥3 Tier-1 targets identified,
+ *             outreach templates defined …
+ *   Module C  10 items — backwards narrative, tier classification, gap
+ *             analysis, 3 stepping stones, alignment statement …
+ *
+ * Modelling those as objectives produces a 1:1 restatement of the completion
+ * criteria: for each item, "how to pursue it" and "what counts as done" are the
+ * same sentence. That is not a beat structure — it is a production checklist,
+ * and duplicating it into a second table would recreate precisely the
+ * two-sources-of-truth problem this work removed from the analysis prompts.
+ *
+ * A session is a conversation with beats; a module is a production run. The
+ * objective layer earns its place where "which beat is this turn pursuing?" has
+ * a meaningful answer, and for a module the answer is only ever "producing
+ * deliverable N".
+ */
+const SETS: Array<{ sessionType: string; label: string; objectives: Objective[] }> = [
+  { sessionType: "foundation_1", label: "Foundation Session 1", objectives: FOUNDATION_1 },
+  { sessionType: "foundation_2", label: "Foundation Session 2", objectives: FOUNDATION_2 },
+  { sessionType: "foundation_3", label: "Foundation Session 3", objectives: FOUNDATION_3 },
+];
+
 let db: ScriptDb["db"];
 let pool: ScriptDb["pool"];
 
-async function main() {
-  ({ db, pool } = await initScript());
-  console.log(`\n[objectives] Foundation Session 1${DRY_RUN ? " (DRY RUN)" : ""}\n`);
+async function seedOne(set: (typeof SETS)[number]) {
+  console.log(`\n[objectives] ${set.label}${DRY_RUN ? " (DRY RUN)" : ""}\n`);
 
+  const FOUNDATION_1 = set.objectives; // local alias; the body below is generic
   const issues = validateObjectiveSet(FOUNDATION_1);
   if (issues.length) {
     console.error("[objectives] ABORT — the set does not validate:");
@@ -316,6 +788,18 @@ async function main() {
   );
 
   /*
+   * Beat count and inapplicability are NOT constant across sessions, which is
+   * the finding from modelling a second one:
+   *
+   *   Session 1   6 beats, 1 inapplicable to 1 population (undergraduate)
+   *   Session 2   7 beats, 2 inapplicable to 2 populations
+   *
+   * So the beat model generalises, but "six beats with one exception" was a
+   * fact about Session 1 rather than about sessions. Anyone modelling Session 3
+   * should expect a third shape and not try to force this one onto it.
+   */
+
+  /*
    * The shared-content figure is the one that falsified the original design,
    * so it is worth reading carefully rather than glancing at.
    *
@@ -338,42 +822,71 @@ async function main() {
   if (shared === 0) {
     console.log(
       `  No beat has identical content across all three populations. That is a real\n` +
-        `  result, not a gap: the shared asset here is the structure, and the six keys\n` +
-        `  are what keep satisfaction rates comparable between populations.\n`,
+        `  result, not a gap: the shared asset is the structure, and the ${FOUNDATION_1.length} keys are\n` +
+        `  what keep satisfaction rates comparable between populations.\n`,
     );
   }
 
   const [existing] = await db
     .select({ id: objectiveSets.id })
     .from(objectiveSets)
-    .where(eq(objectiveSets.sessionType, "foundation_1" as any))
+    .where(eq(objectiveSets.sessionType, set.sessionType as any))
     .limit(1);
 
   if (existing) {
-    console.log("[objectives] foundation_1 already has a set — skipped.\n");
-    await pool.end();
+    console.log(`[objectives] ${set.sessionType} already has a set — skipped.\n`);
     return;
   }
 
   if (DRY_RUN) {
     console.log("[objectives] (dry run — nothing was written)\n");
-    await pool.end();
     return;
   }
 
   await db.insert(objectiveSets).values({
-    sessionType: "foundation_1" as any,
+    sessionType: set.sessionType as any,
     versionNumber: 1,
     status: "published",
     objectives: FOUNDATION_1 as any,
     changeNote:
-      "Session 1 modelled as objectives, derived by reading all three population prompts. " +
+      `${set.label} modelled as objectives, derived by reading all three population prompts. ` +
       "Shared structure, per-population content. Publishing does not change behaviour — the " +
       "renderer is used only once the session is switched over to it.",
     publishedAt: new Date(),
   });
 
-  console.log("[objectives] published foundation_1 v1.\n");
+  console.log(`[objectives] published ${set.sessionType} v1.\n`);
+}
+
+async function main() {
+  ({ db, pool } = await initScript());
+
+  // One set may be requested; otherwise all known sets are seeded.
+  const only = process.argv.includes("--session")
+    ? process.argv[process.argv.indexOf("--session") + 1]
+    : null;
+
+  const targets = only ? SETS.filter((s) => s.sessionType === only) : SETS;
+  if (!targets.length) {
+    console.error(`Unknown session "${only}". One of: ${SETS.map((s) => s.sessionType).join(", ")}`);
+    await pool.end();
+    process.exit(1);
+  }
+
+  // Validation aborts the whole run before anything is written, so a broken
+  // set cannot be published just because it happened to come first.
+  for (const set of targets) {
+    const issues = validateObjectiveSet(set.objectives);
+    if (issues.length) {
+      console.error(`\n[objectives] ABORT — ${set.sessionType} does not validate:`);
+      for (const i of issues) console.error(`    ${i.objectiveKey ?? "(set)"}: ${i.message}`);
+      await pool.end();
+      process.exit(1);
+    }
+  }
+
+  for (const set of targets) await seedOne(set);
+
   await pool.end();
 }
 
