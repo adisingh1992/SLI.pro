@@ -608,17 +608,17 @@ Conversation Messages:
 ${transcript}
 
 COMPLETION CRITERIA — ALL MUST BE SATISFIED:
-✅ Aspiration articulated (3–5 year goal with specific role/impact)
-✅ Current positioning snapshot stated using Session 2 credibilityGaps and credibilityCeiling
-✅ Target role/impact specified
-✅ Tier classification identified
-✅ Gap analysis completed anchored to Session 2 credibilityGaps, with at least 2 gaps mapped across categories
-✅ All 3 stepping stones defined with specific titles and competencies (framed for 3–5 year horizon)
-✅ Positioning adjustments identified (credibility expansion, network repositioning, narrative reframing, skill gap filling)
-✅ Complete Alignment Statement formed
-✅ Timeline reality acknowledged
-✅ 30/90/6-month check-ins defined
-✅ If pivot intent was present: pivot pathway with bridge positioning included
+${completionCriteria ?? `- Aspiration articulated (3–5 year goal with specific role/impact)
+- Current positioning snapshot stated using Session 2 credibilityGaps and credibilityCeiling
+- Target role/impact specified
+- Tier classification identified
+- Gap analysis completed anchored to Session 2 credibilityGaps, with at least 2 gaps mapped across categories
+- All 3 stepping stones defined with specific titles and competencies (framed for 3–5 year horizon)
+- Positioning adjustments identified (credibility expansion, network repositioning, narrative reframing, skill gap filling)
+- Complete Alignment Statement formed
+- Timeline reality acknowledged
+- 30/90/6-month check-ins defined
+- If pivot intent was present: pivot pathway with bridge positioning included`}
 
 Extract these fields from the conversation and return JSON:
 {
@@ -650,10 +650,7 @@ Extract these fields from the conversation and return JSON:
   }
 }
 
-${completionCriteria ? `Rules for completion (ALL must be satisfied for shouldComplete=true):
-${completionCriteria}
-
-` : ""}Mark shouldComplete as true ONLY if ALL completion criteria are satisfied with specific, actionable content.
+Mark shouldComplete as true ONLY if ALL completion criteria are satisfied with specific, actionable content.
 
 RETURN STRICT JSON ONLY. No prose, no explanation, just the JSON object.`;
     }

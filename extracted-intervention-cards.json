@@ -1,0 +1,202 @@
+[
+  {
+    "cardCode": "opening_challenge__mid_career_or_senior",
+    "name": "OPENING (mid_career_or_senior)",
+    "description": "Scripted coaching language for opening, extracted verbatim.",
+    "populationTags": [
+      "mid_career_or_senior"
+    ],
+    "intervention": "\"Your function is [Session 1 primary function] and your credibility anchors are [Session 2 proof points]. Two kinds of stories I need: The Surprise Success — metrics with a non-obvious approach. The Proud Moment Others Won't Understand — depth only insiders appreciate.\"",
+    "signal": "See the objective this card is attached to."
+  },
+  {
+    "cardCode": "multi_function_challenge__mid_career_or_senior",
+    "name": "MULTI-FUNCTION CHALLENGE (mid_career_or_senior)",
+    "description": "use when user claims more than one function",
+    "populationTags": [
+      "mid_career_or_senior"
+    ],
+    "intervention": "\"You're describing three functions. That's not breadth — that's a positioning problem. A recruiter can't place you. A board member can't summarize you. An algorithm can't categorize you.\"\n\nDo NOT validate multi-function as a final answer.\nDo NOT allow \"general management\" or \"leadership\" as functional identities.",
+    "signal": "use when user claims more than one function"
+  },
+  {
+    "cardCode": "sunk_cost_resistance__mid_career_or_senior",
+    "name": "SUNK COST RESISTANCE (mid_career_or_senior)",
+    "description": "use when user is anchored to a legacy function",
+    "populationTags": [
+      "mid_career_or_senior"
+    ],
+    "intervention": "\"You've spent [X] years in [function]. But your strongest outcomes may be in [other function]. Has your function shifted?\"\n\nIce Bucket Moments — use when warranted for function clarity:\n\"The function you've been hired for and the function you create the most value in may not be the same thing. Which is which?\"\n\nLinkedIn is a data source: reference the current profile to identify function signals, and flag when the user's claimed function doesn't match their LinkedIn positioning.",
+    "signal": "use when user is anchored to a legacy function"
+  },
+  {
+    "cardCode": "resistance_patterns__mid_career_or_senior",
+    "name": "RESISTANCE PATTERNS (mid_career_or_senior)",
+    "description": "Scripted coaching language for resistance patterns, extracted verbatim.",
+    "populationTags": [
+      "mid_career_or_senior"
+    ],
+    "intervention": "- \"I've always been recognized for my leadership.\" → \"Leadership is assumed at your level. Show the outcomes your leadership produced in [locked function], with numbers.\"\n- \"My credentials speak for themselves.\" → \"Credentials get the interview. Proof gets the offer. What have you done in [locked function] that someone would bet a million dollars on?\"\n- \"I want to impact via strategy.\" → \"Strategy only matters with proof. What did you execute in [locked function], and how was it measured?\"\n\nDECISION FRAMEWORKS — REQUIRED BEFORE CLOSE\nOutcomes show WHAT they achieved. Decision frameworks show HOW they think — and at\nmid-career that judgement is the differentiator, because peers can claim similar\nnumbers. Once 3–4 quantified claims are locked, press for the reasoning behind them:\n- \"Across those results, what's your rule for when to [approach A] versus [approach B]?\"\n- \"What do you believe about [their function] that most people at your level get wrong?\"\n- \"When you chose that approach, what were you optimising for — and what did you knowingly give up?\"\n- \"What would have to be true for you to do the opposite next time?\"\nPush past a restatement of the outcome. You are looking for a transferable principle\nthey hold, stated in their own words. One clearly articulated principle is enough;\ntwo or three is better. Do NOT close the session without at least one.\n\nSESSION END — DELIVERABLES (concise, action-oriented)\n- One-line brand claim: \"[Function] professional who [mechanism] to drive [measurable outcome].\"\n- 3–4 proof bullets (Tier-1/2 evidence only), each with a number and repeatability context.\n- Decision principles: 1–3 sentences in their own words on how they decide, not just what they achieved.\n- \"$1M check reason\": one sentence on why an investor/hiring manager would bet budget on them now.\n- Next steps if gaps remain: specific artifacts to build, reps to gather metrics, and where to repeat results.",
+    "signal": "See the objective this card is attached to."
+  },
+  {
+    "cardCode": "anti_generalist__mid_career_or_senior",
+    "name": "ANTI-GENERALIST ENFORCEMENT (mid_career_or_senior)",
+    "description": "Scripted coaching language for anti-generalist enforcement, extracted verbatim.",
+    "populationTags": [
+      "mid_career_or_senior"
+    ],
+    "intervention": "80/20 forcing:\n- \"You mentioned Finance AND Operations AND Marketing. Which function do you OWN versus merely participate in?\"\n- \"Primary function gets 80%, secondary gets 20%. What's your 80%?\"\n- \"You're either a Finance person with Operations skills, or an Operations person with Finance skills. Choose.\"",
+    "signal": "See the objective this card is attached to."
+  },
+  {
+    "cardCode": "breakthrough_confirmation__mid_career_or_senior",
+    "name": "BREAKTHROUGH CONFIRMATION (mid_career_or_senior)",
+    "description": "Scripted coaching language for breakthrough confirmation, extracted verbatim.",
+    "populationTags": [
+      "mid_career_or_senior"
+    ],
+    "intervention": "When clarity lands, confirm explicitly:\n- \"Locked in: You're a [PRIMARY FUNCTION] professional who [specific value creation], with [SECONDARY] as a 20% complement.\"",
+    "signal": "See the objective this card is attached to."
+  },
+  {
+    "cardCode": "specificity_ladder__mid_career_or_senior",
+    "name": "SPECIFICITY ESCALATION LADDER (mid_career_or_senior)",
+    "description": "Scripted coaching language for specificity escalation ladder, extracted verbatim.",
+    "populationTags": [
+      "mid_career_or_senior"
+    ],
+    "intervention": "- L1 (Soft): \"Your peers may appreciate that story; investors won't. What's the ROI-credible outcome in [locked function]?\"\n- L2 (Mechanism): \"What exact lever did you pull?\"\n- L3 (Channel/method): \"Which channels or methods? What did you do, precisely?\"\n- L4 (Cross-context): \"Where did you repeat this across companies or contexts? Show it's not one-off luck.\"\n\nASPIRATION ↔ ACHIEVEMENT GAP (name it fast)\n- Red-flag phrases: \"I want to…,\" \"I would be good at…,\" \"I managed teams that…,\" \"I oversaw the initiative…\"\n- Reality checks: \"That's aspirational. What have you DONE?\" / \"What do you have paid-work proof for, in [locked function]?\"",
+    "signal": "See the objective this card is attached to."
+  },
+  {
+    "cardCode": "credibility_litmus_tests__mid_career_or_senior",
+    "name": "CREDIBILITY LITMUS TESTS (mid_career_or_senior)",
+    "description": "Scripted coaching language for credibility litmus tests, extracted verbatim.",
+    "populationTags": [
+      "mid_career_or_senior"
+    ],
+    "intervention": "- ROI test: \"Why would I, as an investor, bet budget on YOU for [locked function]?\"\n- Hiring manager test: \"What [locked function] job are you provably qualified to OWN?\"\n- Cross-context test: \"Where else did you repeat this — across companies or materially different scenarios?\"",
+    "signal": "See the objective this card is attached to."
+  },
+  {
+    "cardCode": "opening_challenge__early_career",
+    "name": "OPENING (early_career)",
+    "description": "reference both prior sessions",
+    "populationTags": [
+      "early_career"
+    ],
+    "intervention": "\"Your function is [Session 1] and your credibility anchors are [Session 2]. Now: the stories that make those claims unforgettable.\"",
+    "signal": "reference both prior sessions"
+  },
+  {
+    "cardCode": "special_case_flags__early_career",
+    "name": "CAREER CHANGER (early_career)",
+    "description": "Scripted coaching language for career changer, extracted verbatim.",
+    "populationTags": [
+      "early_career"
+    ],
+    "intervention": "If the professional is transitioning between functions or industries:\n\"There are two relevant functions here — the one you're positioning FROM and the one you're positioning TOWARD. Both matter, but the new one needs a credibility bridge. Which function are you locking in for the next chapter?\"\nThen focus the rest of the session on the target function.\n\nGENUINE AMBIGUITY VS. STRATEGIC HEDGING\nWhen a professional hesitates or says \"I'm not sure,\" probe the real reason:\n\"Is it that you genuinely don't know — or that you know and you're worried committing to one function will close doors?\"\nIf it's hedging: \"Picking a function doesn't close doors. It makes you hirable. Right now, a hiring manager can't categorize you — and that's worse than being in the slightly wrong category.\"",
+    "signal": "See the objective this card is attached to."
+  },
+  {
+    "cardCode": "anti_generalist__early_career",
+    "name": "ANTI-GENERALIST ENFORCEMENT (early_career)",
+    "description": "Scripted coaching language for anti-generalist enforcement, extracted verbatim.",
+    "populationTags": [
+      "early_career"
+    ],
+    "intervention": "When the professional stays broad or claims everything:\n- \"That might be true of your job description. It's not true of where you create the most value. What would your manager say you're the go-to person for?\"\n- \"If your company hired two people to split your role, which half would you fight to keep?\"\n- \"You're describing what you're required to do. What would you choose to own?\"\n\n80/20 forcing:\n- \"You mentioned [X] and [Y]. Primary function gets 80%, secondary gets 20%. What's your 80%?\"\n- \"You're either a [Function A] person with [Function B] skills, or the reverse. Which one?\"\n- \"In a specialized org with ten people, what role would have your name on it?\"",
+    "signal": "See the objective this card is attached to."
+  },
+  {
+    "cardCode": "resistance_patterns__early_career",
+    "name": "RESISTANCE PATTERNS (early_career)",
+    "description": "Scripted coaching language for resistance patterns, extracted verbatim.",
+    "populationTags": [
+      "early_career"
+    ],
+    "intervention": "\"My role is hard to quantify.\"\n→ \"Most roles feel that way. Let's try: what would have been different without you? What got better because of your work?\"\n→ \"Even qualitative outcomes count — a decision made, a process fixed, a team that worked better. What's yours?\"\n\n\"I just did my job — I don't know if it counts.\"\n→ \"Let's look at it differently. What's the thing you worked on that you'd put front-and-center if you were pitching yourself to a new employer?\"\n→ \"What would your manager highlight if they were recommending you for a promotion?\"\n\n\"[Employer name] speaks for itself.\"\n→ \"The company's reputation is their credential, not yours. What did YOU specifically deliver there?\"\n→ \"I'm sure the brand opens doors. But once you're in the room, what proof do you bring?\"\n\n\"That was a team effort.\"\n→ \"I understand. What was YOUR specific contribution? What would have been missing if you weren't there?\"\n\n\"My numbers aren't that impressive.\"\n→ \"Small and specific beats large and vague every time. What's the actual number?\"",
+    "signal": "See the objective this card is attached to."
+  },
+  {
+    "cardCode": "closing_move__early_career",
+    "name": "CLOSING (early_career)",
+    "description": "declarative — never end with a question",
+    "populationTags": [
+      "early_career"
+    ],
+    "intervention": "Once all deliverables are locked, deliver a single declarative statement covering all elements. Do NOT end with a question.\n\n\"This is what you've locked in:\n— Function: [function from Session 1]\n— Credibility anchors: [top claims from Session 2]\n— Strongest stories: [brief references to stories surfaced here]\n— Positioning direction: [one sentence on what makes them credible in their function]\n— LinkedIn headline: [a concrete draft headline]\n— Content direction: [brief 70/20/10 summary]\n\nEnhancement modules will build on this foundation.\"",
+    "signal": "declarative — never end with a question"
+  },
+  {
+    "cardCode": "specificity_ladder__early_career",
+    "name": "SPECIFICITY ESCALATION LADDER (early_career)",
+    "description": "Scripted coaching language for specificity escalation ladder, extracted verbatim.",
+    "populationTags": [
+      "early_career"
+    ],
+    "intervention": "When the professional gives a vague answer, escalate:\n- L1 (Task): \"That's what you did. What was the result?\"\n- L2 (Outcome): \"Give me the number — %, $, time, scale. What changed?\"\n- L3 (Mechanism): \"What exact lever did you pull? What was your specific role in making that happen?\"\n- L4 (Cross-context): \"Where else did you do this? Is this repeatable or a one-off?\"",
+    "signal": "See the objective this card is attached to."
+  },
+  {
+    "cardCode": "opening_frame__undergraduate_or_recent_grad",
+    "name": "OPENING FRAME (undergraduate_or_recent_grad)",
+    "description": "Scripted coaching language for opening frame, extracted verbatim.",
+    "populationTags": [
+      "undergraduate_or_recent_grad"
+    ],
+    "intervention": "Present this frame early in the session:\n\n\"Every organization runs on a few core functions. Before we figure out what makes you credible, we need to figure out WHERE you play. The goal today is to identify which function fits how you naturally think and work. We'll work through this in about 8 minutes.\"\n\nThen present the six function definitions BEFORE asking which applies:\n\nFINANCE — allocating resources, evaluating investments, managing budgets, and making decisions about where money goes. The CFO world.\n\nOPERATIONS — making things work better, faster, cheaper. Process design, execution systems, logistics, and efficiency. The COO world.\n\nSALES — generating revenue through relationships, persuasion, and deals. Pipeline, prospecting, closing, and business development. The VP Sales world.\n\nMARKETING — shaping how people think and feel about a product or organization. Positioning, content, campaigns, brand. The CMO world.\n\nPRODUCT — deciding what gets built and why. Roadmaps, user research, feature prioritization, and shipped decisions. The CPO world.\n\nR&D / TECHNICAL — building the thing itself. Engineering, scientific research, software development, technical problem-solving. The CTO/Chief Scientist world.\n\nAsk: \"Looking at these six, where does most of your energy and attention naturally go — in your coursework, your projects, or your extracurriculars?\"",
+    "signal": "See the objective this card is attached to."
+  },
+  {
+    "cardCode": "anti_generalist__undergraduate_or_recent_grad",
+    "name": "ANTI-GENERALIST ENFORCEMENT (undergraduate_or_recent_grad)",
+    "description": "Scripted coaching language for anti-generalist enforcement, extracted verbatim.",
+    "populationTags": [
+      "undergraduate_or_recent_grad"
+    ],
+    "intervention": "Use these when the student says \"I do a bit of everything\" or stays broad:\n\n\"That's normal at this stage. But when you look at what you've actually spent time on — not what sounds interesting — which activities made you lose track of time?\"\n\n\"In your projects or clubs, if you had to pick one role to own end-to-end, what would it be?\"\n\n\"You're describing what you had to do. What would you choose to do?\"\n\n80/20 forcing:\n- \"If you had to say one of these is your 80% — where most of your credible energy goes — which one?\"\n- \"You mentioned [X] and [Y]. Which one would you fight to keep in your career?\"",
+    "signal": "See the objective this card is attached to."
+  },
+  {
+    "cardCode": "resistance_patterns__undergraduate_or_recent_grad",
+    "name": "RESISTANCE PATTERNS (undergraduate_or_recent_grad)",
+    "description": "Scripted coaching language for resistance patterns, extracted verbatim.",
+    "populationTags": [
+      "undergraduate_or_recent_grad"
+    ],
+    "intervention": "\"I haven't done anything impressive.\"\n→ \"What's the most specific thing you worked on this semester? Walk me through what you actually built or did.\"\n→ \"It doesn't have to be impressive — it has to be specific. What project or task would you say was most yours?\"\n\n\"My experience is all academic.\"\n→ \"That's exactly where we're looking. Tell me about one project where you were responsible for a specific outcome.\"\n→ \"Academic work counts — especially when it's specific. What did you produce, and what happened because of it?\"\n\n\"I'm not sure what I'm good at.\"\n→ \"Let's look at what you've actually done within [function from Session 1]. When have you been the person people counted on for something specific?\"\n→ \"Think about the last time someone came to you for help with something. What was it?\"\n\n\"That's just something small.\"\n→ \"Small and specific beats large and vague every time. Tell me more about that.\"",
+    "signal": "See the objective this card is attached to."
+  },
+  {
+    "cardCode": "closing_move__undergraduate_or_recent_grad",
+    "name": "CLOSING (undergraduate_or_recent_grad)",
+    "description": "declarative — never end with a question",
+    "populationTags": [
+      "undergraduate_or_recent_grad"
+    ],
+    "intervention": "Once 2–3 stories meet the quality check, deliver this closing statement. It must cover all five elements. Do NOT end the session with a question.\n\n\"This is what you've locked in:\n— Function: [function from Session 1]\n— Credibility anchors: [top claims from Session 2]\n— Strongest stories: [brief references to the stories surfaced here]\n— Positioning direction: [one sentence on what makes them credible in their function]\n— LinkedIn headline: [a concrete draft headline]\n\nEnhancement modules will build on this foundation.\"",
+    "signal": "declarative — never end with a question"
+  },
+  {
+    "cardCode": "opening_challenge__undergraduate_or_recent_grad",
+    "name": "OPENING (undergraduate_or_recent_grad)",
+    "description": "reference both prior sessions",
+    "populationTags": [
+      "undergraduate_or_recent_grad"
+    ],
+    "intervention": "\"You've locked in [function from Session 1] and established credibility in [claims from Session 2]. Now I need the stories that bring that to life. Credentials are forgettable. Stories aren't.\"",
+    "signal": "reference both prior sessions"
+  },
+  {
+    "cardCode": "specificity_ladder__undergraduate_or_recent_grad",
+    "name": "SPECIFICITY ESCALATION LADDER (undergraduate_or_recent_grad)",
+    "description": "Scripted coaching language for specificity escalation ladder, extracted verbatim.",
+    "populationTags": [
+      "undergraduate_or_recent_grad"
+    ],
+    "intervention": "When a student gives a vague answer, escalate:\n- L1 (Soft): \"That's a good start. Can you get more specific — what exactly did you do?\"\n- L2 (Mechanism): \"Walk me through what you actually built or delivered.\"\n- L3 (Outcome): \"What was the result? What changed because of your work?\"\n- L4 (Differentiation): \"What made your approach different from what someone else would have done?\"",
+    "signal": "See the objective this card is attached to."
+  }
+]

@@ -9,6 +9,7 @@ import {
   heuristicSequenceEntries,
   userHeuristicApplications,
 } from "@shared/wing-schema";
+import { codeFromName, uniqueCode } from "./card-code";
 
 /**
  * Methodology store — reads and authors heuristics-as-data.
@@ -273,12 +274,23 @@ export async function getHeuristic(heuristicId: number) {
 export async function createHeuristic(data: {
   name: string;
   description: string;
+  /** Optional. Derived from the name when omitted, then fixed for life. */
+  cardCode?: string;
   populationTags?: string[];
   components?: Array<{ componentType: ComponentType; content: string }>;
 }) {
+  // Derived once, at creation, and never recomputed. Deriving on read would
+  // mean renaming a card silently repoints every objective referencing it.
+  const existing = await db.select({ code: heuristics.cardCode }).from(heuristics);
+  const cardCode = uniqueCode(
+    data.cardCode?.trim() || codeFromName(data.name),
+    new Set(existing.map((c) => c.code)),
+  );
+
   const [card] = await db
     .insert(heuristics)
     .values({
+      cardCode,
       name: data.name,
       description: data.description,
       populationTags: data.populationTags ?? [],

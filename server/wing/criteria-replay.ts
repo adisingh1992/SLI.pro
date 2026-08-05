@@ -2,6 +2,10 @@ import { and, desc, eq, inArray } from "drizzle-orm";
 import { db } from "../db";
 import { sessions, students, users, transcripts, transcriptTurns } from "@shared/wing-schema";
 import { renderForAnalysis, type Criterion } from "./completion-criteria-store";
+import {
+  renderForAnalysis as renderMethodology,
+  type MethodologySection,
+} from "./analysis-methodology-store";
 import { log } from "../logger";
 
 /**
@@ -73,7 +77,18 @@ function statusesFor(populationTag: string): string[] {
 export async function replay(params: {
   populationTag: string;
   sessionType: string;
-  criteria: Criterion[];
+  /** Draft criteria. Omit to replay published criteria unchanged. */
+  criteria?: Criterion[];
+  /**
+   * Draft methodology sections. Omit to replay published methodology unchanged.
+   *
+   * Foundation Sessions only — `checkModuleCompletion` takes no methodology
+   * parameter because module analysis prompts have not been parameterised for
+   * it. Passing sections with a module session type is rejected by the route
+   * rather than silently ignored here, since a replay that quietly tests
+   * nothing is worse than one that refuses.
+   */
+  sections?: MethodologySection[];
   limit?: number;
 }): Promise<ReplayResult> {
   const limit = Math.min(params.limit ?? 10, 25);
@@ -125,7 +140,12 @@ export async function replay(params: {
     };
   }
 
-  const rendered = renderForAnalysis(params.criteria);
+  // undefined means "use whatever is published", which is what lets a
+  // methodology replay leave criteria alone and vice versa.
+  const rendered = params.criteria ? renderForAnalysis(params.criteria) : undefined;
+  const renderedMethodology = params.sections
+    ? renderMethodology(params.sections)
+    : undefined;
   const sessionStore = await import("./session-store");
   const profileStore = await import("./profile-store");
 
@@ -169,6 +189,7 @@ export async function replay(params: {
             messages,
             userProfile,
             rendered,
+            renderedMethodology,
           );
 
       const actuallyCompleted = candidate.status === "completed";

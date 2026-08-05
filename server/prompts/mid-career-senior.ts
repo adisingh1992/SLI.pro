@@ -498,6 +498,8 @@ function getAnalysisPrompt(
   // prompt was given. Undefined falls back to the list written below, so this
   // can be adopted one session at a time.
   completionCriteria?: string,
+  // Rendered from analysis_methodology. Undefined uses the block below.
+  analysisMethodology?: string,
 ): string {
   if (sessionNumber === 1) {
     return `${questionnaireContext}You are evaluating a Session 1 "Functional Identity Lock-In" coaching conversation that must stay within the Five Functions framework: Finance, Operations, Sales, Marketing, Product. Use the conversation transcript and the following guardrails from our methodology to make a determination.
@@ -506,7 +508,7 @@ function getAnalysisPrompt(
 ${messages.map((msg) => `${msg.role.toUpperCase()}: ${msg.content}`).join("\n\n")}
 
 Use this methodology to analyze the transcript:
-
+${analysisMethodology ?? `
 1) Five Functions Reality Check (force functional specificity)
    - Primary function MUST be one of: Finance, Operations, Sales, Marketing, Product.
    - Leadership and "strategy" are NOT functions; they are qualities applied within a function.
@@ -555,7 +557,7 @@ Use this methodology to analyze the transcript:
    - IMPORTANT: Base all judgments ONLY on evidence found in the transcript. Do not invent details.
    - Prefer null for undecided fields when evidence is weak, contradictory, or single-exchange.
    - Confidence scaling: 0–49 low (inconclusive/contradictory), 50–79 medium (directional but incomplete), ≥80 high (clear, acknowledged, multi-exchange evidence).
-   - Penalize overuse of generic terms ("strategy," "impact," "leadership") without functional mechanisms.
+   - Penalize overuse of generic terms ("strategy," "impact," "leadership") without functional mechanisms.`}
 
 Respond in STRICT JSON only (no prose, no code fences) with EXACTLY this schema and keys:
 
@@ -608,7 +610,7 @@ Edge handling:
            ${messages.map((msg) => `${msg.role.toUpperCase()}: ${msg.content}`).join("\n\n")}
 
         Use this methodology to analyze the transcript:
-
+${analysisMethodology ?? `
         1) Evidence Quality Assessment
            - Tier 1: Measurable business outcomes (saved $ / grew revenue / % improvements / shipped usage & retention)
            - Tier 2: Channel-specific execution with clear levers and playbooks AND results
@@ -632,13 +634,7 @@ Edge handling:
         4) Hard vs Soft Claims Detection
            - Flag aspirational or hypothetical language ("I want to," "I would be good at," "I could do")
            - Flag school-only, theoretical, or training-only examples without real-world application
-           - Claims lacking concrete metrics, decisions, or outcomes should be downgraded to Tier 4 or 5 rather than translated or inferred
-
-        5) Completion Criteria
-           - Clear functional credibility demonstrated with Tier 1 or Tier 2 evidence
-           - Measurable business impact demonstrated in more than one context or scenario
-           - Strong opinions and decision frameworks articulated
-           - Proof quality sufficient that an investor or hiring manager would rationally stake budget or role scope
+           - Claims lacking concrete metrics, decisions, or outcomes should be downgraded to Tier 4 or 5 rather than translated or inferred`}
 
         Respond in STRICT JSON only (no prose, no code fences) with EXACTLY this schema and keys:
 
@@ -695,7 +691,7 @@ Conversation Messages:
 ${messages.map((msg) => `${msg.role.toUpperCase()}: ${msg.content}`).join("\n\n")}
 
 Use this methodology to analyze the transcript:
-
+${analysisMethodology ?? `
 1) Story Completeness Assessment (Green Lights)
    - Personal agency is explicit ("I did" vs "we did")
    - Thinking process is visible (frameworks, contrarian insight, system lens)
@@ -721,14 +717,7 @@ Use this methodology to analyze the transcript:
    - Team win without personal agency (participation rather than ownership)
    - No vulnerability; success appears effortless or frictionless
    - Outcomes presented without insight into how decisions were made
-   - Vague claims without concrete mechanisms or examples
-
-5) Completion Criteria
-   - A complete signature story is articulated with all required elements
-   - Personal agency and thinking process are explicit
-   - Vulnerability and growth are demonstrated
-   - Content angles and brand positioning are extractable
-   - The story clearly reinforces their functional credibility rather than re-defining it
+   - Vague claims without concrete mechanisms or examples`}
 
 Respond in STRICT JSON only (no prose, no code fences) with EXACTLY this schema and keys:
 

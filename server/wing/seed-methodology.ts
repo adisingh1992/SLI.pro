@@ -10,6 +10,7 @@ import {
   heuristicSequences,
   heuristicSequenceEntries,
 } from "@shared/wing-schema";
+import { codeFromName, uniqueCode } from "./card-code";
 
 /**
  * Seeds the minimum methodology the engine needs in order to resolve anything.
@@ -259,9 +260,17 @@ async function seedCard(card: CardSeed): Promise<number | null> {
     return null;
   }
 
+  // Read fresh each time: seedCard is called per card, and a code allocated by
+  // the previous call must be visible to this one or two cards whose names
+  // slug identically would collide on the unique index.
+  const taken = new Set(
+    (await db.select({ code: heuristics.cardCode }).from(heuristics)).map((r) => r.code),
+  );
+
   const [created] = await db
     .insert(heuristics)
     .values({
+      cardCode: uniqueCode(codeFromName(card.name), taken),
       name: card.name,
       description: card.description,
       populationTags: card.populationTags,

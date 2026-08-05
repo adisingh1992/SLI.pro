@@ -3,6 +3,7 @@ import { readFileSync, writeFileSync } from "fs";
 import { and, eq } from "drizzle-orm";
 import { initScript, type ScriptDb } from "../script-init";
 import { heuristics, heuristicComponents } from "@shared/wing-schema";
+import { codeFromName, uniqueCode } from "./card-code";
 
 /**
  * Extracts heuristic cards from the existing prompt files.
@@ -283,6 +284,13 @@ async function main() {
   let inserted = 0;
   let skipped = 0;
 
+  // Loaded once and extended as we go. Querying per card would miss codes
+  // allocated earlier in this same run, and two cards in one batch that slug
+  // identically would collide on the unique index.
+  const takenCodes = new Set(
+    (await db.select({ code: heuristics.cardCode }).from(heuristics)).map((r) => r.code),
+  );
+
   for (const card of deduped) {
     const name = `${card.name} (${card.source.populationTag})`;
 
@@ -300,6 +308,11 @@ async function main() {
     const [created] = await db
       .insert(heuristics)
       .values({
+        cardCode: (() => {
+          const c = uniqueCode(codeFromName(name), takenCodes);
+          takenCodes.add(c);
+          return c;
+        })(),
         name,
         description: card.description,
         populationTags: [card.source.populationTag],

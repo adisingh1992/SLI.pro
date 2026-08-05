@@ -20,6 +20,35 @@ import * as wing   from "@shared/wing-schema"; // wing.*
 
 So the shape is: **copy the data in, then transform it in place.**
 
+### `public` is permanent, not a staging area
+
+Worth being explicit, because the framing above invites the opposite reading.
+Several live features still read **and write** the legacy tables through
+`server/storage.ts`:
+
+| feature | legacy table |
+|---|---|
+| monthly check-ins | `monthly_check_ins` |
+| coaching notes | `coaching_notes` |
+| homework assignments | `homework_assignments` |
+| profile sub-records | `experiences`, `education`, `skills`, `languages` |
+| questionnaires, profiles | `questionnaires`, `profiles` |
+
+`migrate-data` **archives** these into `wing.legacy_records` — a point-in-time
+JSON snapshot — but nothing reads them back from there, and the features keep
+inserting into `public`. So the archive begins drifting the moment the app
+takes traffic.
+
+Two consequences for cutover:
+
+1. The legacy schema must be restored **complete and kept**, not dropped once
+   the transform finishes.
+2. Its **sequences** must land correctly, or the first insert into
+   `monthly_check_ins`, `coaching_notes` or any other still-live legacy table
+   collides on a primary key. `pg_dump` emits `setval` entries, but a
+   `--data-only` restore is exactly where they get lost — verify before
+   letting traffic in.
+
 ```
 Neon (live, read-only)
   └─ pg_dump public schema
@@ -424,9 +453,127 @@ every count-based check, so look at an actual transcript with your eyes:
 
 ---
 
+## Cutover dry run — the path this runbook has NOT rehearsed
+
+Everything above restores a full dump (schema **and** data) and then adds the
+wing schema. That is not what a fresh production database does, and the
+difference is where the remaining risk lives.
+
+### Two candidate paths
+
+**Path A — what steps 5–6 rehearse.** Full restore into an empty database,
+then `db:wing-ddl`.
+
+- `public` arrives exactly as production shapes it, sequences included.
+- Wing comes from the migration files.
+- Cost: Drizzle's migration journal is never initialised, so a later
+  `db:migrate` would try to apply `0000` and fail. Future schema changes have
+  to go through `db:push` or hand-applied SQL.
+
+**Path B — the conventional one.** `db:migrate` on an empty database, then
+`pg_restore --data-only`.
+
+- Journal is correct; future migrations just work.
+- `public` matches `shared/schema.ts`, which means **seven unique constraints
+  production has never had are suddenly enforced** — see below.
+- Two hazards a data-only restore is prone to: foreign-key ordering, and
+  sequence state.
+
+**Neither is obviously right.** Path A is proven and constrains future schema
+work; Path B is conventional and may not survive contact with the data.
+
+### Validate Path B before choosing it — cheap, run it now
+
+`db:migrate` creates these on `public`, and production has none of them:
+
+```sql
+-- Any row returned by any of these blocks a --data-only restore under Path B.
+select lower(username), count(*) from users group by 1 having count(*) > 1;
+select username, count(*) from users group by 1 having count(*) > 1;
+select linkedin_id, count(*) from users
+  where linkedin_id is not null group by 1 having count(*) > 1;
+select user_id, count(*) from profiles group by 1 having count(*) > 1;
+select user_id, count(*) from branding_intakes group by 1 having count(*) > 1;
+select user_id, session_number, count(*) from foundation_sessions
+  group by 1,2 having count(*) > 1;
+select user_id, module_code, count(*) from enhancement_modules
+  group by 1,2 having count(*) > 1;
+select token, count(*) from password_resets group by 1 having count(*) > 1;
+select count(*) from documents where file_data is null;  -- 0000 has NOT NULL
+```
+
+Note the first two are different questions. The known duplicate account —
+`chelseykavulu@` and `Chelseykavulu@` — differs only in case, and Postgres
+`UNIQUE` is case-sensitive, so `users_username_unique` is **not** violated by
+it. The lowercased query is the one that shows the human-level duplicate; the
+raw one is what the constraint actually enforces.
+
+If everything returns empty, Path B is viable. If anything returns rows, Path B
+requires cleaning production data first — which is a product decision, not a
+migration one.
+
+### The dry run itself
+
+Against a second scratch database, so it can be repeated:
+
+```bash
+az postgres flexible-server db create \
+  --resource-group <rg> --server-name <stage-server> --database-name cutover-dry
+
+export DATABASE_URL="postgresql://<user>:<pass>@<stage-server>.postgres.database.azure.com/cutover-dry?sslmode=require"
+grep '^DATABASE_URL=' .env | sed -E 's|^.*@||; s|\?.*||'   # must say cutover-dry
+
+npm run db:migrate            # both schemas, from the migration files
+
+pg_restore \
+  --dbname="$DATABASE_URL" \
+  --data-only --disable-triggers \
+  --no-owner --no-acl \
+  $HOME/slipro-legacy-*.dump
+```
+
+`--disable-triggers` is what defers foreign-key checks. It needs rights Azure
+Flexible Server may not grant; if it is refused, that is a finding, not a
+detour — record the error and fall back to Path A rather than improvising.
+
+### Then check the two things this path can silently get wrong
+
+```sql
+-- 1. Sequences. If these come back 0 or 1 while the table has rows, the next
+--    insert collides on the primary key. Legacy tables still take writes —
+--    monthly check-ins, coaching notes, homework — so this is not theoretical.
+select 'users', last_value from users_id_seq
+union all select 'monthly_check_ins', last_value from monthly_check_ins_id_seq
+union all select 'coaching_notes', last_value from coaching_notes_id_seq
+union all select 'homework_assignments', last_value from homework_assignments_id_seq;
+
+select max(id) from users;   -- compare against last_value above
+```
+
+```sql
+-- 2. Row counts, against the baseline table earlier in this document.
+select 'users', count(*) from users
+union all select 'foundation_sessions', count(*) from foundation_sessions
+union all select 'enhancement_modules', count(*) from enhancement_modules
+union all select 'documents', count(*) from documents;
+```
+
+Then run identity and data as normal and diff against the known-good baseline.
+Same numbers means the path is equivalent and Path B is safe to adopt.
+
+Drop `cutover-dry` afterwards — it holds a full copy of production.
+
+---
+
 ## Before the real run
 
 - [ ] Two consecutive clean rehearsals — zero `failed`, zero unexplained skips
+      ✅ done 2026-08-04, both matching the baseline above
+- [ ] Cutover path chosen (A or B) and dry-run against `cutover-dry`
+- [ ] Sequences verified non-zero on the legacy tables that still take writes
+- [ ] Rehearsal artefacts cleared: `rehearsal` database, `cutover-dry`
+      database, `student-*` blobs in the stage storage account, and the local
+      `slipro-legacy-*.dump`. All hold real student data.
 - [ ] Production Azure environment exists (container app, Postgres, Key Vault,
       ACR pull identity, DNS) — **this does not exist yet**
 - [ ] `TRANSCRIBE_FALLBACK_TO_OPENAI=false` in production, so audio stays inside

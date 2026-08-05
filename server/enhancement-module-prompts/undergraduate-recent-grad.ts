@@ -566,16 +566,16 @@ Conversation Messages:
 ${transcript}
 
 COMPLETION CRITERIA — ALL MUST BE SATISFIED:
-✅ Aspiration articulated as functional exploration (2–3 year horizon, not a fixed 10-year plan)
-✅ Current positioning snapshot stated using Session 2 credibilityGaps and credibilityCeiling (framed for student/early-career context)
-✅ First target role specified and reality-checked (directly accessible, stretch, or significant gap)
-✅ Gap analysis completed anchored to Session 2 credibilityGaps, using entry-level role requirements
-✅ 2–3 stepping-stone plan defined with specific titles and what each role adds
-✅ Positioning adjustments identified (specific, achievable for a student)
-✅ Short Alignment Statement formed
-✅ Timeline reality acknowledged (realistic for first job search)
-✅ 30/90/6-month check-ins at student-appropriate level
-✅ If Achievement Orientation Paralysis was detected, roadmap redirected to authentic interests
+${completionCriteria ?? `- Aspiration articulated as functional exploration (2–3 year horizon, not a fixed 10-year plan)
+- Current positioning snapshot stated using Session 2 credibilityGaps and credibilityCeiling (framed for student/early-career context)
+- First target role specified and reality-checked (directly accessible, stretch, or significant gap)
+- Gap analysis completed anchored to Session 2 credibilityGaps, using entry-level role requirements
+- 2–3 stepping-stone plan defined with specific titles and what each role adds
+- Positioning adjustments identified (specific, achievable for a student)
+- Short Alignment Statement formed
+- Timeline reality acknowledged (realistic for first job search)
+- 30/90/6-month check-ins at student-appropriate level
+- If Achievement Orientation Paralysis was detected, roadmap redirected to authentic interests`}
 
 Extract these fields from the conversation and return JSON:
 {
@@ -607,10 +607,7 @@ Extract these fields from the conversation and return JSON:
   }
 }
 
-${completionCriteria ? `Rules for completion (ALL must be satisfied for shouldComplete=true):
-${completionCriteria}
-
-` : ""}Mark shouldComplete as true ONLY if ALL completion criteria are satisfied with specific, achievable content appropriate for an undergraduate or recent graduate.
+Mark shouldComplete as true ONLY if ALL completion criteria are satisfied with specific, achievable content appropriate for an undergraduate or recent graduate.
 
 RETURN STRICT JSON ONLY. No prose, no explanation, just the JSON object.`;
     }

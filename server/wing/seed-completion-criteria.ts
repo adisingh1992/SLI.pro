@@ -268,12 +268,25 @@ async function main() {
       /^\s*\d+\.\s*(.+)$/,
     );
 
-    // Analysis: Module A uses dashes, Module B uses blank-line separated
-    // paragraphs. Captured as a span and split below rather than assuming one
-    // bullet style — assuming cost me a wrong audit earlier.
+    /*
+     * Analysis criteria. THREE formats, not one — this is the fourth time an
+     * extractor here was wrong because it assumed a single shape.
+     *
+     *  Module A  headed "Rules for completion (…)", dash bullets
+     *  Module B  same heading, blank-line separated paragraphs, no bullets
+     *  Module C  headed "COMPLETION CRITERIA — ALL MUST BE SATISFIED:",
+     *            dash bullets with INDENTED sub-bullets
+     *
+     * Module C's heading was missed entirely by the previous version, which
+     * matched only Module A/B's. It reported "analysis had NONE", Module C was
+     * seeded from its CONVERSATION prompt instead, and the seed script printed
+     * a warning claiming Module C's completion had always been arbitrary. All
+     * of that was false — Module C had a full criteria list the whole time,
+     * written with ✅ marks that no pattern here looked for.
+     */
     const analysisSpans = Array.from(
       src.matchAll(
-        /Rules for completion \(ALL must be satisfied for shouldComplete=true\):\n([\s\S]*?)\n\s*If (?:these criteria|any criterion)/g,
+        /(?:Rules for completion \(ALL must be satisfied for shouldComplete=true\):|COMPLETION CRITERIA — ALL MUST BE SATISFIED:)\n([\s\S]*?)\n\s*(?:If (?:these criteria|any criterion)|Extract these fields)/g,
       ),
     ).map((m) =>
       // Strip the interpolation wrapper before splitting, or its opening line
@@ -281,12 +294,27 @@ async function main() {
       m[1].replace(/^\$\{[^`]*\?\?\s*`/, "").replace(/`\}\s*$/, ""),
     );
 
-    const analysisBlocks = analysisSpans.map((span) =>
-      span
-        .split("\n")
-        .map((l) => l.replace(/^\s*[-•]\s*/, "").trim())
-        .filter((l) => l.length > 15 && !l.includes("completionCriteria")),
-    );
+    const analysisBlocks = analysisSpans.map((span) => {
+      // Split on a TOP-LEVEL bullet only. Module C nests sub-bullets under a
+      // parent ("…mapped across the 4 categories:" followed by the four), and
+      // a plain line split would promote each sub-bullet to its own criterion.
+      let chunks = span
+        .trim()
+        .split(/\n(?=[-•]\s)/)
+        .map((c) => c.replace(/^[-•]\s*/, "").trimEnd())
+        .filter((c) => c.trim().length > 15);
+
+      // Module B has no bullets at all, so the split yields one chunk. Fall
+      // back to line-per-criterion for that shape.
+      if (chunks.length <= 1) {
+        chunks = span
+          .split("\n")
+          .map((l) => l.replace(/^\s*[-•]\s*/, "").trim())
+          .filter((l) => l.length > 15);
+      }
+
+      return chunks.filter((c) => !c.includes("completionCriteria"));
+    });
 
     for (let i = 0; i < MODULE_TYPES.length; i++) {
       const sessionType = MODULE_TYPES[i];
@@ -310,11 +338,12 @@ async function main() {
         continue;
       }
 
-      // Module C has no analysis list, so the conversation's is the only
-      // statement of what "done" means. Using it PUBLISHED would hand the
-      // analysis criteria it has never had — stricter than today, and a
-      // behaviour change made by a seed script. So it lands as a DRAFT:
-      // visible in the editor, replayable, live only once someone publishes it.
+      // Fallback to the conversation prompt only if a module genuinely states
+      // no analysis criteria. That is no longer true of any of them: Module C
+      // was believed to have none, but its list was simply written under a
+      // different heading with ✅ marks the old extractor did not match. This
+      // branch is kept as a guard for a future module, not because one needs
+      // it today — if it ever fires, check the extractor before believing it.
       const usingConversationFallback = analysis.length === 0;
       const source_ = usingConversationFallback ? conversation : analysis;
 
@@ -333,9 +362,10 @@ async function main() {
         ...(usingConversationFallback
           ? {
               note:
-                "Taken from the CONVERSATION prompt because this module's analysis " +
-                "prompt states no criteria at all — it says 'ALL completion criteria' " +
-                "without listing them, so the model has been inferring the bar.",
+                "Taken from the CONVERSATION prompt because no analysis criteria " +
+                "were extracted. Verify that against the prompt file before " +
+                "trusting it — the last time this fired, the criteria existed and " +
+                "the extractor was wrong.",
             }
           : {}),
       }));
@@ -372,9 +402,10 @@ async function main() {
   console.log(
     `\n[criteria] modules: ${modulesPublished} published, ${modulesDrafted} left as DRAFT.\n` +
       (modulesDrafted
-        ? `[criteria] The drafts are Module C for each population — their analysis\n` +
-          `[criteria] prompt never stated any criteria, so completion has been\n` +
-          `[criteria] arbitrary. Review and replay before publishing.\n`
+        ? `[criteria] A DRAFT means no analysis criteria were extracted for that\n` +
+          `[criteria] module and the conversation prompt was used instead. Check the\n` +
+          `[criteria] prompt file before accepting that — the last time this\n` +
+          `[criteria] happened the criteria were there and the extractor missed them.\n`
         : ""),
   );
 

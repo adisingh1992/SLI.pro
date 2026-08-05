@@ -457,6 +457,8 @@ function getAnalysisPrompt(
   // prompt was given. Undefined falls back to the list written below, so this
   // can be adopted one session at a time.
   completionCriteria?: string,
+  // Rendered from analysis_methodology. Undefined uses the block below.
+  analysisMethodology?: string,
 ): string {
   if (sessionNumber === 1) {
     return `${questionnaireContext}You are evaluating a Session 1 "Functional Identity Lock-In" coaching conversation for an undergraduate student or recent graduate. The valid functions are: Finance, Operations, Sales, Marketing, Product, R&D/Technical. Use the conversation transcript and the methodology below to determine whether functional identity has been locked.
@@ -465,7 +467,7 @@ function getAnalysisPrompt(
 ${messages.map((msg) => `${msg.role.toUpperCase()}: ${msg.content}`).join("\n\n")}
 
 Use this methodology to analyze the transcript:
-
+${analysisMethodology ?? `
 1) Valid Function Set (undergraduate context)
    - Primary function MUST be one of: Finance, Operations, Sales, Marketing, Product, R&D/Technical.
    - Leadership and "strategy" are NOT functions — they are qualities applied within a function.
@@ -502,7 +504,7 @@ Use this methodology to analyze the transcript:
 6) Evidence Rigor & Confidence Guidance
    - Base all judgments ONLY on evidence in the transcript. Do not invent details.
    - Confidence scaling: 0–49 low (student still exploring), 50–79 medium (directional but not fully committed), ≥80 high (clearly locked, acknowledged, confirmed)
-   - Penalize vague function claims without any supporting behavioral or academic evidence
+   - Penalize vague function claims without any supporting behavioral or academic evidence`}
 
 Respond in STRICT JSON only (no prose, no code fences) with EXACTLY this schema and keys:
 
@@ -547,7 +549,7 @@ Return ONLY the JSON object, nothing else.`;
            ${messages.map((msg) => `${msg.role.toUpperCase()}: ${msg.content}`).join("\n\n")}
 
         Use this methodology to analyze the transcript:
-
+${analysisMethodology ?? `
         1) Evidence Quality Assessment (undergraduate-adapted tiers)
            - Tier 1: Specific measurable outcome — competition placement, quantified project result, internship deliverable with an observable impact, research contribution with a named output
            - Tier 2: Specific project or role with clear actions taken and an observable (if not quantified) result
@@ -569,12 +571,7 @@ Return ONLY the JSON object, nothing else.`;
         4) Hard vs Soft Claims Detection
            - Flag: "I'm a hard worker," "I learn quickly," "I have potential," "I've always been interested in X"
            - Flag: vague participation without a specific output ("I helped with research," "I worked on the marketing team")
-           - Valid: "I built a financial model for our case competition that placed 2nd," "I led social media for the club and grew followers by 40%," "I coded the data pipeline for our senior project"
-
-        5) Completion Criteria
-           - 2–3 specific, provable claims within the locked function
-           - At least one claim has a measurable or observable outcome
-           - Coach has delivered the closing line
+           - Valid: "I built a financial model for our case competition that placed 2nd," "I led social media for the club and grew followers by 40%," "I coded the data pipeline for our senior project"`}
 
         Respond in STRICT JSON only (no prose, no code fences) with EXACTLY this schema and keys:
 
@@ -620,7 +617,7 @@ Conversation Messages:
 ${messages.map((msg) => `${msg.role.toUpperCase()}: ${msg.content}`).join("\n\n")}
 
 Use this methodology to analyze the transcript:
-
+${analysisMethodology ?? `
 1) Story Completeness Assessment
    Each story must include ALL FOUR of the following to count:
    - SPECIFIC CONTEXT: a named situation, project, or challenge (not just "at my internship")
@@ -647,14 +644,7 @@ Use this methodology to analyze the transcript:
    - No outcome described ("it went well")
    - No differentiation ("I did my part")
    - Session closes with a question instead of a declarative statement
-   - Closing is missing any of the five required elements
-
-5) Completion Criteria
-   - At least 2 stories that meet all four quality criteria
-   - A one-sentence positioning direction is articulated
-   - A LinkedIn headline draft is produced
-   - The session closes with a declarative statement (not a question)
-   - The student has acknowledged the closing
+   - Closing is missing any of the five required elements`}
 
 Respond in STRICT JSON only (no prose, no code fences) with EXACTLY this schema and keys:
 

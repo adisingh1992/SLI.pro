@@ -11,7 +11,8 @@ import {
   FileBarChart2,
   BookOpen,
   Tag,
-  CheckSquare
+  CheckSquare,
+  ScanSearch
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
@@ -68,6 +69,20 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
       icon: CheckSquare,
       href: "/admin/criteria",
       active: isActive("/admin/criteria"),
+    },
+    {
+      // Named "Analysis", not "Methodology", because "Methodology" above
+      // already means the heuristic card library — two identical labels with
+      // the same icon, which is how this shipped for about ten minutes.
+      //
+      // The three are distinct surfaces and the labels should say so:
+      //   Methodology  what Wing does DURING a conversation (cards, sequences)
+      //   Completion   WHETHER a finished session counts as done
+      //   Analysis     HOW a finished transcript is read on the way to that
+      title: "Analysis",
+      icon: ScanSearch,
+      href: "/admin/methodology",
+      active: isActive("/admin/methodology"),
     },
   ];
 

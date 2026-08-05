@@ -379,6 +379,19 @@ export const students = wing.table("students", {
 /** Build now · Parent card record. Never deleted, only retired. */
 export const heuristics = wing.table("heuristics", {
   id: id(),
+  /**
+   * Stable identifier, safe to reference from elsewhere.
+   *
+   * Cards had only `id` and `name`. Numeric ids are meaningless in an
+   * objective definition a human has to read, and names change the moment the
+   * methodology owner rewords a card in the editor she already has — so
+   * objectives had nothing they could safely bind an intervention to.
+   *
+   * Same reasoning as an objective's `key`: the thing other records point at
+   * must survive rewording, because the alternative is a reference that breaks
+   * silently and renders as nothing.
+   */
+  cardCode: text("card_code").notNull().unique(),
   name: text("name").notNull(),
   description: text("description").notNull(),
   versionNumber: integer("version_number").notNull().default(1),
@@ -745,6 +758,138 @@ export const sessionCompletionCriteria = wing.table(
     publishedUnique: uniqueIndex("session_completion_criteria_published_unique")
       .on(t.populationTag, t.sessionType)
       .where(sql`${t.status} = 'published'`),
+  }),
+);
+
+/**
+ * How the analysis reasons about a finished transcript.
+ *
+ * Sibling of session_completion_criteria, and the distinction between them is
+ * worth keeping straight:
+ *
+ *   criteria    — WHETHER the session is done. A checklist.
+ *   methodology — HOW to judge the transcript at all. The lenses, tests and
+ *                 translation rules the model applies before reaching that
+ *                 checklist.
+ *
+ * They were tangled until now: five of the nine analysis prompts stated their
+ * completion criteria a second time *inside* the methodology block, disagreeing
+ * with the criteria the editor controlled. Those duplicates are gone, so the
+ * two surfaces no longer overlap and can be owned separately.
+ *
+ * Same shape and same rules as criteria — versioned, retire-never-edit, one
+ * published row per population/session, absent row means the prompt file's own
+ * text is used.
+ */
+export const analysisMethodology = wing.table(
+  "analysis_methodology",
+  {
+    id: id(),
+    /** Matches users.professional_status, which selects the prompt set. */
+    populationTag: text("population_tag").notNull(),
+    sessionType: sessionType("session_type").notNull(),
+    versionNumber: integer("version_number").notNull().default(1),
+    status: publishStatus("status").notNull().default("draft"),
+    /**
+     * [{ id, title, body }] — one entry per numbered section.
+     *
+     * Stored unnumbered and renumbered at render, so reordering or retiring a
+     * section does not require renumbering the rest by hand — which is the
+     * kind of edit that silently produces "1) 2) 4)".
+     */
+    sections: jsonb("sections").notNull(),
+    changeNote: text("change_note"),
+    createdBy: fk("created_by").references(() => users.id),
+    createdAt: tsNow("created_at"),
+    publishedAt: ts("published_at"),
+  },
+  (t) => ({
+    lookupIdx: index("analysis_methodology_lookup_idx")
+      .on(t.populationTag, t.sessionType, t.status),
+    publishedUnique: uniqueIndex("analysis_methodology_published_unique")
+      .on(t.populationTag, t.sessionType)
+      .where(sql`${t.status} = 'published'`),
+  }),
+);
+
+/**
+ * The objective set for a session — what it is trying to achieve, in order.
+ *
+ * WHY THIS EXISTS
+ * Methodology used to live inside 22,000-character prompt template literals,
+ * three near-identical copies of them, and reaching in to change one thing kept
+ * silently changing another. Four separate extractors written against those
+ * files were wrong in ways that looked like success. Criteria ended up stated
+ * in three places and disagreeing.
+ *
+ * So the prompt stops being a document and becomes a render target: assembled
+ * per turn from the objective in play, the heuristic cards eligible for it, the
+ * student's context, and the published completion criteria. Nothing to
+ * duplicate into, no interpolation for an editor to delete.
+ *
+ * POPULATIONS ARE OVERLAYS, NOT COPIES
+ * One objective set per session type. Where a population genuinely differs, it
+ * says so in `overrides` — so "why is mid-career stricter here?" has an answer
+ * in a field instead of being lost in prose, and copy-paste decay becomes
+ * impossible to mistake for deliberate methodology.
+ *
+ * Versioned exactly like criteria and methodology: retire-never-edit, one
+ * published set per session type, absent row means the legacy prompt file is
+ * still in charge — so this can be adopted one session at a time.
+ */
+export const objectiveSets = wing.table(
+  "objective_sets",
+  {
+    id: id(),
+    sessionType: sessionType("session_type").notNull(),
+    versionNumber: integer("version_number").notNull().default(1),
+    status: publishStatus("status").notNull().default("draft"),
+    /**
+     * Ordered Objective[]. See objective-rules.ts for the shape and for the
+     * overlay merge, which is a pure function so it can be tested without a
+     * database.
+     */
+    objectives: jsonb("objectives").notNull(),
+    changeNote: text("change_note"),
+    createdBy: fk("created_by").references(() => users.id),
+    createdAt: tsNow("created_at"),
+    publishedAt: ts("published_at"),
+  },
+  (t) => ({
+    lookupIdx: index("objective_sets_lookup_idx").on(t.sessionType, t.status),
+    publishedUnique: uniqueIndex("objective_sets_published_unique")
+      .on(t.sessionType)
+      .where(sql`${t.status} = 'published'`),
+  }),
+);
+
+/**
+ * Which objective each turn was pursuing.
+ *
+ * The reason the whole design pays for itself. Turns already carry provenance
+ * and turn type; adding the objective gives every heuristic card a real
+ * denominator — "applied while pursuing objective X, and X was subsequently
+ * satisfied" — instead of the much weaker "applied in a session that later
+ * completed".
+ *
+ * It is also what makes a conversation change measurable at all. Replay cannot
+ * work for conversation prompts, because changing what Wing says changes what
+ * the student says next. But per-objective satisfaction rates across cohorts
+ * can be compared, which is a real experiment rather than a simulated one.
+ */
+export const turnObjectives = wing.table(
+  "turn_objectives",
+  {
+    turnId: fk("turn_id").notNull().unique().references(() => transcriptTurns.id),
+    sessionId: fk("session_id").notNull().references(() => sessions.id),
+    objectiveKey: text("objective_key").notNull(),
+    /** True on the turn where the objective's evidence test first passed. */
+    satisfiedHere: boolean("satisfied_here").notNull().default(false),
+    createdAt: tsNow("created_at"),
+  },
+  (t) => ({
+    sessionIdx: index("turn_objectives_session_idx").on(t.sessionId),
+    objectiveIdx: index("turn_objectives_objective_idx").on(t.objectiveKey),
   }),
 );
 

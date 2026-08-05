@@ -57,6 +57,27 @@
       "when": 1785833000000,
       "tag": "0007_content_draft_share_count",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1785836000000,
+      "tag": "0008_analysis_methodology",
+      "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1785900000000,
+      "tag": "0009_objective_sets",
+      "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1785910000000,
+      "tag": "0010_heuristic_card_code",
+      "breakpoints": true
     }
   ]
 }

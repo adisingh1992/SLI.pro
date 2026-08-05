@@ -36,6 +36,20 @@ export interface PromptSet {
     previousSessionsContext: string,
     /** Same criteria the conversation was given. Undefined uses the built-in list. */
     completionCriteria?: string,
+    /**
+     * How to read the transcript — the lenses and validation tests, rendered
+     * from analysis_methodology.
+     *
+     * Separate from completionCriteria on purpose. Criteria decide WHETHER the
+     * session is done; methodology decides HOW the transcript is read on the
+     * way to that judgement. They used to overlap — five of the nine analysis
+     * prompts restated their criteria inside the methodology block, disagreeing
+     * with the criteria the editor controlled — and that duplication is now
+     * removed.
+     *
+     * Undefined uses the prompt file's own text, so adoption is per session.
+     */
+    analysisMethodology?: string,
   ): string;
   getInitialGuidanceMessage(sessionNumber: number): string | null;
 }

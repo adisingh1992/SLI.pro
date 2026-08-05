@@ -651,27 +651,27 @@ Conversation Messages:
 ${transcript}
 
 COMPLETION CRITERIA — ALL MUST BE SATISFIED:
-✅ Long-term backwards narrative articulated (what they want to be known for at the executive level)
-✅ Current positioning snapshot stated using Session 2 credibilityGaps and credibilityCeiling
-✅ Target role/impact specified (2-5 year goal)
-✅ Tier classification identified (Tier 1: same path advancement, Tier 2: single pivot, Tier 3: Earth-to-Moon)
-✅ Gap analysis completed anchored to Session 2 credibilityGaps, with at least 2 gaps mapped across the 4 categories:
+${completionCriteria ?? `- Long-term backwards narrative articulated (what they want to be known for at the executive level)
+- Current positioning snapshot stated using Session 2 credibilityGaps and credibilityCeiling
+- Target role/impact specified (2-5 year goal)
+- Tier classification identified (Tier 1: same path advancement, Tier 2: single pivot, Tier 3: Earth-to-Moon)
+- Gap analysis completed anchored to Session 2 credibilityGaps, with at least 2 gaps mapped across the 4 categories:
    - Experience gaps (missing leadership, P&L, etc.)
    - Functional gaps (influence vs ownership)
    - Scale gaps (startup vs enterprise proof)
    - Industry gaps (adjacent vs deep domain)
-✅ All 3 stepping stones defined with specific titles and competencies added (framed toward C-suite/executive trajectory):
+- All 3 stepping stones defined with specific titles and competencies added (framed toward C-suite/executive trajectory):
    - Immediate (6-12 months): next role adding ONE missing competency
    - Intermediate (2-3 years): role adding second competency + complexity
    - Ultimate (5+ years): realistic C-suite or executive target
-✅ Positioning adjustments identified with at least 2 actions in each category:
+- Positioning adjustments identified with at least 2 actions in each category:
    - Credibility expansion
    - Network repositioning
    - Narrative reframing
    - Skill gap filling
-✅ Complete Alignment Statement formed: "CURRENT → TARGET → PATHWAY → POSITIONING ADJUSTMENTS → TIMELINE REALITY"
-✅ Timeline reality acknowledged
-✅ 30/90/6-month check-ins defined with trackable metrics
+- Complete Alignment Statement formed: "CURRENT → TARGET → PATHWAY → POSITIONING ADJUSTMENTS → TIMELINE REALITY"
+- Timeline reality acknowledged
+- 30/90/6-month check-ins defined with trackable metrics`}
 
 Extract these fields from the conversation and return JSON:
 {
@@ -703,10 +703,7 @@ Extract these fields from the conversation and return JSON:
   }
 }
 
-${completionCriteria ? `Rules for completion (ALL must be satisfied for shouldComplete=true):
-${completionCriteria}
-
-` : ""}Mark shouldComplete as true ONLY if ALL completion criteria are satisfied with specific, actionable content (no generic placeholders).
+Mark shouldComplete as true ONLY if ALL completion criteria are satisfied with specific, actionable content (no generic placeholders).
 
 RETURN STRICT JSON ONLY. No prose, no explanation, just the JSON object.`;
     }

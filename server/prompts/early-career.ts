@@ -502,6 +502,8 @@ function getAnalysisPrompt(
   // prompt was given. Undefined falls back to the list written below, so this
   // can be adopted one session at a time.
   completionCriteria?: string,
+  // Rendered from analysis_methodology. Undefined uses the block below.
+  analysisMethodology?: string,
 ): string {
   if (sessionNumber === 1) {
     return `${questionnaireContext}You are evaluating a Session 1 "Functional Identity Lock-In" coaching conversation for an early career professional (2–7 years of experience). The valid functions are: Finance, Operations, Sales, Marketing, Product. Use the conversation transcript and the methodology below to determine whether functional identity has been locked.
@@ -510,7 +512,7 @@ function getAnalysisPrompt(
 ${messages.map((msg) => `${msg.role.toUpperCase()}: ${msg.content}`).join("\n\n")}
 
 Use this methodology to analyze the transcript:
-
+${analysisMethodology ?? `
 1) Valid Function Set (early career context)
    - Primary function MUST be one of: Finance, Operations, Sales, Marketing, Product.
    - Leadership, strategy, and general management are NOT functions.
@@ -549,7 +551,7 @@ Use this methodology to analyze the transcript:
 7) Evidence Rigor & Confidence Guidance
    - Base all judgments ONLY on evidence in the transcript
    - Confidence scaling: 0–49 low (still hedging/exploring), 50–79 medium (directional but not fully committed), ≥80 high (clearly locked, acknowledged, work-evidence-based)
-   - Penalize: industry substitution, employer brand substitution, "leadership" as a function, "general management" as a function
+   - Penalize: industry substitution, employer brand substitution, "leadership" as a function, "general management" as a function`}
 
 Respond in STRICT JSON only (no prose, no code fences) with EXACTLY this schema and keys:
 
@@ -595,7 +597,7 @@ Return ONLY the JSON object, nothing else.`;
            ${messages.map((msg) => `${msg.role.toUpperCase()}: ${msg.content}`).join("\n\n")}
 
         Use this methodology to analyze the transcript:
-
+${analysisMethodology ?? `
         1) Evidence Quality Assessment (early career tiers)
            - Tier 1: Measurable business outcome with a clear metric (%, $, time, growth rate, scale) personally driven
            - Tier 2: Specific project or decision with a clear mechanism and observable (if not fully quantified) result
@@ -620,13 +622,7 @@ Return ONLY the JSON object, nothing else.`;
            - Flag: "I worked at [Company]" without a personal delivery
            - Flag: "I'm passionate about" or "I have a track record of"
            - Flag: "The team achieved" without "my specific contribution was"
-           - Valid: "Reduced customer churn by 18% by building an automated follow-up sequence", "Grew pipeline from 40 to 110 qualified leads in one quarter by launching outbound cadence"
-
-        5) Completion Criteria
-           - 2–3 specific credibility claims within the locked function
-           - At least one claim includes a metric
-           - Claims are differentiated from employer brand or team effort
-           - Coach has delivered the closing line
+           - Valid: "Reduced customer churn by 18% by building an automated follow-up sequence", "Grew pipeline from 40 to 110 qualified leads in one quarter by launching outbound cadence"`}
 
         Respond in STRICT JSON only (no prose, no code fences) with EXACTLY this schema and keys:
 
@@ -671,7 +667,7 @@ Conversation Messages:
 ${messages.map((msg) => `${msg.role.toUpperCase()}: ${msg.content}`).join("\n\n")}
 
 Use this methodology to analyze the transcript:
-
+${analysisMethodology ?? `
 1) Story Completeness Assessment
    Each story must include ALL FIVE of the following to count:
    - SPECIFIC CONTEXT: named situation, project, company context, or challenge
@@ -707,7 +703,7 @@ Use this methodology to analyze the transcript:
    - No functional connection to Session 1
    - Experience bullets are still task descriptions, not outcome-driven
    - No content direction produced
-   - Session closes with a question
+   - Session closes with a question`}
 
 Respond in STRICT JSON only (no prose, no code fences) with EXACTLY this schema and keys:
 

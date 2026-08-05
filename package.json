@@ -8,9 +8,9 @@
     "build": "npm run build:client && npm run build:server",
     "start": "NODE_ENV=production node dist/index.js",
     "check": "tsc",
-    "test": "tsx server/wing/engine-rules.test.ts && tsx server/wing/classifier-rules.test.ts && tsx server/wing/provenance.test.ts",
+    "test": "tsx server/wing/objective-rules.test.ts && tsx server/wing/engine-rules.test.ts && tsx server/wing/classifier-rules.test.ts && tsx server/wing/provenance.test.ts",
     "db:push": "drizzle-kit push",
-    "db:wing-ddl": "psql \"$DATABASE_URL\" -v ON_ERROR_STOP=1 -f rehearsal-public-prereqs.sql -f migrations/0003_optimal_spyke.sql -f migrations/0005_milky_calypso.sql -f migrations/0006_optimal_princess_powerful.sql -f migrations/0007_content_draft_share_count.sql",
+    "db:wing-ddl": "psql \"$DATABASE_URL\" -v ON_ERROR_STOP=1 -f rehearsal-public-prereqs.sql -f migrations/0003_optimal_spyke.sql -f migrations/0005_milky_calypso.sql -f migrations/0006_optimal_princess_powerful.sql -f migrations/0007_content_draft_share_count.sql -f migrations/0008_analysis_methodology.sql -f migrations/0009_objective_sets.sql -f migrations/0010_heuristic_card_code.sql",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "tsx server/migrate.ts",
     "db:verify": "tsx server/verify-db.ts",
@@ -22,7 +22,11 @@
     "build:migrate": "esbuild server/migrate.ts --platform=node --packages=external --bundle --format=esm --outfile=dist/migrate.js",
     "wing:classify-backlog": "tsx server/wing/classify-backlog.ts",
     "wing:extract-heuristics": "tsx server/wing/extract-heuristics.ts",
-    "wing:seed-criteria": "tsx server/wing/seed-completion-criteria.ts"
+    "wing:seed-criteria": "tsx server/wing/seed-completion-criteria.ts",
+    "wing:seed-methodology-sections": "tsx server/wing/seed-analysis-methodology.ts",
+    "wing:seed-objectives": "tsx server/wing/seed-objectives.ts",
+    "wing:preview-prompt": "tsx server/wing/preview-objective-prompt.ts",
+    "wing:extract-cards": "tsx server/wing/extract-intervention-cards.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.37.0",

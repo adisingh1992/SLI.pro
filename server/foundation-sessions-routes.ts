@@ -85,6 +85,38 @@ async function resolveCompletionCriteria(
   }
 }
 
+/**
+ * Published analysis methodology for this population/session, or undefined.
+ *
+ * Analysis only — unlike completion criteria, there is no conversation-side
+ * counterpart. Methodology describes how to read a FINISHED transcript, which
+ * is not something the live conversation needs to be told.
+ */
+async function resolveAnalysisMethodology(
+  professionalStatus: string | null | undefined,
+  sessionNumber: number,
+): Promise<string | undefined> {
+  try {
+    const store = await import("./wing/analysis-methodology-store");
+    const populationTag =
+      professionalStatus === "undergraduate_or_recent_grad" ||
+      professionalStatus === "early_career"
+        ? professionalStatus
+        : "mid_career_or_senior";
+
+    const published = await store.getPublished(
+      populationTag,
+      sessionTypeFor(sessionNumber),
+    );
+    if (!published) return undefined;
+
+    return store.renderForAnalysis(published.sections);
+  } catch (error) {
+    console.error("[methodology] resolution failed, using prompt defaults:", error);
+    return undefined;
+  }
+}
+
 /** Artifact type produced by each Foundation Session (spec §8). */
 const ARTIFACT_FOR_SESSION: Record<number, ArtifactType> = {
   1: "functional_identity",
@@ -286,6 +318,8 @@ export async function checkSessionCompletion(
    * path — a separate copy would drift and reassure you about the wrong code.
    */
   criteriaOverride?: string,
+  /** Draft methodology to evaluate INSTEAD of the published sections. */
+  methodologyOverride?: string,
 ): Promise<{ shouldComplete: boolean; completionData?: any }> {
   if (![1, 2, 3].includes(sessionNumber)) return { shouldComplete: false };
 
@@ -318,12 +352,21 @@ export async function checkSessionCompletion(
         "analysis",
       ));
 
+    // How to read the transcript, as opposed to what counts as done.
+    const methodology =
+      methodologyOverride ??
+      (await resolveAnalysisMethodology(
+        userProfile?.professionalStatus,
+        sessionNumber,
+      ));
+
     const analysisPrompt = promptSet.getAnalysisPrompt(
       sessionNumber,
       messages,
       questionnaireContext,
       previousSessionsContext,
       criteria,
+      methodology,
     );
 
     // Structured analysis of the transcript -> mid tier.
