@@ -26,7 +26,8 @@
     "wing:seed-methodology-sections": "tsx server/wing/seed-analysis-methodology.ts",
     "wing:seed-objectives": "tsx server/wing/seed-objectives.ts",
     "wing:preview-prompt": "tsx server/wing/preview-objective-prompt.ts",
-    "wing:extract-cards": "tsx server/wing/extract-intervention-cards.ts"
+    "wing:extract-cards": "tsx server/wing/extract-intervention-cards.ts",
+    "wing:reset-sessions": "tsx server/wing/reset-foundation-sessions.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.37.0",

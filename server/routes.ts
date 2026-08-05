@@ -20,6 +20,7 @@ import { registerHeuristicsRoutes } from "./heuristics-routes";
 import { registerTaggingRoutes } from "./tagging-routes";
 import { registerCriteriaRoutes } from "./criteria-routes";
 import { registerMethodologyRoutes } from "./methodology-routes";
+import { registerObjectiveRoutes } from "./objectives-routes";
 import * as blobStorage from "./blob-storage";
 import { getDocumentBase64 } from "./document-data";
 import * as orchestrator from "./orchestrator";
@@ -113,6 +114,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   registerTaggingRoutes(app);
   registerCriteriaRoutes(app);
   registerMethodologyRoutes(app);
+  registerObjectiveRoutes(app);
 
   // Middleware to check if user is authenticated
   const isAuthenticated = (req: Request, res: Response, next: NextFunction) => {

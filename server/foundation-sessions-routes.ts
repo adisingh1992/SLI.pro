@@ -6,6 +6,7 @@ import * as orchestrator from "./orchestrator";
 import * as store from "./wing/session-store";
 import type { WingSessionType, ArtifactType } from "./wing/session-store";
 import { isAiTurn } from "./wing/turn-type";
+import * as objectiveRuntime from "./wing/objective-runtime";
 import type { PriorSessionContext } from "./prompts/types";
 import * as docStore from "./wing/document-store";
 import * as intakeStore from "./wing/intake-store";
@@ -737,18 +738,48 @@ export function registerFoundationSessionsRoutes(app: Express) {
         const resumeSummary = await formatResumeSummary(legacyUserId);
         const priorSessions = await buildPriorSessionContexts(studentId, sessionNumber);
 
-        const basePrompt = promptSet.getSystemPrompt({
+        const conversationCriteria = await resolveCompletionCriteria(
+          userProfile?.professionalStatus,
           sessionNumber,
-          resumeSummary,
-          priorSessions: priorSessions.length > 0 ? priorSessions : undefined,
-          // Same row the analysis reads, rendered for the conversation. This
-          // pairing is the whole point: one definition, two renderings.
-          completionCriteria: await resolveCompletionCriteria(
-            userProfile?.professionalStatus,
-            sessionNumber,
-            "conversation",
-          ),
+          "conversation",
+        );
+
+        /*
+         * EXPERIMENT — assemble the prompt from objectives instead of the
+         * prompt file, for allowlisted populations only.
+         *
+         * Off unless OBJECTIVE_RENDERER_POPULATIONS names this student's
+         * population. Returns null on anything unexpected — flag off, no
+         * published objective set, or an error — and the legacy prompt runs
+         * exactly as before. A student mid-session must never see this break.
+         *
+         * The comparison this exists to make: a focused ~1,500-character
+         * prompt carrying one objective and its cards, against the 22,000-
+         * character file that carries everything at once. Which produces better
+         * coaching is a question no amount of design settles.
+         */
+        const objectivePrompt = await objectiveRuntime.buildObjectivePrompt({
+          sessionId: session.id,
+          sessionType: sessionTypeFor(sessionNumber),
+          sessionTitle: `Foundation Session ${sessionNumber}`,
+          professionalStatus: userProfile?.professionalStatus,
+          identity: promptSet.getSystemPrompt({ sessionNumber }).slice(0, 600),
+          studentContext: [resumeSummary, ...priorSessions.map((p) => p.conversationTranscript)]
+            .filter(Boolean)
+            .join("\n\n"),
+          completionCriteria: conversationCriteria,
         });
+
+        const basePrompt =
+          objectivePrompt?.prompt ??
+          promptSet.getSystemPrompt({
+            sessionNumber,
+            resumeSummary,
+            priorSessions: priorSessions.length > 0 ? priorSessions : undefined,
+            // Same row the analysis reads, rendered for the conversation. This
+            // pairing is the whole point: one definition, two renderings.
+            completionCriteria: conversationCriteria,
+          });
 
         // The real-time engine loop (spec §6): evaluate the turn against the
         // student's active heuristic sequence before Wing replies, so an
@@ -792,6 +823,26 @@ export function registerFoundationSessionsRoutes(app: Express) {
 
         // Completion check over the full turn list.
         const allMessages = await store.getTurnsAsMessages(session.id);
+
+        /*
+         * Which objectives this turn satisfied — the measurement half of the
+         * experiment, and the reason it is worth running at all.
+         *
+         * Attributed to the HUMAN turn, not Wing's reply: the student is who
+         * satisfies an objective. Costs one mid-tier call per turn, which is
+         * why it is gated to allowlisted populations. Never throws — losing a
+         * data point is acceptable, losing the session is not.
+         */
+        await objectiveRuntime.recordObjectiveEvidence({
+          sessionId: session.id,
+          sessionType: sessionTypeFor(sessionNumber),
+          professionalStatus: userProfile?.professionalStatus,
+          turnId: humanTurn.id,
+          transcript: allMessages
+            .map((m) => `${m.role.toUpperCase()}: ${m.content}`)
+            .join("\n\n"),
+        });
+
         const completionCheck = await checkSessionCompletion(
           legacyUserId,
           studentId,

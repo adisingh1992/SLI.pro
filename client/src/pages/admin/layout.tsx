@@ -12,7 +12,8 @@ import {
   BookOpen,
   Tag,
   CheckSquare,
-  ScanSearch
+  ScanSearch,
+  Target
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
@@ -69,6 +70,14 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
       icon: CheckSquare,
       href: "/admin/criteria",
       active: isActive("/admin/criteria"),
+    },
+    {
+      // The beats a session is trying to reach. Sits before Completion and
+      // Analysis because it is what the session DOES; those two judge it.
+      title: "Objectives",
+      icon: Target,
+      href: "/admin/objectives",
+      active: isActive("/admin/objectives"),
     },
     {
       // Named "Analysis", not "Methodology", because "Methodology" above
