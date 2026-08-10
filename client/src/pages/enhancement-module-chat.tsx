@@ -388,35 +388,53 @@ export default function EnhancementModuleChatPage() {
       {/* Header */}
       <div className="w-full px-4 py-2 border-b bg-background">
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <Button 
-              onClick={() => navigate('/')} 
-              variant="outline" 
+          <div className="flex items-center gap-2 sm:gap-4">
+            <Button
+              onClick={() => navigate('/')}
+              variant="outline"
               size="sm"
               data-testid="button-back-to-overview"
             >
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Back
+              <ArrowLeft className="h-4 w-4 sm:mr-2" />
+              <span className="hidden sm:inline">Back</span>
             </Button>
-            <div>
-              <h1 className="text-2xl font-bold text-foreground" data-testid="text-module-title">
+            <div className="min-w-0">
+              <h1 className="truncate text-base font-bold text-foreground sm:text-2xl" data-testid="text-module-title">
                 {moduleInfo.title}
               </h1>
-              <p className="text-sm text-muted-foreground">{moduleInfo.description}</p>
+              <p className="hidden text-sm text-muted-foreground sm:block">{moduleInfo.description}</p>
             </div>
           </div>
         </div>
       </div>
 
-      {/* 2-Column Layout */}
-      <div className="flex h-[calc(100vh-140px)]">
+      {/* 2-column layout. `dvh` not `vh` — see foundation-session-chat.tsx for
+          why; the failure is the message box sitting below the fold on a
+          phone. */}
+      <div className="flex h-[calc(100dvh-104px)] sm:h-[calc(100dvh-140px)]">
         {/* Left Column - Chat Interface (75%) */}
         <div className="w-full lg:w-3/4 flex flex-col">
+          {/* Mobile timer — the info column is hidden below lg, so without this
+              a student on a phone has no sense of how long the module takes.
+              No end-early control here because this page never had one. */}
+          {(module.status === 'in_progress' || module.status === 'completed') && (
+            <div className="shrink-0 border-b px-3 py-1.5 lg:hidden">
+              <SessionTimer
+                config={getTimerConfig()}
+                isSessionActive={module.status === 'in_progress'}
+                isSessionCompleted={module.status === 'completed'}
+                className="border-0 bg-transparent p-0 text-xs"
+                initialTimerElapsed={module.timerElapsed || 0}
+                onTimerSave={handleTimerSave}
+              />
+            </div>
+          )}
+
           {/* Chat Interface */}
           <Card className="flex-1 flex flex-col overflow-hidden m-0 rounded-none">       
           <CardContent className="flex-1 min-h-0 flex flex-col p-0 overflow-hidden py-2">
             {/* Messages Area */}
-            <ScrollArea className="flex-1 min-h-0 px-6">
+            <ScrollArea className="flex-1 min-h-0 px-3 sm:px-6">
               <div className="space-y-4 pb-4">
 
                 {/* Conversation messages */}
@@ -491,7 +509,7 @@ export default function EnhancementModuleChatPage() {
 
             {/* Message Input */}
             {(module.status === 'in_progress' || (module.status === 'completed' && allowContinue)) && (
-              <div className="border-t p-6">
+              <div className="border-t p-3 sm:p-6">
                 <form onSubmit={handleSendMessage}>
                   <div className="flex gap-2">
                     <VoiceMicButton
@@ -505,7 +523,7 @@ export default function EnhancementModuleChatPage() {
                       value={currentMessage}
                       onChange={(e) => setCurrentMessage(e.target.value)}
                       placeholder="Type or click the microphone to speak your response naturally..."
-                      className="min-h-[60px] resize-none text-sm flex-1"
+                      className="min-h-[60px] resize-none text-base sm:text-sm flex-1"
                       onKeyDown={(e) => {
                         if (e.key === 'Enter' && !e.shiftKey) {
                           e.preventDefault();

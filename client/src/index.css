@@ -46,8 +46,49 @@
   }
 }
 
-html {
-  zoom: 0.95;
+/*
+ * Desktop only.
+ *
+ * `zoom` is non-standard and compounds badly on a phone: it shrinks every touch
+ * target by 5% on screens that have the least room to spare, and it interacts
+ * unpredictably with the visual viewport when the on-screen keyboard opens.
+ * Whatever it is buying on a large display, it is not worth paying for on a
+ * 375px one.
+ */
+@media (min-width: 1024px) {
+  html {
+    zoom: 0.95;
+  }
 }
 
-/* PDF CSS no longer needed - using jsPDF programmatic approach */
+/*
+ * iOS Safari zooms the page whenever a text field with a font-size below 16px
+ * receives focus — and does not zoom back out afterwards. In a session that is
+ * fifteen minutes of typing into one box, the student ends up conducting the
+ * whole conversation on a zoomed-in page they have to pan around.
+ *
+ * The usual workaround is `maximum-scale=1` on the viewport meta, which is why
+ * that was there. It is the wrong fix twice over: iOS has ignored it since iOS
+ * 10, so it does not even work, and Android Chrome does honour it, which
+ * disables pinch-zoom and fails WCAG 1.4.4. Removed from index.html.
+ *
+ * The actual fix is the font size. 16px on form controls at phone widths costs
+ * nothing — text-sm and text-base render nearly identically at that size — and
+ * it is applied globally rather than per-input so a screen nobody has audited
+ * yet cannot reintroduce the bug.
+ */
+@media (max-width: 767px) {
+  input[type="text"],
+  input[type="email"],
+  input[type="password"],
+  input[type="number"],
+  input[type="search"],
+  input[type="tel"],
+  input[type="url"],
+  input[type="date"],
+  input[type="datetime-local"],
+  select,
+  textarea {
+    font-size: 16px;
+  }
+}

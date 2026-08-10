@@ -47,6 +47,8 @@ import AdminClassifierPage from "@/pages/admin/classifier-page";
 import AdminCriteriaPage from "@/pages/admin/criteria-page";
 import AdminMethodologyPage from "@/pages/admin/methodology-page";
 import AdminObjectivesPage from "@/pages/admin/objectives-page";
+import AdminAdvisorsPage from "@/pages/admin/advisors-page";
+import AdminTemplatesPage from "@/pages/admin/templates-page";
 
 function Router() {
   return (
@@ -110,6 +112,8 @@ function Router() {
       <Route path="/admin/criteria" component={AdminCriteriaPage} />
       <Route path="/admin/methodology" component={AdminMethodologyPage} />
       <Route path="/admin/objectives" component={AdminObjectivesPage} />
+      <Route path="/admin/advisors" component={AdminAdvisorsPage} />
+      <Route path="/admin/templates" component={AdminTemplatesPage} />
       <Route path="/admin/tagging" component={AdminTaggingPage} />
       <Route path="/admin/tagging/validate" component={AdminTaggingValidatePage} />
       <Route path="/admin/tagging/classifier" component={AdminClassifierPage} />

@@ -16,12 +16,22 @@ interface EmailParams {
   html?: string;
 }
 
+export type SendOutcome = {
+  sent: boolean;
+  /** SendGrid's x-message-id — the handle for querying deliverability later. */
+  messageId: string | null;
+  /** One line, safe to store. Null when the send was accepted. */
+  reason: string | null;
+};
+
 /**
- * Sends an email using the SendGrid API
- * @param params Email parameters
- * @returns true if the email was sent successfully, false otherwise
+ * Sends an email and reports what actually happened.
+ *
+ * `sendEmail` below keeps the boolean signature for existing callers. New code
+ * should prefer this: "accepted or not" is rarely enough on its own, and the
+ * message id is the only way to answer "did it actually arrive" afterwards.
  */
-export async function sendEmail(params: EmailParams): Promise<boolean> {
+export async function sendEmailDetailed(params: EmailParams): Promise<SendOutcome> {
   try {
     const msg = {
       to: params.to,
@@ -30,24 +40,74 @@ export async function sendEmail(params: EmailParams): Promise<boolean> {
       text: params.text || '',
       html: params.html || ''
     };
-    
+
     console.log(`Attempting to send email to: ${params.to} from: ${params.from}`);
-    await mail.send(msg);
-    console.log(`Email sent successfully to ${params.to}`);
-    return true;
+    const [response] = await mail.send(msg);
+    // SendGrid returns 202 with the id in a header; there is no body to read.
+    const messageId =
+      (response?.headers as Record<string, string> | undefined)?.["x-message-id"] ?? null;
+    console.log(`Email sent successfully to ${params.to}${messageId ? ` (${messageId})` : ""}`);
+    return { sent: true, messageId, reason: null };
   } catch (error: any) {
-    console.error('SendGrid email error:', error);
-    
-    // Log detailed error information
-    if (error.response) {
-      console.error('Error details:', {
-        status: error.code,
-        body: error.response.body,
-      });
+    /*
+     * SendGrid puts the actual reason in error.response.body.errors, which is
+     * nested three levels deep. console.error truncates at depth 2, so the
+     * previous version printed `errors: [Array]` and `[Object]` — the stack
+     * trace and headers were visible and the one useful sentence was not.
+     *
+     * The errors array is the only part worth reading, so it is pulled out and
+     * printed flat rather than dumped.
+     */
+    const status = error?.code ?? error?.response?.statusCode;
+    const errors: Array<{ message?: string; field?: string; help?: string }> =
+      error?.response?.body?.errors ?? [];
+
+    console.error(`[email] SendGrid refused the send — HTTP ${status ?? "?"}`);
+    console.error(`[email]   to:   ${params.to}`);
+    console.error(`[email]   from: ${params.from}`);
+
+    if (errors.length) {
+      for (const e of errors) {
+        console.error(`[email]   → ${e.message ?? "(no message)"}`);
+        if (e.field) console.error(`[email]     field: ${e.field}`);
+        if (e.help) console.error(`[email]     help:  ${e.help}`);
+      }
+    } else {
+      console.error(`[email]   ${error?.message ?? String(error)}`);
     }
-    
-    return false;
+
+    // The two failures that account for almost every 401/403 here, called out
+    // because the API's own wording ("The from address does not match a
+    // verified Sender Identity") is easy to read as a malformed-address
+    // problem rather than a one-time setup step.
+    if (status === 403) {
+      console.error(
+        `[email]   Most likely: "${params.from}" is not a verified sender in SendGrid.\n` +
+          `[email]   Verify it under Settings → Sender Authentication, or set\n` +
+          `[email]   WING_FROM_EMAIL to an address that already is.`,
+      );
+    }
+    if (status === 401) {
+      console.error(`[email]   Most likely: SENDGRID_API_KEY is missing, wrong, or lacks Mail Send.`);
+    }
+
+    const reason =
+      `HTTP ${status ?? "?"}: ` +
+      (errors.map((e) => e.message).filter(Boolean).join("; ") ||
+        error?.message ||
+        "unknown");
+
+    return { sent: false, messageId: null, reason: reason.slice(0, 500) };
   }
+}
+
+/**
+ * Sends an email using the SendGrid API
+ * @param params Email parameters
+ * @returns true if the email was sent successfully, false otherwise
+ */
+export async function sendEmail(params: EmailParams): Promise<boolean> {
+  return (await sendEmailDetailed(params)).sent;
 }
 
 /**

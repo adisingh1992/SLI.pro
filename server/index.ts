@@ -106,7 +106,7 @@ app.use((req, res, next) => {
   }
 
   // Port comes from the environment (Container Apps sets PORT); default 5000
-  // preserves local/Replit behaviour.
+  // for local development.
   const port = config.port;
   server.listen({
     port,

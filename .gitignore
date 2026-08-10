@@ -34,10 +34,17 @@ logs
 .env.test.local
 .env.production.local
 
-# Replit specific
+# Replit remnants — the platform runs on Azure. None of these should reappear;
+# they are listed so that restoring an old branch or an editor plugin cannot
+# quietly put them back.
 .replit
 .repl_history
 *.replit-cache
+replit.nix
+replit.md
+replit_agent/
+.local/
+theme.json
 
 # System files
 .DS_Store
@@ -52,3 +59,9 @@ Thumbs.db
 *.swm
 cookies.txt
 extracted-heuristics.json
+
+# Replit semgrep scanner cache
+.config/
+
+# Replit upload folder
+attached_assets/

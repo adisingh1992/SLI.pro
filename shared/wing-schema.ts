@@ -356,6 +356,18 @@ export const students = wing.table("students", {
   origin: studentOrigin("origin").notNull().default("institutional"),
   enrollmentStatus: enrollmentStatus("enrollment_status").notNull().default("active"),
   graduationDate: date("graduation_date"),
+  /**
+   * Onboarding wizard progress. Was `public.profiles` (completion_step,
+   * is_complete) — two columns behind a whole legacy table.
+   *
+   * It had to move: registration creates a `wing.users` row, but
+   * `public.profiles.user_id` has a foreign key to `public.users`, so every
+   * new registration failed on that constraint. Migrated users have rows in
+   * both tables, which is exactly why it went unnoticed — the only people who
+   * hit it were people signing up, and everyone testing was already migrated.
+   */
+  onboardingStep: integer("onboarding_step").notNull().default(0),
+  onboardingComplete: boolean("onboarding_complete").notNull().default(false),
   // Stays NULL until graduation, exactly per the spec; instantiated by the
   // graduate loop (logic deferred).
   personalSequenceId: fk("personal_sequence_id")
@@ -978,6 +990,16 @@ export const messageEvents = wing.table("message_events", {
   promptId: fk("prompt_id").references(() => promptLibrary.id), // enforces 14-day no-repeat
   providerMessageId: text("provider_message_id"), // SendGrid / Twilio
   sentAt: tsNow("sent_at"),
+  /**
+   * Set when the provider refused the send. `sent_at` alone could not express
+   * this — it defaults to now() on every row, so a refused send was recorded as
+   * delivered and `alreadySent()` then suppressed its own retry forever.
+   *
+   * NULL means "not known to have failed", which for rows written before this
+   * column existed is the honest answer rather than a claim of success.
+   */
+  failedAt: ts("failed_at"),
+  failureReason: text("failure_reason"),
   deliveredAt: ts("delivered_at"),
   openedAt: ts("opened_at"),
   clickedAt: ts("clicked_at"),

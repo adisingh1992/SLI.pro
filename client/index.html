@@ -2,7 +2,13 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1" />
+    <!--
+      No maximum-scale. It was there to stop iOS zooming on input focus, which
+      it does not do (iOS has ignored it since iOS 10) — while Android Chrome
+      does honour it, disabling pinch-zoom and failing WCAG 1.4.4. The zoom
+      problem is fixed properly in index.css by setting form controls to 16px.
+    -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>SLI.pro - Professional Profile Management</title>
     <link rel="icon" type="image/png" href="/src/assets/sli-pro-favicon.png" />
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@200;400;500;600&display=swap" rel="stylesheet">
@@ -11,7 +17,12 @@
   <body>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
-    <!-- This script injects a replit badge into the page, please feel free to remove this line -->
-    <script type="text/javascript" src="https://replit.com/public/js/replit-badge-v3.js"></script>
+    <!--
+      The Replit badge script used to load here. Removed: the platform runs on
+      Azure now, so it was a third-party request to replit.com on every page
+      load — latency on the critical path we are trying to keep under three
+      seconds on cellular, and an external script injecting into a page
+      Berkeley and Vanderbilt students use.
+    -->
   </body>
 </html>

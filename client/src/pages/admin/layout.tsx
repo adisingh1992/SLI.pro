@@ -13,7 +13,9 @@ import {
   Tag,
   CheckSquare,
   ScanSearch,
-  Target
+  Target,
+  CalendarClock,
+  Mail
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
@@ -92,6 +94,23 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
       icon: ScanSearch,
       href: "/admin/methodology",
       active: isActive("/admin/methodology"),
+    },
+    {
+      // Advising appointments and the pre-meeting snapshot. Named "Advising"
+      // rather than "Appointments" because the appointment is an input, not the
+      // thing — we brief advisors, we do not run a calendar.
+      title: "Advising",
+      icon: CalendarClock,
+      href: "/admin/advisors",
+      active: isActive("/admin/advisors"),
+    },
+    {
+      // Everything Wing says outside a session. Sits next to Advising because
+      // the advisor snapshot copy lives here too.
+      title: "Messages",
+      icon: Mail,
+      href: "/admin/templates",
+      active: isActive("/admin/templates"),
     },
   ];
 

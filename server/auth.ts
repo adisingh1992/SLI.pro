@@ -169,11 +169,10 @@ export function setupAuth(app: Express) {
               linkedinId,
             });
 
-            await storage.createProfile({
-              userId: user.id,
-              completionStep: 0,
-              isComplete: false,
-            });
+            // No legacy profiles insert here either: identity.createUser has
+            // already created the wing.students row that carries onboarding
+            // state, and public.profiles.user_id points at public.users — so
+            // this would fail the same FK the local registration path did.
           }
 
           // Store LinkedIn tokens (params.expires_in is in seconds)
@@ -232,15 +231,29 @@ export function setupAuth(app: Express) {
         discoverySourceOther: discoverySource === "other" ? discoverySourceOther : undefined,
       });
 
-      // Create an empty profile
-      await storage.createProfile({
-        userId: user.id,
-        completionStep: 0,
-        isComplete: false
-      });
+      // Onboarding state lives on wing.students now — identity.createUser
+      // already created that row. The legacy profiles insert failed here for
+      // every new registration, because its FK points at public.users and the
+      // user was created in wing.users.
 
       const { passwordHash: _, ...userWithoutPassword } = user;
       res.status(201).json(userWithoutPassword);
+
+      // S1 — welcome sequence (Feature List B3). Fired AFTER the response so a
+      // slow or failing email cannot make registration look broken, which is
+      // the surface that already loses 43% of registrants.
+      void (async () => {
+        try {
+          const { ensureStudent } = await import("./wing/bootstrap");
+          const engagement = await import("./wing/engagement");
+          // Takes the legacy user row, not an id — it provisions the wing user
+          // as well as the student on first call.
+          const studentId = await ensureStudent(user as any);
+          if (studentId) await engagement.onRegistered(studentId);
+        } catch (err) {
+          console.error("[engagement] welcome sequence not started:", err);
+        }
+      })();
     } catch (error) {
       next(error);
     }

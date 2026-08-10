@@ -20,12 +20,15 @@ client/dist
 .DS_Store
 Thumbs.db
 
-# Replit remnants
+# Replit remnants — deleted from the repo, kept here as a belt-and-braces guard
+# so a stale working copy cannot ship them into an image.
 .replit
 replit.nix
 replit.md
 replit_agent
 .repl_history
+.local
+theme.json
 
 # Docs, planning and assets not needed at runtime
 *.md

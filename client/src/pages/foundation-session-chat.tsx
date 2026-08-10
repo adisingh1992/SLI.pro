@@ -505,38 +505,88 @@ export default function FoundationSessionChatPage() {
     <div className="min-h-screen bg-background">
       <NavBar />
       
-      {/* Header */}
+      {/* Header — the description is desktop-only; on a phone the vertical
+          space it costs is space the conversation needs. */}
       <div className="w-full px-4 py-2 border-b bg-background">
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <Button 
-              onClick={() => navigate('/')} 
-              variant="outline" 
+          <div className="flex items-center gap-2 sm:gap-4">
+            <Button
+              onClick={() => navigate('/')}
+              variant="outline"
               size="sm"
               data-testid="button-back-to-overview"
             >
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Back
+              <ArrowLeft className="h-4 w-4 sm:mr-2" />
+              <span className="hidden sm:inline">Back</span>
             </Button>
-            <div>
-              <h1 className="text-2xl font-bold text-foreground" data-testid="text-session-title">
+            <div className="min-w-0">
+              <h1 className="truncate text-base font-bold text-foreground sm:text-2xl" data-testid="text-session-title">
                 {sessionInfo.title}
               </h1>
-              <p className="text-sm text-muted-foreground">{sessionInfo.description}</p>
+              <p className="hidden text-sm text-muted-foreground sm:block">{sessionInfo.description}</p>
             </div>
           </div>
         </div>
       </div>
 
-      {/* 2-Column Layout */}
-      <div className="flex h-[calc(100vh-140px)]">
+      {/*
+        2-column layout.
+
+        `dvh`, not `vh`. On iOS Safari and Android Chrome `100vh` is the
+        viewport height with the address bar HIDDEN, so a 100vh container is
+        taller than what is actually on screen — and the thing pushed off the
+        bottom here is the message box. The student opens the session and cannot
+        see where to type. `dvh` tracks the real visible height as the browser
+        chrome collapses.
+
+        The subtracted header is smaller on mobile because the header itself is:
+        the description is hidden and the title drops to text-base.
+      */}
+      <div className="flex h-[calc(100dvh-104px)] sm:h-[calc(100dvh-140px)]">
         {/* Left Column - Chat Interface (75%) */}
         <div className="w-full lg:w-3/4 flex flex-col">
+          {/*
+            Mobile session bar.
+
+            The right-hand column is `hidden lg:block`, so on a phone the timer
+            and the End Session Early button did not exist at all — and the
+            second of those is a control, not decoration. A student on mobile
+            had no way to leave a session they had started. "The full user
+            journey must function on mobile" (B5) is not satisfied by a journey
+            you cannot exit.
+
+            Sits inside the flex column rather than above it, so it takes its
+            space from the scroll area and the height calc above stays honest.
+          */}
+          {(session.status === 'in_progress' || session.status === 'completed') && (
+            <div className="flex shrink-0 items-center justify-between gap-2 border-b px-3 py-1.5 lg:hidden">
+              <SessionTimer
+                isSessionActive={session.status === 'in_progress'}
+                isSessionCompleted={session.status === 'completed'}
+                className="border-0 bg-transparent p-0 text-xs"
+                sessionNumber={sessionNumber}
+                initialTimerElapsed={session.timerElapsedSeconds || 0}
+              />
+              {session.status === 'in_progress' && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-8 shrink-0 px-2 text-xs text-muted-foreground hover:text-destructive"
+                  onClick={() => setShowEndSessionDialog(true)}
+                  disabled={isStreaming || endSessionEarlyMutation.isPending}
+                >
+                  <LogOut className="mr-1 h-3.5 w-3.5" />
+                  End
+                </Button>
+              )}
+            </div>
+          )}
+
           {/* Chat Interface */}
           <Card className="flex-1 flex flex-col overflow-hidden m-0 rounded-none">       
           <CardContent className="flex-1 min-h-0 flex flex-col p-0 overflow-hidden py-2">
             {/* Messages Area */}
-            <ScrollArea className="flex-1 min-h-0 px-6">
+            <ScrollArea className="flex-1 min-h-0 px-3 sm:px-6">
               <div className="space-y-4 pb-4">
 
                 {/* Conversation messages */}
@@ -611,7 +661,7 @@ export default function FoundationSessionChatPage() {
 
             {/* Message Input */}
             {(session.status === 'in_progress' || (session.status === 'completed' && allowContinue)) && (
-              <div className="border-t p-6">
+              <div className="border-t p-3 sm:p-6">
                 <form onSubmit={handleSendMessage}>
                   <div className="flex gap-2">
                     <VoiceMicButton
@@ -623,9 +673,15 @@ export default function FoundationSessionChatPage() {
                     <Textarea
                       ref={messageInputRef}
                       value={currentMessage}
+                      // Shorter placeholder on mobile: the full sentence wraps
+                      // to three lines in a 60px box and hides itself.
+                      placeholder="Type or tap the mic to speak..."
                       onChange={(e) => setCurrentMessage(e.target.value)}
-                      placeholder="Type or click the microphone to speak your response naturally..."
-                      className="min-h-[60px] resize-none text-sm flex-1"
+                      // text-base, not text-sm. Below 16px iOS zooms the page on
+                      // focus and never zooms back — see index.css. The global
+                      // rule covers this too; it is explicit here because this
+                      // is the one input a student spends a whole session in.
+                      className="min-h-[60px] resize-none text-base sm:text-sm flex-1"
                       onKeyDown={(e) => {
                         if (e.key === 'Enter' && !e.shiftKey) {
                           e.preventDefault();

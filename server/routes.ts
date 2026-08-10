@@ -21,6 +21,9 @@ import { registerTaggingRoutes } from "./tagging-routes";
 import { registerCriteriaRoutes } from "./criteria-routes";
 import { registerMethodologyRoutes } from "./methodology-routes";
 import { registerObjectiveRoutes } from "./objectives-routes";
+import { registerAdvisorRoutes } from "./advisor-routes";
+import { registerTemplateRoutes } from "./template-routes";
+import { registerMetricsRoutes } from "./metrics-routes";
 import * as blobStorage from "./blob-storage";
 import { getDocumentBase64 } from "./document-data";
 import * as orchestrator from "./orchestrator";
@@ -115,6 +118,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   registerCriteriaRoutes(app);
   registerMethodologyRoutes(app);
   registerObjectiveRoutes(app);
+  registerAdvisorRoutes(app);
+  registerTemplateRoutes(app);
+  registerMetricsRoutes(app);
 
   // Middleware to check if user is authenticated
   const isAuthenticated = (req: Request, res: Response, next: NextFunction) => {
@@ -145,24 +151,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const userId = req.user.id;
 
-      // Check if the user has a profile
-      let profile = await storage.getProfile(userId);
-      if (!profile) {
-        // Create a new profile if it doesn't exist
-        profile = await storage.createProfile({
-          userId,
-          completionStep: 0,
-          isComplete: false,
-        });
-      }
+      // Onboarding progress lives on wing.students. There is no create step:
+      // the student row exists from registration, and a missing one means a
+      // deeper problem than this endpoint should paper over.
+      const onboarding = await import("./wing/onboarding-store");
 
       // headline / bio / location have no column in wing.users: the LinkedIn
       // upload is the profile source now (feature list A2), and the legacy
       // structured profile sub-records are archived to legacy_records (§14).
       // Accepted and ignored rather than failing the request.
 
-      // Update profile data
-      const updatedProfile = await storage.updateProfile(userId, {
+      const updatedProfile = await onboarding.updateProfile(userId, {
         completionStep: req.body.completionStep,
         isComplete: req.body.isComplete,
       });

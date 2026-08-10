@@ -7,6 +7,7 @@ import * as store from "./wing/session-store";
 import type { WingSessionType, ArtifactType } from "./wing/session-store";
 import { isAiTurn } from "./wing/turn-type";
 import * as objectiveRuntime from "./wing/objective-runtime";
+import * as engagement from "./wing/engagement";
 import type { PriorSessionContext } from "./prompts/types";
 import * as docStore from "./wing/document-store";
 import * as intakeStore from "./wing/intake-store";
@@ -887,6 +888,15 @@ export function registerFoundationSessionsRoutes(app: Express) {
           void classifier
             .classifySession(session.id)
             .then(() => scoring.scoreSession(session.id));
+
+          // S2 — completion email within the hour (Feature List B3). Also
+          // after res.end(): the student has finished and should not wait on
+          // an email. Never throws, so a floating promise is safe here.
+          void engagement.onSessionCompleted({
+            studentId,
+            sessionId: session.id,
+            sessionNumber,
+          });
         }
       } catch (error) {
         console.error("Error in foundation session stream:", error);
