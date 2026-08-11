@@ -147,6 +147,31 @@ stages:
                   --query name -o tsv)
                 echo "Started execution: $EXEC"
 
+                # Prints the migration container's own output. Without this the
+                # pipeline reports "Failed" and discards the reason — the job
+                # runs inside the VNet, so its stdout never reaches this log,
+                # and diagnosing a broken deploy means going to the portal with
+                # nothing to search for.
+                #
+                # `|| true` throughout: log retrieval is diagnostics. If the CLI
+                # extension is missing or Log Analytics has not ingested yet,
+                # that must not replace the real error with a different one.
+                dump_logs() {
+                  echo ""
+                  echo "───── migration container output ─────"
+                  az containerapp job logs show \
+                    --name "$(MIGRATE_JOB_NAME)" \
+                    --resource-group "$(RESOURCE_GROUP)" \
+                    --container "$(MIGRATE_JOB_NAME)" \
+                    --execution "$1" \
+                    --tail 200 2>/dev/null || {
+                    echo "  (could not fetch logs automatically — run this locally:)"
+                    echo "  az containerapp job logs show --name $(MIGRATE_JOB_NAME) --resource-group $(RESOURCE_GROUP) --container $(MIGRATE_JOB_NAME) --execution $1"
+                  }
+                  echo "──────────────────────────────────────"
+                  echo ""
+                }
+
                 # Poll to completion — a silent migration failure followed by a
                 # successful app rollout is the worst possible outcome.
                 for i in $(seq 1 60); do
@@ -157,12 +182,23 @@ stages:
                     --query properties.status -o tsv)
                   echo "  status: $STATUS"
                   case "$STATUS" in
-                    Succeeded) exit 0 ;;
-                    Failed|Degraded) echo "Migration failed"; exit 1 ;;
+                    Succeeded)
+                      # Printed on success too: the migrator lists what it
+                      # applied, and "0 applied" is worth seeing when a schema
+                      # change appears not to have taken effect.
+                      dump_logs "$EXEC"
+                      exit 0 ;;
+                    Failed|Degraded)
+                      echo "Migration failed"
+                      dump_logs "$EXEC"
+                      exit 1 ;;
                   esac
                   sleep 10
                 done
-                echo "Migration did not finish within 10 minutes"; exit 1
+
+                echo "Migration did not finish within 10 minutes"
+                dump_logs "$EXEC"
+                exit 1
 
 # ── 4. Deploy ────────────────────────────────────────────────────────────────
 - stage: Deploy

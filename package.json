@@ -37,7 +37,8 @@
     "wing:check-journey": "tsx server/wing/check-journey.ts",
     "wing:preview-context": "tsx server/wing/preview-student-context.ts",
     "wing:check-sequences": "tsx server/wing/check-sequences.ts",
-    "wing:check-documents": "tsx server/wing/check-documents.ts"
+    "wing:check-documents": "tsx server/wing/check-documents.ts",
+    "wing:check-migrations": "tsx server/wing/check-migrations.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.37.0",

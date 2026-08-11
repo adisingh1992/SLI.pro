@@ -27,5 +27,6 @@
 create index if not exists linkedin_optimizations_student_idx
   on wing.linkedin_optimizations (student_id);
 
+--> statement-breakpoint
 create index if not exists freshness_reports_student_idx
   on wing.freshness_reports (student_id);

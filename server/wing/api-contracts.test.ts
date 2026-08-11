@@ -239,6 +239,54 @@ console.log("\nDemographic intake keys are withheld from institution admins");
   if (failures === before5) console.log(`  ok — ${sensitive.size} key(s) withheld`);
 }
 
+/* ── 6 · Every migration is in drizzle's journal ──────────────────────────
+ *
+ * `npm run db:migrate` — what the deployment pipeline runs inside the VNet —
+ * does not apply the `migrations/*.sql` files. It applies whatever
+ * `migrations/meta/_journal.json` lists. A hand-written `.sql` file with no
+ * journal entry is not "pending"; it is invisible, and the migrator reports
+ * success having done nothing.
+ *
+ * That is how six migrations came to exist in the repo, be listed in
+ * `db:wing-ddl`, be applied to stage by hand, and never once be applied by the
+ * pipeline. Anyone reading the folder would reasonably conclude the deploy
+ * covers them.
+ *
+ * The reverse — a journal entry whose file is gone — is worse: drizzle throws
+ * on a missing file, so the deploy breaks rather than lying.
+ */
+console.log("\nEvery migration file is in drizzle's journal");
+{
+  const before6 = failures;
+  const dir = join(process.cwd(), "migrations");
+
+  const files = readdirSync(dir)
+    .filter((f) => f.endsWith(".sql"))
+    .map((f) => f.replace(/\.sql$/, ""))
+    .sort();
+
+  const journal = JSON.parse(
+    readFileSync(join(dir, "meta", "_journal.json"), "utf8"),
+  ) as { entries: { tag: string }[] };
+  const tags = new Set(journal.entries.map((e) => e.tag));
+
+  for (const file of files) {
+    if (!tags.has(file)) {
+      fail(
+        `${file}.sql is not in meta/_journal.json — the deployment pipeline ` +
+          `will never apply it, and will report success anyway`,
+      );
+    }
+  }
+  for (const tag of Array.from(tags)) {
+    if (!files.includes(tag)) {
+      fail(`_journal.json lists "${tag}" but no such .sql file exists — db:migrate will throw`);
+    }
+  }
+
+  if (failures === before6) console.log(`  ok — ${files.length} migration(s)`);
+}
+
 /* ── Result ──────────────────────────────────────────────────────────── */
 if (failures) {
   console.error(`\n${failures} contract violation(s)\n`);
