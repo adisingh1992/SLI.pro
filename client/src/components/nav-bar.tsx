@@ -8,7 +8,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { LogOut, User, ChevronDown } from "lucide-react";
+import { LogOut, User, ChevronDown, NotebookPen } from "lucide-react";
 import UserAvatar from "@/components/user-avatar";
 import sliProLogo from "@/assets/sliPro-logos_aqua.png";
 // This is a custom navigation function that will let the chat page's exit confirmation handle navigation
@@ -66,7 +66,18 @@ export default function NavBar() {
           </div>
           
           {user ? (
-            <div className="flex items-center">
+            <div className="flex items-center gap-1">
+              {/* The log is the only ongoing surface between sessions, so it
+                  earns a top-level link rather than a place in the menu. */}
+              <Button
+                variant="ghost"
+                className="text-[#333333]"
+                onClick={() => navigate("/log")}
+              >
+                <NotebookPen className="h-4 w-4 sm:mr-2" />
+                <span className="hidden sm:inline">Log</span>
+              </Button>
+
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" className="flex items-center space-x-2">

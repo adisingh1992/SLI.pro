@@ -24,11 +24,20 @@ import { registerObjectiveRoutes } from "./objectives-routes";
 import { registerAdvisorRoutes } from "./advisor-routes";
 import { registerTemplateRoutes } from "./template-routes";
 import { registerMetricsRoutes } from "./metrics-routes";
+import { registerLifeLogRoutes } from "./life-log-routes";
+import { registerIntakeRoutes } from "./intake-routes";
+import { registerRefreshRoutes } from "./refresh-routes";
+import { registerPortfolioRoutes } from "./portfolio-routes";
+import * as checkinStore from "./wing/checkin-store";
+import { registerCalendarRoutes } from "./calendar-routes";
 import * as blobStorage from "./blob-storage";
 import { getDocumentBase64 } from "./document-data";
 import * as orchestrator from "./orchestrator";
 import * as wingStore from "./wing/session-store";
 import * as identity from "./wing/identity-store";
+import type { AuthUser } from "./wing/identity-store";
+import { cohortSummary } from "./wing/cohort-summary";
+import { studentRecord } from "./wing/student-record";
 import * as sliStore from "./wing/sli-store";
 import * as artifactStore from "./wing/artifact-store";
 import * as wingModuleStore from "./wing/enhancement-store";
@@ -54,6 +63,7 @@ import { extractDocumentText, validateExtractedText } from "./document-extractor
 import * as docStore from "./wing/document-store";
 import * as intakeStore from "./wing/intake-store";
 import * as profileStore from "./wing/profile-store";
+import { isAdmin } from "./admin-guards";
 
 const scryptAsync = promisify(scrypt);
 
@@ -109,7 +119,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   registerLinkedinOptimizationRoutes(app);
   registerLinkedinContentRoutes(app);
   registerSliRoutes(app, storage);
-  registerHomeworkRoutes(app, storage);
+  registerHomeworkRoutes(app);
   registerFoundationSessionsRoutes(app);
   setupEnhancementModulesRoutes(app);
   registerPaymentRoutes(app);
@@ -121,6 +131,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   registerAdvisorRoutes(app);
   registerTemplateRoutes(app);
   registerMetricsRoutes(app);
+  registerLifeLogRoutes(app);
+  registerIntakeRoutes(app);
+  registerRefreshRoutes(app);
+  registerPortfolioRoutes(app);
+  registerCalendarRoutes(app);
 
   // Middleware to check if user is authenticated
   const isAuthenticated = (req: Request, res: Response, next: NextFunction) => {
@@ -131,13 +146,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
   };
   
   // Middleware to check if user is an admin
-  const isAdmin = (req: Request, res: Response, next: NextFunction) => {
-    if (!req.isAuthenticated() || !req.user?.isAdmin) {
-      return res.status(403).json({ message: "Forbidden: Admin access required" });
-    }
-    next();
-  };
-
   // Profile routes
   app.patch("/api/profile", isAuthenticated, async (req, res, next) => {
     try {
@@ -498,19 +506,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
+      /*
+       * intakeStore, not storage — see the note on the draft route below.
+       * The reads on this surface were migrated to wing and the writes were
+       * not, which breaks submission outright for anyone who registered after
+       * the cutover.
+       */
+      // userId is stripped: the store takes it as its own argument and the
+      // payload describes only the answers. Leaving it in would put a second,
+      // unvalidated copy of the id inside the stored JSON.
+      const { userId: _ignored, ...answers } = validationResult.data;
+
       let questionnaire;
       if (existingQuestionnaire) {
-        // Update existing questionnaire
-        questionnaire = await storage.updateQuestionnaire(
-          req.user.id,
-          validationResult.data,
-        );
+        questionnaire = await intakeStore.updateQuestionnaire(req.user!.id, answers);
         res.json(questionnaire);
       } else {
-        // Create new questionnaire
-        questionnaire = await storage.createQuestionnaire(
-          validationResult.data,
-        );
+        questionnaire = await intakeStore.createQuestionnaire(req.user!.id, answers);
         res.status(201).json(questionnaire);
       }
     } catch (error) {
@@ -526,7 +538,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       try {
         // Check if user already has a questionnaire
         const existingQuestionnaire = await intakeStore.getQuestionnaire(
-          req.user.id,
+          req.user!.id,
         );
 
         // If the questionnaire exists and is already published (not a draft),
@@ -539,7 +551,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
         const validationResult = insertQuestionnaireSchema.safeParse({
           ...req.body,
-          userId: req.user.id,
+          userId: req.user!.id,
           isDraft: true, // Mark as draft
         });
 
@@ -550,19 +562,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
           });
         }
 
+        /*
+         * ── WHY intakeStore AND NOT storage ──────────────────────────────
+         * `storage.createQuestionnaire` writes public.questionnaires, whose
+         * user_id is a NOT NULL foreign key to public.users. Registration
+         * creates a wing.users row and no public.users row at all, so this
+         * threw a constraint violation for every student who signed up after
+         * the cutover — questionnaire submission was simply broken for them.
+         *
+         * It hid because the READ on the very next line above was already
+         * migrated: getQuestionnaire hits wing, finds nothing for a new user,
+         * and routes them into the create branch that cannot succeed. Migrated
+         * users have rows in both schemas, so anyone testing with one saw it
+         * work.
+         *
+         * The identical shape broke registration (public.profiles) and half of
+         * claude.ts. The rule this file now follows: if the read is on wing,
+         * the write is too. There is no case where mixing them is correct.
+         */
+        const { userId: _unused, ...answers } = validationResult.data;
+
         let questionnaire;
         if (existingQuestionnaire) {
-          // Update existing questionnaire
-          questionnaire = await storage.updateQuestionnaire(
-            req.user.id,
-            validationResult.data,
-          );
+          questionnaire = await intakeStore.updateQuestionnaire(req.user!.id, answers);
           res.json(questionnaire);
         } else {
-          // Create new questionnaire as draft
-          questionnaire = await storage.createQuestionnaire(
-            validationResult.data,
-          );
+          questionnaire = await intakeStore.createQuestionnaire(req.user!.id, answers);
           res.status(201).json(questionnaire);
         }
       } catch (error) {
@@ -589,9 +614,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      const updatedQuestionnaire = await storage.updateQuestionnaire(
-        req.user.id,
-        validationResult.data,
+      // intakeStore: the read four lines up is on wing, so the write must be
+      // too. Writing to public.questionnaires here left the update invisible to
+      // every subsequent read, for migrated users who did not hit the FK error.
+      const { userId: _drop, ...answers } = validationResult.data;
+      const updatedQuestionnaire = await intakeStore.updateQuestionnaire(
+        req.user!.id,
+        answers,
       );
       res.json(updatedQuestionnaire);
     } catch (error) {
@@ -748,29 +777,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Monthly Check-in Routes
+  /*
+   * Monthly check-ins — on wing (Feature List A2 / migration cleanup).
+   *
+   * These wrote `public.monthly_check_ins`, foreign-keyed to `public.users`.
+   * Registration creates a wing.users row and no public one, so submitting a
+   * check-in threw a constraint violation for every student who signed up after
+   * the cutover. Fourth instance of that defect, after registration, the
+   * questionnaire and homework.
+   *
+   * Keyed on month rather than on a row id, which is what the data actually
+   * means: one check-in per student per month. The legacy table had no such
+   * constraint, so a resubmitted month produced two rows and double counted in
+   * every report.
+   */
   app.get("/api/monthly-check-ins", isAuthenticated, async (req, res, next) => {
     try {
-      const checkIns = await storage.getMonthlyCheckIns(req.user.id);
-      res.json(checkIns);
-    } catch (error) {
-      next(error);
-    }
-  });
-
-  app.get("/api/monthly-check-ins/:id", isAuthenticated, async (req, res, next) => {
-    try {
-      const checkInId = parseInt(req.params.id);
-      const checkIn = await storage.getMonthlyCheckIn(checkInId);
-
-      if (!checkIn) {
-        return res.status(404).json({ message: "Monthly check-in not found" });
-      }
-
-      if (checkIn.userId !== req.user.id) {
-        return res.status(403).json({ message: "Unauthorized" });
-      }
-
-      res.json(checkIn);
+      res.json(await checkinStore.listCheckIns(req.user!.id));
     } catch (error) {
       next(error);
     }
@@ -778,216 +801,209 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/monthly-check-ins/month/:month", isAuthenticated, async (req, res, next) => {
     try {
-      const month = req.params.month;
-      const checkIn = await storage.getMonthlyCheckInByMonth(req.user.id, month);
-
-      if (!checkIn) {
-        return res.status(404).json({ message: "Monthly check-in not found" });
-      }
-
+      const checkIn = await checkinStore.getCheckIn(req.user!.id, req.params.month);
+      if (!checkIn) return res.status(404).json({ message: "Monthly check-in not found" });
       res.json(checkIn);
     } catch (error) {
       next(error);
     }
   });
 
+  /**
+   * Create or update the check-in for a month.
+   *
+   * One endpoint, not create-plus-update-plus-409. Ownership is implicit: the
+   * student id comes from the session and the row is addressed by month, so
+   * there is no id a caller could supply for somebody else's check-in.
+   */
   app.post("/api/monthly-check-ins", isAuthenticated, async (req, res, next) => {
     try {
-      const validationResult = insertMonthlyCheckInSchema.safeParse({
-        ...req.body,
-        userId: req.user.id,
+      const month = String(req.body?.month ?? "").trim();
+      if (!/^\d{4}-\d{2}$/.test(month)) {
+        return res.status(400).json({ message: "month must be YYYY-MM" });
+      }
+
+      const body = req.body ?? {};
+
+      /*
+       * Screenshots: base64 in, Blob URIs out.
+       *
+       * The client sends three base64 payloads — contentScreenshots[],
+       * engagementScreenshot and profileScreenshot — because the MVP stored
+       * them inline in the row. The wing column holds URIs, so without this
+       * they would be accepted and silently discarded, and the student would
+       * have no way to tell their evidence had not been saved.
+       *
+       * Uploads that fail are skipped rather than failing the whole check-in:
+       * losing a screenshot is recoverable, losing the whole submission after
+       * someone filled in four steps is not.
+       */
+      const screenshotUris: string[] = [];
+      const rawShots: { data: string; name: string }[] = [
+        ...(Array.isArray(body.contentScreenshots)
+          ? body.contentScreenshots
+              .filter((s: any) => typeof s?.data === "string")
+              .map((s: any) => ({ data: s.data, name: String(s.name ?? "content") }))
+          : []),
+        ...(typeof body.engagementScreenshot === "string" && body.engagementScreenshot
+          ? [{ data: body.engagementScreenshot, name: "engagement" }]
+          : []),
+        ...(typeof body.profileScreenshot === "string" && body.profileScreenshot
+          ? [{ data: body.profileScreenshot, name: "profile" }]
+          : []),
+      ];
+
+      if (rawShots.length) {
+        const blob = await import("./blob-storage");
+        if (blob.isConfigured()) {
+          for (const shot of rawShots) {
+            try {
+              // Strip a data: URL prefix if the client sent one.
+              const payload = shot.data.includes(",")
+                ? shot.data.slice(shot.data.indexOf(",") + 1)
+                : shot.data;
+              const uri = await blob.uploadBase64(blob.CONTAINERS.checkInMedia, payload, {
+                fileName: `${month}-${shot.name}.png`,
+                contentType: "image/png",
+                prefix: `student-${req.user!.id}`,
+              });
+              screenshotUris.push(uri);
+            } catch (err) {
+              console.error(`[check-in] screenshot upload failed: ${(err as Error).message}`);
+            }
+          }
+        } else {
+          console.warn(
+            `[check-in] ${rawShots.length} screenshot(s) discarded — Blob storage is not configured`,
+          );
+        }
+      }
+
+      const saved = await checkinStore.upsertCheckIn(req.user!.id, {
+        month,
+        contentPosts: Number(body.contentPosts) || 0,
+        contentLinks: Array.isArray(body.contentLinks)
+          ? body.contentLinks.filter((l: unknown) => typeof l === "string")
+          : [],
+        engagementFrequency: body.engagementFrequency ?? null,
+        newConnections: Number(body.newConnections) || 0,
+        targetConnectionPercentage: body.targetConnectionPercentage ?? null,
+        recommendationImplementation: body.recommendationImplementation ?? null,
+        implementationChallenges: body.implementationChallenges ?? null,
+        updatedProfileVisuals: body.updatedProfileVisuals === true,
+        screenshotUris,
       });
 
-      if (!validationResult.success) {
-        return res.status(400).json({
-          message: "Validation error",
-          errors: validationResult.error.errors,
-        });
+      if (!saved) {
+        return res.status(404).json({ message: "No student record for this account" });
       }
 
-      // Check if a check-in already exists for this month
-      const existingCheckIn = await storage.getMonthlyCheckInByMonth(
-        req.user.id,
-        validationResult.data.month
-      );
-
-      if (existingCheckIn) {
-        return res.status(409).json({
-          message: "A check-in for this month already exists",
-          checkIn: existingCheckIn,
-        });
-      }
-
-      const checkIn = await storage.createMonthlyCheckIn(validationResult.data);
-      res.status(201).json(checkIn);
+      res.status(201).json(saved);
     } catch (error) {
       next(error);
     }
   });
 
-  app.put("/api/monthly-check-ins/:id", isAuthenticated, async (req, res, next) => {
-    try {
-      const checkInId = parseInt(req.params.id);
-      const checkIn = await storage.getMonthlyCheckIn(checkInId);
-
-      if (!checkIn) {
-        return res.status(404).json({ message: "Monthly check-in not found" });
-      }
-
-      if (checkIn.userId !== req.user.id) {
-        return res.status(403).json({ message: "Unauthorized" });
-      }
-
-      const validationResult = insertMonthlyCheckInSchema
-        .partial()
-        .safeParse(req.body);
-        
-      if (!validationResult.success) {
-        return res.status(400).json({
-          message: "Validation error",
-          errors: validationResult.error.errors,
-        });
-      }
-
-      const updatedCheckIn = await storage.updateMonthlyCheckIn(
-        checkInId,
-        validationResult.data
-      );
-      res.json(updatedCheckIn);
-    } catch (error) {
-      next(error);
-    }
-  });
-
-  app.delete("/api/monthly-check-ins/:id", isAuthenticated, async (req, res, next) => {
-    try {
-      const checkInId = parseInt(req.params.id);
-      const checkIn = await storage.getMonthlyCheckIn(checkInId);
-
-      if (!checkIn) {
-        return res.status(404).json({ message: "Monthly check-in not found" });
-      }
-
-      if (checkIn.userId !== req.user.id) {
-        return res.status(403).json({ message: "Unauthorized" });
-      }
-
-      await storage.deleteMonthlyCheckIn(checkInId);
-      res.sendStatus(204);
-    } catch (error) {
-      next(error);
-    }
-  });
-
-  // Helper function to get all users for admin routes
-  async function getAllUsers(excludeAdmins: boolean = false): Promise<User[]> {
-    // If we need to exclude admins, use the storage method directly
-    if (excludeAdmins) {
-      return await storage.getNonAdminUsers();
-    }
-    
-    // Otherwise get all users using the proper storage method
-    return await storage.getAllUsers();
+  /**
+   * Every user, from the Wing schema.
+   *
+   * ── WHY THIS NO LONGER READS `storage` ───────────────────────────────────
+   * `storage.getAllUsers()` selects from `public.users` — the legacy MVP table.
+   * `identity.getUser()`, which every detail endpoint uses, selects from
+   * `wing.users`. The identity migration assigned wing rows a **fresh serial**
+   * and kept no mapping back to the legacy id, so the two tables number the
+   * same people differently.
+   *
+   * That made the admin list actively wrong rather than merely stale:
+   *
+   *   - Clicking a row passed a legacy id to `/api/admin/users/:id`, which
+   *     looked it up in `wing.users` and returned whoever happened to hold that
+   *     id there. You got a real student — just not the one you clicked.
+   *   - Worse and quieter: `getUserStatus()` and `getBrandingIntake()` are Wing
+   *     stores. Feeding them legacy ids meant every enriched column — progress,
+   *     school, programme, opt-in — was computed from a different student's
+   *     data and displayed against this one's name.
+   *
+   * Nothing raised. Every row looked plausible. This is the same failure that
+   * broke registration, the questionnaire, homework and check-ins: a read
+   * migrated to `wing` with something left pointing at `public`.
+   *
+   * The rule this settles on: **an id that leaves an endpoint must be a wing
+   * id**, because that is the id space every other endpoint resolves.
+   */
+  async function getAllUsers(excludeAdmins: boolean = false): Promise<AuthUser[]> {
+    const all = await identity.listUsers();
+    return excludeAdmins ? all.filter((u) => !u.isAdmin) : all;
   }
 
-  // Helper function to determine user status
-  async function getUserStatus(userId: number): Promise<string> {
-    // Check LinkedIn Optimization
-    const linkedinOptimizations = await artifactStore.getLinkedinOptimizations(userId);
-    if (linkedinOptimizations.length > 0) {
-      return "LinkedIn Optimization Done";
-    }
-    
-    // Check SLI
-    const slis = await sliStore.listByUser(userId);
-    if (slis.length > 0) {
-      return "SLI Generated";
-    }
-    
-    // Check Freshness Report
-    const freshnessReports = await artifactStore.getFreshnessReports(userId);
-    if (freshnessReports.length > 0) {
-      return "Freshness Report Generated";
-    }
+  /*
+   * `getUserStatus()` lived here — a nine-query sequential walk that derived
+   * one student's funnel position. It is gone, not merely unused: the same
+   * precedence now lives in `wing/cohort-summary.ts` as a single statement,
+   * and keeping a second implementation around is how the two end up
+   * disagreeing about what "Documents Uploaded" means.
+   */
 
-    // Sessions and modules now live in the wing schema. Read them there, or
-    // this reports stale progress for every student.
-    const user = await identity.getUser(userId);
-    if (user) {
-      const studentId = await wingStore.studentIdFor(user as any);
-      const wingSessions = await wingStore.listSessions(studentId);
-      const completed = new Set(
-        wingSessions.filter((s) => s.status === "completed").map((s) => s.sessionType),
-      );
-
-      // Enhancement Modules (C > B > A)
-      if (completed.has("enhancement_c")) return "Enhancement Module C Completed";
-      if (completed.has("enhancement_b")) return "Enhancement Module B Completed";
-      if (completed.has("enhancement_a")) return "Enhancement Module A Completed";
-
-      // Foundation Sessions (3 > 2 > 1)
-      if (completed.has("foundation_3")) return "Foundation Session 3 Completed";
-      if (completed.has("foundation_2")) return "Foundation Session 2 Completed";
-      if (completed.has("foundation_1")) return "Foundation Session 1 Completed";
-    }
-
-    // Check Documents
-    const documents = await docStore.getDocuments(userId);
-    const hasResume = documents.some(doc => doc.type === 'resume');
-    const hasLinkedin = documents.some(doc => doc.type === 'linkedin');
-    if (hasResume && hasLinkedin) {
-      return "Documents Uploaded";
-    }
-
-    // Check Branding Intake
-    const brandingIntake = await intakeStore.getBrandingIntake(userId);
-    if (brandingIntake?.completed) {
-      return "Registration Intake Completed";
-    }
-
-    // Check Questionnaire
-    const questionnaire = await intakeStore.getQuestionnaire(userId);
-    if (questionnaire && !questionnaire.isDraft) {
-      return "Questionnaire Completed";
-    }
-    
-    // Default status
-    return "Registered";
-  }
-
-  // Admin API routes
   app.get("/api/admin/users", isAdmin, async (req: Request, res: Response, next: NextFunction) => {
     try {
-      // Get all users from storage, then manually filter
-      const allUsers = await getAllUsers(false);
-      
-      // FORCE filter admin users out - manual approach to bypass any caching issues
-      const nonAdminUsers = allUsers.filter(user => user.isAdmin !== true);
-      
-      // Enhance each user with their status and branding intake data
-      const enhancedUsers = await Promise.all(nonAdminUsers.map(async (user) => {
-        const { passwordHash, ...userWithoutPassword } = user as any;
-        const status = await getUserStatus(user.id);
-        const brandingIntake = await intakeStore.getBrandingIntake(user.id);
-        const responses = (brandingIntake?.responses as Record<string, unknown>) ?? {};
-        const school =
-          (responses.university_name as string) ||
-          (responses.undergrad_institution as string) ||
-          (responses.grad_university_name as string) ||
-          null;
-        const academicProgram =
-          (responses.major as string) ||
-          (responses.highest_degree as string) ||
-          null;
+      const nonAdminUsers = (await getAllUsers(false)).filter((u) => !u.isAdmin);
+
+      /*
+       * `user.id` here is a WING id, and every store below is a wing store.
+       * That agreement is the whole point of the change in `getAllUsers` — it
+       * used to be a legacy id, so each of these lookups returned a different
+       * student's data and displayed it under this student's name.
+       *
+       * The allowlist is the same fix as GET /api/user and GET
+       * /api/admin/users/:id: this used to spread the row and drop only
+       * `passwordHash`, which shipped every user's `linkedinAccessToken` and
+       * `linkedinRefreshToken` to the browser — the whole cohort's OAuth
+       * credentials, in one response, on the busiest admin screen.
+       */
+      /*
+       * ── ONE QUERY FOR THE WHOLE COHORT ───────────────────────────────────
+       * This used to call `getUserStatus()` per student inside a Promise.all,
+       * plus a second branding-intake fetch for the school column.
+       * `getUserStatus` asks up to NINE questions in sequence, so 255 students
+       * meant roughly 2,300 queries issued as 255 concurrent chains against a
+       * ten-connection pool — they queue, and the screen waits for all of it.
+       *
+       * `cohortSummary()` computes the same funnel position for everybody in a
+       * single statement. Two queries now serve this endpoint regardless of
+       * cohort size.
+       */
+      const summary = await cohortSummary();
+
+      const enhancedUsers = nonAdminUsers.map((user) => {
+        const derived = summary.get(user.id);
+
         return {
-          ...userWithoutPassword,
-          status,
-          school,
-          academicProgram,
-          marketingOptIn: brandingIntake?.marketingOptIn ?? null,
+          id: user.id,
+          email: user.email,
+          username: user.username,
+          firstName: user.firstName,
+          lastName: user.lastName,
+          phoneNumber: user.phoneNumber,
+          role: user.role,
+          isAdmin: user.isAdmin,
+          isTestUser: user.isTestUser,
+          professionalStatus: user.professionalStatus,
+          discoverySource: user.discoverySource,
+          timezone: user.timezone,
+          status: user.status,
+          createdAt: user.createdAt,
+          lastLoginAt: user.lastLoginAt,
+
+          // Derived, for the list's columns. A student with no summary row is
+          // one the join found nothing for — "Registered" is the honest answer,
+          // not an error.
+          journeyStatus: derived?.journeyStatus ?? "Registered",
+          school: derived?.school ?? null,
+          academicProgram: derived?.academicProgram ?? null,
+          marketingOptIn: derived?.marketingOptIn ?? null,
         };
-      }));
-      
+      });
+
       res.json(enhancedUsers);
     } catch (error) {
       next(error);
@@ -1018,17 +1034,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "User not found" });
       }
 
-      // Get full user profile
-      const userProfile = await profileStore.getUserProfile(userId);
-      if (!userProfile) {
-        // If profile doesn't exist, just return the user
-        const { passwordHash, ...userWithoutPassword } = user;
-        return res.json(userWithoutPassword);
-      }
-
-      // Remove password before sending
-      const { passwordHash, ...profileWithoutPassword } = userProfile;
-      res.json(profileWithoutPassword);
+      /*
+       * ── ALLOWLIST, NOT DENYLIST ──────────────────────────────────────────
+       * Names what goes out, so a field added to AuthUser later is not exposed
+       * by default. This used to spread the profile and delete `passwordHash`,
+       * which sent `linkedinAccessToken` and `linkedinRefreshToken` to the
+       * browser — another person's live OAuth credentials, readable by any
+       * admin, sitting in a client-side query cache.
+       *
+       * ── AND ONLY WHAT THE SCREEN RENDERS ─────────────────────────────────
+       * `getUserProfile()` is the student's own dashboard payload: six
+       * collections, all of them used there. This screen renders three, and
+       * the three it skipped were the expensive ones — every document's
+       * `extracted_text` (a resume and a LinkedIn export in full), an extra
+       * artifact query per completed session with its jsonb embedded, plus SLI
+       * records and freshness reports fetched and never read.
+       *
+       * That is what made this screen slow. Not a bad plan — just megabytes of
+       * document text serialised to render a filename and a date.
+       */
+      // Platform staff see the demographic responses; institution admins do
+      // not — see RESTRICTED_INTAKE_KEYS. Withheld here rather than only in the
+      // UI, because a hidden field is still a sent field.
+      const record = await studentRecord(userId, {
+        includeRestricted: req.user?.role === "platform_admin",
+      });
+      res.json({ ...identity.publicUser(user), ...record });
     } catch (error) {
       next(error);
     }
@@ -1037,7 +1068,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Admin Excel export: branding intake data for all users
   app.get("/api/admin/export/branding-intake", isAdmin, async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const allUsers = await storage.getAllUsers();
+      const allUsers = await getAllUsers();
       const nonAdminUsers = allUsers.filter((u) => !u.isAdmin && !u.isTestUser);
 
       // Build a deduplicated ordered list of all questions across all platforms.
@@ -1155,7 +1186,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Admin Excel export: questionnaire Q&A for all users
   app.get("/api/admin/export/questionnaire", isAdmin, async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const allUsers = await storage.getAllUsers();
+      const allUsers = await getAllUsers();
       const nonAdminUsers = allUsers.filter((u) => !u.isAdmin && !u.isTestUser);
 
       function mapPlatform(status: string | null | undefined): string {
@@ -1287,7 +1318,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Admin Excel export: all non-test users with key coaching profile fields
   app.get("/api/admin/export/users", isAdmin, async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const allUsers = await storage.getAllUsers();
+      const allUsers = await getAllUsers();
       const targetUsers = allUsers
         .filter((u) => !u.isAdmin && !u.isTestUser)
         .sort((a, b) => (a.username || "").localeCompare(b.username || ""));
@@ -1366,7 +1397,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Admin Excel export: chatbot session data (foundation sessions + enhancement modules)
   app.get("/api/admin/export/chatbot-sessions", isAdmin, async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const allUsers = await storage.getAllUsers();
+      const allUsers = await getAllUsers();
       const nonAdminUsers = allUsers.filter((u) => !u.isAdmin && !u.isTestUser);
 
       function mapPlatform(status: string | null | undefined): string {
@@ -1537,7 +1568,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         label = `Enhancement Module ${moduleCode}`;
       }
 
-      const allUsers = await storage.getAllUsers();
+      const allUsers = await getAllUsers();
       const nonAdminUsers = allUsers.filter((u) => !u.isAdmin && !u.isTestUser);
       const sortedUsers = [...nonAdminUsers].sort((a, b) =>
         (a.username || "").localeCompare(b.username || "")
@@ -1837,26 +1868,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Coaching Notes routes - ADMIN only
+  /*
+   * Coaching notes — on wing (migration cleanup).
+   *
+   * public.coaching_notes had TWO foreign keys to public.users: the student and
+   * the admin who wrote the note. Both broke for post-cutover accounts, so a
+   * coach could not record anything about any student who registered after the
+   * migration. Fifth and last reachable instance of that defect.
+   *
+   * The author is nullable here, unlike the legacy NOT NULL. Staff accounts
+   * were not all migrated, and a note whose author cannot be resolved is still
+   * worth keeping — dropping the note to preserve the reference would lose the
+   * more valuable half.
+   */
   app.get("/api/admin/users/:userId/coaching-notes", isAdmin, async (req, res, next) => {
     try {
-      const userId = parseInt(req.params.userId);
-      const notes = await storage.getCoachingNotes(userId);
-      res.json(notes);
-    } catch (error) {
-      next(error);
-    }
-  });
+      const userId = parseInt(req.params.userId, 10);
+      if (Number.isNaN(userId)) return res.status(400).json({ message: "Invalid user id" });
 
-  app.get("/api/admin/coaching-notes/:id", isAdmin, async (req, res, next) => {
-    try {
-      const noteId = parseInt(req.params.id);
-      const note = await storage.getCoachingNote(noteId);
-      
-      if (!note) {
-        return res.status(404).json({ message: "Coaching note not found" });
-      }
-      
-      res.json(note);
+      res.json(await checkinStore.listNotes(userId));
     } catch (error) {
       next(error);
     }
@@ -1864,18 +1894,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/admin/coaching-notes", isAdmin, async (req, res, next) => {
     try {
-      const validationResult = insertCoachingNoteSchema.safeParse({
-        ...req.body,
+      const userId = parseInt(String(req.body?.userId ?? ""), 10);
+      const content = String(req.body?.content ?? "").trim();
+
+      if (Number.isNaN(userId)) return res.status(400).json({ message: "userId is required" });
+      if (!content) return res.status(400).json({ message: "content is required" });
+
+      const note = await checkinStore.createNote({
+        userId,
+        authorUserId: req.user!.id,
+        content,
       });
 
-      if (!validationResult.success) {
-        return res.status(400).json({
-          message: "Validation error",
-          errors: validationResult.error.errors,
-        });
+      if (!note) {
+        return res.status(404).json({ message: "That account has no student record" });
       }
 
-      const note = await storage.createCoachingNote(validationResult.data);
       res.status(201).json(note);
     } catch (error) {
       next(error);
@@ -1884,18 +1918,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.put("/api/admin/coaching-notes/:id", isAdmin, async (req, res, next) => {
     try {
-      const noteId = parseInt(req.params.id);
-      const note = await storage.getCoachingNote(noteId);
+      const id = parseInt(req.params.id, 10);
+      if (Number.isNaN(id)) return res.status(400).json({ message: "Invalid note id" });
 
-      if (!note) {
-        return res.status(404).json({ message: "Coaching note not found" });
-      }
+      const content = String(req.body?.content ?? "").trim();
+      if (!content) return res.status(400).json({ message: "content is required" });
 
-      const updatedNote = await storage.updateCoachingNote(
-        noteId,
-        req.body.content,
-      );
-      res.json(updatedNote);
+      const updated = await checkinStore.updateNote(id, content);
+      if (!updated) return res.status(404).json({ message: "Coaching note not found" });
+
+      res.json(updated);
     } catch (error) {
       next(error);
     }
@@ -1903,22 +1935,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.delete("/api/admin/coaching-notes/:id", isAdmin, async (req, res, next) => {
     try {
-      const noteId = parseInt(req.params.id);
-      const note = await storage.getCoachingNote(noteId);
+      const id = parseInt(req.params.id, 10);
+      if (Number.isNaN(id)) return res.status(400).json({ message: "Invalid note id" });
 
-      if (!note) {
-        return res.status(404).json({ message: "Coaching note not found" });
-      }
-
-      await storage.deleteCoachingNote(noteId);
+      await checkinStore.deleteNote(id);
       res.sendStatus(204);
     } catch (error) {
       next(error);
     }
   });
-
-  
-  
 
   // Force update the admin user on server start for debugging
   (async () => {

@@ -1,5 +1,5 @@
 import { Express, Request, Response, NextFunction } from "express";
-import { and, desc, eq } from "drizzle-orm";
+import { and, desc, eq, sql } from "drizzle-orm";
 import { db } from "./db";
 import { messageTemplates } from "@shared/wing-schema";
 import {
@@ -10,6 +10,7 @@ import {
 } from "./wing/template-catalogue";
 import * as messaging from "./wing/messaging-store";
 import { log } from "./logger";
+import { isAdmin } from "./admin-guards";
 
 /**
  * Message template editor API (Feature List B3).
@@ -33,12 +34,57 @@ import { log } from "./logger";
  * because that has no defensible reading.
  */
 
-const isAdmin = (req: Request, res: Response, next: NextFunction) => {
-  if (req.isAuthenticated() && req.user?.isAdmin) return next();
-  res.status(403).json({ error: "Admin access required" });
-};
-
 export function registerTemplateRoutes(app: Express) {
+  /**
+   * The delivery log — what was actually sent, and what failed.
+   *
+   * ── WHY THIS ENDPOINT EXISTS ─────────────────────────────────────────────
+   * `message_events.failed_at` and `failure_reason` were added after a bug
+   * where `sendSnapshot` discarded the send result and reported success
+   * unconditionally: the UI said the advisor had been briefed, and no email had
+   * left the building. The columns fixed the recording. They did not fix the
+   * visibility — until now the only way to see a failure was to open psql.
+   *
+   * A delivery failure that nobody can see is the same shape as the original
+   * bug. This is the screen that closes it.
+   *
+   * Capped at 200 rows and never paginated: this is a "what happened lately"
+   * surface, not an archive. Anyone who needs the full history has SQL.
+   */
+  app.get("/api/admin/message-events", isAdmin, async (req, res, next) => {
+    try {
+      const onlyFailures = req.query.failures === "true";
+
+      const rows = await db.execute(sql`
+        select e.id,
+               e.template_key                       as "templateKey",
+               e.template_version                   as "templateVersion",
+               e.sequence_key                       as "sequenceKey",
+               e.sequence_step                      as "sequenceStep",
+               e.channel::text                      as channel,
+               e.sent_at                            as "sentAt",
+               e.failed_at                          as "failedAt",
+               e.failure_reason                     as "failureReason",
+               e.provider_message_id                as "providerMessageId",
+               e.student_id                         as "studentId",
+               u.first_name                         as "firstName",
+               u.last_name                          as "lastName",
+               u.email                              as email
+          from wing.message_events e
+          left join wing.students s on s.id = e.student_id
+          left join wing.users u    on u.id = s.user_id
+         where e.direction = 'outbound'
+           ${onlyFailures ? sql`and e.failed_at is not null` : sql``}
+         order by coalesce(e.failed_at, e.sent_at) desc
+         limit 200
+      `);
+
+      res.json(rows.rows ?? rows);
+    } catch (error) {
+      next(error);
+    }
+  });
+
   /**
    * Everything the list screen needs: the catalogue joined to whatever is
    * currently live, including templates that exist in code but have never been

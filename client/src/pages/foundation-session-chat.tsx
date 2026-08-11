@@ -92,6 +92,30 @@ const turnToMessage = (t: WingTurn): ChatMessage => ({
   createdAt: t.createdAt,
 });
 
+/*
+ * A2: "Add contextual micro-copy at every transition: what the next section
+ * does, approximately how long it takes, and what it will reveal."
+ *
+ * Finishing a session IS a transition, and it was previously marked only by a
+ * toast that vanished after five seconds. Whether the student carries on to
+ * the next one is decided in exactly that moment, so it gets a panel that
+ * stays on screen rather than a notification that does not.
+ */
+const NEXT_STEP: Record<number, { title: string; does: string; duration: string; reveals: string }> = {
+  1: {
+    title: "Session 2 — Professional Credibility Assessment",
+    does: "Takes the function you just locked and looks for the evidence behind it.",
+    duration: "About 12 minutes",
+    reveals: "Which of your claims someone would actually bet on, and which need proof.",
+  },
+  2: {
+    title: "Session 3 — Positioning Story Development",
+    does: "Turns the proof you just gathered into the story you'll actually tell.",
+    duration: "About 12 minutes",
+    reveals: "The answer to \"so what do you do?\" — built from evidence, not adjectives.",
+  },
+};
+
 export default function FoundationSessionChatPage() {
   const { user } = useAuth();
   const [, navigate] = useLocation();
@@ -724,22 +748,60 @@ export default function FoundationSessionChatPage() {
               </div>
             )}
 
-            {/* Completed session message with Continue option */}
+            {/* Completed session — the transition to what comes next. */}
             {session.status === 'completed' && !allowContinue && (
-              <div className="border-t p-6 text-center space-y-4">
-                <div>
-                  <CheckCircle className="h-6 w-6 text-green-600 mx-auto mb-2" />
+              <div className="border-t p-4 sm:p-6 space-y-4">
+                <div className="flex items-start gap-2">
+                  <CheckCircle className="mt-0.5 h-5 w-5 shrink-0 text-green-600" />
                   <p className="text-sm text-muted-foreground">
-                    This session has been completed. You can review the conversation above.
+                    This one's done — the conversation above stays here if you want to reread it.
                   </p>
                 </div>
-                <Button 
+
+                {NEXT_STEP[sessionNumber] && (
+                  <div className="rounded-md border bg-muted/40 p-4">
+                    <p className="text-sm font-medium">Next: {NEXT_STEP[sessionNumber].title}</p>
+                    <p className="pt-1 text-sm text-muted-foreground">
+                      {NEXT_STEP[sessionNumber].does}
+                    </p>
+                    <p className="pt-2 text-sm">
+                      <span className="text-muted-foreground">You'll come away with — </span>
+                      {NEXT_STEP[sessionNumber].reveals}
+                    </p>
+                    <div className="flex flex-wrap items-center gap-3 pt-3">
+                      <Button onClick={() => navigate(`/foundation/session/${sessionNumber + 1}`)}>
+                        Start {NEXT_STEP[sessionNumber].title.split(' — ')[0]}
+                      </Button>
+                      <span className="text-xs uppercase tracking-wide text-muted-foreground">
+                        {NEXT_STEP[sessionNumber].duration}
+                      </span>
+                    </div>
+                  </div>
+                )}
+
+                {/* Session 3 has no next session — the arc is finished. */}
+                {!NEXT_STEP[sessionNumber] && (
+                  <div className="rounded-md border bg-muted/40 p-4">
+                    <p className="text-sm font-medium">That's all three.</p>
+                    <p className="pt-1 text-sm text-muted-foreground">
+                      Your positioning work is done. The optional modules and the rest of the
+                      tools are on your dashboard whenever you want them.
+                    </p>
+                    <Button className="mt-3" onClick={() => navigate('/')}>
+                      Back to dashboard
+                    </Button>
+                  </div>
+                )}
+
+                <Button
                   onClick={() => setAllowContinue(true)}
-                  variant="outline"
+                  variant="ghost"
+                  size="sm"
+                  className="text-muted-foreground"
                   data-testid="button-continue-chat"
                 >
                   <MessageSquare className="h-4 w-4 mr-2" />
-                  Continue the chat
+                  Or keep talking about this one
                 </Button>
               </div>
             )}

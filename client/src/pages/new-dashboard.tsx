@@ -6,6 +6,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Button } from "@/components/ui/button";
 import { LogOut, User, ChevronDown } from "lucide-react";
 import { useLocation } from "wouter";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -29,45 +30,69 @@ import UserAvatar from "@/components/user-avatar";
 import "@/assets/css/new-dashboard.css";
 import { hasSelectedSli, hasRefinedSli } from "@/lib/sli";
 
+/*
+ * A2: "Add contextual micro-copy at every transition: what the next section
+ * does, approximately how long it takes, and what it will reveal."
+ *
+ * The reported complaint was a "lack of instructions and rationale at
+ * transition points" — students arriving at a session with no idea what they
+ * were walking into or why. So each entry now carries all three, and `reveals`
+ * is deliberately phrased as an OUTCOME the student leaves with rather than a
+ * description of the activity. "Identify measurable expertise" tells you what
+ * you will be doing; "which of your claims someone would actually bet on" tells
+ * you what you get, which is the part that decides whether they start.
+ */
 const SESSION_CONTENT = [
   {
     header: "Session 1",
     title: "Functional Identity Mapping",
     description: "Define your primary business function and positioning",
+    duration: "About 10 minutes",
+    reveals: "Which single function you're credible in — and what you've been hedging across.",
   },
   {
     header: "Session 2",
     title: "Professional Credibility Assessment",
     description: "Identify measurable expertise and business impact",
+    duration: "About 12 minutes",
+    reveals: "Which of your claims someone would actually bet on, and which need proof.",
   },
   {
     header: "Session 3",
     title: "Positioning Story Development",
     description: "Extract compelling stories that prove your unique value",
+    duration: "About 12 minutes",
+    reveals: "The story you'll tell when someone asks what you do — built from evidence, not adjectives.",
   },
 ];
 
 const MODULE_CONTENT: Record<
   string,
-  { header: string; title: string; description: string }
+  { header: string; title: string; description: string; duration: string; reveals: string }
 > = {
   A: {
     header: "Module A",
     title: "Digital Behavior Analysis Framework",
     description:
       "Analyze your LinkedIn presence and content strategy patterns to identify opportunities and barriers for professional growth.",
+    duration: "About 15 minutes",
+    reveals: "What your LinkedIn currently signals versus what you meant it to.",
   },
   B: {
     header: "Module B",
     title: "Network Position Mapping Framework",
     description:
       "Map your current network position and develop strategic relationship building approaches for enhanced professional influence.",
+    duration: "About 12 minutes",
+    reveals: "The ten people worth knowing that you don't yet, and a way in.",
   },
   C: {
     header: "Module C",
     title: "Career Aspiration Alignment Framework",
     description:
       "Align your long-term career aspirations with your current positioning to create an actionable roadmap for professional advancement.",
+    duration: "About 10 minutes",
+    reveals: "Whether where you're heading and where you're positioned are the same place."
   },
 };
 
@@ -193,52 +218,58 @@ function buildSidebarSections(
               locked: !status.areAllSessionsComplete,
               completed: moduleADone,
             },
+            /* A3: "Enhancement Modules should NOT be progressive — students can
+               complete them in any order or skip entirely." B and C used to
+               wait on A and B respectively. Only the Foundation Sessions
+               prerequisite remains, because the modules genuinely do read the
+               SLI and functional identity those produce. */
             {
               label: "Network Position Mapping",
-              locked: !status.areAllSessionsComplete || !moduleADone,
+              locked: !status.areAllSessionsComplete,
               completed: moduleBDone,
             },
             {
               label: "Career Aspiration Alignment",
-              locked: !status.areAllSessionsComplete || !moduleBDone,
+              locked: !status.areAllSessionsComplete,
               completed: getModuleCompleted("C"),
             },
           ],
         },
         {
           title: "Phase 4 - Advanced Tools",
-          disabled: !status.areAllModulesComplete,
+          // A3: optional modules cannot gate the tools.
+          disabled: !status.areAllSessionsComplete,
           items: [
             {
               label: "Schedule Coaching Call",
-              locked: !status.areAllModulesComplete,
+              locked: !status.areAllSessionsComplete,
               completed: false,
             },
             {
               label: "Brand Intelligence Report",
-              locked: !status.areAllModulesComplete,
+              locked: !status.areAllSessionsComplete,
               completed: hasFreshnessReport,
             },
             {
               label: "Single Lasting Impression",
-              locked: !status.areAllModulesComplete || !hasSli,
+              locked: !status.areAllSessionsComplete || !hasSli,
               completed: !!(hasSliSelected || hasSliRefined),
             },
             {
               label: "LinkedIn Optimization",
-              locked: !status.areAllModulesComplete || !canGenerateLinkedIn,
+              locked: !status.areAllSessionsComplete || !canGenerateLinkedIn,
               completed: hasLinkedInOpt,
             },
             {
               label: "Strategic Content",
-              locked: !status.areAllModulesComplete || !canGenerateLinkedIn,
+              locked: !status.areAllSessionsComplete || !canGenerateLinkedIn,
               completed: false,
             },
             ...(!isAdmin
               ? [
                   {
                     label: "Assigned Homework",
-                    locked: !status.areAllModulesComplete,
+                    locked: !status.areAllSessionsComplete,
                     completed: false,
                   },
                 ]
@@ -258,7 +289,19 @@ function getCurrentPhase(
   if (!status.isAssessmentComplete) return "assessment";
   if (!status.isDocumentsComplete) return "documents";
   if (!status.areAllSessionsComplete) return "sessions";
-  if (!status.areAllModulesComplete) return "enhancement";
+  /*
+   * A3: modules are optional, so they no longer hold the phase.
+   *
+   * `if (!areAllModulesComplete) return "enhancement"` used to sit here, and it
+   * WAS the "undergraduate platform forces students to complete Enhancement
+   * Modules" bug. Nothing displayed a lock and nothing explained itself — the
+   * phase simply never advanced past "enhancement" until all three modules were
+   * finished, so every tool stayed out of reach for a reason the student could
+   * not see.
+   *
+   * Finishing the Foundation Sessions is now what opens the tools. The modules
+   * remain available alongside them, in any order or not at all.
+   */
   return "tools";
 }
 
@@ -610,6 +653,8 @@ export default function NewDashboardPage() {
                   header={content.header}
                   title={content.title}
                   description={content.description}
+                  duration={content.duration}
+                  reveals={content.reveals}
                   status={cardStatus}
                   onClick={() => handleSessionClick(session.sessionNumber)}
                 />
@@ -618,31 +663,125 @@ export default function NewDashboardPage() {
           </div>
         )}
 
-        {currentPhase === "enhancement" && (
-          <div className="flex flex-col gap-6 max-w-[900px]">
-            {(["A", "B", "C"] as const).map((code, index) => {
+        {/*
+          A3: modules render in the tools phase, not a phase of their own.
+
+          They used to have an exclusive "enhancement" phase that the dashboard
+          could not leave until all three were finished. Now that the phase
+          advances on sessions alone, an `=== "enhancement"` condition would
+          never match and the modules would simply vanish — so they sit
+          alongside the tools, which is what "optional" actually looks like on
+          a screen.
+        */}
+        {/*
+          A2 backward navigation: completed sessions stay on the main panel.
+
+          The sessions block only renders while `currentPhase === "sessions"`,
+          which stops being true the moment the third one finishes — so a
+          student who wanted to reread Session 1 found the cards simply gone.
+          They were still reachable from the sidebar, which is why this looked
+          fine to anyone who knew where to click.
+
+          Revisiting is safe at the data layer: putArtifact versions rather than
+          overwrites, so continuing a finished session adds a new artifact
+          version and cannot destroy the original outcome.
+        */}
+        {/*
+          A2 career-evolution re-entry.
+
+          Offered whenever an SLI exists, with no elapsed-time gate. The spec is
+          explicit that re-engagement is "not just after years, and not just for
+          career pivots" — a promotion six weeks after finishing counts, and a
+          cooldown would amount to telling someone their positioning is not
+          allowed to have changed yet.
+        */}
+        {/* A4: the portfolio is the artefact an advisor reads, so it sits above
+            the refresh prompt rather than among the secondary tools. */}
+        {currentPhase === "tools" && (
+          <div className="max-w-[900px] rounded-lg border bg-muted/40 p-4">
+            <p className="text-sm font-medium">Your evidence portfolio</p>
+            <p className="pt-1 text-sm text-muted-foreground">
+              What you can claim and what proves it, mapped to the competencies employers
+              screen for. Built from your own words.
+            </p>
+            <Button variant="outline" className="mt-3" onClick={() => navigate("/portfolio")}>
+              Open portfolio
+            </Button>
+          </div>
+        )}
+
+        {currentPhase === "tools" && (hasSliSelected || hasSliRefined) && (
+          <div className="max-w-[900px] rounded-lg border bg-muted/40 p-4">
+            <p className="text-sm font-medium">Has something changed?</p>
+            <p className="pt-1 text-sm text-muted-foreground">
+              A promotion, a move into something of your own, a different industry — or just a
+              sense that your positioning doesn't fit any more. We'll build on what you've
+              already done rather than starting over.
+            </p>
+            <Button
+              variant="outline"
+              className="mt-3"
+              onClick={() => navigate("/positioning-refresh")}
+            >
+              Refresh my positioning
+            </Button>
+          </div>
+        )}
+
+        {currentPhase === "tools" && (
+          <div className="flex flex-col gap-4 max-w-[900px]">
+            <div>
+              <h2 className="text-lg font-semibold">Your sessions</h2>
+              <p className="text-sm text-muted-foreground">
+                Reread any of these, or pick up one you paused. Nothing you've already
+                worked out gets lost.
+              </p>
+            </div>
+            {foundationSessions?.slice(0, 3).map((session) => {
+              const content = SESSION_CONTENT[session.sessionNumber - 1];
+              if (!content) return null;
+              return (
+                <SessionCard
+                  key={session.id}
+                  header={content.header}
+                  title={content.title}
+                  description={content.description}
+                  duration={content.duration}
+                  reveals={content.reveals}
+                  status={session.status as any}
+                  onClick={() => handleSessionClick(session.sessionNumber)}
+                />
+              );
+            })}
+          </div>
+        )}
+
+        {currentPhase === "tools" && (
+          <div className="flex flex-col gap-4 max-w-[900px]">
+            <div>
+              <h2 className="text-lg font-semibold">Enhancement Modules</h2>
+              <p className="text-sm text-muted-foreground">
+                Optional, and in any order. Each one builds on your SLI rather than on the
+                other modules.
+              </p>
+            </div>
+            {(["A", "B", "C"] as const).map((code) => {
               const content = MODULE_CONTENT[code];
               const module = enhancementModules?.find(
                 (m) => m.moduleCode === code,
               );
-              const moduleStatus = module?.status ?? "available";
-              const prevCodes = ["A", "B", "C"];
-              const prevCompleted =
-                index === 0
-                  ? true
-                  : (enhancementModules?.some(
-                      (m) =>
-                        m.moduleCode === prevCodes[index - 1] &&
-                        m.status === "completed",
-                    ) ?? false);
-              const cardStatus = prevCompleted ? moduleStatus : "locked";
+              // No prevCompleted: the modules are not a sequence. The only
+              // prerequisite is the Foundation Sessions, and reaching this
+              // phase means those are done.
               return (
                 <SessionCard
                   key={code}
                   header={content.header}
                   title={content.title}
                   description={content.description}
-                  status={cardStatus}
+                  duration={content.duration}
+                  reveals={content.reveals}
+                  status={module?.status ?? "available"}
                   onClick={() => handleModuleClick(code)}
                 />
               );

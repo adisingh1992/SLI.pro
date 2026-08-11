@@ -214,6 +214,42 @@ export async function alreadySent(studentId: number, templateKey: string): Promi
   }
 }
 
+/**
+ * Has this student already received anything under this sequence key?
+ *
+ * `alreadySent` is keyed on the template, which is right for a sequence a
+ * student passes through once — nobody should get two welcome emails. It is
+ * wrong for anything that recurs on a different occasion with the same copy:
+ * two calendar touchpoints six months apart share a template key, and a
+ * template-keyed guard would suppress the second one forever.
+ *
+ * So this guards on the sequence key instead, which callers make unique per
+ * occasion (`calendar:41`). Same job — do not send twice — different grain.
+ */
+export async function alreadySentForSequence(
+  studentId: number,
+  sequenceKey: string,
+): Promise<boolean> {
+  try {
+    const [row] = await db
+      .select({ id: messageEvents.id })
+      .from(messageEvents)
+      .where(
+        and(
+          eq(messageEvents.studentId, studentId),
+          eq(messageEvents.sequenceKey, sequenceKey),
+          eq(messageEvents.direction, "outbound" as any),
+          isNull(messageEvents.failedAt),
+        ),
+      )
+      .limit(1);
+    return !!row;
+  } catch {
+    // Fail closed, for the same reason as alreadySent.
+    return true;
+  }
+}
+
 /* ── Sequence state ─────────────────────────────────────────────────────── */
 
 /** Starts a sequence for a student if it is not already running. */

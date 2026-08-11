@@ -274,6 +274,18 @@ export const institutions = wing.table("institutions", {
   populationTags: text("population_tags").array().notNull().default(sql`'{}'`),
   primaryContactName: text("primary_contact_name"),
   primaryContactEmail: text("primary_contact_email"),
+  /**
+   * Email domains that identify this institution's students, e.g.
+   * {berkeley.edu, vanderbilt.edu}.
+   *
+   * Without this nothing ever set students.institution_id: registration creates
+   * every account as origin='direct' with a NULL institution, so cohort
+   * reporting for a partner returned zero however many of their students had
+   * signed up. Matching on the registration domain is both the natural
+   * definition of an institutional student and the only signal available
+   * without asking them.
+   */
+  emailDomains: text("email_domains").array().notNull().default(sql`'{}'`),
   status: institutionStatus("status").notNull().default("active"),
   createdAt: tsNow("created_at"),
   updatedAt: tsNow("updated_at"),
@@ -356,6 +368,17 @@ export const students = wing.table("students", {
   origin: studentOrigin("origin").notNull().default("institutional"),
   enrollmentStatus: enrollmentStatus("enrollment_status").notNull().default("active"),
   graduationDate: date("graduation_date"),
+  /**
+   * When their internship began — the anchor for the 30- and 60-day milestone
+   * messages (B3 E2). NULL for most students, which simply means those
+   * messages never fire.
+   *
+   * Set explicitly rather than inferred from a life log entry: guessing "I
+   * started my internship" from prose would send real emails on an inference,
+   * and a milestone landing three weeks early is worse than one that never
+   * lands at all.
+   */
+  internshipStartDate: date("internship_start_date"),
   /**
    * Onboarding wizard progress. Was `public.profiles` (completion_step,
    * is_complete) — two columns behind a whole legacy table.
@@ -941,6 +964,84 @@ export const lifeLogEntries = wing.table("life_log_entries", {
   studentCreatedIdx: index("life_log_entries_student_created_idx").on(t.studentId, t.createdAt),
 }));
 
+/**
+ * Build now · Coach-assigned homework.
+ *
+ * Was `public.homework_assignments`, whose user_id is a foreign key to
+ * `public.users`. Registration creates a `wing.users` row and no public one, so
+ * assigning or answering homework threw a constraint violation for every
+ * student who signed up after the cutover — the same defect that broke
+ * registration and the questionnaire.
+ *
+ * Keyed on students.id like every other coaching-side table. `assignedByUserId`
+ * points at wing.users because the assigner is staff, not a student.
+ */
+export const homeworkAssignments = wing.table("homework_assignments", {
+  id: id(),
+  studentId: fk("student_id").notNull().references(() => students.id, { onDelete: "cascade" }),
+  assignedByUserId: fk("assigned_by_user_id").references(() => users.id),
+  questionText: text("question_text").notNull(),
+  answerText: text("answer_text"), // null until the student answers
+  answeredAt: ts("answered_at"),
+  createdAt: tsNow("created_at"),
+  updatedAt: tsNow("updated_at"),
+}, (t) => ({
+  studentCreatedIdx: index("homework_assignments_student_created_idx").on(t.studentId, t.createdAt),
+}));
+
+/**
+ * Build now · Monthly self-reported activity check-in.
+ *
+ * Was `public.monthly_check_ins`, FK'd to `public.users` — a table no
+ * post-cutover student has a row in, so submitting one failed for every student
+ * who registered after the migration.
+ *
+ * Screenshots move to Blob rather than staying as base64 in the row: the legacy
+ * table held three separate base64 image columns, and a check-in with three
+ * screenshots was routinely over a megabyte of text in a jsonb/text column.
+ * The URIs are kept here; the images live where images belong.
+ */
+export const monthlyCheckIns = wing.table("monthly_check_ins", {
+  id: id(),
+  studentId: fk("student_id").notNull().references(() => students.id, { onDelete: "cascade" }),
+  /** YYYY-MM. One check-in per student per month. */
+  month: text("month").notNull(),
+  contentPosts: integer("content_posts").notNull().default(0),
+  contentLinks: text("content_links").array().notNull().default(sql`'{}'`),
+  engagementFrequency: text("engagement_frequency"),
+  newConnections: integer("new_connections").notNull().default(0),
+  targetConnectionPercentage: text("target_connection_percentage"),
+  recommendationImplementation: text("recommendation_implementation"),
+  implementationChallenges: text("implementation_challenges"),
+  updatedProfileVisuals: boolean("updated_profile_visuals").notNull().default(false),
+  /** Azure Blob URIs. The MVP inlined base64 here; that does not carry forward. */
+  screenshotUris: text("screenshot_uris").array().notNull().default(sql`'{}'`),
+  createdAt: tsNow("created_at"),
+  updatedAt: tsNow("updated_at"),
+}, (t) => ({
+  studentMonthUnique: uniqueIndex("monthly_check_ins_student_month_unique").on(t.studentId, t.month),
+}));
+
+/**
+ * Build now · Staff notes about a student.
+ *
+ * Was `public.coaching_notes`, with TWO foreign keys to `public.users` — the
+ * student and the admin who wrote it. Both broke for post-cutover accounts.
+ *
+ * `authorUserId` is nullable because staff accounts were not all migrated, and
+ * a note whose author cannot be resolved is still worth keeping.
+ */
+export const coachingNotes = wing.table("coaching_notes", {
+  id: id(),
+  studentId: fk("student_id").notNull().references(() => students.id, { onDelete: "cascade" }),
+  authorUserId: fk("author_user_id").references(() => users.id),
+  content: text("content").notNull(),
+  createdAt: tsNow("created_at"),
+  updatedAt: tsNow("updated_at"),
+}, (t) => ({
+  studentCreatedIdx: index("coaching_notes_student_created_idx").on(t.studentId, t.createdAt),
+}));
+
 /** Build now · Versioned message templates; copy governed by the Voice Guide
  *  and editable without a deploy. message_events records the key and version
  *  actually sent, so delivered copy is always recoverable. */
@@ -1070,7 +1171,9 @@ export const linkedinOptimizations = wing.table("linkedin_optimizations", {
   holisticReview: jsonb("holistic_review").notNull(),
   sourceType: sourceType("source_type").notNull().default("ai_generated"),
   createdAt: tsNow("created_at"),
-});
+}, (t) => ({
+  studentIdx: index("linkedin_optimizations_student_idx").on(t.studentId),
+}));
 
 /** Build now · LinkedIn post/article drafts conforming to the 360Brew
  *  authenticity standard. First published SLI-aligned post activates the
@@ -1112,7 +1215,9 @@ export const freshnessReports = wing.table("freshness_reports", {
   finalSynthesis: jsonb("final_synthesis"),
   sourceType: sourceType("source_type").notNull().default("ai_generated"),
   createdAt: tsNow("created_at"),
-});
+}, (t) => ({
+  studentIdx: index("freshness_reports_student_idx").on(t.studentId),
+}));
 
 /** Build now · Document metadata with content in Azure Blob. Extracted text
  *  is retained so Wing references uploads instead of re-asking (A2). Inline

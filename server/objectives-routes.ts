@@ -5,6 +5,7 @@ import { turnObjectives, sessions, students, users } from "@shared/wing-schema";
 import * as store from "./wing/objectives-store";
 import { validateObjectiveSet, POPULATIONS } from "./wing/objective-rules";
 import { log } from "./logger";
+import { isPlatformAdmin as isAdmin } from "./admin-guards";
 
 /**
  * Objective sets API — what a session is trying to achieve, in order.
@@ -29,11 +30,6 @@ const SESSION_TYPES = [
   "foundation_1", "foundation_2", "foundation_3",
   "enhancement_a", "enhancement_b", "enhancement_c",
 ];
-
-const isAdmin = (req: Request, res: Response, next: NextFunction) => {
-  if (req.isAuthenticated() && req.user?.isAdmin) return next();
-  res.status(403).json({ error: "Admin access required" });
-};
 
 export function registerObjectiveRoutes(app: Express) {
   app.get("/api/admin/objectives", isAdmin, async (_req, res, next) => {

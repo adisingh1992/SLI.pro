@@ -18,6 +18,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Info, Loader2, Mail, Plus, Send, UserPlus } from "lucide-react";
+import { PageShell } from "@/components/admin/page";
 
 /**
  * Advising appointments and pre-meeting snapshots (Feature List B1).
@@ -240,7 +241,7 @@ export default function AdminAdvisorsPage() {
 
   return (
     <AdminLayout>
-      <div className="mx-auto max-w-5xl space-y-6 p-6">
+      <PageShell width="page">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Advising appointments</h1>
           <p className="text-sm text-muted-foreground">
@@ -497,7 +498,7 @@ export default function AdminAdvisorsPage() {
             ))}
           </CardContent>
         </Card>
-      </div>
+      </PageShell>
     </AdminLayout>
   );
 }

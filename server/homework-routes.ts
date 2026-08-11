@@ -1,163 +1,126 @@
 import { Express, Request, Response, NextFunction } from 'express';
 import { z } from 'zod';
-import { insertHomeworkAssignmentSchema, updateHomeworkAssignmentSchema, HomeworkAssignment } from '@shared/schema';
-import { IStorage } from './storage';
+import * as homework from './wing/homework-store';
+import { isAdmin, isAuthenticated } from "./admin-guards";
 
-const isAuthenticated = (req: Request, res: Response, next: NextFunction) => {
-  if (req.isAuthenticated()) {
-    return next();
-  }
-  res.status(401).json({ error: 'Not authenticated' });
-};
+/**
+ * Homework routes — on wing.
+ *
+ * These used to go through `storage`, which writes `public.homework_assignments`
+ * whose user_id is a foreign key to `public.users`. Registration creates a
+ * `wing.users` row and no public one, so both assigning and answering threw a
+ * constraint violation for every student who registered after the cutover.
+ *
+ * Third instance of that defect (registration, questionnaire, this), so the
+ * rule is worth stating plainly: a route that reads wing must write wing. There
+ * is no correct reason to mix them.
+ */
 
-const isAdmin = (req: Request, res: Response, next: NextFunction) => {
-  if (req.isAuthenticated() && req.user?.isAdmin) {
-    return next();
-  }
-  res.status(403).json({ error: 'Admin access required' });
-};
-
-export function registerHomeworkRoutes(app: Express, storage: IStorage) {
-  // Admin: Get homework assignments for a specific user
-  app.get("/api/admin/users/:userId/homework", isAdmin, async (req: Request, res: Response, next: NextFunction) => {
+export function registerHomeworkRoutes(app: Express) {
+  /** Admin: homework for one student. :userId is a wing.users id. */
+  app.get("/api/admin/users/:userId/homework", isAdmin, async (req, res, next) => {
     try {
       const userId = parseInt(req.params.userId);
-      if (isNaN(userId)) {
-        return res.status(400).json({ error: "Invalid user ID" });
-      }
+      if (isNaN(userId)) return res.status(400).json({ error: "Invalid user ID" });
 
-      const homework = await storage.getHomeworkAssignments(userId);
-      res.json(homework);
+      res.json(await homework.listForUser(userId));
     } catch (error) {
       next(error);
     }
   });
 
-  // Admin: Create new homework assignment for a user
-  app.post("/api/admin/users/:userId/homework", isAdmin, async (req: Request, res: Response, next: NextFunction) => {
+  app.post("/api/admin/users/:userId/homework", isAdmin, async (req, res, next) => {
     try {
       const userId = parseInt(req.params.userId);
-      if (isNaN(userId)) {
-        return res.status(400).json({ error: "Invalid user ID" });
-      }
+      if (isNaN(userId)) return res.status(400).json({ error: "Invalid user ID" });
 
-      const adminId = req.user!.id;
-      
-      // Validate the request body
-      const homeworkSchema = z.object({
-        questionText: z.string().min(1, "Question text is required"),
-      });
+      const { questionText } = z
+        .object({ questionText: z.string().min(1, "Question text is required") })
+        .parse(req.body);
 
-      const validatedData = homeworkSchema.parse(req.body);
-
-      const homeworkData = {
+      const created = await homework.create({
         userId,
-        adminId,
-        questionText: validatedData.questionText,
-      };
-
-      const homework = await storage.createHomeworkAssignment(homeworkData);
-      res.status(201).json(homework);
-    } catch (error) {
-      if (error instanceof z.ZodError) {
-        return res.status(400).json({ 
-          error: "Validation failed", 
-          details: error.errors 
-        });
-      }
-      next(error);
-    }
-  });
-
-  // Admin: Update homework assignment (admin can edit questions)
-  app.patch("/api/admin/homework/:id", isAdmin, async (req: Request, res: Response, next: NextFunction) => {
-    try {
-      const id = parseInt(req.params.id);
-      if (isNaN(id)) {
-        return res.status(400).json({ error: "Invalid homework ID" });
-      }
-
-      const updateSchema = z.object({
-        questionText: z.string().min(1).optional(),
+        assignedByUserId: req.user!.id,
+        questionText,
       });
 
-      const validatedData = updateSchema.parse(req.body);
-      const homework = await storage.updateHomeworkAssignment(id, validatedData);
-
-      if (!homework) {
-        return res.status(404).json({ error: "Homework assignment not found" });
+      // Null means the account has no student record — a staff or admin user.
+      // 404 rather than a foreign-key error surfacing as a 500, which is how
+      // this failed before.
+      if (!created) {
+        return res.status(404).json({ error: "That account has no student record" });
       }
 
-      res.json(homework);
+      res.status(201).json(created);
     } catch (error) {
       if (error instanceof z.ZodError) {
-        return res.status(400).json({ 
-          error: "Validation failed", 
-          details: error.errors 
-        });
+        return res.status(400).json({ error: "Validation failed", details: error.errors });
       }
       next(error);
     }
   });
 
-  // Admin: Delete homework assignment
-  app.delete("/api/admin/homework/:id", isAdmin, async (req: Request, res: Response, next: NextFunction) => {
+  app.patch("/api/admin/homework/:id", isAdmin, async (req, res, next) => {
     try {
       const id = parseInt(req.params.id);
-      if (isNaN(id)) {
-        return res.status(400).json({ error: "Invalid homework ID" });
-      }
+      if (isNaN(id)) return res.status(400).json({ error: "Invalid homework ID" });
 
-      await storage.deleteHomeworkAssignment(id);
+      const { questionText } = z
+        .object({ questionText: z.string().min(1) })
+        .parse(req.body);
+
+      const updated = await homework.updateQuestion(id, questionText);
+      if (!updated) return res.status(404).json({ error: "Homework assignment not found" });
+
+      res.json(updated);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: "Validation failed", details: error.errors });
+      }
+      next(error);
+    }
+  });
+
+  app.delete("/api/admin/homework/:id", isAdmin, async (req, res, next) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) return res.status(400).json({ error: "Invalid homework ID" });
+
+      await homework.remove(id);
       res.status(204).send();
     } catch (error) {
       next(error);
     }
   });
 
-  // User: Get their own homework assignments
-  app.get("/api/user/homework", isAuthenticated, async (req: Request, res: Response, next: NextFunction) => {
+  /** Student: their own homework. */
+  app.get("/api/user/homework", isAuthenticated, async (req, res, next) => {
     try {
-      const userId = req.user!.id;
-      const homework = await storage.getHomeworkAssignments(userId);
-      res.json(homework);
+      res.json(await homework.listForUser(req.user!.id));
     } catch (error) {
       next(error);
     }
   });
 
-  // User: Submit answer to homework assignment
-  app.patch("/api/user/homework/:id/answer", isAuthenticated, async (req: Request, res: Response, next: NextFunction) => {
+  app.patch("/api/user/homework/:id/answer", isAuthenticated, async (req, res, next) => {
     try {
       const id = parseInt(req.params.id);
-      if (isNaN(id)) {
-        return res.status(400).json({ error: "Invalid homework ID" });
-      }
+      if (isNaN(id)) return res.status(400).json({ error: "Invalid homework ID" });
 
-      const userId = req.user!.id;
+      const { answerText } = z
+        .object({ answerText: z.string().min(1, "Answer is required") })
+        .parse(req.body);
 
-      // Check if this homework belongs to the user
-      const homework = await storage.getHomeworkAssignment(id);
-      if (!homework || homework.userId !== userId) {
-        return res.status(404).json({ error: "Homework assignment not found" });
-      }
+      // Ownership is enforced inside the update's WHERE clause, not by a
+      // fetch-then-compare. A student answering someone else's homework
+      // updates nothing and gets a 404.
+      const updated = await homework.answer({ id, userId: req.user!.id, answerText });
+      if (!updated) return res.status(404).json({ error: "Homework assignment not found" });
 
-      const answerSchema = z.object({
-        answerText: z.string().min(1, "Answer is required"),
-      });
-
-      const validatedData = answerSchema.parse(req.body);
-      const updatedHomework = await storage.updateHomeworkAssignment(id, {
-        answerText: validatedData.answerText,
-      });
-
-      res.json(updatedHomework);
+      res.json(updated);
     } catch (error) {
       if (error instanceof z.ZodError) {
-        return res.status(400).json({ 
-          error: "Validation failed", 
-          details: error.errors 
-        });
+        return res.status(400).json({ error: "Validation failed", details: error.errors });
       }
       next(error);
     }

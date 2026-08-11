@@ -41,6 +41,7 @@ export type AuthUser = {
   linkedinTokenExpiry: Date | null;
   professionalStatus: string | null;
   discoverySource: string | null;
+  discoverySourceOther: string | null;
   timezone: string;
   isTestUser: boolean;
   status: "active" | "suspended" | "closed";
@@ -67,6 +68,7 @@ function toAuthUser(row: any): AuthUser {
     linkedinTokenExpiry: row.linkedinTokenExpiry ?? null,
     professionalStatus: row.professionalStatus ?? null,
     discoverySource: row.discoverySource ?? null,
+    discoverySourceOther: row.discoverySourceOther ?? null,
     timezone: row.timezone,
     isTestUser: row.isTestUser,
     status: row.status,
@@ -74,6 +76,62 @@ function toAuthUser(row: any): AuthUser {
     createdAt: row.createdAt,
     passwordHash: row.passwordHash ?? null,
   };
+}
+
+/**
+ * The only shape of a user that may leave the server.
+ *
+ * ── ONE ALLOWLIST, USED EVERYWHERE ───────────────────────────────────────
+ * Five endpoints independently did `const { passwordHash, ...rest } = user`
+ * and sent `rest`. That reads as safe and is not: a denylist only excludes
+ * what somebody remembered, and nobody remembered `linkedinAccessToken` or
+ * `linkedinRefreshToken`. Those are live OAuth credentials, and on the admin
+ * list endpoint the whole cohort's went out in a single response.
+ *
+ * Having one definition means a field added to `AuthUser` is private by
+ * default and has to be deliberately published here. `api-contracts.test.ts`
+ * fails the build if the old destructuring pattern reappears.
+ *
+ * `linkedinId` is reduced to a boolean: whether an account is linked is useful
+ * to a client, the identifier itself is not.
+ */
+export function publicUser(u: AuthUser) {
+  return {
+    id: u.id,
+    email: u.email,
+    username: u.username,
+    firstName: u.firstName,
+    lastName: u.lastName,
+    phoneNumber: u.phoneNumber,
+    role: u.role,
+    isAdmin: u.isAdmin,
+    linkedinConnected: !!u.linkedinId,
+    professionalStatus: u.professionalStatus,
+    discoverySource: u.discoverySource,
+    discoverySourceOther: u.discoverySourceOther,
+    timezone: u.timezone,
+    isTestUser: u.isTestUser,
+    status: u.status,
+    lastLoginAt: u.lastLoginAt,
+    createdAt: u.createdAt,
+  };
+}
+
+/**
+ * A profile (a user plus its nested artifacts) with the identity fields
+ * replaced by the allowlist above. The nested collections — documents, SLIs,
+ * sessions — carry no credentials and pass through untouched.
+ */
+export function publicProfile<T extends AuthUser>(profile: T) {
+  const {
+    passwordHash: _p,
+    linkedinAccessToken: _a,
+    linkedinRefreshToken: _r,
+    linkedinTokenExpiry: _e,
+    linkedinId: _i,
+    ...rest
+  } = profile;
+  return { ...rest, ...publicUser(profile) };
 }
 
 /* ── Lookups ───────────────────────────────────────────────────────────── */
@@ -161,6 +219,25 @@ export async function createUser(data: {
     .insert(userChannelPreferences)
     .values({ userId: row.id })
     .onConflictDoNothing();
+
+  /*
+   * Attach them to their institution if the email domain matches one.
+   *
+   * The student row above is created as origin='direct' with a NULL
+   * institution, and until this existed nothing ever changed that — so every
+   * Berkeley and Vanderbilt student on the platform was invisible to their own
+   * institution's cohort reporting.
+   *
+   * Never throws and never blocks: a failure here leaves the student
+   * unassigned, which the backfill can repair, whereas a failure that took
+   * registration down with it could not be repaired at all.
+   */
+  try {
+    const { assignOnRegistration } = await import("./institution-assignment");
+    await assignOnRegistration(row.id);
+  } catch {
+    // assignOnRegistration already swallows and logs; this is belt and braces.
+  }
 
   return toAuthUser(row);
 }

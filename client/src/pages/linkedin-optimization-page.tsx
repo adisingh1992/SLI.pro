@@ -7,13 +7,70 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { formatDistanceToNow } from "date-fns";
 import NavBar from "@/components/nav-bar";
 
+/**
+ * What the optimization endpoint returns.
+ *
+ * The query was previously untyped, so `optimization` was `{}` and every field
+ * access was an error the build tolerated. Typing it fixes those and — the
+ * reason it is worth doing rather than casting — means the A4 holisticReview
+ * fields are checked rather than assumed.
+ *
+ * Everything is optional because records created before A4 have no
+ * holisticReview, and the older MVP rows are missing sections too.
+ */
+type OptimizationChange = {
+  section?: string;
+  current?: string;
+  proposed?: string;
+  why?: string;
+  dependsOn?: string;
+};
+
+type LinkedinOptimizationView = {
+  id?: number;
+  createdAt?: string;
+  alignmentAssessment?: string;
+  headlineOptimization?: {
+    currentHeadline?: string;
+    recommendedHeadline?: string;
+    rationale?: string;
+  };
+  aboutSection?: {
+    currentAnalysis?: string;
+    recommendations?: string;
+    suggestedStructure?: string;
+    keyElements?: string;
+    draftContent?: string;
+  };
+  profileEnhancements?: {
+    experienceSection?: string;
+    skillsEndorsements?: string;
+    activityEngagement?: string;
+    visualImprovements?: string;
+  };
+  contentStrategy?: {
+    themes?: string;
+    postIdeas?: string;
+    engagementTips?: string;
+  };
+  implementationPriorities?: string;
+  /** A4: the integrated read. Absent on anything generated before A4. */
+  holisticReview?: {
+    throughLine?: string;
+    readsAsToday?: string;
+    readsAsAfter?: string;
+    changes?: OptimizationChange[];
+    sequence?: string;
+  };
+};
+
 export default function LinkedinOptimizationPage() {
   const [_, navigate] = useLocation();
   const params = useParams();
   const id = params?.id;
 
   // Fetch the specific LinkedIn optimization if ID is provided, otherwise fetch the latest
-  const { data: optimization, isLoading } = useQuery({
+  const { data: optimization, isLoading } = useQuery<LinkedinOptimizationView>({
     queryKey: id ? [`/api/linkedin-optimizations/${id}`] : ["/api/linkedin-optimizations/latest"],
   });
 
@@ -110,7 +167,118 @@ export default function LinkedinOptimizationPage() {
             </p>
           </div>
 
+          {/*
+            A4: the whole profile, before the sections.
+
+            "The optimization should present a holistic, integrated view of the
+            full profile with changes shown in context, not as disconnected
+            pieces."
+
+            This sits ABOVE the tabs rather than inside them, and that placement
+            is the fix. A profile is read top to bottom in about nine seconds;
+            the tabs below optimise the headline, the About and the experience
+            as separate problems, which produces a profile saying three
+            different things well. The through-line comes first, then the
+            before/after changes with their dependencies, and only then the
+            per-section detail.
+
+            Rendered only when present — records created before A4 have no
+            holisticReview, and their tabs still work exactly as they did.
+          */}
+          {optimization.holisticReview && (
+            <div className="border-b bg-slate-50 p-6 space-y-5">
+              {optimization.holisticReview.throughLine && (
+                <div>
+                  <p className="text-xs uppercase tracking-wide text-slate-500">
+                    What this profile should say
+                  </p>
+                  <p className="pt-1 text-lg leading-relaxed text-slate-900">
+                    {optimization.holisticReview.throughLine}
+                  </p>
+                </div>
+              )}
+
+              <div className="grid gap-4 sm:grid-cols-2">
+                {optimization.holisticReview.readsAsToday && (
+                  <div className="rounded-lg border border-amber-200 bg-amber-50 p-4">
+                    <p className="text-xs uppercase tracking-wide text-amber-700">
+                      What it says today
+                    </p>
+                    <p className="pt-1 text-sm leading-relaxed text-amber-900 whitespace-pre-line">
+                      {optimization.holisticReview.readsAsToday}
+                    </p>
+                  </div>
+                )}
+                {optimization.holisticReview.readsAsAfter && (
+                  <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-4">
+                    <p className="text-xs uppercase tracking-wide text-emerald-700">
+                      What it would say after
+                    </p>
+                    <p className="pt-1 text-sm leading-relaxed text-emerald-900 whitespace-pre-line">
+                      {optimization.holisticReview.readsAsAfter}
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              {/* Changes in context — current beside proposed, never apart. */}
+              {(optimization.holisticReview.changes ?? []).length > 0 && (
+                <div className="space-y-3">
+                  <p className="text-xs uppercase tracking-wide text-slate-500">
+                    The changes, in order
+                  </p>
+                  {(optimization.holisticReview.changes ?? []).map(
+                    (change, i) => (
+                      <div key={i} className="rounded-lg border bg-white p-4">
+                        <p className="text-sm font-medium">{change.section}</p>
+                        <div className="grid gap-3 pt-2 sm:grid-cols-2">
+                          <div>
+                            <p className="text-xs uppercase tracking-wide text-slate-400">Now</p>
+                            <p className="pt-1 text-sm text-slate-500 line-through decoration-slate-300">
+                              {change.current}
+                            </p>
+                          </div>
+                          <div>
+                            <p className="text-xs uppercase tracking-wide text-slate-400">
+                              Instead
+                            </p>
+                            <p className="pt-1 text-sm text-slate-900">{change.proposed}</p>
+                          </div>
+                        </div>
+                        {change.why && (
+                          <p className="pt-3 text-sm text-slate-600">{change.why}</p>
+                        )}
+                        {change.dependsOn && (
+                          /* The dependency is the thing the fragmented view
+                             loses — a headline change that only works if the
+                             About opening moves too. */
+                          <p className="pt-2 text-xs text-slate-500">
+                            Only works alongside: {change.dependsOn}
+                          </p>
+                        )}
+                      </div>
+                    ),
+                  )}
+                </div>
+              )}
+
+              {optimization.holisticReview.sequence && (
+                <div className="rounded-lg border bg-white p-4">
+                  <p className="text-xs uppercase tracking-wide text-slate-500">Start here</p>
+                  <p className="pt-1 text-sm leading-relaxed text-slate-800 whitespace-pre-line">
+                    {optimization.holisticReview.sequence}
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
+
           <Tabs defaultValue="overview" className="p-6">
+            {optimization.holisticReview && (
+              <p className="mb-3 text-xs text-slate-500">
+                Section-by-section detail behind the changes above.
+              </p>
+            )}
             <TabsList className="mb-6">
               <TabsTrigger value="overview">Overview</TabsTrigger>
               <TabsTrigger value="headline">Headline</TabsTrigger>

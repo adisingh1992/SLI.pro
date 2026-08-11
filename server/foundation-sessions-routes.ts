@@ -2,6 +2,7 @@ import { Express, Request, Response, NextFunction } from "express";
 import { parseJsonResponse } from "./json-response";
 import { storage } from "./storage";
 import { getPromptSet } from "./prompts";
+import { buildStudentContext } from "./wing/student-context";
 import * as orchestrator from "./orchestrator";
 import * as store from "./wing/session-store";
 import type { WingSessionType, ArtifactType } from "./wing/session-store";
@@ -736,8 +737,29 @@ export function registerFoundationSessionsRoutes(app: Express) {
 
         const userProfile = await profileStore.getUserProfile(legacyUserId);
         const promptSet = getPromptSet(userProfile?.professionalStatus);
-        const resumeSummary = await formatResumeSummary(legacyUserId);
         const priorSessions = await buildPriorSessionContexts(studentId, sessionNumber);
+
+        /*
+         * A2: everything Wing already knows, in the CONVERSATION prompt.
+         *
+         * This used to be `formatResumeSummary`, which filtered on
+         * type === "resume" — so the LinkedIn PDF was uploaded, extracted,
+         * stored, and never shown to Wing. Sessions then asked for the headline
+         * that was sitting in the database, which is the exact complaint A2
+         * names.
+         *
+         * Worse, the intake answers reached only the ANALYSIS prompt. Live,
+         * Wing knew nothing the student had already said, so it asked again.
+         */
+        const studentContext = await buildStudentContext(legacyUserId);
+        const resumeSummary = studentContext.text;
+
+        if (studentContext.included.length) {
+          console.log(
+            `[foundation] session ${sessionNumber}: context — ` +
+              `${studentContext.included.join(", ")} (${studentContext.chars} chars)`,
+          );
+        }
 
         const conversationCriteria = await resolveCompletionCriteria(
           userProfile?.professionalStatus,

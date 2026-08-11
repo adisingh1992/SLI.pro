@@ -40,7 +40,15 @@ export type TemplateSpec = {
   sender: string;
   variables: TemplateVariable[];
   /** Grouping in the editor. */
-  group: "Welcome" | "Session completion" | "Dormancy" | "Advising";
+  group:
+    | "Welcome"
+    | "Session completion"
+    | "Dormancy"
+    | "Advising"
+    | "Life log"
+    | "Milestones"
+    | "Positioning launch"
+    | "Academic calendar";
 };
 
 const firstName: TemplateVariable = {
@@ -169,6 +177,169 @@ export const TEMPLATE_CATALOGUE: TemplateSpec[] = [
     sender: "engagement.runDueSequences",
     group: "Dormancy",
     variables: [firstName, dashboardLink],
+  },
+
+  /* ── Life log ────────────────────────────────────────────────────────── */
+  {
+    templateKey: "life_log_nudge",
+    title: "Life log nudge",
+    trigger:
+      "Every 5 days for the first month after Session 1, then weekly. Never stops.",
+    sender: "engagement.runDueSequences",
+    group: "Life log",
+    variables: [
+      firstName,
+      {
+        name: "prompt",
+        description:
+          "A rotating prompt from the library, never repeated within 14 days. Used as the " +
+          "subject line as well as in the body. Absent if the library is empty — copy must " +
+          "still make sense without it.",
+        sample: "What's something you accomplished this week that you didn't tell anyone about?",
+        optional: true,
+      },
+      {
+        name: "logLink",
+        description: "Link to the student's log.",
+        sample: "https://app.sli.pro/log",
+      },
+    ],
+  },
+
+  /* ── Milestones (B3 E1/E2) ───────────────────────────────────────────── */
+  {
+    templateKey: "event_followup_career",
+    title: "Life-event follow-up — career",
+    trigger: "24 hours after a career entry in the life log. Once per student.",
+    sender: "event-sequences.runEventFollowUps",
+    group: "Milestones",
+    variables: [
+      firstName,
+      {
+        name: "entryExcerpt",
+        description:
+          "The first 180 characters of what they wrote. Quoting them is the justification for " +
+          "a second message — Wing already replied when they logged it.",
+        sample: "Had the second interview. They asked about the migration and I froze on the numbers.",
+      },
+      { name: "logLink", description: "Link to their log.", sample: "https://app.sli.pro/log" },
+    ],
+  },
+  {
+    templateKey: "event_followup_personal",
+    title: "Life-event follow-up — personal",
+    trigger: "24 hours after a personal entry in the life log. Once per student.",
+    sender: "event-sequences.runEventFollowUps",
+    group: "Milestones",
+    variables: [
+      firstName,
+      {
+        name: "entryExcerpt",
+        description: "The first 180 characters of what they wrote.",
+        sample: "Keep feeling like everyone else knows what they're doing and I'm improvising.",
+      },
+      { name: "logLink", description: "Link to their log.", sample: "https://app.sli.pro/log" },
+    ],
+  },
+  {
+    templateKey: "internship_day_30",
+    title: "Internship — day 30",
+    trigger: "30 days after students.internship_start_date. Never fires if that is unset.",
+    sender: "event-sequences.runInternshipMilestones",
+    group: "Milestones",
+    variables: [
+      firstName,
+      { name: "logLink", description: "Link to their log.", sample: "https://app.sli.pro/log" },
+    ],
+  },
+  {
+    templateKey: "internship_day_60",
+    title: "Internship — day 60",
+    trigger: "60 days after students.internship_start_date.",
+    sender: "event-sequences.runInternshipMilestones",
+    group: "Milestones",
+    variables: [
+      firstName,
+      {
+        name: "portfolioLink",
+        description: "Link to their evidence portfolio.",
+        sample: "https://app.sli.pro/portfolio",
+      },
+    ],
+  },
+
+  /* ── 90-Day Positioning Launch (B3 S5) ───────────────────────────────── */
+  {
+    templateKey: "positioning_launch_week",
+    title: "Positioning launch — weekly",
+    trigger:
+      "Weekly for twelve weeks, starting a week after their first published LinkedIn post.",
+    sender: "engagement.runDueSequences",
+    group: "Positioning launch",
+    variables: [
+      firstName,
+      { name: "weekNumber", description: "1–12.", sample: "3" },
+      {
+        name: "weekTheme",
+        description:
+          "That week's theme. Comes from LAUNCH_WEEKS in event-sequences.ts — the twelve weeks " +
+          "share this ONE template, so editing the copy here changes all of them.",
+        sample: "Something you changed your mind about",
+      },
+      {
+        name: "weekPrompt",
+        description: "That week's specific instruction. Also from LAUNCH_WEEKS.",
+        sample:
+          "A view you held and dropped. It signals you are thinking rather than performing.",
+      },
+      {
+        name: "draftsLink",
+        description: "Link to their content drafts.",
+        sample: "https://app.sli.pro/linkedin-content-drafts",
+      },
+    ],
+  },
+
+  /* ── Academic calendar (B3 S4) ───────────────────────────────────────── */
+  {
+    templateKey: "calendar_touchpoint_incomplete",
+    title: "Calendar touchpoint — not finished",
+    trigger:
+      "On a configured institution calendar date, to students with fewer than 3 sessions done.",
+    sender: "calendar-touchpoints.runDueTouchpoints",
+    group: "Academic calendar",
+    variables: [
+      firstName,
+      {
+        name: "eventLabel",
+        description: "The calendar event's name, as configured per institution.",
+        sample: "Recruiting season",
+      },
+      {
+        name: "institutionName",
+        description: "Their institution.",
+        sample: "University of California, Berkeley",
+      },
+      { name: "sessionsCompleted", description: "0, 1 or 2.", sample: "1" },
+      sessionLink,
+    ],
+  },
+  {
+    templateKey: "calendar_touchpoint_complete",
+    title: "Calendar touchpoint — finished",
+    trigger: "Same date, to students who have completed all three sessions.",
+    sender: "calendar-touchpoints.runDueTouchpoints",
+    group: "Academic calendar",
+    variables: [
+      firstName,
+      { name: "eventLabel", description: "The calendar event's name.", sample: "Recruiting season" },
+      {
+        name: "institutionName",
+        description: "Their institution.",
+        sample: "Vanderbilt University",
+      },
+      dashboardLink,
+    ],
   },
 
   /* ── Advising ────────────────────────────────────────────────────────── */

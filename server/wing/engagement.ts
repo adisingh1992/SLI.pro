@@ -155,6 +155,22 @@ export async function onSessionCompleted(params: {
 
     // Finishing a session is activity, so any dormancy clock restarts.
     await resetDormancy(params.studentId);
+
+    /*
+     * The life log nudges begin after Session 1, not at registration.
+     *
+     * Two reasons. A student who has not yet done a session is already inside
+     * the welcome sequence, and stacking a second cadence on top reads as
+     * pestering from a platform they have barely used. And the log is a record
+     * kept against a position — before Session 1 there is no position to keep
+     * it against, so the prompts would land without a reason to answer them.
+     *
+     * startSequence is a no-op when one already exists, so replaying Session 1
+     * does not restart the cadence.
+     */
+    if (params.sessionNumber === 1) {
+      await messaging.startSequence(params.studentId, "life_log", daysFromNow(5));
+    }
   } catch (err) {
     log(
       `completion email failed for session ${params.sessionId}: ${(err as Error).message}`,
@@ -303,6 +319,104 @@ export async function runDueSequences(now = new Date()): Promise<{ sent: number;
           step,
           nextRunAt: step < 3 ? daysFromNow(5) : null,
           done: step >= 3,
+        });
+        continue;
+      }
+
+      /*
+       * Life log nudge (B2 Triggers 2 and 3).
+       *
+       * "Every 5 days for the first month, then weekly." The cadence is derived
+       * from how long the sequence has been running rather than from a step
+       * counter, so it is correct even if a run is missed — a step counter would
+       * drift permanently after one skipped day.
+       *
+       * Unlike welcome and dormancy this sequence never completes. The log is
+       * the ongoing surface; there is no point at which we stop asking.
+       */
+      if (item.sequenceKey === "life_log") {
+        const step = item.currentStep + 1;
+
+        const daysRunning = item.startedAt
+          ? (now.getTime() - new Date(item.startedAt).getTime()) / 86400000
+          : 0;
+        const cadenceDays = daysRunning < 30 ? 5 : 7;
+
+        const lifeLog = await import("./life-log-store");
+        const prompt = await lifeLog.promptFor(item.studentId);
+
+        const r = await messaging.sendTemplated({
+          studentId: item.studentId,
+          to: to.email,
+          templateKey: "life_log_nudge",
+          sequenceKey: "life_log",
+          sequenceStep: step,
+          // Recorded so the 14-day no-repeat rule can see it — the rule is a
+          // query over message_events.prompt_id, so a prompt sent by email
+          // counts the same as one shown in the app.
+          promptId: prompt?.id ?? null,
+          vars: {
+            ...vars,
+            /*
+             * Never null. {{prompt}} is the SUBJECT LINE of this email, and
+             * render() deliberately leaves an unresolved variable visible — so
+             * an empty or fully-recently-used prompt library would send a
+             * student an email titled "{{prompt}}". That behaviour is correct
+             * everywhere else (a visible gap is debuggable) and unacceptable
+             * here, because the subject is the part that cannot be walked back.
+             *
+             * The fallback is written to work as both a subject and an opening
+             * line, so the email reads as intended rather than as damaged.
+             */
+            prompt: prompt?.text ?? "What's happened since we last talked?",
+            logLink: `${APP_URL()}/log`,
+          },
+        });
+
+        if (!r.sent) {
+          log(`life_log nudge not sent to student ${item.studentId}: ${r.reason}`, "engagement");
+          skipped++;
+          continue;
+        }
+        sent++;
+
+        await messaging.advanceSequence({
+          studentId: item.studentId,
+          sequenceKey: "life_log",
+          step,
+          nextRunAt: daysFromNow(cadenceDays),
+          done: false,
+        });
+        continue;
+      }
+
+      /*
+       * S5 · 90-Day Positioning Launch — twelve weekly steps.
+       *
+       * The only one of these sequences that keeps state rather than being a
+       * "who is due today" query, because it is a twelve-week arc and the step
+       * number is the thing being tracked.
+       */
+      if (item.sequenceKey === "positioning_launch") {
+        const step = item.currentStep + 1;
+        const launch = await import("./event-sequences");
+
+        const result = await launch.sendLaunchStep(item.studentId, step);
+
+        if (!result.sent && !result.done) {
+          log(`launch week ${step} not sent to student ${item.studentId}`, "engagement");
+          skipped++;
+          continue;
+        }
+        if (result.sent) sent++;
+
+        await messaging.advanceSequence({
+          studentId: item.studentId,
+          sequenceKey: "positioning_launch",
+          step,
+          // A week between steps — it is a content calendar, not a drip.
+          nextRunAt: result.done ? null : daysFromNow(7),
+          done: result.done,
         });
         continue;
       }

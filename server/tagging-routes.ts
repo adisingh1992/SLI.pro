@@ -2,6 +2,7 @@ import { Express, Request, Response, NextFunction } from "express";
 import * as store from "./wing/tagging-store";
 import { CLASSIFIABLE_TYPES } from "./wing/classifier-rules";
 import { log } from "./logger";
+import { isPlatformAdmin as isAdmin } from "./admin-guards";
 
 /**
  * Turn-tagging API — building the gold standard (spec §14).
@@ -22,11 +23,6 @@ import { log } from "./logger";
  * engine could never generate, so only the three human types are offered.
  */
 const TAGGABLE = CLASSIFIABLE_TYPES;
-
-const isAdmin = (req: Request, res: Response, next: NextFunction) => {
-  if (req.isAuthenticated() && req.user?.isAdmin) return next();
-  res.status(403).json({ error: "Admin access required" });
-};
 
 function parseId(raw: string): number | null {
   const n = parseInt(raw, 10);

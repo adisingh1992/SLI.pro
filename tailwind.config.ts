@@ -30,6 +30,35 @@ export default {
           foreground: "hsl(var(--secondary-foreground))",
         },
         tertiary: "hsl(var(--tertiary))",
+
+        /*
+         * Admin accents. See the block in index.css for what each one means —
+         * they are semantic roles, not a palette to pick from by eye.
+         */
+        brand: {
+          DEFAULT: "hsl(var(--brand))",
+          soft: "hsl(var(--brand-soft))",
+        },
+        info: {
+          DEFAULT: "hsl(var(--info))",
+          soft: "hsl(var(--info-soft))",
+        },
+        deep: {
+          DEFAULT: "hsl(var(--deep))",
+          soft: "hsl(var(--deep-soft))",
+        },
+        warn: {
+          DEFAULT: "hsl(var(--warn))",
+          soft: "hsl(var(--warn-soft))",
+        },
+        good: {
+          DEFAULT: "hsl(var(--good))",
+          soft: "hsl(var(--good-soft))",
+        },
+        bad: {
+          DEFAULT: "hsl(var(--bad))",
+          soft: "hsl(var(--bad-soft))",
+        },
         muted: {
           DEFAULT: "hsl(var(--muted))",
           foreground: "hsl(var(--muted-foreground))",

@@ -8,7 +8,15 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, Send, ArrowLeft, Lock, CheckCircle, MessageSquare, AlertCircle } from "lucide-react";
+import { Loader2, Send, ArrowLeft, Lock, CheckCircle, MessageSquare, AlertCircle, LogOut } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import VoiceMicButton from "@/components/VoiceMicButton";
 import { useVoiceRecording } from "@/hooks/use-voice-recording";
 import { useToast } from "@/hooks/use-toast";
@@ -69,6 +77,7 @@ export default function EnhancementModuleChatPage() {
   const [streamingResponse, setStreamingResponse] = useState('');
   const [optimisticMessage, setOptimisticMessage] = useState<EnhancementModuleMessage | null>(null);
   const [allowContinue, setAllowContinue] = useState(false);
+  const [showEndDialog, setShowEndDialog] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messageInputRef = useRef<HTMLTextAreaElement>(null);
   const messageCountBeforeStreamRef = useRef<number>(0);
@@ -122,6 +131,38 @@ export default function EnhancementModuleChatPage() {
     },
     onError: (error: any) => {
       console.error('Failed to update timer:', error);
+    },
+  });
+
+  /**
+   * A3: "No option to end modules early (unlike Foundation Sessions, which
+   * allow early exit). Modules should allow exit at any natural stopping
+   * point."
+   *
+   * The server still runs the analysis, so whatever the conversation produced
+   * is kept — the module is recorded as ended_early rather than completed.
+   */
+  const endEarlyMutation = useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest('POST', `/api/enhancement-modules/${moduleCode}/end-early`);
+      return await res.json();
+    },
+    onSuccess: (data: any) => {
+      queryClient.invalidateQueries({ queryKey: ['/api/enhancement-modules'] });
+      toast({
+        title: "Module ended",
+        description: data?.outcomeSaved
+          ? "Your progress was saved, along with what came out of the conversation."
+          : "Your progress is saved. You can pick this up again whenever.",
+      });
+      navigate('/');
+    },
+    onError: () => {
+      toast({
+        title: "Couldn't end the module",
+        description: "Try again in a moment.",
+        variant: "destructive",
+      });
     },
   });
 
@@ -414,11 +455,10 @@ export default function EnhancementModuleChatPage() {
       <div className="flex h-[calc(100dvh-104px)] sm:h-[calc(100dvh-140px)]">
         {/* Left Column - Chat Interface (75%) */}
         <div className="w-full lg:w-3/4 flex flex-col">
-          {/* Mobile timer — the info column is hidden below lg, so without this
-              a student on a phone has no sense of how long the module takes.
-              No end-early control here because this page never had one. */}
+          {/* Mobile bar — the info column is hidden below lg, so a student on a
+              phone would otherwise have neither the timer nor a way out. */}
           {(module.status === 'in_progress' || module.status === 'completed') && (
-            <div className="shrink-0 border-b px-3 py-1.5 lg:hidden">
+            <div className="flex shrink-0 items-center justify-between gap-2 border-b px-3 py-1.5 lg:hidden">
               <SessionTimer
                 config={getTimerConfig()}
                 isSessionActive={module.status === 'in_progress'}
@@ -427,6 +467,18 @@ export default function EnhancementModuleChatPage() {
                 initialTimerElapsed={module.timerElapsed || 0}
                 onTimerSave={handleTimerSave}
               />
+              {module.status === 'in_progress' && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-8 shrink-0 px-2 text-xs text-muted-foreground hover:text-destructive"
+                  onClick={() => setShowEndDialog(true)}
+                  disabled={isStreaming || endEarlyMutation.isPending}
+                >
+                  <LogOut className="mr-1 h-3.5 w-3.5" />
+                  End
+                </Button>
+              )}
             </div>
           )}
 
@@ -603,6 +655,19 @@ export default function EnhancementModuleChatPage() {
               onTimerSave={handleTimerSave}
             />
 
+            {module.status === 'in_progress' && (
+              <Button
+                variant="outline"
+                size="sm"
+                className="w-full text-muted-foreground hover:text-destructive hover:border-destructive"
+                onClick={() => setShowEndDialog(true)}
+                disabled={isStreaming || endEarlyMutation.isPending}
+              >
+                <LogOut className="h-3.5 w-3.5 mr-2" />
+                End Module Early
+              </Button>
+            )}
+
 
             {/* Function Progress for Enhancement Modules */}
             <div className="space-y-2">
@@ -641,6 +706,53 @@ export default function EnhancementModuleChatPage() {
           </div>
         </div>
       </div>
+
+      {/*
+        Ending early is a legitimate stopping point, so the copy says so.
+
+        Deliberately gentler than the Foundation Session equivalent, which warns
+        that partial completion means partial results. That is true there — the
+        three sessions build on each other and produce the positioning. Modules
+        are optional and non-progressive, so implying a penalty for stopping
+        would be both untrue and exactly the pressure A3 exists to remove.
+      */}
+      <Dialog open={showEndDialog} onOpenChange={setShowEndDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Stop here?</DialogTitle>
+            <DialogDescription className="pt-2 leading-relaxed">
+              That's fine — these modules are optional and you can take them in any order.
+              <br /><br />
+              Whatever you've worked out so far is saved, and you can come back to this one
+              whenever you want.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="flex-col-reverse gap-2 sm:flex-row sm:gap-0">
+            <Button
+              variant="outline"
+              onClick={() => setShowEndDialog(false)}
+              className="sm:mr-2"
+              disabled={endEarlyMutation.isPending}
+            >
+              Keep going
+            </Button>
+            <Button
+              onClick={() => endEarlyMutation.mutate()}
+              disabled={endEarlyMutation.isPending}
+              data-testid="button-end-module-confirm"
+            >
+              {endEarlyMutation.isPending ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Saving…
+                </>
+              ) : (
+                'Stop here'
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

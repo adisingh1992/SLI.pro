@@ -14,8 +14,9 @@ import {
 } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
 import AdminLayout from "./layout";
-import { StatusBadge, type Heuristic } from "./heuristics-page";
+import { StatusBadge, type Heuristic } from "./methodology/heuristic";
 import { ComponentField, COMPONENT_TYPES, COMPONENT_SPECS, type ComponentType } from "./heuristic-editor";
+import { PageShell } from "@/components/admin/page";
 
 type ComponentRow = {
   id: number;
@@ -49,27 +50,27 @@ export default function AdminHeuristicDetailPage() {
   const [confirmRetire, setConfirmRetire] = useState(false);
 
   const { data: card, isLoading } = useQuery<Heuristic & { components: ComponentRow[] }>({
-    queryKey: [`/api/admin/heuristics/${id}`],
-    queryFn: async () => (await apiRequest("GET", `/api/admin/heuristics/${id}`)).json(),
+    queryKey: [`/api/admin/methodology/cards/${id}`],
+    queryFn: async () => (await apiRequest("GET", `/api/admin/methodology/cards/${id}`)).json(),
   });
 
   const { data: performance } = useQuery<Performance>({
-    queryKey: [`/api/admin/heuristics/${id}/performance`],
+    queryKey: [`/api/admin/methodology/cards/${id}/performance`],
     queryFn: async () =>
-      (await apiRequest("GET", `/api/admin/heuristics/${id}/performance`)).json(),
+      (await apiRequest("GET", `/api/admin/methodology/cards/${id}/performance`)).json(),
   });
 
   const reviseMutation = useMutation({
     mutationFn: async ({ type, content }: { type: ComponentType; content: string }) => {
       const res = await apiRequest(
         "PUT",
-        `/api/admin/heuristics/${id}/components/${type}`,
+        `/api/admin/methodology/cards/${id}/components/${type}`,
         { content },
       );
       return res.json();
     },
     onSuccess: (revised: ComponentRow, { type }) => {
-      queryClient.invalidateQueries({ queryKey: [`/api/admin/heuristics/${id}`] });
+      queryClient.invalidateQueries({ queryKey: [`/api/admin/methodology/cards/${id}`] });
       setDrafts((d) => {
         const next = { ...d };
         delete next[type];
@@ -86,11 +87,11 @@ export default function AdminHeuristicDetailPage() {
 
   const statusMutation = useMutation({
     mutationFn: async (status: string) => {
-      const res = await apiRequest("PATCH", `/api/admin/heuristics/${id}/status`, { status });
+      const res = await apiRequest("PATCH", `/api/admin/methodology/cards/${id}/status`, { status });
       return res.json();
     },
     onSuccess: (updated: Heuristic) => {
-      queryClient.invalidateQueries({ queryKey: [`/api/admin/heuristics/${id}`] });
+      queryClient.invalidateQueries({ queryKey: [`/api/admin/methodology/cards/${id}`] });
       queryClient.invalidateQueries({ queryKey: ["/api/admin/heuristics"] });
       setConfirmRetire(false);
       toast({
@@ -118,9 +119,9 @@ export default function AdminHeuristicDetailPage() {
   if (!card) {
     return (
       <AdminLayout>
-        <div className="container mx-auto max-w-3xl p-6">
+        <PageShell width="prose">
           <p className="text-muted-foreground">Card not found.</p>
-        </div>
+        </PageShell>
       </AdminLayout>
     );
   }
@@ -142,8 +143,8 @@ export default function AdminHeuristicDetailPage() {
 
   return (
     <AdminLayout>
-      <div className="container mx-auto max-w-3xl p-6">
-        <Button variant="ghost" size="sm" className="mb-4" onClick={() => navigate("/admin/heuristics")}>
+      <PageShell width="prose">
+        <Button variant="ghost" size="sm" className="mb-4" onClick={() => navigate("/admin/methodology/cards")}>
           <ArrowLeft className="mr-2 h-4 w-4" />
           Methodology
         </Button>
@@ -157,10 +158,10 @@ export default function AdminHeuristicDetailPage() {
         </div>
 
         {card.status === "candidate" && (
-          <Alert className="mb-6 border-amber-300 bg-amber-50">
-            <AlertTriangle className="h-4 w-4 text-amber-700" />
-            <AlertTitle className="text-amber-900">This card is a candidate</AlertTitle>
-            <AlertDescription className="text-amber-900">
+          <Alert className="mb-6 border-warn/30 bg-warn-soft">
+            <AlertTriangle className="h-4 w-4 text-warn" />
+            <AlertTitle className="text-warn">This card is a candidate</AlertTitle>
+            <AlertDescription className="text-warn">
               If it is in an active sequence it is reaching students right now. Candidate
               means "not yet backed by evidence", not "not live".
             </AlertDescription>
@@ -347,7 +348,7 @@ export default function AdminHeuristicDetailPage() {
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
-      </div>
+      </PageShell>
     </AdminLayout>
   );
 }

@@ -13,6 +13,7 @@ import {
 import * as store from "./wing/heuristics-store";
 import type { ComponentType } from "./wing/heuristics-store";
 import { log } from "./logger";
+import { isPlatformAdmin as isAdmin } from "./admin-guards";
 
 /**
  * Methodology authoring API — the surface Danielle and Sam use to write the
@@ -54,11 +55,6 @@ const COMPONENT_TYPES: ComponentType[] = [
  */
 const SEQUENCE_SOFT_LIMIT = 15;
 const SEQUENCE_HARD_LIMIT = 40;
-
-const isAdmin = (req: Request, res: Response, next: NextFunction) => {
-  if (req.isAuthenticated() && req.user?.isAdmin) return next();
-  res.status(403).json({ error: "Admin access required" });
-};
 
 function parseId(raw: string): number | null {
   const n = parseInt(raw, 10);

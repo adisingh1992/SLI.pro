@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { useToast } from "@/hooks/use-toast";
 import AdminLayout from "./layout";
+import { PageShell } from "@/components/admin/page";
 
 /**
  * Transcript tagger.
@@ -169,7 +170,7 @@ export default function AdminTaggingSessionPage() {
 
   return (
     <AdminLayout>
-      <div className="container mx-auto max-w-4xl p-6">
+      <PageShell width="page">
         <Button variant="ghost" size="sm" className="mb-4" onClick={() => navigate("/admin/tagging")}>
           <ArrowLeft className="mr-2 h-4 w-4" />
           Sessions
@@ -192,10 +193,10 @@ export default function AdminTaggingSessionPage() {
         </div>
 
         {isLegacy && (
-          <Alert className="mb-4 border-amber-300 bg-amber-50">
-            <AlertTriangle className="h-4 w-4 text-amber-700" />
-            <AlertTitle className="text-amber-900">Legacy import</AlertTitle>
-            <AlertDescription className="text-amber-900">
+          <Alert className="mb-4 border-warn/30 bg-warn-soft">
+            <AlertTriangle className="h-4 w-4 text-warn" />
+            <AlertTitle className="text-warn">Legacy import</AlertTitle>
+            <AlertDescription className="text-warn">
               This transcript came from the MVP and has no reliable provenance. Tagging
               it is possible but the turns were never captured with provenance, so they
               make a weaker gold standard than a natively captured session.
@@ -233,7 +234,7 @@ export default function AdminTaggingSessionPage() {
                 className={[
                   isAi ? "bg-muted/40" : "cursor-pointer",
                   isSelected && !isAi ? "ring-2 ring-primary" : "",
-                  isTagged ? "border-emerald-300" : "",
+                  isTagged ? "border-good/30" : "",
                 ].join(" ")}
                 onClick={() => !isAi && setSelected(turn.id)}
               >
@@ -252,7 +253,7 @@ export default function AdminTaggingSessionPage() {
                         AI turn — type is structural, not tagged
                       </span>
                     ) : isTagged ? (
-                      <Badge className="bg-emerald-100 text-emerald-900 hover:bg-emerald-100">
+                      <Badge className="bg-good-soft text-good hover:bg-good-soft">
                         <Lock className="mr-1 h-3 w-3" />
                         hand-tagged
                       </Badge>
@@ -329,7 +330,7 @@ export default function AdminTaggingSessionPage() {
             );
           })}
         </div>
-      </div>
+      </PageShell>
     </AdminLayout>
   );
 }

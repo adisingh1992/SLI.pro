@@ -1,21 +1,59 @@
-# Tier 1 gap analysis — 10 days to August 15
+# Tier 1 gap analysis
 
 Read against the Feature List (May 2026) §A and §B, and the Architecture and
-Strategy doc §13. Written 2026-08-05.
+Strategy doc §13. Written 2026-08-05, **re-baselined 2026-08-10 — five days to
+August 15.**
 
 ---
 
-## The headline
+## Where it actually stands, 10 August
 
-**The migration is nearly done. Tier 1 is not the migration.**
+**Section B is closed. Section A has not been started. Production does not
+exist.**
 
-Tier 1 = Feature List **Section A** (modify seven existing areas) +
-**Section B** (build five new features). Everything built so far is the
-*backbone* — §A6 plus the Azure move — which the Strategy doc explicitly
-sequenced first ("backbone and migration lead").
+| | Aug 5 | Aug 10 |
+|---|---|---|
+| B1 advisor snapshot | not started | ✅ built and verified end to end |
+| B2 life log | schema only | ✅ in-app core; inbound email/SMS deferred |
+| B3 email infrastructure | ~10% | ◐ four sequences live; two deferred |
+| B4 admin dashboard | 1 of 6 metrics | ✅ built, cross-checked |
+| B5 mobile | unverified | ✅ code fixed; device testing outstanding |
+| Section A (A1–A4) | not started | **unchanged — not started** |
+| Production Azure | not started | **unchanged — does not exist** |
 
-Of the twelve Tier 1 items, **two are done**. Three of the five new Section B
-features have no implementation at all.
+Also delivered, unplanned but load-bearing: the message-template editor
+(Danielle can change any copy without a deploy), delivery-failure tracking
+across the whole messaging path, and the removal of every Replit dependency.
+
+### Decision, 10 August — no production environment before the contract
+
+**Danielle's call: production is not being built for the 15th.** Demos happen
+on stage; prod gets built and deployed once the contract is signed.
+
+That removes the largest unestimated piece of work from the critical path and
+changes what "done" means for the deadline. Two consequences follow:
+
+**Stage is now the demo environment, so it has to behave like production.**
+Not in its infrastructure — it stays a single container app with no Front Door
+and no separate Key Vault — but in the only sense that matters on the day: a
+person clicking through it must not hit anything broken. Stage data is no
+longer disposable in practice, because it is what Berkeley and Vanderbilt will
+be shown.
+
+**The remaining five days go to Section A and polish**, not to environment
+work. The risk profile inverts accordingly: a half-finished feature is
+survivable in a demo, a *broken* one is not. Fixing what is already known to be
+broken outranks adding what is missing.
+
+Known-broken and demo-reachable, in priority order:
+
+1. **SLI refinement** (A3) — a feature that exists and does not work.
+2. The **primary journey has never been walked end to end.** Registration was
+   silently broken for every new user and a feature-presence audit did not see
+   it, because the surface existed and only the wiring was wrong. Nothing rules
+   out a second instance of that.
+3. **A1 conversational intake** — the first thing any demo touches, and still
+   a form.
 
 ---
 

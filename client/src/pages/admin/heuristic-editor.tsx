@@ -139,11 +139,11 @@ export function ComponentField({
 
       {showExample && spec.goodExample && (
         <div className="rounded-md border bg-muted/40 p-2 text-xs">
-          <p className="text-emerald-700">
+          <p className="text-good">
             <span className="font-medium">Good:</span> {spec.goodExample}
           </p>
           {spec.poorExample && (
-            <p className="mt-1 text-amber-800">
+            <p className="mt-1 text-warn">
               <span className="font-medium">Poor:</span> {spec.poorExample}
             </p>
           )}
@@ -260,7 +260,7 @@ export function NewHeuristicDialog({
           </div>
 
           {missingEngineFields.length > 0 && (
-            <div className="rounded-md border border-amber-300 bg-amber-50 p-3 text-xs text-amber-900">
+            <div className="rounded-md border border-warn/30 bg-warn-soft p-3 text-xs text-warn">
               <p className="font-medium">
                 {missingEngineFields.map((f) => COMPONENT_SPECS[f].label).join(", ")} not filled in
               </p>

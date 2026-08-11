@@ -9,6 +9,7 @@ import * as sliStore from "./wing/sli-store";
 import * as orchestrator from "./orchestrator";
 import * as profileStore from "./wing/profile-store";
 import * as identity from "./wing/identity-store";
+import { checkAuthenticity, renderStandardForPrompt } from "./wing/authenticity";
 
 // Import the logging function
 const log = (message: string, tag = "express") => {
@@ -157,7 +158,19 @@ async function generateLinkedinContentDrafts(userId: number) {
     context += `## SLI (Single Lasting Impression)\n${sliText}\n\n`;
     
     // Define Claude system prompt
-    const systemPrompt = `You are a professional content strategist for SLI.pro, creating custom LinkedIn posts for clients.`;
+    /*
+     * A4: the 360Brew authenticity standard is IN the system prompt, and the
+     * output is checked against it afterwards.
+     *
+     * The old prompt asked the model to avoid "AI-detection triggers (e.g.
+     * overly formulaic writing, clichés)", which is precisely the instruction
+     * models ignore — it names the category without naming a single word, so
+     * nothing constrains the tokens it actually reaches for. The standard below
+     * lists them.
+     */
+    const systemPrompt = `You are a professional content strategist for SLI.pro, creating custom LinkedIn posts for clients.
+
+${renderStandardForPrompt()}`;
     
     // Define user prompt with Claude prompt from the feature request
     const userPrompt = `${context}
@@ -180,7 +193,7 @@ For each post, include:
 - Connection to their target audience  
 - Optional: bullet points with actionable insights]  
 **Closing:** [Call to action, reflection question, or forward-looking statement]  
-**Hashtags:** [5-7 relevant hashtags, including #SLIpro]
+**Hashtags:** [AT MOST 3, and only ones people genuinely search. A wall of hashtags is itself a marker of generated content.]
 
 ### Post 2: [DIFFERENT APPROACH TYPE]
 [Same structure as above, but using a different content angle]
@@ -191,7 +204,7 @@ Ensure each post:
 - Reflects the client's authentic voice (based on resume, LinkedIn profile, and SLI)
 - Matches sophistication to career level (executive/mid/early)
 - Demonstrates credibility through insights and context
-- Avoids AI-detection triggers (e.g., overly formulaic writing, clichés)
+- Obeys the authenticity standard above — this is the hard constraint, not a preference
 - Projects confidence appropriate to their personality profile
 
 ## Topic Selection Strategy
@@ -229,7 +242,73 @@ Stay optimistic, insightful, and grounded—avoiding political or divisive topic
       throw new Error("Empty response from the model");
     }
 
-    const responseText = response.text;
+    let responseText = response.text;
+
+    /*
+     * A4: check the output, and regenerate once if it fails.
+     *
+     * The instruction alone is not enough. Told not to use "leverage", a model
+     * still produces it — the flagged words are the ones it reaches for by
+     * default, which is exactly why they mark text as generated.
+     *
+     * One retry, not a loop. If a second attempt with the specific findings
+     * named still fails, the drafts go through anyway with the report attached:
+     * a student looking at a flagged draft they can fix is better served than a
+     * student watching a spinner while we spend their money re-rolling.
+     */
+    let authenticity = checkAuthenticity(responseText);
+
+    if (!authenticity.passes) {
+      const problems = authenticity.findings
+        .map((f) => `- "${f.found}" — ${f.note}`)
+        .join("\n");
+
+      log(
+        `content drafts scored ${authenticity.score}; regenerating with ${authenticity.findings.length} finding(s)`,
+        "claude",
+      );
+
+      try {
+        const retry = await orchestrator.complete({
+          tier: "mid",
+          system: systemPrompt,
+          maxTokens: 4096,
+          temperature: 0.8,
+          messages: [
+            { role: "user", content: userPrompt },
+            { role: "assistant", content: responseText },
+            {
+              role: "user",
+              content:
+                `That draft breaks the authenticity standard. Specifically:\n\n${problems}\n\n` +
+                `Rewrite both posts. Keep the same structure and the same underlying ` +
+                `substance — fix the language. Do not swap one banned word for another ` +
+                `from the list.`,
+            },
+          ],
+        });
+
+        if (retry.text) {
+          const second = checkAuthenticity(retry.text);
+          // Only take the retry if it is actually better. A regeneration that
+          // scores worse is a regression, and keeping it would make the check
+          // actively harmful.
+          if (second.score > authenticity.score) {
+            responseText = retry.text;
+            authenticity = second;
+          }
+        }
+      } catch (err) {
+        // A failed retry is not a failed generation — the first draft stands.
+        log(`authenticity retry failed: ${(err as Error).message}`, "claude");
+      }
+    }
+
+    log(
+      `content drafts authenticity: ${authenticity.score}/100` +
+        (authenticity.findings.length ? ` (${authenticity.findings.length} finding(s))` : ""),
+      "claude",
+    );
     
     // Extract post types and content
     const post1TypeMatch = responseText.match(/### Post 1: \[(.*?)\]/);
@@ -469,6 +548,33 @@ export function registerLinkedinContentRoutes(app: Express) {
 
       // Increment share count on the wing row, and mark it published.
       const shared = await artifactStore.recordContentDraftShare(draftId);
+
+      /*
+       * S5 · the 90-Day Positioning Launch starts here.
+       *
+       * "When: First SLI-aligned LinkedIn post. 12-week content calendar for
+       * 360Brew DNA." The window the spec cares about — LinkedIn's model
+       * beginning to associate topics with a person — only opens once there is
+       * something to associate, so this is the honest trigger. Starting it at
+       * session completion would spend the first weeks on someone who has not
+       * posted.
+       *
+       * Fired after the response and never awaited into the failure path: the
+       * post succeeded, and a sequence that failed to start must not report the
+       * post as failed. startSequence is a no-op when one is already running,
+       * so a second published post does not restart the twelve weeks.
+       */
+      void (async () => {
+        try {
+          const studentId = await artifactStore.studentIdForUser(req.user!.id);
+          if (studentId) {
+            const launch = await import("./wing/event-sequences");
+            await launch.onFirstPostPublished(studentId);
+          }
+        } catch (err) {
+          console.error(`[launch] could not start sequence: ${(err as Error).message}`);
+        }
+      })();
 
       res.json({
         success: true,

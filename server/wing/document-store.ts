@@ -145,6 +145,33 @@ export async function createDocument(data: {
   const fileName = data.fileName || data.name;
   const buffer = Buffer.from(data.fileData, "base64");
 
+  /*
+   * ── DECODE, THEN CHECK ───────────────────────────────────────────────────
+   * `Buffer.from(x, "base64")` never throws. Given a data-URI prefix, a
+   * truncated payload, or anything else that is not base64, it silently
+   * returns an EMPTY buffer — so the `!data.fileData` guard above passes, the
+   * row is written with `size_bytes = 0`, and a blob URI is stored pointing at
+   * nothing.
+   *
+   * That is how a student ended up with a LinkedIn export of 0 KB. Nothing
+   * failed, nothing logged, and the record screen listed the document as
+   * present. The consequence is not cosmetic: A2's premise is that Wing reads
+   * the LinkedIn export instead of re-asking, so a student with a phantom
+   * document gets a noticeably more generic session and no one can tell why.
+   *
+   * MIN_BYTES rather than `> 0` because a PDF cannot be a handful of bytes —
+   * the header alone is longer. A tiny decode means malformed input, not a
+   * very small file.
+   */
+  const MIN_BYTES = 100;
+  if (buffer.length < MIN_BYTES) {
+    throw new Error(
+      `"${fileName}" decoded to ${buffer.length} byte(s), which is not a readable file. ` +
+        `The upload was probably truncated, or the payload is not base64 — check that any ` +
+        `"data:...;base64," prefix has been stripped before sending.`,
+    );
+  }
+
   const blobUri = await blob.uploadBase64(blob.CONTAINERS.documents, data.fileData, {
     fileName,
     contentType: data.mimeType || "application/pdf",

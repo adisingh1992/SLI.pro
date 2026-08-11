@@ -11,6 +11,7 @@ import {
 } from "@shared/wing-schema";
 import * as snapshot from "./wing/advisor-snapshot";
 import { log } from "./logger";
+import { isAdmin } from "./admin-guards";
 
 /**
  * Advisor appointments and pre-meeting snapshots (Feature List B1).
@@ -36,11 +37,6 @@ import { log } from "./logger";
  *   2. ON DEMAND  admin asks for it now (`sendNow`, or the snapshot endpoint).
  *   3. COMPLETION the SLI is finished, so a snapshot exists to be read.
  */
-
-const isAdmin = (req: Request, res: Response, next: NextFunction) => {
-  if (req.isAuthenticated() && req.user?.isAdmin) return next();
-  res.status(403).json({ error: "Admin access required" });
-};
 
 export function registerAdvisorRoutes(app: Express) {
   /** Institutions — the required field when adding an advisor. */

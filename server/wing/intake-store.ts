@@ -32,7 +32,13 @@ type QuestionnairePayload = {
   interests?: string | null;
   timeframe?: string | null;
   rawAnswers?: unknown;
-  isDraft?: boolean;
+  /**
+   * Nullable because the legacy Zod schema the routes validate against permits
+   * null, and this type is what those routes hand over. Narrowing it here would
+   * only push a coercion out to four call sites; getQuestionnaire already
+   * resolves null to false on read.
+   */
+  isDraft?: boolean | null;
 };
 
 type BrandingIntakePayload = {
@@ -177,6 +183,54 @@ export async function upsertBrandingIntake(
 }
 
 /* ── Wing-native surface ───────────────────────────────────────────────── */
+
+/**
+ * Merges fields INTO `responses`, leaving everything already there alone.
+ *
+ * ── WHY THIS EXISTS SEPARATELY FROM upsertBrandingIntake ─────────────────
+ * That function spreads at the `brandingIntake` level, so passing
+ * `{ responses: {...} }` REPLACES the whole responses object. That is correct
+ * for the form, which holds every answer in client state and posts the
+ * complete set on each save — replace and merge are identical when the payload
+ * is total.
+ *
+ * The conversational intake is the opposite: it learns one or two fields per
+ * turn and sends only those. Routed through upsertBrandingIntake it would
+ * discard everything captured so far on every single exchange, and the symptom
+ * would be Wing asking questions it had already been given answers to — which
+ * reads as the model losing track, not as a storage bug.
+ */
+export async function mergeIntakeResponses(
+  userId: number,
+  patch: Record<string, unknown>,
+) {
+  if (!patch || Object.keys(patch).length === 0) return;
+
+  await patchStructured(userId, (current) => {
+    const intake = current.brandingIntake ?? {};
+    return {
+      ...current,
+      brandingIntake: {
+        ...intake,
+        responses: { ...(intake.responses ?? {}), ...patch },
+      },
+    };
+  });
+}
+
+/**
+ * The raw intake row, or undefined.
+ *
+ * Read-only accessor over the private `readRecord`, exported for the
+ * conversational intake, which needs the columns the two legacy shims above do
+ * not expose — `early_insight_delivered_at`, `session_id`, `verification_status`
+ * and `completed`. Creating a record is deliberately still not possible through
+ * this: writes go through the upsert functions so `ensureRecord` stays the one
+ * place a row is born.
+ */
+export async function getIntakeRecord(userId: number) {
+  return readRecord(userId);
+}
 
 /** Links the intake conversation (session_type = intake) to the record. */
 export async function attachIntakeSession(userId: number, sessionId: number) {

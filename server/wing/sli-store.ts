@@ -244,6 +244,88 @@ export async function refine(
 }
 
 /**
+ * Career-evolution re-entry — a Positioning Refresh (Feature List A2).
+ *
+ * "The platform must support re-engagement at any point — not just after
+ * years, and not just for career pivots… Wing should acknowledge the prior
+ * work, offer a Positioning Refresh that builds on the existing profile rather
+ * than starting from zero… The previous SLI is never deleted — it becomes part
+ * of the longitudinal record."
+ *
+ * ── REFRESH IS NOT REFINEMENT ────────────────────────────────────────────
+ * They look similar and mean opposite things.
+ *
+ *   refine   the positioning was not quite right. The student is correcting
+ *            a statement that failed to capture what was already true.
+ *            Capped at MAX_REFINEMENTS, because a fourth attempt at saying
+ *            the same thing is a sign the underlying work needs redoing.
+ *
+ *   refresh  the positioning WAS right, and the world moved. A promotion, a
+ *            shift into founding something, an industry change. Nothing was
+ *            wrong; the context changed.
+ *
+ * So a refresh does NOT consume a refinement, and does not inherit the parent's
+ * count — a student returning after a promotion arrives with a full three
+ * refinements available on the new statement. Capping refreshes at all would
+ * mean telling someone on their fourth career move that they have run out of
+ * career, which is the opposite of "a career partner for life".
+ *
+ * The lineage stays intact: parent_sli_id points back, the parent becomes
+ * superseded rather than deleted, and the chain is the longitudinal record the
+ * spec asks for.
+ */
+export async function refresh(
+  parentId: number,
+  data: {
+    statement: string;
+    rationale?: string | null;
+    implementationGuidance?: string | null;
+    title?: string;
+    /** The career_event_review session this came out of. */
+    sessionId?: number | null;
+  },
+): Promise<SliView> {
+  const parent = await getById(parentId);
+  if (!parent) throw new Error(`SLI ${parentId} not found`);
+
+  const [row] = await db
+    .insert(sliRecords)
+    .values({
+      studentId: parent.studentId,
+      title: data.title || parent.title,
+      statement: data.statement,
+      rationale: data.rationale ?? null,
+      implementationGuidance: data.implementationGuidance ?? null,
+      source: "refresh",
+      status: "selected",
+      parentSliId: parent.id,
+      // Deliberately 0, not parent.refinementCount. See the note above.
+      refinementCount: 0,
+      generatedInSessionId: data.sessionId ?? null,
+      sourceType: "ai_generated",
+    })
+    .returning();
+
+  await markActive(row.id);
+  return (await getById(row.id))!;
+}
+
+/**
+ * The full lineage for a student, oldest first.
+ *
+ * The longitudinal record the spec protects. Wing reads this to say "I remember
+ * your original SLI" and mean it — and an advisor or the student can see how
+ * the positioning actually moved, which is the thing that makes a multi-year
+ * relationship visible rather than asserted.
+ */
+export async function lineage(userId: number): Promise<SliView[]> {
+  const all = await listByUser(userId);
+  return [...all].sort(
+    (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime(),
+  );
+}
+
+/**
  * Removes candidate rows only. A selected/active/superseded SLI is part of the
  * longitudinal record and is never deleted (spec §12) — callers wanting to
  * move on should create a refinement or refresh instead.

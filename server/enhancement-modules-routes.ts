@@ -48,24 +48,12 @@ import * as moduleStore from "./wing/enhancement-store";
 import * as store from "./wing/session-store";
 import type { ArtifactType } from "./wing/session-store";
 import * as docStore from "./wing/document-store";
+import { buildStudentContext } from "./wing/student-context";
 import * as intakeStore from "./wing/intake-store";
 import * as sliStore from "./wing/sli-store";
 import * as profileStore from "./wing/profile-store";
 import * as identity from "./wing/identity-store";
-
-const isAuthenticated = (req: Request, res: Response, next: NextFunction) => {
-  if (req.isAuthenticated()) {
-    return next();
-  }
-  res.status(401).json({ error: "Not authenticated" });
-};
-
-const isAdmin = (req: Request, res: Response, next: NextFunction) => {
-  if (req.isAuthenticated() && req.user?.isAdmin) {
-    return next();
-  }
-  res.status(403).json({ error: "Admin access required" });
-};
+import { isAdmin, isAuthenticated } from "./admin-guards";
 
 
 // Format previous module's completion data into a summary for the next module's system prompt
@@ -242,38 +230,20 @@ CRITICAL: The user has already provided this information in their questionnaire.
 `;
 }
 
-// Format resume documents into a summary for system prompt context
+/**
+ * Everything Wing already knows about this student (Feature List A2).
+ *
+ * Was a local copy that filtered documents on type === "resume", identical to
+ * the one in foundation-sessions-routes.ts and carrying the same defect: the
+ * LinkedIn PDF, the supplementary uploads and every intake answer were invisible
+ * to the module conversation, so it asked for them again.
+ *
+ * Delegates now, so the two surfaces cannot drift apart again — and so a fix to
+ * what Wing knows lands in both places at once.
+ */
 async function formatResumeSummary(userId: number): Promise<string> {
-  try {
-    const documents = await docStore.getDocuments(userId);
-    const resumeDocuments = documents.filter((doc) => doc.type === "resume");
-
-    if (!resumeDocuments || resumeDocuments.length === 0) {
-      return "";
-    }
-
-    // Use the most recent resume (last uploaded)
-    const resume = resumeDocuments[resumeDocuments.length - 1];
-
-    if (!resume.analysisContent && !resume.name) {
-      return "";
-    }
-
-    return `
-═══════════════════════════════════════════════════════════════
-USER RESUME SUMMARY
-═══════════════════════════════════════════════════════════════
-
-Document Name: ${resume.name}
-${resume.analysisContent ? `\nResume Content Analysis:\n${resume.analysisContent}` : ""}
-
-CRITICAL: The user has already uploaded their resume. Use this information to provide personalized coaching based on their actual experience and background. Reference specific details from their resume naturally in your guidance.
-═══════════════════════════════════════════════════════════════
-`;
-  } catch (error) {
-    console.error("Error formatting resume summary:", error);
-    return "";
-  }
+  const context = await buildStudentContext(userId);
+  return context.text;
 }
 
 // Format SLI (Single Lasting Impression) data for system prompt context
@@ -1310,6 +1280,77 @@ export function setupEnhancementModulesRoutes(app: Express) {
       } catch (error) {
         console.error("Error processing module message:", error);
         res.status(500).json({ error: "Failed to process message" });
+      }
+    },
+  );
+
+  /**
+   * Ends a module early — a distinct status, not a completion (Feature List A3).
+   *
+   * "No option to end modules early (unlike Foundation Sessions, which allow
+   * early exit). Modules should allow exit at any natural stopping point."
+   *
+   * Mirrors the Foundation Session route deliberately, including the part that
+   * matters most: the analysis still runs and whatever the conversation
+   * produced is still saved. A student who stops at a sensible point keeps
+   * their work — the module is marked `ended_early` rather than `completed`, so
+   * the record stays honest about how it finished without punishing them for
+   * finishing it that way.
+   */
+  app.post(
+    "/api/enhancement-modules/:moduleCode/end-early",
+    isAuthenticated,
+    async (req: Request, res: Response) => {
+      try {
+        const { moduleCode } = req.params;
+        if (!["A", "B", "C"].includes(moduleCode)) {
+          return res.status(400).json({ error: "Invalid module code" });
+        }
+
+        const module = await moduleStore.getEnhancementModule(req.user!.id, moduleCode);
+        if (!module) return res.status(404).json({ error: "Module not found" });
+
+        const userProfile = await profileStore.getUserProfile(req.user!.id);
+        const allMessages = await moduleStore.getEnhancementModuleMessages(module.id);
+
+        const completionCheck = await checkModuleCompletion(
+          req.user!.id,
+          moduleCode,
+          allMessages,
+          userProfile,
+          req.user!.professionalStatus,
+        );
+
+        await moduleStore.updateEnhancementModule(module.id, {
+          status: "ended_early",
+          completedAt: new Date(),
+          // Saved whether or not the methodology thought it was finished, with
+          // the truncation recorded on the artifact itself — that provenance
+          // matters when the outcome is scored later.
+          ...(completionCheck.completionData
+            ? {
+                completionData: {
+                  ...completionCheck.completionData,
+                  endedEarly: true,
+                  complete: completionCheck.shouldComplete,
+                },
+              }
+            : {}),
+        });
+
+        console.log(
+          `[modules] ${moduleCode} ended early for user ${req.user!.id} ` +
+            `(methodologyComplete=${completionCheck.shouldComplete})`,
+        );
+
+        res.json({
+          endedEarly: true,
+          outcomeSaved: !!completionCheck.completionData,
+          methodologyComplete: completionCheck.shouldComplete,
+        });
+      } catch (error) {
+        console.error("Error ending module early:", error);
+        res.status(500).json({ error: "Failed to end module" });
       }
     },
   );

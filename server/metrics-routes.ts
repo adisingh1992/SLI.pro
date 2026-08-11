@@ -1,5 +1,6 @@
 import { Express, Request, Response, NextFunction } from "express";
 import * as metrics from "./wing/cohort-metrics";
+import { isAdmin } from "./admin-guards";
 
 /**
  * Institutional admin dashboard API (Feature List B4).
@@ -9,11 +10,6 @@ import * as metrics from "./wing/cohort-metrics";
  * front of someone who controls their funding. So the API returns counts
  * alongside every rate and never invents a denominator.
  */
-
-const isAdmin = (req: Request, res: Response, next: NextFunction) => {
-  if (req.isAuthenticated() && req.user?.isAdmin) return next();
-  res.status(403).json({ error: "Admin access required" });
-};
 
 /** Query string → filter. Absent and unparseable both mean "no filter". */
 function parseFilter(req: Request): metrics.MetricsFilter {

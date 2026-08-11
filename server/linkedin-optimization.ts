@@ -78,6 +78,36 @@ export async function generateLinkedInOptimization(
     engagementTips?: string;
   };
   implementationPriorities: string;
+  /**
+   * A4: the integrated read of the whole profile.
+   *
+   * "The current approach chunks out different parts of the profile in a
+   * fragmented way. The optimization should present a holistic, integrated view
+   * of the full profile with changes shown in context, not as disconnected
+   * pieces."
+   *
+   * The six fields above ARE the fragmented view. They are kept — they hold
+   * real detail and migrated records already have them — but they become the
+   * detail behind this rather than the product itself.
+   */
+  holisticReview: {
+    /** The single claim the whole profile should make. */
+    throughLine?: string;
+    /** What someone scanning it top to bottom concludes today. */
+    readsAsToday?: string;
+    /** What it would say once the changes land. */
+    readsAsAfter?: string;
+    /** Each change in context, including what it depends on. */
+    changes?: {
+      section?: string;
+      current?: string;
+      proposed?: string;
+      why?: string;
+      dependsOn?: string;
+    }[];
+    /** What to change first, and why that order. */
+    sequence?: string;
+  };
 }> {
   // One row, one statement — no reconstruction from packed columns.
   const sliText = sli.statement;
@@ -121,8 +151,36 @@ Structure your response in the following format:
     "postIdeas": "5-7 specific post ideas including suggested structure and topics",
     "engagementTips": "Specific strategies to increase meaningful engagement and grow professional network"
   },
-  "implementationPriorities": "Prioritized roadmap of changes in order of impact, with timeframes"
-}`;
+  "implementationPriorities": "Prioritized roadmap of changes in order of impact, with timeframes",
+  "holisticReview": {
+    "throughLine": "The single claim the whole profile should make, in one sentence",
+    "readsAsToday": "What someone scanning this profile top to bottom concludes about them right now — the honest version, including where it contradicts itself",
+    "readsAsAfter": "What it would say once these changes land",
+    "changes": [
+      {
+        "section": "Headline | About | Experience | Skills | Visuals | Activity",
+        "current": "The exact current text, quoted",
+        "proposed": "The exact replacement text",
+        "why": "What this fixes about the profile as a whole",
+        "dependsOn": "Which other change this needs in order to work, or empty if it stands alone"
+      }
+    ],
+    "sequence": "What to change first and why that order — usually the change everything else hangs off"
+  }
+}
+
+CRITICAL — holisticReview IS THE PRODUCT. The six sections above are detail.
+
+A profile is read top to bottom by one person in about nine seconds.
+Recommendations that treat the headline, the About and the experience as
+separate problems produce a profile that says three different things well, which
+is worse than one thing adequately.
+
+So: find the through-line first. Say honestly what the profile communicates as a
+whole today, INCLUDING where it contradicts itself. Then show each change as
+before and after, with the reason it matters to the whole rather than to its own
+section. Where one change only works if another lands too, say so in dependsOn —
+that dependency is precisely what the fragmented version loses.`;
 
   // Preparing user prompt
   let userPrompt = `I need comprehensive LinkedIn optimization recommendations for a client based on their finalized Single Lasting Impression (SLI).

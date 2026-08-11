@@ -8,9 +8,9 @@
     "build": "npm run build:client && npm run build:server",
     "start": "NODE_ENV=production node dist/index.js",
     "check": "tsc",
-    "test": "tsx server/wing/objective-rules.test.ts && tsx server/wing/engine-rules.test.ts && tsx server/wing/classifier-rules.test.ts && tsx server/wing/provenance.test.ts",
+    "test": "tsx server/wing/objective-rules.test.ts && tsx server/wing/engine-rules.test.ts && tsx server/wing/classifier-rules.test.ts && tsx server/wing/provenance.test.ts && tsx server/wing/intake-beats.test.ts && tsx server/wing/nace-competencies.test.ts && tsx server/wing/authenticity.test.ts && tsx server/wing/api-contracts.test.ts",
     "db:push": "drizzle-kit push",
-    "db:wing-ddl": "psql \"$DATABASE_URL\" -v ON_ERROR_STOP=1 -f rehearsal-public-prereqs.sql -f migrations/0003_optimal_spyke.sql -f migrations/0005_milky_calypso.sql -f migrations/0006_optimal_princess_powerful.sql -f migrations/0007_content_draft_share_count.sql -f migrations/0008_analysis_methodology.sql -f migrations/0009_objective_sets.sql -f migrations/0010_heuristic_card_code.sql -f migrations/0011_student_onboarding_state.sql -f migrations/0012_message_event_failures.sql",
+    "db:wing-ddl": "psql \"$DATABASE_URL\" -v ON_ERROR_STOP=1 -f rehearsal-public-prereqs.sql -f migrations/0003_optimal_spyke.sql -f migrations/0005_milky_calypso.sql -f migrations/0006_optimal_princess_powerful.sql -f migrations/0007_content_draft_share_count.sql -f migrations/0008_analysis_methodology.sql -f migrations/0009_objective_sets.sql -f migrations/0010_heuristic_card_code.sql -f migrations/0011_student_onboarding_state.sql -f migrations/0012_message_event_failures.sql -f migrations/0013_wing_homework.sql -f migrations/0014_wing_checkins_and_notes.sql -f migrations/0015_institution_email_domains.sql -f migrations/0016_internship_milestones.sql -f migrations/0017_cohort_summary_indexes.sql",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "tsx server/migrate.ts",
     "db:verify": "tsx server/verify-db.ts",
@@ -32,7 +32,12 @@
     "wing:run-sequences": "tsx server/wing/run-sequences.ts",
     "wing:check-advisors": "tsx server/wing/check-advisor-surface.ts",
     "wing:seed-partners": "tsx server/wing/seed-partner-institutions.ts",
-    "wing:check-metrics": "tsx server/wing/check-metrics.ts"
+    "wing:check-metrics": "tsx server/wing/check-metrics.ts",
+    "wing:seed-prompts": "tsx server/wing/seed-prompt-library.ts",
+    "wing:check-journey": "tsx server/wing/check-journey.ts",
+    "wing:preview-context": "tsx server/wing/preview-student-context.ts",
+    "wing:check-sequences": "tsx server/wing/check-sequences.ts",
+    "wing:check-documents": "tsx server/wing/check-documents.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.37.0",

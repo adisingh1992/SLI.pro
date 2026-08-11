@@ -43,7 +43,14 @@ export function ProtectedRoute({
   }
 
   const intakeCompleted = brandingIntake?.completed === true;
-  const isIntakePage = path === "/branding-intake";
+  /*
+   * Both paths, since A1 introduced /intake as the canonical one and
+   * /branding-intake stays mapped for existing redirects and bookmarks.
+   * Recognising only the old path would redirect /intake straight back to
+   * /branding-intake — the intake page bouncing off its own gate, which
+   * presents as an infinite redirect on the first screen a new student sees.
+   */
+  const isIntakePage = path === "/branding-intake" || path === "/intake";
 
   if (!intakeCompleted && !isIntakePage && !isIntakeError) {
     return (

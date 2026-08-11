@@ -37,6 +37,14 @@ const DRY_RUN = process.argv.includes("--dry-run");
 type PartnerSeed = {
   name: string;
   populationTags: string[];
+  /**
+   * Email domains that identify this institution's students.
+   *
+   * Subdomains match automatically, so haas.berkeley.edu resolves to Berkeley
+   * without being listed — otherwise every department would need enumerating
+   * and the ones nobody thought of would silently stay unassigned.
+   */
+  emailDomains: string[];
   /** Academic year the August 2026 cohort belongs to. */
   cycleYear: number;
   label: string;
@@ -49,6 +57,7 @@ type PartnerSeed = {
 const PARTNERS: PartnerSeed[] = [
   {
     name: "University of California, Berkeley",
+    emailDomains: ["berkeley.edu"],
     // Both partners run undergraduate and recent-grad populations. The tag
     // drives which objective content a session renders, so an empty array here
     // would silently hand every student the wrong population's material.
@@ -62,6 +71,7 @@ const PARTNERS: PartnerSeed[] = [
   },
   {
     name: "Vanderbilt University",
+    emailDomains: ["vanderbilt.edu"],
     populationTags: ["undergraduate_or_recent_grad", "early_career"],
     cycleYear: 2026,
     label: "Vanderbilt AY 2026–27",
@@ -92,6 +102,7 @@ async function seedPartner(p: PartnerSeed) {
           name: p.name,
           country: "US",
           populationTags: p.populationTags,
+          emailDomains: p.emailDomains,
           status: "active",
         })
         .returning();
@@ -99,6 +110,21 @@ async function seedPartner(p: PartnerSeed) {
     }
   } else {
     console.log(`  institution '${p.name}' #${institution.id} exists`);
+
+    // Domains are set even on an existing row: institutions seeded before the
+    // email_domains column existed have an empty array, and without this the
+    // seeder would report success while assignment stayed broken.
+    const current = institution.emailDomains ?? [];
+    const missing = p.emailDomains.filter((d) => !current.includes(d));
+    if (missing.length && !DRY_RUN) {
+      await db
+        .update(institutions)
+        .set({ emailDomains: [...current, ...missing], updatedAt: new Date() })
+        .where(eq(institutions.id, institution.id));
+      console.log(`  + domains ${missing.join(", ")}`);
+    } else if (missing.length) {
+      console.log(`  would add domains ${missing.join(", ")}`);
+    }
   }
   if (!institution) return;
 
@@ -149,6 +175,19 @@ async function main() {
     await seedPartner(p);
     console.log("");
   }
+
+  /* Attach any students who registered before the domains existed. */
+  const { backfill } = await import("./institution-assignment");
+  const result = await backfill({ dryRun: DRY_RUN });
+
+  console.log(`[partners] backfill: ${result.considered} unassigned student(s) considered`);
+  for (const a of result.assigned) {
+    console.log(`  ${DRY_RUN ? "would assign" : "assigned"}  ${a.email}  ->  ${a.institution}`);
+  }
+  if (!result.assigned.length) {
+    console.log(`  none matched a partner domain (${result.unmatched} stay direct/B2C)`);
+  }
+  console.log("");
 
   console.log(
     `[partners] Cohort dates are PLACEHOLDERS — a plausible US academic year,\n` +

@@ -55,7 +55,43 @@ async function main() {
   // Azure Function, not two competing timers.
   const advisor = await import("./advisor-snapshot");
   const snaps = await advisor.sendDueSnapshots();
-  console.log(`[sequences] ${snaps.sent} advisor snapshot(s) sent.\n`);
+  console.log(`[sequences] ${snaps.sent} advisor snapshot(s) sent.`);
+
+  /*
+   * The date-driven sequences, all on the same runner for the same reason.
+   *
+   * Each asks the database "who is due today" rather than relying on a row
+   * written when the triggering event happened, so a day the runner did not
+   * execute is caught up rather than lost. Each is awaited separately and none
+   * can stop the others: a failure in the calendar job must not mean nobody
+   * gets an internship milestone.
+   */
+  const events = await import("./event-sequences");
+  const calendar = await import("./calendar-touchpoints");
+
+  try {
+    const touchpoints = await calendar.runDueTouchpoints();
+    console.log(
+      `[sequences] calendar: ${touchpoints.events} event(s) due, ` +
+        `${touchpoints.sent} sent, ${touchpoints.skipped} skipped.`,
+    );
+  } catch (err) {
+    console.error(`[sequences] calendar touchpoints failed: ${(err as Error).message}`);
+  }
+
+  try {
+    const followUps = await events.runEventFollowUps();
+    console.log(`[sequences] ${followUps.sent} life-event follow-up(s) sent.`);
+  } catch (err) {
+    console.error(`[sequences] event follow-ups failed: ${(err as Error).message}`);
+  }
+
+  try {
+    const milestones = await events.runInternshipMilestones();
+    console.log(`[sequences] ${milestones.sent} internship milestone(s) sent.\n`);
+  } catch (err) {
+    console.error(`[sequences] internship milestones failed: ${(err as Error).message}\n`);
+  }
 
   await pool.end();
 }

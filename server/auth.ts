@@ -275,9 +275,7 @@ export function setupAuth(app: Express) {
       
       req.login(user, (err: any) => {
         if (err) return next(err);
-        // Remove password before sending to client
-        const { passwordHash, ...userWithoutPassword } = user;
-        res.status(200).json(userWithoutPassword);
+        res.status(200).json(identity.publicUser(user));
       });
     })(req, res, next);
   });
@@ -289,10 +287,22 @@ export function setupAuth(app: Express) {
     });
   });
 
+  /**
+   * The signed-in user.
+   *
+   * ── ALLOWLIST, NOT DENYLIST ──────────────────────────────────────────────
+   * This used to spread the whole AuthUser and delete `passwordHash`, which
+   * meant `linkedinAccessToken` and `linkedinRefreshToken` were serialised to
+   * the browser on every page load — a live OAuth credential sitting in a
+   * client-side query cache. Nothing read them there.
+   *
+   * Denylisting is the wrong shape for this: every field added to AuthUser is
+   * exposed by default and the mistake is invisible. Naming what the client
+   * gets means a new secret has to be deliberately added here to leak.
+   */
   app.get("/api/user", (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
-    const { passwordHash, ...userWithoutPassword } = req.user;
-    res.json(userWithoutPassword);
+    res.json(identity.publicUser(req.user));
   });
 
   app.get("/api/user/profile", async (req, res, next) => {
@@ -304,8 +314,7 @@ export function setupAuth(app: Express) {
         return res.status(404).json({ message: "Profile not found" });
       }
       
-      const { passwordHash, ...profileWithoutPassword } = userProfile;
-      res.json(profileWithoutPassword);
+      res.json(identity.publicProfile(userProfile));
     } catch (error) {
       next(error);
     }

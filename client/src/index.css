@@ -35,6 +35,69 @@
     --ring: 167 23% 79%;
 
     --radius: 0.5rem;
+
+    /*
+     * Admin sidebar.
+     *
+     * Deliberately NOT the app background. The admin panel is a different
+     * product from the student experience — the student app is a calm, mostly
+     * white surface built for a fifteen-minute conversation; the admin panel is
+     * a tool someone keeps open all day. A faintly recessed sidebar gives the
+     * content area an edge to sit against and makes "where am I" answerable at
+     * a glance rather than by reading.
+     *
+     * The accent stays on the brand's --tertiary rather than the mint --primary:
+     * at sidebar scale the mint reads as a highlighter over whichever item is
+     * selected, which is louder than a navigation state should ever be.
+     */
+    --sidebar-background: 210 40% 98%;
+    --sidebar-foreground: 222.2 47.4% 11.2%;
+    --sidebar-primary: 167 23% 79%;
+    --sidebar-primary-foreground: 222.2 47.4% 11.2%;
+    --sidebar-accent: 161 30% 92%;
+    --sidebar-accent-foreground: 222.2 47.4% 11.2%;
+    --sidebar-border: 214.3 31.8% 91.4%;
+    --sidebar-ring: 167 23% 79%;
+
+    /*
+     * ── ADMIN ACCENTS ──────────────────────────────────────────────────────
+     * The brand `--primary` is a 23%-saturation mint. It is right for the
+     * student app — calm, recedes behind a fifteen-minute conversation — but at
+     * icon size it is almost invisible against white, which is why the admin
+     * panel read as grey-on-grey.
+     *
+     * These are the same hue family with enough saturation to register at 16px.
+     * `--brand` is the mint's own hue (167) pushed to a usable depth, so the
+     * accent and the brand are the same colour rather than two greens that
+     * nearly match — which is the thing that looks like a mistake.
+     *
+     * The others are spaced far enough apart to be told apart at a glance and
+     * kept in the cool half of the wheel so the whole panel stays one family.
+     * They carry meaning, not decoration:
+     *
+     *   brand   the product, and anything that is "live" or current
+     *   info    neutral secondary emphasis — counts, references, links
+     *   deep    the methodology engine, which is a different job from operations
+     *   warn    needs a person to look at it
+     *   good    finished, verified, delivered
+     *   bad     failed, or destructive
+     *
+     * Six is the ceiling. Past that they stop being categories and become a
+     * palette, which is how the old students list ended up with thirteen
+     * pastels that meant nothing.
+     */
+    --brand: 167 52% 34%;
+    --brand-soft: 167 44% 94%;
+    --info: 199 62% 40%;
+    --info-soft: 199 62% 95%;
+    --deep: 258 46% 52%;
+    --deep-soft: 258 60% 96%;
+    --warn: 32 82% 42%;
+    --warn-soft: 38 92% 95%;
+    --good: 158 64% 33%;
+    --good-soft: 152 60% 95%;
+    --bad: 0 72% 45%;
+    --bad-soft: 0 80% 96%;
   }
 
   * {
@@ -47,17 +110,44 @@
 }
 
 /*
- * Desktop only.
+ * Page zoom. Desktop only, both apps.
  *
- * `zoom` is non-standard and compounds badly on a phone: it shrinks every touch
- * target by 5% on screens that have the least room to spare, and it interacts
- * unpredictably with the visual viewport when the on-screen keyboard opens.
- * Whatever it is buying on a large display, it is not worth paying for on a
- * 375px one.
+ * ── THE TRAP, AND THE FIX ────────────────────────────────────────────────
+ * `zoom` scales the rendered result, but viewport units resolve BEFORE the
+ * scale is applied. A full-height element sized `h-svh` therefore computes
+ * 100% of the viewport and is then shrunk — leaving a strip of page background
+ * along the bottom. On the admin panel, whose sidebar is a different colour
+ * from the content, that strip is plainly visible. This is what made the
+ * sidebar stop short.
+ *
+ * The fix is to divide the height back out: at zoom Z, an element must be
+ * `100svh / Z` tall to render as `100svh`. `--zoom` carries the factor so the
+ * arithmetic lives next to the number that causes it, rather than as a magic
+ * `111.11svh` somewhere in a component. Anything full-height must use
+ * `calc(100svh / var(--zoom))` — see `components/ui/sidebar.tsx`.
+ *
+ * ── WHY NOT ON PHONES ────────────────────────────────────────────────────
+ * `zoom` shrinks touch targets. At 0.9 a 44px control becomes 40px, which is
+ * below the minimum comfortable target on every platform guideline, on the
+ * screens with the least room to spare. It also interacts unpredictably with
+ * the visual viewport when the on-screen keyboard opens. Whatever it buys on a
+ * large display is not worth paying for on a 375px one.
  */
+:root {
+  --zoom: 1;
+}
+
 @media (min-width: 1024px) {
-  html {
-    zoom: 0.95;
+  /* The student app: a fifteen-minute conversation, barely denser than 1:1. */
+  html:not(.admin-ui) {
+    --zoom: 0.95;
+    zoom: var(--zoom);
+  }
+
+  /* The admin panel: a tool someone keeps open all day, and denser for it. */
+  html.admin-ui {
+    --zoom: 0.9;
+    zoom: var(--zoom);
   }
 }
 

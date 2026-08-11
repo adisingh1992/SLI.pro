@@ -268,6 +268,175 @@ Wing`,
       "refresh, not a nudge to start. 'Let's update it' is collaborative voice.",
   },
 
+  /* ── B2 Life log nudge — every 5 days, then weekly ──────────────────── */
+  {
+    templateKey: "life_log_nudge",
+    channel: "email",
+    subject: "{{prompt}}",
+    body: `Hi {{firstName}},
+
+{{prompt}}
+
+Or anything else that's happened — an interview, a conversation that went sideways, something you figured out. Two sentences is plenty.
+
+{{logLink}}
+
+Wing`,
+    voiceNote:
+      "The prompt IS the subject line — it is the most interesting thing in the email and " +
+      "burying it under 'Your weekly check-in' would waste the one line that gets read in a " +
+      "preview pane. The body then explicitly releases them from it ('or anything else'), " +
+      "which is the same not-constraining rule the in-app placeholder follows. 'Two sentences " +
+      "is plenty' is doing real work: the failure mode for a reflection prompt is implying it " +
+      "wants an essay.",
+  },
+
+  /* ── E1 Life-event follow-up — 24h after a log entry ────────────────── */
+  {
+    templateKey: "event_followup_career",
+    channel: "email",
+    subject: "What came of it?",
+    body: `Hi {{firstName}},
+
+You wrote this yesterday:
+
+"{{entryExcerpt}}"
+
+What happened next? Even if the answer is nothing yet — that's information too.
+
+{{logLink}}
+
+Wing`,
+    voiceNote:
+      "Quotes them back, which is the entire justification for a second message — Wing already " +
+      "replied when they wrote it. A day later the useful question is what came of it. " +
+      "'Even if the answer is nothing yet' matters: without it, someone whose interview went " +
+      "quiet has a reason not to reply, and those are exactly the weeks worth capturing.",
+  },
+  {
+    templateKey: "event_followup_personal",
+    channel: "email",
+    subject: "Still thinking about this one",
+    body: `Hi {{firstName}},
+
+You wrote:
+
+"{{entryExcerpt}}"
+
+I've been turning it over. Anything shifted since — or does it still sit the same way?
+
+{{logLink}}
+
+Wing`,
+    voiceNote:
+      "Personal entries get a slower register than career ones. 'I've been turning it over' is " +
+      "the observation voice and it is doing the work the career version does with 'what " +
+      "happened next' — which would be the wrong question about something personal.",
+  },
+
+  /* ── E2 Internship milestones — day 30 and day 60 ───────────────────── */
+  {
+    templateKey: "internship_day_30",
+    channel: "email",
+    subject: "A month in",
+    body: `Hi {{firstName}},
+
+Thirty days. You know things now you didn't on day one, and most of them will be gone from memory by September if you don't write them down.
+
+Two questions worth answering while it's fresh: what did you turn out to be good at that surprised you, and what did you get handed because someone trusted you with it?
+
+Both are evidence. Neither survives the summer in your head.
+
+{{logLink}}
+
+Wing`,
+    voiceNote:
+      "The urgency is real and specific rather than manufactured — internship detail genuinely " +
+      "evaporates, and this is the moment it is still recoverable. Two questions, both aimed at " +
+      "evidence the portfolio can use, rather than 'how's it going'.",
+  },
+  {
+    templateKey: "internship_day_60",
+    channel: "email",
+    subject: "Two months — what would you put on a CV?",
+    body: `Hi {{firstName}},
+
+Sixty days in, so you can see the shape of it now.
+
+If you had to put one line about this internship on a CV, what would it say? Not the job description — the thing you actually did that someone would hire you for.
+
+If that's hard to answer, that's the useful finding, and it's worth fixing while you're still there.
+
+{{portfolioLink}}
+
+Wing`,
+    voiceNote:
+      "Day 60 asks a harder question than day 30 on purpose — there is still time to act on the " +
+      "answer. 'If that's hard to answer, that's the useful finding' is the anti-flattery rule: " +
+      "the difficulty is the insight, and softening it would waste the last month.",
+  },
+
+  /* ── S5 90-Day Positioning Launch — one template, twelve weeks ──────── */
+  {
+    templateKey: "positioning_launch_week",
+    channel: "email",
+    subject: "Week {{weekNumber}}: {{weekTheme}}",
+    body: `Hi {{firstName}},
+
+Week {{weekNumber}} of twelve.
+
+{{weekPrompt}}
+
+{{draftsLink}}
+
+Wing`,
+    voiceNote:
+      "ONE template for all twelve weeks — the theme and prompt are variables, held in " +
+      "LAUNCH_WEEKS in event-sequences.ts. Twelve near-identical templates would mean twelve " +
+      "places to edit the sign-off and twelve chances for the voice to drift. Deliberately " +
+      "short: the prompt is the message, and framing around it would bury it.",
+  },
+
+  /* ── S4 Academic calendar — completion-aware variants ───────────────── */
+  {
+    templateKey: "calendar_touchpoint_incomplete",
+    channel: "email",
+    subject: "{{eventLabel}} — worth being ready",
+    body: `Hi {{firstName}},
+
+{{eventLabel}} is here.
+
+This is the stretch where being able to say what you do — clearly, in one sentence — starts to matter more than it did last month. You're {{sessionsCompleted}} of 3 sessions in.
+
+The next one takes about ten minutes.
+
+{{sessionLink}}
+
+Wing`,
+    voiceNote:
+      "The variant for someone who has not finished. Names where they actually are rather than " +
+      "generically nudging, and gives the real time cost. No deadline language — the calendar " +
+      "event supplies the urgency, and adding more would tip into pressure.",
+  },
+  {
+    templateKey: "calendar_touchpoint_complete",
+    channel: "email",
+    subject: "{{eventLabel}} — you're ready for this",
+    body: `Hi {{firstName}},
+
+{{eventLabel}} is here, and you've done the work — all three sessions, positioning written down.
+
+So this week is about using it rather than building it. Your SLI is the answer to the first question anyone asks you.
+
+{{dashboardLink}}
+
+Wing`,
+    voiceNote:
+      "Same event, different job. This one affirms and redirects to using the work; the " +
+      "incomplete variant asks them to do it. Sending either to the wrong group is what makes " +
+      "calendar mail read as a mailing list rather than as something aimed at them.",
+  },
+
   {
     templateKey: "dormancy_3",
     channel: "email",

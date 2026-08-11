@@ -1,6 +1,7 @@
 import { Express, Request, Response, NextFunction } from "express";
 import * as store from "./wing/completion-criteria-store";
 import { log } from "./logger";
+import { isPlatformAdmin as isAdmin } from "./admin-guards";
 
 /**
  * Completion criteria API — methodology the owner can change without a deploy.
@@ -22,11 +23,6 @@ const SESSION_TYPES = [
   // session_type enum, so no schema change was needed.
   "enhancement_a", "enhancement_b", "enhancement_c",
 ];
-
-const isAdmin = (req: Request, res: Response, next: NextFunction) => {
-  if (req.isAuthenticated() && req.user?.isAdmin) return next();
-  res.status(403).json({ error: "Admin access required" });
-};
 
 function validSelector(populationTag: string, sessionType: string) {
   return POPULATIONS.includes(populationTag) && SESSION_TYPES.includes(sessionType);

@@ -1,6 +1,7 @@
 import { Express, Request, Response, NextFunction } from "express";
 import * as store from "./wing/analysis-methodology-store";
 import { log } from "./logger";
+import { isPlatformAdmin as isAdmin } from "./admin-guards";
 
 /**
  * Analysis methodology API — how the analysis reads a transcript, editable
@@ -27,11 +28,6 @@ const POPULATIONS = [
  * here. Listing them would offer an editor that silently does nothing.
  */
 const SESSION_TYPES = ["foundation_1", "foundation_2", "foundation_3"];
-
-const isAdmin = (req: Request, res: Response, next: NextFunction) => {
-  if (req.isAuthenticated() && req.user?.isAdmin) return next();
-  res.status(403).json({ error: "Admin access required" });
-};
 
 function validSelector(populationTag: string, sessionType: string) {
   return POPULATIONS.includes(populationTag) && SESSION_TYPES.includes(sessionType);

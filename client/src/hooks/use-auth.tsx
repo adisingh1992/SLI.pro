@@ -4,7 +4,10 @@ import {
   useMutation,
   UseMutationResult,
 } from "@tanstack/react-query";
-import { User, insertUserSchema } from "@shared/schema";
+import { insertUserSchema } from "@shared/schema";
+// `User` describes public.users; /api/user returns a wing user. See the note
+// in shared/auth-user.ts — the client was typed against the wrong table.
+import type { AuthenticatedUser as User } from "@shared/auth-user";
 import { apiRequest, queryClient } from "../lib/query-client";
 import { useToast } from "@/hooks/use-toast";
 import { z } from "zod";

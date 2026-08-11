@@ -11,8 +11,25 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>SLI.pro - Professional Profile Management</title>
     <link rel="icon" type="image/png" href="/src/assets/sli-pro-favicon.png" />
-    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@200;400;500;600&display=swap" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Lora:wght@400;500;600&display=swap" rel="stylesheet">
+    <!--
+      Fonts, tuned for the B5 target of under three seconds on cellular.
+
+      preconnect first: the stylesheet lives on fonts.googleapis.com but the
+      font files come from fonts.gstatic.com, so without warming BOTH the
+      browser pays two fresh DNS + TLS handshakes on a mobile connection before
+      any text can render. crossorigin is required on the gstatic hint — font
+      fetches are CORS requests, and a non-CORS preconnect opens a connection
+      the font request cannot reuse.
+
+      One combined request instead of two: the previous pair of stylesheets were
+      two serial round trips to the same host for no reason.
+    -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Montserrat:wght@200;400;500;600&family=Lora:wght@400;500;600&display=swap"
+      rel="stylesheet"
+    >
   </head>
   <body>
     <div id="root"></div>

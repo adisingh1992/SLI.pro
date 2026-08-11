@@ -5,6 +5,9 @@ import * as orchestrator from "./orchestrator";
 import * as sliStore from "./wing/sli-store";
 import * as profileStore from "./wing/profile-store";
 import * as identity from "./wing/identity-store";
+import { parseJsonResponse } from "./json-response";
+import { log } from "./logger";
+import { isAdmin } from "./admin-guards";
 
 /**
  * SLI routes — running natively on the Wing schema.
@@ -28,11 +31,6 @@ export function registerSliRoutes(app: Express, storage: IStorage) {
   const isAuthenticated = (req: Request, res: Response, next: NextFunction) => {
     if (req.isAuthenticated() && req.user) return next();
     res.status(401).json({ message: "Unauthorized" });
-  };
-
-  const isAdmin = (req: Request, res: Response, next: NextFunction) => {
-    if (req.isAuthenticated() && req.user && req.user.isAdmin) return next();
-    res.status(403).json({ message: "Forbidden" });
   };
 
   /** Confirms the SLI belongs to the caller (student-id comparison). */
@@ -217,18 +215,38 @@ export function registerSliRoutes(app: Express, storage: IStorage) {
         .map((s, i) => `Option ${i + 1}: ${s.statement}`)
         .join("\n");
 
+      /*
+       * JSON, not prose headings.
+       *
+       * This previously asked for three named headings and recovered them with
+       *   response.split(/Refined SLI|Refinement Rationale|Implementation Guidance/g)
+       * which fails in three separate ways, none of which raise an error:
+       *
+       *   1. The model writes those exact phrases inside the prose — "this
+       *      refined SLI positions you as…" — and every occurrence creates a
+       *      spurious section, shifting rationale and guidance onto the wrong
+       *      text.
+       *   2. The alternation does not preserve order, so sections[1] is
+       *      "whatever followed the first heading", not necessarily the SLI.
+       *   3. When "Final SLI Statement:" did not match, the fallback assigned
+       *      the ENTIRE section as the statement — so a student's SLI silently
+       *      became three paragraphs including a heading.
+       *
+       * All three produce a plausible non-empty result, which is why this was
+       * reported as "refinement is broken" rather than as an error. Structured
+       * output removes the parsing step instead of hardening it.
+       */
       const systemPrompt = `You are a professional branding expert for SLI.pro, helping a client refine their chosen Single Lasting Impression (SLI) based on their feedback. Use the original SLI options and the client's specific feedback to create an optimized version that precisely meets their needs.
 
-Create a refined SLI that incorporates the client's feedback while maintaining the integrity and effectiveness of the statement. Your response should include:
+Respond with ONLY a JSON object, no prose before or after, in exactly this shape:
 
-Refined SLI
-Final SLI Statement: [The updated complete sentence incorporating requested changes]
+{
+  "statement": string,   // The refined SLI: ONE complete sentence, nothing else. No label, no quotes, no heading.
+  "rationale": string,   // 2-3 paragraphs explaining what changed and why it strengthens the positioning.
+  "implementationGuidance": string  // Practical guidance for using this SLI across their professional presence.
+}
 
-Refinement Rationale
-[2–3 paragraphs explaining the changes made and why they strengthen the positioning]
-
-Implementation Guidance
-[Practical guidance on how to use this SLI across their professional presence]`;
+"statement" must be the sentence on its own. If it contains a newline, a colon-prefixed label, or more than one sentence, it is wrong.`;
 
       const userPrompt = `Here were the SLI options generated for me:
 ${alternatives || "(no alternative options recorded)"}
@@ -249,23 +267,44 @@ Please provide a refined SLI statement, rationale, and implementation guidance b
         temperature: 0.7,
       });
 
-      const sections = response.split(/Refined SLI|Refinement Rationale|Implementation Guidance/g);
-
-      let refinedStatement = '';
-      if (sections.length > 1) {
-        const sliSection = sections[1].trim();
-        const match = sliSection.match(/Final SLI Statement:?\s*(.*?)(?:\n|$)/i);
-        refinedStatement = (match?.[1] ?? sliSection).trim();
-      }
-
-      if (!refinedStatement) {
+      let parsed: {
+        statement?: string;
+        rationale?: string;
+        implementationGuidance?: string;
+      };
+      try {
+        parsed = parseJsonResponse(response, "SLI refinement");
+      } catch (err) {
+        log(`SLI refinement parse failed: ${(err as Error).message}`, "sli");
         return res.status(502).json({
-          message: "Could not extract a refined SLI from the model response",
+          message: "Wing couldn't produce a refined SLI just now. Try again in a moment.",
         });
       }
 
-      const refinementRationale = sections.length > 2 ? sections[2].trim() : '';
-      const implementationGuidance = sections.length > 3 ? sections[3].trim() : '';
+      const refinedStatement = String(parsed.statement ?? "").trim();
+
+      // Guards on the value, not just its presence. The old code's failure was
+      // never an empty string — it was a long, structured, entirely wrong one,
+      // which passed a truthiness check and went straight into the database as
+      // the student's positioning statement.
+      if (!refinedStatement) {
+        return res.status(502).json({
+          message: "Wing couldn't produce a refined SLI just now. Try again in a moment.",
+        });
+      }
+      if (refinedStatement.length > 400 || refinedStatement.includes("\n")) {
+        log(
+          `SLI refinement rejected: statement was ${refinedStatement.length} chars` +
+            `${refinedStatement.includes("\n") ? " and multi-line" : ""}`,
+          "sli",
+        );
+        return res.status(502).json({
+          message: "Wing returned something that doesn't look like an SLI. Try rewording your feedback.",
+        });
+      }
+
+      const refinementRationale = String(parsed.rationale ?? "").trim();
+      const implementationGuidance = String(parsed.implementationGuidance ?? "").trim();
 
       const refined = await sliStore.refine(sli!.id, {
         statement: refinedStatement,
