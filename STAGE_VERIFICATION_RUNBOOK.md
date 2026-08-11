@@ -29,11 +29,43 @@ stop, because everything after depends on them.
 
 ## 1 · Schema
 
+### Two migration paths, and why they diverged
+
+There are two ways schema reaches a database, and they disagreed:
+
+| | applies | used by |
+|---|---|---|
+| `db:migrate` | whatever `meta/_journal.json` lists, minus what `drizzle.__drizzle_migrations` records | the deployment pipeline |
+| `db:wing-ddl` | a hand-written list of `.sql` files, via psql | people, by hand |
+
+Stage's drizzle table had 0000–0007. Everything from 0008 was applied by
+`db:wing-ddl` instead, so drizzle never learned about it — and on every
+pipeline run it reached 0008, tried to create `analysis_methodology_id_seq` a
+second time, and failed with `42P07`.
+
+**Fixed by making 0008 onward replay-safe** rather than by hand-inserting rows
+into drizzle's tracking table. A baseline `INSERT` repairs one database; guards
+repair the next one too, including production when it is built.
+
+Check before running anything:
+
 ```bash
-npm run db:wing-ddl
+npm run wing:check-migrations
 ```
 
-Idempotent, safe to re-run. Then confirm the four tables added this session
+Read-only. Reports what drizzle has recorded, what the next `db:migrate` would
+apply, and flags anything not safe to replay.
+
+### Applying
+
+```bash
+npm run db:migrate      # the same path the pipeline uses — prefer this
+```
+
+`db:wing-ddl` is now bootstrap-only: it also runs
+`rehearsal-public-prereqs.sql`, which is what a database with no `public`
+schema needs before the wing migrations will apply. For an existing database it
+is redundant, and using it is what caused the drift. Then confirm the four tables added this session
 exist and the two new columns are on `wing.students`:
 
 ```sql

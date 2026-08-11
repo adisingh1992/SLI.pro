@@ -287,6 +287,66 @@ console.log("\nEvery migration file is in drizzle's journal");
   if (failures === before6) console.log(`  ok — ${files.length} migration(s)`);
 }
 
+/* ── 7 · Migrations from 0008 on are safe to replay ───────────────────────
+ *
+ * `db:migrate` (drizzle, in the pipeline) and `db:wing-ddl` (psql, by hand)
+ * have both been used against the same databases, and drizzle only skips what
+ * its own tracking table records. A migration applied by one path is
+ * indistinguishable from a pending one to the other — so every migration has
+ * to survive being run a second time.
+ *
+ * 0008 is the boundary: it is where the two paths first diverged on stage, and
+ * everything from there has been rewritten with guards. 0000–0007 predate the
+ * convention, are recorded in drizzle's table, and are deliberately left alone
+ * — editing them would change their hashes and make drizzle re-run them.
+ *
+ * Guarding DDL is the easy half. `UPDATE` in a migration is the half that
+ * matters: 0010's backfill would have recomputed every `card_code` from the
+ * name, discarding deduplication suffixes and breaking a UNIQUE constraint that
+ * had been fine for months. Re-runnable is not the same as harmless.
+ */
+console.log("\nMigrations from 0008 are safe to replay");
+{
+  const before7 = failures;
+  const dir = join(process.cwd(), "migrations");
+
+  const files = readdirSync(dir)
+    .filter((f) => f.endsWith(".sql") && f >= "0008")
+    .sort();
+
+  for (const file of files) {
+    // Comments explain the rule at length; they must not be read as code.
+    const code = readFileSync(join(dir, file), "utf8").replace(/--.*$/gm, "");
+
+    const creates = (code.match(/\bcreate (table|index|unique index|type)\b/gi) ?? []).length;
+    const guards = (code.match(/if not exists/gi) ?? []).length;
+    if (creates > guards) {
+      fail(`${file}: ${creates} CREATE(s) but only ${guards} IF NOT EXISTS — fails on replay`);
+    }
+
+    const constraints = (code.match(/add constraint/gi) ?? []).length;
+    const handled = (code.match(/duplicate_object/gi) ?? []).length;
+    if (constraints > handled) {
+      fail(
+        `${file}: ADD CONSTRAINT without an EXCEPTION WHEN duplicate_object block — ` +
+          `Postgres has no ADD CONSTRAINT IF NOT EXISTS`,
+      );
+    }
+
+    // An UPDATE outside a conditional guard will re-run against live data.
+    const updates = (code.match(/^\s*update\s/gim) ?? []).length;
+    const conditional = /\bif exists\b/i.test(code) || /\bAND\s+s\."?onboarding/i.test(code);
+    if (updates > 0 && !conditional) {
+      fail(
+        `${file}: has ${updates} UPDATE(s) with no conditional guard — a replay would ` +
+          `overwrite current data with whatever the migration originally wrote`,
+      );
+    }
+  }
+
+  if (failures === before7) console.log(`  ok — ${files.length} migration(s) checked`);
+}
+
 /* ── Result ──────────────────────────────────────────────────────────── */
 if (failures) {
   console.error(`\n${failures} contract violation(s)\n`);
