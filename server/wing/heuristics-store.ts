@@ -1,4 +1,5 @@
 import { and, asc, eq, inArray, ne } from "drizzle-orm";
+import * as cache from "./published-cache";
 import { db } from "../db";
 import {
   students,
@@ -279,6 +280,10 @@ export async function createHeuristic(data: {
   populationTags?: string[];
   components?: Array<{ componentType: ComponentType; content: string }>;
 }) {
+  // Any change to which card rows are current invalidates the copy the
+  // turn path reads. Cleared up front rather than on the way out so an
+  // early return cannot skip it.
+  cache.invalidate("cards:");
   // Derived once, at creation, and never recomputed. Deriving on read would
   // mean renaming a card silently repoints every objective referencing it.
   const existing = await db.select({ code: heuristics.cardCode }).from(heuristics);
@@ -326,6 +331,10 @@ export async function reviseComponent(params: {
   componentType: ComponentType;
   content: string;
 }) {
+  // Any change to which card rows are current invalidates the copy the
+  // turn path reads. Cleared up front rather than on the way out so an
+  // early return cannot skip it.
+  cache.invalidate("cards:");
   return db.transaction(async (tx) => {
     const [current] = await tx
       .select()
@@ -377,6 +386,10 @@ export async function setHeuristicStatus(
   heuristicId: number,
   status: "candidate" | "validated" | "retired",
 ) {
+  // Any change to which card rows are current invalidates the copy the
+  // turn path reads. Cleared up front rather than on the way out so an
+  // early return cannot skip it.
+  cache.invalidate("cards:");
   const [row] = await db
     .update(heuristics)
     .set({ status, modifiedAt: new Date() })

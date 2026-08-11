@@ -4,14 +4,14 @@ import { extractDocumentText, validateExtractedText } from "./document-extractor
 import { getDocumentBase64 } from "./document-data";
 import * as orchestrator from "./orchestrator";
 
-// Helper function to make Claude API calls with retry logic for rate limits
-async function callClaude(systemPrompt: string, userPrompt: string, maxRetries = 3, initialBackoff = 60000) {
+// Helper function to call the model with retry logic for rate limits
+async function callModel(systemPrompt: string, userPrompt: string, maxRetries = 3, initialBackoff = 60000) {
   const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
   
   // Helper function to truncate long user prompts to reduce token count
   const truncateIfNeeded = (text: string, maxLength = 150000) => {
     if (text.length > maxLength) {
-      log(`Truncating long user prompt from ${text.length} to ${maxLength} characters`, "claude");
+      log(`Truncating long user prompt from ${text.length} to ${maxLength} characters`, "freshness");
       return text.substring(0, maxLength) + "... [content truncated due to length]";
     }
     return text;
@@ -23,7 +23,7 @@ async function callClaude(systemPrompt: string, userPrompt: string, maxRetries =
   for (let attempt = 0; attempt < maxRetries; attempt++) {
     try {
       // Add retry information to logs
-      log(`Sending request to Claude for freshness report analysis (Attempt ${attempt + 1}/${maxRetries})`, "claude");
+      log(`Requesting freshness report analysis (Attempt ${attempt + 1}/${maxRetries})`, "freshness");
 
       // Freshness report analysis -> mid tier.
       const response = await orchestrator.complete({
@@ -55,7 +55,7 @@ async function callClaude(systemPrompt: string, userPrompt: string, maxRetries =
             }
           }
           
-          // Sometimes Claude responds with text before, after, or between the JSON.
+          // Sometimes the model responds with text before, after, or between the JSON.
           // First try to extract JSON with precise regex patterns for JSON objects
           const jsonRegex = /\{(?:[^{}]|(?:\{(?:[^{}]|(?:\{(?:[^{}]|(?:\{(?:[^{}])*\}))*\}))*\}))*\}/;
           const match = jsonText.match(jsonRegex);
@@ -75,9 +75,9 @@ async function callClaude(systemPrompt: string, userPrompt: string, maxRetries =
           try {
             return JSON.parse(jsonText);
           } catch (jsonError) {
-            log(`Error parsing JSON: ${jsonError}. Raw response: ${rawText}`, "claude");
+            log(`Error parsing JSON: ${jsonError}. Raw response: ${rawText}`, "freshness");
             
-            log(`Will attempt to parse partial content to salvage response`, "claude");
+            log(`Will attempt to parse partial content to salvage response`, "freshness");
             
             // Check if rawText contains any JSON object by extracting anything between braces
             try {
@@ -111,20 +111,20 @@ async function callClaude(systemPrompt: string, userPrompt: string, maxRetries =
                 , "");
                 
                 if (largestMatch.length > 0) {
-                  log(`Found potential JSON object in response. Attempting to parse it.`, "claude");
+                  log(`Found potential JSON object in response. Attempting to parse it.`, "freshness");
                   try {
                     return JSON.parse(largestMatch);
                   } catch (parseErr) {
-                    log(`Failed to parse largest match: ${parseErr}`, "claude");
+                    log(`Failed to parse largest match: ${parseErr}`, "freshness");
                   }
                 }
               }
             } catch (regexError) {
-              log(`Error finding JSON objects: ${regexError}`, "claude");
+              log(`Error finding JSON objects: ${regexError}`, "freshness");
             }
             
             // If all attempts failed, provide a generic fallback
-            log(`Using fallback default response structure`, "claude");
+            log(`Using fallback default response structure`, "freshness");
             
             // Create a generic response that matches the expected schema
             return {
@@ -171,14 +171,14 @@ async function callClaude(systemPrompt: string, userPrompt: string, maxRetries =
         }
       }
 
-      throw new Error("No valid response content received from Claude");
+      throw new Error("No valid response content received from the model");
     } catch (error: any) {
       // Check if this is a rate limit error
       const errorString = String(error);
       const isRateLimit = errorString.includes("rate_limit_error") || errorString.includes("429");
       
       // Log the specific error
-      log(`Error calling Claude API (Attempt ${attempt + 1}/${maxRetries}): ${error}`, "claude");
+      log(`Model call failed (Attempt ${attempt + 1}/${maxRetries}): ${error}`, "freshness");
       
       // If we've used all our retries or it's not a rate limit error, give up
       if (attempt === maxRetries - 1 || !isRateLimit) {
@@ -187,7 +187,7 @@ async function callClaude(systemPrompt: string, userPrompt: string, maxRetries =
       
       // Calculate backoff time with exponential increase
       const backoffTime = initialBackoff * Math.pow(2, attempt);
-      log(`Rate limit exceeded. Retrying in ${backoffTime/1000} seconds...`, "claude");
+      log(`Rate limit exceeded. Retrying in ${backoffTime/1000} seconds...`, "freshness");
       
       // Wait before trying again
       await sleep(backoffTime);
@@ -195,7 +195,7 @@ async function callClaude(systemPrompt: string, userPrompt: string, maxRetries =
   }
   
   // This should never be reached due to the throw in the loop, but TypeScript wants a return
-  throw new Error("Failed to complete Claude API call after retries");
+  throw new Error("Model call failed after retries");
 }
 
 // 1. Analyze questionnaire data
@@ -256,7 +256,7 @@ Timeframe: ${questionnaire.timeframe || "Not specified"}
 
 Please analyze this information and create a structured summary of their professional brand positioning according to the structure in your instructions. Use reasonable assumptions where information is incomplete, and focus on creating a coherent professional narrative based on the available data.`;
 
-  return await callClaude(systemPrompt, userPrompt);
+  return await callModel(systemPrompt, userPrompt);
 }
 
 // 2a. Step 1: Summarize resume content only (token-efficient)
@@ -304,7 +304,7 @@ ${resumeContent}
 
 Please analyze and summarize the resume content according to the structure in your instructions. Focus on extracting career trajectory, skills, accomplishments, and presentation style. Be concise but comprehensive. DO NOT MAKEUP NEW THINGS ON YOUR OWN. ONLY USE THE INFORMATION PROVIDED.`;
 
-  return await callClaude(systemPrompt, userPrompt);
+  return await callModel(systemPrompt, userPrompt);
 }
 
 // 2b. Step 2: Analyze resume alignment with questionnaire (token-efficient)
@@ -334,7 +334,7 @@ ${JSON.stringify(questionnaireAnalysis, null, 2)}
 
 Please analyze the alignment between the resume summary and questionnaire responses according to the structure in your instructions. Focus on identifying consistencies, discrepancies, missing elements, and overall congruence. DO NOT MAKEUP NEW THINGS ON YOUR OWN. ONLY USE THE INFORMATION PROVIDED.`;
 
-  return await callClaude(systemPrompt, userPrompt);
+  return await callModel(systemPrompt, userPrompt);
 }
 
 // 2. Analyze resume data (orchestrator function using two-step approach)
@@ -354,7 +354,7 @@ export async function generateResumeSummary(resumeContent: string, questionnaire
     
     return combinedResult;
   } catch (error) {
-    log(`Error in generateResumeSummary: ${error}`, "claude");
+    log(`Error in generateResumeSummary: ${error}`, "freshness");
     throw error;
   }
 }
@@ -414,7 +414,7 @@ ${JSON.stringify(resumeAnalysis, null, 2)}
 
 Please analyze the LinkedIn profile content in relation to their questionnaire responses and resume analysis, then create a structured analysis according to the structure in your instructions. Focus on identifying strengths, weaknesses, and opportunities to improve their LinkedIn presence to better support their professional branding goals.`;
 
-  return await callClaude(systemPrompt, userPrompt);
+  return await callModel(systemPrompt, userPrompt);
 }
 
 // 4. Analyze additional documents
@@ -473,7 +473,7 @@ ${JSON.stringify(linkedinAnalysis, null, 2)}
 
 Please analyze this additional document in relation to their other materials and create a structured analysis according to the structure in your instructions. Focus on identifying how this document adds to their overall professional brand narrative and any unique elements it contributes.`;
 
-    const analysis = await callClaude(systemPrompt, userPrompt);
+    const analysis = await callModel(systemPrompt, userPrompt);
     analyses.push(analysis);
   }
 
@@ -1194,10 +1194,10 @@ async function calculateRecommendationImplementation(
       
       return { grade, explanation };
     } else {
-      // If no monthly check-in data is available, use Claude to analyze
-      log(`No monthly check-in data available for recommendation implementation, using Claude for analysis`, "freshness");
+      // If no monthly check-in data is available, ask the model to analyse
+      log(`No monthly check-in data available for recommendation implementation, using the model for analysis`, "freshness");
       
-      // Prepare system prompt for Claude analysis
+      // Prepare system prompt for the model analysis
       const systemPrompt = `You are an expert professional branding strategist at SLI.pro. Your task is to assess how well a client has implemented previous recommendations for improving their professional brand. You will analyze their current resume and LinkedIn profile against specific recommendations from a previous assessment.
 
 EXTREMELY IMPORTANT: You MUST respond with VALID JSON ONLY. Your entire response must be parseable by JSON.parse(). DO NOT include any explanatory text, comments, markdown formatting, or code blocks. Your response should start with '{' and end with '}' without any other characters.
@@ -1250,10 +1250,10 @@ Your task is to:
 Remember, respond with ONLY valid JSON with no explanatory text or comments outside the JSON structure.`;
 
       try {
-        const claudeResponse = await callClaude(systemPrompt, userPrompt);
-        const analysisResult = JSON.parse(claudeResponse);
+        const modelResponse = await callModel(systemPrompt, userPrompt);
+        const analysisResult = JSON.parse(modelResponse);
         
-        log(`Claude analysis of recommendation implementation: ${analysisResult.implementationPercentage}%`, "freshness");
+        log(`Model analysis of recommendation implementation: ${analysisResult.implementationPercentage}%`, "freshness");
         log(`Implementation grade: ${analysisResult.grade}`, "freshness");
         
         return {
@@ -1261,9 +1261,9 @@ Remember, respond with ONLY valid JSON with no explanatory text or comments outs
           explanation: analysisResult.explanation
         };
       } catch (error) {
-        log(`Error analyzing recommendation implementation with Claude: ${error}`, "freshness");
+        log(`Error analyzing recommendation implementation with the model: ${error}`, "freshness");
         
-        // Fallback if Claude analysis fails
+        // Fallback if model analysis fails
         return {
           grade: 'C',
           explanation: 'We were unable to automatically assess your implementation of previous recommendations. This baseline grade will be updated when you complete a monthly check-in with implementation details.'
@@ -1308,7 +1308,7 @@ async function calculateSLIClarity(userId: number, questionnaireAnalysis: any) {
     const careerGoals = questionnaireAnalysis?.careerAspirations?.shortTermGoals || '';
     const personalBrandStatement = questionnaireAnalysis?.recommendedPositioning?.coreBrandingNarrative || '';
     
-    // Create a prompt for Claude to analyze alignment and clarity
+    // Create a prompt for the model to analyze alignment and clarity
     const systemPrompt = `You are an expert professional branding analyst for SLI.pro. Your task is to evaluate the Strategic Leadership Intelligence (SLI) Clarity of a client based on their questionnaire responses and the latest coaching notes.
 
 EXTREMELY IMPORTANT: You MUST respond with VALID JSON ONLY. Your entire response must be parseable by JSON.parse(). DO NOT include any explanatory text, comments, markdown formatting, or code blocks. Your response should start with '{' and end with '}' without any other characters.
@@ -1348,17 +1348,17 @@ ${latestNote.content}
 Please evaluate the client's SLI Clarity based on these inputs. Use the grading rubric in your instructions to assign a letter grade (A-F) and provide a brief explanation (1-2 sentences) justifying the grade.`;
 
     try {
-      const claudeResponse = await callClaude(systemPrompt, userPrompt);
-      log(`Claude analysis of SLI Clarity: ${claudeResponse.grade}`, "freshness");
+      const modelResponse = await callModel(systemPrompt, userPrompt);
+      log(`Model analysis of SLI Clarity: ${modelResponse.grade}`, "freshness");
       
       return {
-        grade: claudeResponse.grade,
-        explanation: claudeResponse.explanation
+        grade: modelResponse.grade,
+        explanation: modelResponse.explanation
       };
     } catch (error) {
-      log(`Error analyzing SLI Clarity with Claude: ${error}`, "freshness");
+      log(`Error analyzing SLI Clarity with the model: ${error}`, "freshness");
       
-      // Fallback if Claude analysis fails
+      // Fallback if model analysis fails
       return {
         grade: 'C',
         explanation: 'We were unable to automatically assess your SLI Clarity. This baseline grade will be updated in your next freshness report.'
@@ -1561,7 +1561,7 @@ Be sure to consider all detailed metrics in your recommendations, particularly:
 - The Engagement Activity assessment when recommending networking approaches and engagement tactics
 - The Recommendation Implementation assessment when determining the effectiveness of previous recommendations`;
 
-    return await callClaude(systemPrompt, userPrompt);
+    return await callModel(systemPrompt, userPrompt);
   } catch (error) {
     log(`Error generating final synthesis: ${error}`, "freshness");
     throw new Error(`Failed to generate final synthesis: ${error}`);

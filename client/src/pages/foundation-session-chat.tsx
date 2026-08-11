@@ -116,6 +116,45 @@ const NEXT_STEP: Record<number, { title: string; does: string; duration: string;
   },
 };
 
+/**
+ * The turn in flight.
+ *
+ * ── ONE OBJECT, BECAUSE THREE RACED ──────────────────────────────────────
+ * This replaces `optimisticMessage`, `streamingResponse` and `isStreaming`,
+ * which were cleared independently against a refetch that landed whenever it
+ * landed. Three symptoms came out of that:
+ *
+ *   duplicated text   the refetch brought the real assistant turn while
+ *                     `streamingResponse` still held the same words, so both
+ *                     rendered until an effect ran a frame later
+ *
+ *   vanishing text    the clearing effect compared `messages.length` against a
+ *                     count captured before sending. The optimistic user
+ *                     message inflated that count, so the comparison could pass
+ *                     early and blank the reply mid-flight
+ *
+ *   stuck text        and when the comparison never passed, the streamed copy
+ *                     stayed on screen beside the real one indefinitely
+ *
+ * The fix is not more careful clearing. It is having something definite to
+ * clear against: the server now returns the real turn ids with
+ * `turn_complete`, so the client waits until those exact ids appear in fetched
+ * data. No counting, no heuristics, no guessing which render won.
+ */
+type PendingTurn = {
+  userText: string;
+  assistantText: string;
+  /** Confirmed by the server on `turn_complete`. Null until then. */
+  humanTurnId: number | null;
+  assistantTurnId: number | null;
+  /**
+   * sending    submitted, nothing back yet
+   * streaming  Wing is producing tokens
+   * settling   Wing has finished; waiting for the refetch to carry the turns
+   */
+  phase: 'sending' | 'streaming' | 'settling';
+};
+
 export default function FoundationSessionChatPage() {
   const { user } = useAuth();
   const [, navigate] = useLocation();
@@ -125,14 +164,26 @@ export default function FoundationSessionChatPage() {
   
   const sessionNumber = parseInt(sessionNumberParam || '1');
   const [currentMessage, setCurrentMessage] = useState('');
-  const [isStreaming, setIsStreaming] = useState(false);
-  const [streamingResponse, setStreamingResponse] = useState('');
-  const [optimisticMessage, setOptimisticMessage] = useState<ChatMessage | null>(null);
+  const [pending, setPending] = useState<PendingTurn | null>(null);
   const [allowContinue, setAllowContinue] = useState(false);
   const [showEndSessionDialog, setShowEndSessionDialog] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messageInputRef = useRef<HTMLTextAreaElement>(null);
-  const messageCountBeforeStreamRef = useRef<number>(0);
+
+  /*
+   * Monotonic id for the turn currently being sent. See `sendMessage` — a
+   * finished turn's stream can outlive the turn itself by half a minute, and
+   * this is what stops it writing over its successor.
+   */
+  const turnTokenRef = useRef(0);
+
+  /*
+   * The composer locks while Wing is actually speaking, and unlocks the moment
+   * it stops — not when the request finishes. The server keeps the connection
+   * open past that point to run measurement work, and making the student wait
+   * for bookkeeping is what this whole change is undoing.
+   */
+  const isSpeaking = pending?.phase === 'sending' || pending?.phase === 'streaming';
 
   // Voice recording hook
   const voiceRecording = useVoiceRecording({
@@ -244,165 +295,224 @@ export default function FoundationSessionChatPage() {
     }
   }, [sessionData?.session?.status, sessionNumber]);
 
-  // Send message with streaming response (similar to conversation hook)
+  /**
+   * One turn.
+   *
+   * The composer is released on `turn_complete` rather than when the response
+   * body ends. The server sends that as soon as Wing's reply is durable, then
+   * keeps the connection open to run objective scoring and the completion
+   * analysis — two model calls the student has no reason to wait through.
+   */
   const sendMessage = async (content: string) => {
-    if (!content.trim() || isStreaming) return;
+    const text = content.trim();
+    // Blocked only while Wing is actually speaking. `pending` stays set through
+    // the 'settling' phase — up to thirty seconds of server-side analysis the
+    // student is explicitly not waiting for — and blocking on it meant Enter
+    // did nothing at all during that window, with no feedback.
+    if (!text || isSpeaking) return;
 
-    setIsStreaming(true);
-    setStreamingResponse('');
-    
-    // Track message count before streaming starts
-    messageCountBeforeStreamRef.current = messages.length;
-    
-    // Store the message content for optimistic display
-    const messageContent = content.trim();
-    
+    /*
+     * ── EVERY TURN OWNS A TOKEN ──────────────────────────────────────────
+     * `turn_complete` releases the composer as soon as Wing's reply is
+     * durable, but the response body stays open for the objective and
+     * completion analysis — 23s to release, 54s to body end in the log that
+     * produced this comment. So a *finished* turn's reader can still be
+     * running when the next turn's has started.
+     *
+     * Without a token, that reader's final `setPending` acted on whatever
+     * `pending` happened to hold — which by then was the NEXT turn. It saw a
+     * turn in phase 'sending', concluded the stream had ended prematurely, and
+     * threw. Every stale stream reaches for shared state that has moved on.
+     *
+     * The token makes each reader's writes conditional on still being the
+     * current turn. A stale one becomes a no-op instead of a corruption.
+     */
+    const token = ++turnTokenRef.current;
+    const isCurrent = () => turnTokenRef.current === token;
+    const updatePending = (fn: (p: PendingTurn) => PendingTurn) =>
+      setPending((p) => (p && isCurrent() ? fn(p) : p));
+
+    setPending({
+      userText: text,
+      assistantText: '',
+      humanTurnId: null,
+      assistantTurnId: null,
+      phase: 'sending',
+    });
+    // Cleared optimistically, restored below if the send fails. Losing what
+    // somebody typed fifteen minutes into a session is not recoverable by
+    // them — they have to remember it.
+    setCurrentMessage('');
+
+    /*
+     * Whether this turn was confirmed, tracked as a plain local.
+     *
+     * ── WHY NOT READ IT OFF `pending` ────────────────────────────────────
+     * The previous version asked React: it called `setPending` with an updater
+     * that inspected the phase and threw if it wasn't 'settling'.
+     *
+     * A state updater must be pure. Throwing from inside one does not raise
+     * where you wrote it — the `setPending` call returns normally and React
+     * invokes the updater later, during its render phase. So the throw missed
+     * the `try/catch` entirely and surfaced as a render error, which unmounted
+     * the whole component tree. A student twenty minutes into a session got a
+     * blank page. (StrictMode double-invokes updaters in development, which is
+     * why it appeared twice in the console.)
+     *
+     * A local variable answers the same question, belongs to this turn rather
+     * than to shared state, and throws where it is written.
+     */
+    let sawTurnComplete = false;
+
     try {
-      // Use fetch directly for streaming
-      const response = await fetch(`/api/foundation-sessions/${sessionNumber}/messages/stream`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
+      const response = await fetch(
+        `/api/foundation-sessions/${sessionNumber}/messages/stream`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ content: text }),
+          credentials: 'include',
         },
-        body: JSON.stringify({ content: messageContent }),
-        credentials: 'include'
-      });
-
-      if (!response.body) {
-        throw new Error('ReadableStream not supported');
-      }
+      );
 
       if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`Stream request failed: ${response.status} ${errorText}`);
+        throw new Error(
+          (await response.text()) || `Request failed with ${response.status}`,
+        );
       }
+      if (!response.body) throw new Error('Streaming is not supported by this browser');
 
       const reader = response.body.getReader();
       const decoder = new TextDecoder();
-      
-      let done = false;
-      let accumulatedData = '';
+      let buffer = '';
 
-      while (!done) {
-        const { value, done: readerDone } = await reader.read();
-        done = readerDone;
-
+      for (;;) {
+        const { value, done } = await reader.read();
         if (done) break;
 
-        const text = decoder.decode(value, { stream: true });
-        accumulatedData += text;
+        buffer += decoder.decode(value, { stream: true });
 
-        // Process SSE data
-        const lines = accumulatedData.split('\n\n');
+        // SSE frames are separated by a blank line. The last piece is kept
+        // because it may be a partial frame.
+        const frames = buffer.split('\n\n');
+        buffer = frames.pop() ?? '';
 
-        for (let i = 0; i < lines.length - 1; i++) {
-          const line = lines[i];
-          if (line.startsWith('data: ')) {
-            try {
-              const eventData = JSON.parse(line.substring(6));
+        for (const frame of frames) {
+          const line = frame.split('\n').find((l) => l.startsWith('data: '));
+          if (!line) continue;
 
-              if (eventData.type === 'user_message') {
-                // Optimistically display user message immediately
-                setOptimisticMessage({
-                  id: eventData.id,
-                  role: 'user',
-                  content: messageContent,
-                  createdAt: new Date().toISOString(),
-                });
-              } else if (eventData.type === 'chunk') {
-                setStreamingResponse(prev => prev + eventData.content);
-              } else if (eventData.type === 'complete') {
-                console.log('Stream completed');
-                // Refresh data after completion (optimistic message will be cleared in finally block)
-                queryClient.invalidateQueries({ queryKey: ['/api/foundation-sessions', sessionNumber] });
-                queryClient.invalidateQueries({ queryKey: ['/api/foundation-sessions'] });
-              } else if (eventData.type === 'session_completed') {
-                console.log('Session automatically completed:', eventData);
-                
-                // Session-specific completion messages
-                let description = '';
-                if (eventData.sessionNumber === 1) {
-                  description = `Foundation Session 1 completed automatically. Your primary function has been identified as ${eventData.content?.primaryFunction}.`;
-                } else if (eventData.sessionNumber === 2) {
-                  const tier = eventData.content?.credibilityTier;
-                  const brandClaim = eventData.content?.brandClaim;
-                  description = `Professional Credibility Assessment completed. Achieved Tier ${tier} evidence strength${brandClaim ? `: ${brandClaim}` : ''}.`;
-                } else {
-                  description = `Foundation Session ${eventData.sessionNumber} has been completed successfully.`;
-                }
-                
-                toast({
-                  title: "Session Completed!",
-                  description,
-                  duration: 5000,
-                });
-                // Refresh data after auto-completion
-                queryClient.invalidateQueries({ queryKey: ['/api/foundation-sessions', sessionNumber] });
-                queryClient.invalidateQueries({ queryKey: ['/api/foundation-sessions'] });
-              } else if (eventData.type === 'error') {
-                console.error('Error from server:', eventData.message);
-                throw new Error(eventData.message || 'Server error');
-              }
-            } catch (e) {
-              console.error('Error parsing event data:', e);
-            }
+          let event: any;
+          try {
+            event = JSON.parse(line.slice(6));
+          } catch {
+            // A malformed frame is not worth ending the turn over.
+            continue;
+          }
+
+          if (event.type === 'chunk') {
+            updatePending((p) => ({
+              ...p,
+              phase: 'streaming',
+              assistantText: p.assistantText + event.content,
+            }));
+          } else if (event.type === 'turn_complete') {
+            sawTurnComplete = true;
+            /*
+             * Wing has stopped speaking and both turns are saved. Unlock the
+             * composer now — everything the server does after this point is
+             * measurement, and the student is free to carry on.
+             */
+            updatePending((p) => ({
+              ...p,
+              phase: 'settling',
+              humanTurnId: event.humanTurnId ?? null,
+              assistantTurnId: event.assistantTurnId ?? null,
+            }));
+            queryClient.invalidateQueries({
+              queryKey: ['/api/foundation-sessions', sessionNumber],
+            });
+            // Don't steal focus back to the composer if the student has already
+            // started the next turn.
+            if (isCurrent()) setTimeout(() => messageInputRef.current?.focus(), 0);
+          } else if (event.type === 'session_completed') {
+            const c = event.content ?? {};
+            toast({
+              title: 'Session complete',
+              description:
+                sessionNumber === 1
+                  ? `Your primary function: ${c.primaryFunction ?? 'identified'}.`
+                  : sessionNumber === 2
+                    ? `Tier ${c.credibilityTier} evidence${c.brandClaim ? ` — ${c.brandClaim}` : ''}.`
+                    : `Foundation Session ${sessionNumber} is done.`,
+              duration: 6000,
+            });
+            queryClient.invalidateQueries({
+              queryKey: ['/api/foundation-sessions', sessionNumber],
+            });
+            queryClient.invalidateQueries({ queryKey: ['/api/foundation-sessions'] });
+          } else if (event.type === 'error') {
+            throw new Error(event.message || 'The conversation hit a problem');
           }
         }
-
-        // Keep remaining data for next iteration
-        accumulatedData = lines[lines.length - 1];
       }
 
+      // The body ended. If `turn_complete` never arrived the reply is not
+      // saved, and pretending otherwise would strand a half-turn on screen.
+      // Asked of this turn's own flag, and thrown here, where the catch below
+      // can actually see it.
+      if (!sawTurnComplete) {
+        throw new Error('The connection closed before Wing finished');
+      }
+
+      queryClient.invalidateQueries({ queryKey: ['/api/foundation-sessions'] });
     } catch (error: any) {
+      // A turn that has been superseded fails quietly. Its reply is either
+      // already durable or already gone; either way the student is mid-way
+      // through a newer turn and a destructive toast about an older one would
+      // be both confusing and wrong.
+      if (!isCurrent()) return;
+
+      setPending(null);
+      // Give them their words back rather than making them retype.
+      setCurrentMessage((current) => current || text);
       toast({
-        title: "Error",
-        description: error.message || "Failed to send message",
-        variant: "destructive",
+        title: "That didn't send",
+        description: error?.message || 'Check your connection and try again.',
+        variant: 'destructive',
       });
-    } finally {
-      setIsStreaming(false);
-      // Don't clear streamingResponse here - let useEffect handle it when real message appears
-      setCurrentMessage('');
-      // Note: optimisticMessage and streamingResponse are cleared by useEffect when real messages appear
-      // Refocus the input after clearing the message
-      setTimeout(() => {
-        messageInputRef.current?.focus();
-      }, 0);
+      setTimeout(() => messageInputRef.current?.focus(), 0);
     }
   };
 
-  // Clear optimistic message and streaming response when real messages appear in fetched data
+  /*
+   * Retire the pending turn once the fetched data actually contains it.
+   *
+   * Keyed on the turn ids the server confirmed, not on how many messages there
+   * are. The old version compared `messages.length` to a count captured before
+   * sending — which the optimistic bubble itself inflated, so it could clear
+   * the streamed reply before the real one had arrived. That is the
+   * disappearing text.
+   */
   useEffect(() => {
-    if (optimisticMessage && sessionData?.turns) {
-      const messageExists = messages.some(msg => msg.id === optimisticMessage.id);
-      if (messageExists) {
-        setOptimisticMessage(null);
-      }
-    }
-    
-    // Clear streaming response when new assistant message appears
-    if (streamingResponse && sessionData?.turns) {
-      // Check if we have more messages than before streaming started
-      const currentMessageCount = messages.length;
-      if (currentMessageCount > messageCountBeforeStreamRef.current) {
-        const lastMessage = messages[messages.length - 1];
-        // If the last message is from assistant, the stream has been saved
-        if (lastMessage.role === 'assistant') {
-          setStreamingResponse('');
-        }
-      }
-    }
-  }, [messages, optimisticMessage, streamingResponse]);
+    if (!pending || pending.phase !== 'settling') return;
+    if (pending.assistantTurnId == null) return;
+    if (messages.some((m) => m.id === pending.assistantTurnId)) setPending(null);
+  }, [messages, pending]);
 
-  // Auto-scroll to bottom when new messages arrive
+  // Follow the conversation. `smooth` only while reading; the first paint of a
+  // long transcript should not animate through every turn.
+  const hasScrolledRef = useRef(false);
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages, streamingResponse, optimisticMessage]);
+    messagesEndRef.current?.scrollIntoView({
+      behavior: hasScrolledRef.current ? 'smooth' : 'auto',
+    });
+    hasScrolledRef.current = true;
+  }, [messages, pending?.assistantText, pending?.userText]);
 
   // Handle message submission
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!currentMessage.trim() || isStreaming) {
+    if (!currentMessage.trim() || isSpeaking) {
       return;
     }
 
@@ -597,7 +707,7 @@ export default function FoundationSessionChatPage() {
                   size="sm"
                   className="h-8 shrink-0 px-2 text-xs text-muted-foreground hover:text-destructive"
                   onClick={() => setShowEndSessionDialog(true)}
-                  disabled={isStreaming || endSessionEarlyMutation.isPending}
+                  disabled={isSpeaking || endSessionEarlyMutation.isPending}
                 >
                   <LogOut className="mr-1 h-3.5 w-3.5" />
                   End
@@ -644,40 +754,64 @@ export default function FoundationSessionChatPage() {
                   </div>
                 ))}
 
-                {/* Optimistic user message (shown immediately when sent) */}
-                {optimisticMessage && (
-                  <div 
-                    className="flex gap-3 flex-row-reverse"
-                    data-testid="message-optimistic"
-                  >
+                {/*
+                  The turn in flight.
+
+                  Each bubble is suppressed the moment the real turn is present
+                  in fetched data, so there is never a frame with both. The old
+                  version rendered the streamed copy until an effect cleared it
+                  a frame later, which is where the duplicate flash came from.
+                */}
+                {pending && !messages.some((m) => m.id === pending.humanTurnId) && (
+                  <div className="flex gap-3 flex-row-reverse" data-testid="message-pending-user">
                     <div className="w-8 h-8 rounded-full flex items-center justify-center bg-primary text-primary-foreground">
                       {user?.firstName?.[0]?.toUpperCase() || 'U'}
                     </div>
                     <div className="flex-1 max-w-[calc(100%-6rem)]">
                       <div className="rounded-lg p-4 break-words bg-primary text-primary-foreground ml-8">
-                        <p className="text-sm whitespace-pre-wrap break-words">{optimisticMessage.content}</p>
+                        <p className="text-sm whitespace-pre-wrap break-words">{pending.userText}</p>
                       </div>
-                      <p className="text-xs text-muted-foreground mt-1 text-right">
-                        You • {optimisticMessage.createdAt ? new Date(optimisticMessage.createdAt).toLocaleTimeString() : ""}
-                      </p>
+                      <p className="text-xs text-muted-foreground mt-1 text-right">You</p>
                     </div>
                   </div>
                 )}
 
-                {/* Streaming response */}
-                {streamingResponse && (
-                  <div className="flex gap-3">
-                    <div className="w-8 h-8 bg-muted rounded-full flex items-center justify-center">
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                    </div>
-                    <div className="flex-1 max-w-[calc(100%-6rem)]">
-                      <div className="bg-muted rounded-lg p-4 mr-8 break-words">
-                        <p className="text-sm whitespace-pre-wrap break-words">{streamingResponse}</p>
+                {pending &&
+                  !messages.some((m) => m.id === pending.assistantTurnId) && (
+                    <div className="flex gap-3" data-testid="message-pending-assistant">
+                      <div className="w-8 h-8 bg-muted rounded-full flex items-center justify-center shrink-0">
+                        {pending.phase === 'settling' ? (
+                          'S'
+                        ) : (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        )}
                       </div>
-                      <p className="text-xs text-muted-foreground mt-1">SLI • typing...</p>
+                      <div className="flex-1 max-w-[calc(100%-6rem)]">
+                        <div className="bg-muted rounded-lg p-4 mr-8 break-words">
+                          {pending.assistantText ? (
+                            <p className="text-sm whitespace-pre-wrap break-words">
+                              {pending.assistantText}
+                            </p>
+                          ) : (
+                            /* Nothing has arrived yet. Three dots rather than
+                               an empty bubble, which reads as a broken turn. */
+                            <span className="flex gap-1 py-1" aria-label="Wing is thinking">
+                              {[0, 150, 300].map((delay) => (
+                                <span
+                                  key={delay}
+                                  className="h-1.5 w-1.5 rounded-full bg-muted-foreground/50 animate-pulse"
+                                  style={{ animationDelay: `${delay}ms` }}
+                                />
+                              ))}
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          SLI{pending.phase === 'settling' ? '' : ' • typing...'}
+                        </p>
+                      </div>
                     </div>
-                  </div>
-                )}
+                  )}
 
                 <div ref={messagesEndRef} />
               </div>
@@ -691,7 +825,7 @@ export default function FoundationSessionChatPage() {
                     <VoiceMicButton
                       isRecording={voiceRecording.isRecording}
                       isProcessing={voiceRecording.isProcessing}
-                      disabled={isStreaming}
+                      disabled={isSpeaking}
                       onClick={voiceRecording.toggleRecording}
                     />
                     <Textarea
@@ -712,17 +846,17 @@ export default function FoundationSessionChatPage() {
                           handleSendMessage(e);
                         }
                       }}
-                      disabled={isStreaming || voiceRecording.isRecording}
+                      disabled={isSpeaking || voiceRecording.isRecording}
                       data-testid="input-message"
                     />
                     <Button 
                       type="submit" 
                       size="default"
-                      disabled={!currentMessage.trim() || isStreaming || voiceRecording.isRecording}
+                      disabled={!currentMessage.trim() || isSpeaking || voiceRecording.isRecording}
                       data-testid="button-send-message"
                       className="h-[60px]"
                     >
-                      {isStreaming ? (
+                      {isSpeaking ? (
                         <Loader2 className="h-4 w-4 animate-spin" />
                       ) : (
                         <Send className="h-4 w-4" />
@@ -823,6 +957,13 @@ export default function FoundationSessionChatPage() {
                   className="border-0 bg-transparent p-0"
                   sessionNumber={sessionNumber}
                   initialTimerElapsed={session.timerElapsedSeconds || 0}
+                  /*
+                    Display only. The desktop instance above owns persistence —
+                    both are mounted at every width, so leaving this on doubled
+                    every write. Counting is local, so this still shows the
+                    right time.
+                  */
+                  persist={false}
                 />
                 {session.status === 'in_progress' && (
                   <Button
@@ -830,7 +971,7 @@ export default function FoundationSessionChatPage() {
                     size="sm"
                     className="w-full text-muted-foreground hover:text-destructive hover:border-destructive"
                     onClick={() => setShowEndSessionDialog(true)}
-                    disabled={isStreaming || endSessionEarlyMutation.isPending}
+                    disabled={isSpeaking || endSessionEarlyMutation.isPending}
                   >
                     <LogOut className="h-3.5 w-3.5 mr-2" />
                     End Session Early

@@ -1,6 +1,6 @@
 import { InsertSli, UserProfile } from '@shared/schema';
 import { log } from './logger';
-import { analyzeDocument } from './claude';
+import { analyzeDocument } from './document-analysis';
 import { hasContent } from './document-data';
 import * as orchestrator from "./orchestrator";
 
@@ -29,12 +29,12 @@ async function callWithRetry<T>(
       const backoffTime = initialBackoff * Math.pow(2, retries);
       retries++;
       
-      log(`Rate limit exceeded for ${identifier}. Retrying in ${backoffTime/1000} seconds (retry ${retries}/${maxRetries})`, "claude");
+      log(`Rate limit exceeded for ${identifier}. Retrying in ${backoffTime/1000} seconds (retry ${retries}/${maxRetries})`, "sli");
       
       // Wait for the backoff period
       await new Promise(resolve => setTimeout(resolve, backoffTime));
       
-      log(`Resuming ${identifier} after backoff`, "claude");
+      log(`Resuming ${identifier} after backoff`, "sli");
     }
   }
 }
@@ -65,13 +65,13 @@ async function summarizeResume(document: any): Promise<string> {
   try {
     // Check if we already have an analysis saved
     if (document.analysisContent) {
-      log(`Using existing resume analysis for document: ${document.name}`, "claude");
+      log(`Using existing resume analysis for document: ${document.name}`, "sli");
       return `Resume Analysis (${document.fileName}):\n${document.analysisContent}`;
     }
     
-    // If the fileData is available, analyze it with Claude
+    // If the fileData is available, analyze it with the model
     if (hasContent(document)) {
-      log(`Analyzing resume content for document: ${document.name}`, "claude");
+      log(`Analyzing resume content for document: ${document.name}`, "sli");
       
       // Use the shared document analysis function
       const summary = await analyzeDocument(document);
@@ -85,7 +85,7 @@ async function summarizeResume(document: any): Promise<string> {
       return `Resume filename: ${document.fileName}\nNote: The resume content is not available for detailed analysis.`;
     }
   } catch (error) {
-    log(`Error analyzing resume: ${error}`, "claude");
+    log(`Error analyzing resume: ${error}`, "sli");
     return `Resume filename: ${document.fileName}\nNote: Could not analyze the resume content due to an error.`;
   }
 }
@@ -99,13 +99,13 @@ async function summarizeLinkedIn(document: any): Promise<string> {
   try {
     // Check if we already have an analysis saved
     if (document.analysisContent) {
-      log(`Using existing LinkedIn analysis for document: ${document.name}`, "claude");
+      log(`Using existing LinkedIn analysis for document: ${document.name}`, "sli");
       return `LinkedIn Profile Analysis (${document.fileName}):\n${document.analysisContent}`;
     }
     
-    // If the fileData is available, analyze it with Claude
+    // If the fileData is available, analyze it with the model
     if (hasContent(document)) {
-      log(`Analyzing LinkedIn profile content for document: ${document.name}`, "claude");
+      log(`Analyzing LinkedIn profile content for document: ${document.name}`, "sli");
       
       // Use the shared document analysis function
       const summary = await analyzeDocument(document);
@@ -119,7 +119,7 @@ async function summarizeLinkedIn(document: any): Promise<string> {
       return `LinkedIn profile filename: ${document.fileName}\nNote: The profile content is not available for detailed analysis.`;
     }
   } catch (error) {
-    log(`Error analyzing LinkedIn profile: ${error}`, "claude");
+    log(`Error analyzing LinkedIn profile: ${error}`, "sli");
     return `LinkedIn profile filename: ${document.fileName}\nNote: Could not analyze the profile content due to an error.`;
   }
 }
@@ -137,14 +137,14 @@ async function summarizeAdditionalDocs(documents: any[]): Promise<string> {
     try {
       // Check if we already have an analysis saved
       if (doc.analysisContent) {
-        log(`Using existing analysis for document: ${doc.name}`, "claude");
+        log(`Using existing analysis for document: ${doc.name}`, "sli");
         summaries.push(`Document: ${doc.name} (${doc.fileName})\nSummary: ${doc.analysisContent}`);
         continue;
       }
       
-      // If the fileData is available, analyze it with Claude
+      // If the fileData is available, analyze it with the model
       if (hasContent(doc)) {
-        log(`Analyzing additional document content for: ${doc.name}`, "claude");
+        log(`Analyzing additional document content for: ${doc.name}`, "sli");
         
         // Use the shared document analysis function
         const summary = await analyzeDocument(doc);
@@ -158,7 +158,7 @@ async function summarizeAdditionalDocs(documents: any[]): Promise<string> {
         summaries.push(`Document: ${doc.name} (${doc.fileName})\nNote: Content not available for analysis.`);
       }
     } catch (error) {
-      log(`Error analyzing additional document ${doc.name}: ${error}`, "claude");
+      log(`Error analyzing additional document ${doc.name}: ${error}`, "sli");
       summaries.push(`Document: ${doc.name} (${doc.fileName})\nNote: Could not analyze the document content due to an error.`);
     }
   }
@@ -167,13 +167,13 @@ async function summarizeAdditionalDocs(documents: any[]): Promise<string> {
 }
 
 /**
- * Generate a concise foundation sessions summary using Claude
+ * Generate a concise foundation sessions summary using the model
  */
 async function generateFoundationSessionsSummary(foundationSessions: any[]): Promise<string> {
-  log(`Processing ${foundationSessions?.length || 0} total foundation sessions`, "claude");
+  log(`Processing ${foundationSessions?.length || 0} total foundation sessions`, "sli");
   
   if (!foundationSessions || foundationSessions.length === 0) {
-    log(`No foundation sessions provided`, "claude");
+    log(`No foundation sessions provided`, "sli");
     return "No foundation sessions completed";
   }
   
@@ -183,14 +183,14 @@ async function generateFoundationSessionsSummary(foundationSessions: any[]): Pro
     .sort((a, b) => a.sessionNumber - b.sessionNumber);
   
   const sessionNumbers = completedSessions.map(s => s.sessionNumber);
-  log(`Found ${completedSessions.length} completed sessions: [${sessionNumbers.join(',')}]`, "claude");
+  log(`Found ${completedSessions.length} completed sessions: [${sessionNumbers.join(',')}]`, "sli");
   
   if (completedSessions.length === 0) {
-    log(`No completed sessions found`, "claude");
+    log(`No completed sessions found`, "sli");
     return "No foundation sessions completed";
   }
   
-  // Prepare clean data for Claude
+  // Prepare clean data for the model
   const sessionsData = completedSessions.map(session => ({
     sessionNumber: session.sessionNumber,
     completionData: session.completionData,
@@ -198,7 +198,7 @@ async function generateFoundationSessionsSummary(foundationSessions: any[]): Pro
   }));
   
   try {
-    log(`Sending foundation sessions data to Claude for summarization`, "claude");
+    log(`Summarising foundation sessions data`, "sli");
     
     const systemPrompt = `You are a professional branding strategist assistant. Create a concise, well-structured summary of foundation sessions completion data that will be used for SLI generation. Focus on key insights, functional positioning, credibility factors, and positioning stories. Keep the summary professional and avoid special characters that could break JSON parsing.`;
     
@@ -219,11 +219,11 @@ async function generateFoundationSessionsSummary(foundationSessions: any[]): Pro
 
     const summaryContent = response.text || 'Foundation sessions summary not available';
     
-    log(`Generated foundation sessions summary: ${summaryContent.length} characters`, "claude");
+    log(`Generated foundation sessions summary: ${summaryContent.length} characters`, "sli");
     return summaryContent;
     
   } catch (error) {
-    log(`Error generating foundation sessions summary: ${error}`, "claude");
+    log(`Error generating foundation sessions summary: ${error}`, "sli");
     return "Foundation sessions data available but summary generation failed";
   }
 }
@@ -264,7 +264,7 @@ function sanitizeJsonString(str: string): string {
  */
 export async function generateSLIs(userProfile: any): Promise<InsertSli | null> {
   try {
-    log(`Generating SLIs for user: ${userProfile.id}`, "claude");
+    log(`Generating SLIs for user: ${userProfile.id}`, "sli");
     
     // Extract questionnaire data
     const questionnaireSummary = await summarizeQuestionnaire(userProfile.questionnaire);
@@ -281,25 +281,25 @@ export async function generateSLIs(userProfile: any): Promise<InsertSli | null> 
     const additionalDocs = userProfile.documents?.filter((doc: any) => doc.type !== 'resume' && doc.type !== 'linkedin') || [];
     const additionalDocsSummary = await summarizeAdditionalDocs(additionalDocs);
     
-    // Get foundation sessions summary using Claude
+    // Get foundation sessions summary using the model
     const foundationSessionsSummary = await generateFoundationSessionsSummary(userProfile.foundationSessions || []);
     
-    // Log foundation sessions data being sent to Claude
+    // Log foundation sessions data being sent to the model
     const completedCount = userProfile.foundationSessions?.filter((s: any) => s.status === 'completed').length || 0;
-    log(`Foundation sessions: ${userProfile.foundationSessions?.length || 0} total, ${completedCount} completed, summary: ${foundationSessionsSummary.length} chars`, "claude");
+    log(`Foundation sessions: ${userProfile.foundationSessions?.length || 0} total, ${completedCount} completed, summary: ${foundationSessionsSummary.length} chars`, "sli");
     
     // Log full content only in debug mode to avoid PII exposure
     if (process.env.DEBUG_SLI === 'true') {
       const truncatedSummary = foundationSessionsSummary.length > 500 
         ? foundationSessionsSummary.substring(0, 500) + '...[truncated]'
         : foundationSessionsSummary;
-      log(`Foundation sessions summary: ${truncatedSummary}`, "claude");
+      log(`Foundation sessions summary: ${truncatedSummary}`, "sli");
     }
     
     // Get coaching notes
     const coachingNotesSummary = await getLatestCoachingNotes(userProfile.coachingNotes || []);
     
-    // System prompt for Claude
+    // System prompt for the model
     const systemPrompt = `You are a professional branding strategist working with SLI.pro to craft three powerful, distinct SLIs (Single Lasting Impressions) for a client. Each SLI should balance authenticity and aspiration, serving as a conversationally shareable brand statement.
 
 An SLI is a clear, conversational sentence that expresses the user's unique value proposition—ideal for networking and casual introductions. It connects their authentic experience with their aspirational direction and reflects their natural communication style.
@@ -360,16 +360,16 @@ ${coachingNotesSummary}
 
 Please generate three distinct, compelling SLI options that this person can use in professional settings.`;
 
-    // Call Claude API with retry mechanism
-    log(`Calling Claude API to generate SLIs`, "claude");
+    // Call the model with retry
+    log(`Generating SLIs`, "sli");
     
-    // Log payload verification before Claude API call
+    // Log payload verification before the model call
     const hasFoundationSections = userMessage.includes('FOUNDATION SESSIONS SUMMARY');
     const startIdx = userMessage.indexOf('FOUNDATION SESSIONS SUMMARY');
     const endIdx = userMessage.indexOf('COACHING NOTES');
     const sectionLength = (startIdx >= 0 && endIdx >= 0) ? endIdx - startIdx : -1;
     
-    log(`Sending to Claude API - contains foundation sessions: ${hasFoundationSections}, section length: ${sectionLength} chars`, "claude");
+    log(`Sending to the model — contains foundation sessions: ${hasFoundationSections}, section length: ${sectionLength} chars`, "sli");
     const response = await callWithRetry(
       () => orchestrator.complete({
         tier: "flagship", // SLI generation is quality-critical
@@ -402,9 +402,9 @@ Please generate three distinct, compelling SLI options that this person can use 
     try {
       const sanitizedJson = sanitizeJsonString(jsonStr);
       sliData = JSON.parse(sanitizedJson);
-      log(`Successfully parsed SLI JSON response`, "claude");
+      log(`Successfully parsed SLI JSON response`, "sli");
     } catch (firstError) {
-      log(`First JSON parse failed: ${firstError}`, "claude");
+      log(`First JSON parse failed: ${firstError}`, "sli");
       
       // Try to fix common JSON issues and retry
       try {
@@ -416,14 +416,14 @@ Please generate three distinct, compelling SLI options that this person can use 
           .trim();
         
         sliData = JSON.parse(fixedJson);
-        log(`Successfully parsed SLI JSON after sanitization`, "claude");
+        log(`Successfully parsed SLI JSON after sanitization`, "sli");
       } catch (secondError) {
-        log(`JSON parsing failed after sanitization. Raw response length: ${responseContent.length}`, "claude");
-        log(`Error location: ${secondError}`, "claude");
+        log(`JSON parsing failed after sanitization. Raw response length: ${responseContent.length}`, "sli");
+        log(`Error location: ${secondError}`, "sli");
         
         // Log a snippet around the error for debugging
         if (process.env.DEBUG_SLI === 'true') {
-          log(`Raw response snippet: ${responseContent.substring(0, 200)}...`, "claude");
+          log(`Raw response snippet: ${responseContent.substring(0, 200)}...`, "sli");
         }
         return null;
       }
@@ -448,11 +448,11 @@ Please generate three distinct, compelling SLI options that this person can use 
       
       return sli;
     } catch (error) {
-      log(`Error creating SLI object from parsed data: ${error}`, "claude");
+      log(`Error creating SLI object from parsed data: ${error}`, "sli");
       return null;
     }
   } catch (error) {
-    log(`Error generating SLIs: ${error}`, "claude");
+    log(`Error generating SLIs: ${error}`, "sli");
     return null;
   }
 }

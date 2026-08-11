@@ -4,7 +4,7 @@ import * as wingStore from "./wing/session-store";
 import * as orchestrator from "./orchestrator";
 import * as identity from "./wing/identity-store";
 
-// Helper function to safely call Claude with retries
+// Helper function to safely call the model with retries
 async function callWithRetry<T>(
   fn: () => Promise<T>,
   maxRetries = 3,
@@ -16,17 +16,17 @@ async function callWithRetry<T>(
   while (attempts < maxRetries) {
     try {
       attempts++;
-      console.log(`[claude] Sending request to Claude for LinkedIn optimization (Attempt ${attempts}/${maxRetries})`);
+      console.log(`[linkedin-optimization] Requesting LinkedIn optimization (Attempt ${attempts}/${maxRetries})`);
       return await fn();
     } catch (error: any) {
       if (error.status === 429) {
-        console.log(`[claude] Rate limit exceeded. Retrying in ${backoff / 60000} seconds...`);
+        console.log(`[linkedin-optimization] Rate limit exceeded. Retrying in ${backoff / 60000} seconds...`);
         await new Promise((resolve) => setTimeout(resolve, backoff));
         backoff *= 2; // Exponential backoff
         continue;
       }
       
-      console.error(`[claude] Error calling Claude API (Attempt ${attempts}/${maxRetries}):`, error);
+      console.error(`[linkedin-optimization] Model call failed (Attempt ${attempts}/${maxRetries}):`, error);
       
       if (attempts >= maxRetries) {
         throw error;
@@ -292,33 +292,33 @@ Please analyze this information and provide detailed, actionable recommendations
       );
 
       let content = response.text || '';
-      console.log("[claude] Extracted text content:", content.substring(0, 200) + "...");
+      console.log("[linkedin-optimization] Extracted text content:", content.substring(0, 200) + "...");
       
       // Clean up the response if it's wrapped in markdown code blocks
       if (content.startsWith("```json") || content.startsWith("```")) {
-        console.log("[claude] Detected markdown code block, removing delimiters");
+        console.log("[linkedin-optimization] Detected markdown code block, removing delimiters");
         content = content.replace(/^```json\s*\n|\n```$/g, "");  // Remove ```json and ``` markers
         content = content.replace(/^```\s*\n|\n```$/g, "");      // In case there's no "json" specified
       }
       
-      // Further cleanup - sometimes Claude adds spaces or newlines
+      // Further cleanup - sometimes the model adds spaces or newlines
       content = content.trim();
       
-      console.log("[claude] Cleaned response for parsing:", content.substring(0, 100) + "...");
+      console.log("[linkedin-optimization] Cleaned response for parsing:", content.substring(0, 100) + "...");
       
       try {
         const parsedContent = JSON.parse(content);
-        console.log("[claude] Successfully parsed JSON response");
+        console.log("[linkedin-optimization] Successfully parsed JSON response");
         return parsedContent;
       } catch (parseError) {
-        console.error("[claude] JSON parse error after cleanup:", parseError);
-        console.error("[claude] First 500 chars of content:", content.substring(0, 500));
+        console.error("[linkedin-optimization] JSON parse error after cleanup:", parseError);
+        console.error("[linkedin-optimization] First 500 chars of content:", content.substring(0, 500));
         throw parseError;
       }
     } catch (error) {
-      console.error("[claude] Error in LinkedIn optimization function:", error);
+      console.error("[linkedin-optimization] Error in LinkedIn optimization function:", error);
       if (error instanceof SyntaxError) {
-        console.error("[claude] JSON parse error - likely invalid response format");
+        console.error("[linkedin-optimization] JSON parse error - likely invalid response format");
       }
       throw error;
     }

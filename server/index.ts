@@ -58,6 +58,16 @@ app.use((req, res, next) => {
   // Load secrets from Key Vault (if configured) and validate required config
   // BEFORE importing route modules, which read process.env at import time.
   await loadConfig();
+
+  // One line at startup naming the deployments this replica will call. Cheap,
+  // and it turns "why is the nano classifier behaving oddly" into something you
+  // can answer from the log rather than by reading environment variables out of
+  // a running container.
+  {
+    const orchestrator = await import("./orchestrator");
+    log(`models: ${orchestrator.describeModels()}`, "orchestrator");
+  }
+
   const { registerRoutes } = await import("./routes");
 
   // Readiness: reports whether backing services are reachable. Used for
@@ -72,13 +82,38 @@ app.use((req, res, next) => {
       checks.database = `error: ${err?.message ?? err}`;
     }
 
+    // Azure OpenAI is the only provider, so "which provider" is no longer the
+    // useful question — "which deployments" is. A tier with no deployment
+    // throws on first use, and that is worth seeing from outside the process
+    // rather than discovering when a student sends a turn.
+    // Azure OpenAI is the only provider, so "which provider" is no longer the
+    // useful question — "which deployments" is.
+    //
+    // Readiness gates on the endpoint and the mid tier only, and that split is
+    // deliberate: `azureDeployment()` falls back to _MID for any tier without
+    // its own deployment, so a missing _NANO degrades (nano work runs on mid)
+    // while a missing endpoint or _MID cannot serve anything. Taking a replica
+    // out of rotation for a survivable gap would be worse than the gap.
     const orchestrator = await import("./orchestrator");
-    checks.llmProvider = orchestrator.activeProvider();
+    const llm = orchestrator.modelConfiguration();
+    const fatal = !llm.endpoint
+      ? "AZURE_OPENAI_ENDPOINT is not set"
+      : !llm.deployments.mid
+        ? "AZURE_OPENAI_DEPLOYMENT_MID is not set (every tier falls back to it)"
+        : null;
+    const degraded = Object.entries(llm.deployments)
+      .filter(([tier, v]) => !v && tier !== "mid")
+      .map(([tier]) => tier);
+    checks.llm = fatal
+      ? `error: ${fatal}`
+      : degraded.length
+        ? `degraded: no deployment for ${degraded.join(", ")} — using mid`
+        : `ok (${Object.values(llm.deployments).join(", ")})`;
 
     const blob = await import("./blob-storage");
     checks.blobStorage = blob.isConfigured() ? "configured" : "not configured";
 
-    const ready = checks.database === "ok";
+    const ready = checks.database === "ok" && !checks.llm.startsWith("error");
     res.status(ready ? 200 : 503).json({ ready, checks });
   });
 

@@ -147,7 +147,6 @@ export async function replay(params: {
     ? renderMethodology(params.sections)
     : undefined;
   const sessionStore = await import("./session-store");
-  const profileStore = await import("./profile-store");
 
   // Foundation Sessions and Enhancement Modules have separate completion
   // functions with different signatures. Replay dispatches to whichever one
@@ -169,8 +168,6 @@ export async function replay(params: {
       const messages = await sessionStore.getTurnsAsMessages(candidate.sessionId);
       if (messages.length < 2) continue;
 
-      const userProfile = await profileStore.getUserProfile(candidate.legacyUserId);
-
       // The REAL completion path, with the draft criteria substituted. A
       // separate implementation would drift and reassure about the wrong code.
       const result = isModule
@@ -178,7 +175,6 @@ export async function replay(params: {
             candidate.legacyUserId,
             moduleCode!,
             messages,
-            userProfile,
             candidate.professionalStatus,
             rendered,
           )
@@ -187,7 +183,7 @@ export async function replay(params: {
             candidate.studentId,
             sessionNumber,
             messages,
-            userProfile,
+            candidate.professionalStatus,
             rendered,
             renderedMethodology,
           );

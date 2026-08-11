@@ -4,6 +4,9 @@ import * as sliStore from "./sli-store";
 import * as intakeStore from "./intake-store";
 import * as artifactStore from "./artifact-store";
 import * as sessionStore from "./session-store";
+import { eq } from "drizzle-orm";
+import { db } from "../db";
+import { users as wingUsers } from "@shared/wing-schema";
 
 /**
  * The composed user profile, assembled from wing sources.
@@ -61,3 +64,28 @@ export async function getUserProfile(wingUserId: number) {
 export type WingUserProfile = NonNullable<
   Awaited<ReturnType<typeof getUserProfile>>
 >;
+
+/**
+ * Just the student's population.
+ *
+ * ── WHY THIS EXISTS SEPARATELY FROM getUserProfile ───────────────────────
+ * `getUserProfile()` runs six queries and returns every document with its
+ * `extracted_text` (a resume and a LinkedIn export in full), every session with
+ * its artifact jsonb, plus SLIs and freshness reports. That is the right
+ * payload for the student's own dashboard.
+ *
+ * The Foundation Session turn handler called it once per turn — and used
+ * exactly one field from it, `professionalStatus`, to pick a prompt set. Every
+ * single reference. So each turn loaded megabytes of document text, on the
+ * critical path, before the model was even asked to start, to read one enum.
+ *
+ * One column, one row, one index lookup.
+ */
+export async function getProfessionalStatus(wingUserId: number): Promise<string | null> {
+  const [row] = await db
+    .select({ professionalStatus: wingUsers.professionalStatus })
+    .from(wingUsers)
+    .where(eq(wingUsers.id, wingUserId))
+    .limit(1);
+  return (row?.professionalStatus as string | null) ?? null;
+}

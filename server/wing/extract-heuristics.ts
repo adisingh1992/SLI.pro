@@ -227,7 +227,7 @@ async function main() {
   }
 
   console.log(
-    `[extract] ${sources.length} file(s), provider ${orchestrator.activeProvider()}` +
+    `[extract] ${sources.length} file(s), models ${orchestrator.describeModels()}` +
       (DRY_RUN ? " — DRY RUN, no database writes" : ""),
   );
 

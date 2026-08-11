@@ -8,7 +8,6 @@ import * as docStore from "./wing/document-store";
 import * as profileStore from "./wing/profile-store";
 import * as identity from "./wing/identity-store";
 
-log(`LLM provider: ${orchestrator.activeProvider()}`, "orchestrator");
 
 // Define the system prompt template to be used with each conversation
 const getSystemPrompt = (userData: {
@@ -155,8 +154,8 @@ function extractContentCreation(aspirations: string): string {
 }
 
 /*
- * REMOVED: generateClaudeResponse, generateConversationSummary and
- * generateStreamingClaudeResponse.
+ * REMOVED: the three general coaching-conversation functions that used to
+ * live here (a completion, a streaming completion, and a summariser).
  *
  * All three served the MVP's general "coaching conversation" feature, which
  * Foundation Sessions replaced. Its server routes were dropped in the Wing
@@ -194,12 +193,12 @@ async function callWithRetry<T>(
       const backoffTime = initialBackoff * Math.pow(2, retries);
       retries++;
       
-      log(`Rate limit exceeded for ${identifier}. Retrying in ${backoffTime/1000} seconds (retry ${retries}/${maxRetries})`, "claude");
+      log(`Rate limit exceeded for ${identifier}. Retrying in ${backoffTime/1000} seconds (retry ${retries}/${maxRetries})`, "document-analysis");
       
       // Wait for the backoff period
       await new Promise(resolve => setTimeout(resolve, backoffTime));
       
-      log(`Resuming ${identifier} after backoff`, "claude");
+      log(`Resuming ${identifier} after backoff`, "document-analysis");
     }
   }
 }
@@ -208,18 +207,18 @@ export async function analyzeDocument(document: Document): Promise<string | null
   try {
     // Skip analysis if the document has no retrievable content (inline or Blob)
     if (!hasContent(document)) {
-      log(`No file data available for document ${document.id}`, "claude");
+      log(`No file data available for document ${document.id}`, "document-analysis");
       return null;
     }
 
     // Get document type and check if we already have an analysis
     const documentType = document.type.toLowerCase();
     if (document.analysisContent) {
-      log(`Document ${document.id} already has analysis content`, "claude");
+      log(`Document ${document.id} already has analysis content`, "document-analysis");
       return document.analysisContent;
     }
 
-    log(`Analyzing document ${document.id} of type ${documentType}`, "claude");
+    log(`Analyzing document ${document.id} of type ${documentType}`, "document-analysis");
 
     // Create prompt based on document type
     let analysisPrompt = "";
@@ -279,11 +278,11 @@ export async function analyzeDocument(document: Document): Promise<string | null
     }
 
     // Extract readable text from the document using proper parsing libraries
-    log(`Extracting text from document: ${document.fileName}`, "claude");
+    log(`Extracting text from document: ${document.fileName}`, "document-analysis");
     const extractedText = await extractDocumentText(await getDocumentBase64(document), document.fileName);
     const cleanedText = validateExtractedText(extractedText);
     
-    log(`Successfully extracted ${cleanedText.length} characters of text`, "claude");
+    log(`Successfully extracted ${cleanedText.length} characters of text`, "document-analysis");
     const fullPrompt = `${analysisPrompt}\n\nDocument content:\n${cleanedText}`;
 
     // Use callWithRetry for API calls with exponential backoff
@@ -313,9 +312,9 @@ export async function analyzeDocument(document: Document): Promise<string | null
         if (textContent) {
           try {
             await docStore.updateDocument(document.id, { analysisContent: textContent });
-            log(`Saved analysis for document: ${document.name}`, "claude");
+            log(`Saved analysis for document: ${document.name}`, "document-analysis");
           } catch (saveError) {
-            log(`Error saving document analysis: ${saveError}`, "claude");
+            log(`Error saving document analysis: ${saveError}`, "document-analysis");
           }
         }
         
@@ -325,7 +324,7 @@ export async function analyzeDocument(document: Document): Promise<string | null
 
     return null;
   } catch (error) {
-    log(`Error analyzing document ${document.id}: ${error}`, "claude");
+    log(`Error analyzing document ${document.id}: ${error}`, "document-analysis");
     return null;
   }
 }

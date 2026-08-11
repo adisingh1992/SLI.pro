@@ -242,8 +242,17 @@ export default function EnhancementModuleChatPage() {
               } else if (eventData.type === 'chunk') {
                 setStreamingResponse(prev => prev + eventData.content);
               } else if (eventData.type === 'complete') {
-                console.log('Stream completed');
-                // Refresh data after completion (optimistic message will be cleared in finally block)
+                /*
+                 * Wing has finished speaking and the reply is saved. Release
+                 * the composer HERE rather than when the response body ends —
+                 * the server keeps the connection open past this point to run
+                 * the module completion analysis, which is a model call over
+                 * the whole transcript that the student has no reason to wait
+                 * through. Clearing it in `finally` meant a finished reply sat
+                 * on screen with the input disabled for several more seconds,
+                 * every turn.
+                 */
+                setIsStreaming(false);
                 queryClient.invalidateQueries({ queryKey: ['/api/enhancement-modules', moduleCode] });
                 queryClient.invalidateQueries({ queryKey: ['/api/enhancement-modules'] });
               } else if (eventData.type === 'module_completed') {

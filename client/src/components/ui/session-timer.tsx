@@ -13,6 +13,13 @@ interface SessionTimerProps {
   sessionNumber?: number;
   initialTimerElapsed?: number;
   onTimerSave?: (elapsed: number) => Promise<void>;
+  /**
+   * Whether this instance writes elapsed time back to the server.
+   *
+   * A screen that renders the timer twice — one for desktop, one for mobile —
+   * must set this on exactly one of them. Both display identically either way.
+   */
+  persist?: boolean;
 }
 
 export function SessionTimer({ 
@@ -22,7 +29,8 @@ export function SessionTimer({
   className,
   sessionNumber,
   initialTimerElapsed = 0,
-  onTimerSave
+  onTimerSave,
+  persist = true,
 }: SessionTimerProps) {
   // Use session-specific config if not provided
   const sessionConfig = config || 
@@ -30,7 +38,13 @@ export function SessionTimer({
      sessionNumber === 3 ? SESSION_3_CONFIG : 
      DEFAULT_FOUNDATION_SESSION_CONFIG);
   
-  const timer = useSessionTimer(sessionConfig, sessionNumber, initialTimerElapsed, onTimerSave);
+  const timer = useSessionTimer(
+    sessionConfig,
+    sessionNumber,
+    initialTimerElapsed,
+    onTimerSave,
+    persist,
+  );
 
   // Auto-start timer when session becomes active
   useEffect(() => {

@@ -3,6 +3,7 @@ import { db } from "../db";
 import {
   sessions,
   sessionArtifacts,
+  students,
   transcripts,
   transcriptTurns,
 } from "@shared/wing-schema";
@@ -313,4 +314,40 @@ export async function getArtifact(sessionId: number, artifactType: ArtifactType)
     .orderBy(desc(sessionArtifacts.version))
     .limit(1);
   return row ?? null;
+}
+
+/**
+ * The student's session for a type, in one round trip.
+ *
+ * ── WHY THIS EXISTS ──────────────────────────────────────────────────────
+ * `studentIdFor()` then `getSession()` is the opening of nearly every session
+ * endpoint, and it is two sequential queries to answer one question. On a
+ * co-located database that is invisible. Against a remote one — local
+ * development pointed at the stage database, which is how this project is
+ * actually developed — each hop is one to two seconds of pure latency, and the
+ * session timer alone was spending six seconds on three trivial statements.
+ *
+ * Joining through `students` costs nothing extra: `students.user_id` is unique
+ * and indexed, and the session lookup was already filtered by `student_id`.
+ *
+ * Returns the student id alongside the session because most callers need both,
+ * and returning only the session would send them back for the id.
+ */
+export async function getSessionForUser(
+  wingUserId: number,
+  sessionType: WingSessionType,
+): Promise<{ studentId: number; session: typeof sessions.$inferSelect | null } | null> {
+  const rows = await db
+    .select({ studentId: students.id, session: sessions })
+    .from(students)
+    .leftJoin(
+      sessions,
+      and(eq(sessions.studentId, students.id), eq(sessions.sessionType, sessionType)),
+    )
+    .where(eq(students.userId, wingUserId))
+    .orderBy(desc(sessions.createdAt))
+    .limit(1);
+
+  if (!rows.length) return null;
+  return { studentId: rows[0].studentId, session: rows[0].session ?? null };
 }

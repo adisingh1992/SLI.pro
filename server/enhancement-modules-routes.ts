@@ -997,7 +997,7 @@ export function setupEnhancementModulesRoutes(app: Express) {
         // Get all messages from this module for context
         const messages = await moduleStore.getEnhancementModuleMessages(module.id);
 
-        // Format messages for Claude API
+        // Format messages for the model
         const formattedMessages = messages.map((msg) => ({
           role: msg.role as "user" | "assistant",
           content: msg.content,
@@ -1121,6 +1121,21 @@ export function setupEnhancementModulesRoutes(app: Express) {
             },
           );
 
+          /*
+           * ── THE TURN IS OVER HERE ──────────────────────────────────────────
+           * Same change as the Foundation Session stream, for the same reason.
+           * `complete` is what releases the composer, and it used to sit AFTER
+           * `checkModuleCompletion` — a model call over the whole transcript,
+           * run on every single turn. The student watched a finished reply with
+           * the input still disabled for several more seconds.
+           *
+           * The connection stays open so `module_completed` can still be
+           * delivered if this turn happened to finish the module.
+           */
+          res.write(
+            `data: ${JSON.stringify({ type: "complete", messageId: assistantMessage.id })}\n\n`,
+          );
+
           // Check for automatic completion
           const allMessages = await moduleStore.getEnhancementModuleMessages(
             module.id,
@@ -1154,13 +1169,11 @@ export function setupEnhancementModulesRoutes(app: Express) {
             );
           }
 
-          // Send completion signal
-          res.write(
-            `data: ${JSON.stringify({ type: "complete", messageId: assistantMessage.id })}\n\n`,
-          );
+          // `complete` was sent above, before the analysis. Nothing left to
+          // announce.
           res.end();
         } catch (streamError) {
-          console.error("Error in Claude streaming:", streamError);
+          console.error("Error in model streaming:", streamError);
           res.write(
             `data: ${JSON.stringify({ type: "error", message: "Failed to generate response" })}\n\n`,
           );

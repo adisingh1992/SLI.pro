@@ -3,6 +3,7 @@ import { Loader2 } from "lucide-react";
 import { Redirect, Route } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { UserProfile, BrandingIntake } from "@shared/schema";
+import { ErrorBoundary } from "@/components/error-boundary";
 
 export function ProtectedRoute({
   path,
@@ -60,5 +61,24 @@ export function ProtectedRoute({
     );
   }
 
-  return <Route path={path} component={Component} />;
+  /*
+   * Every authenticated page renders inside an error boundary.
+   *
+   * Placed here rather than around individual pages because the failure this
+   * responds to was not specific to one screen: React unmounts the whole tree
+   * on an unhandled render error, so *any* page throwing takes the entire app
+   * to a blank white document. That happened mid-session — twenty minutes into
+   * a Foundation Session, the student's screen simply went empty.
+   *
+   * The children form, not `component`, so the boundary sits between the route
+   * and the page. Every page here reads its params with `useParams()`, so
+   * nothing depends on the props `component` would have passed.
+   */
+  return (
+    <Route path={path}>
+      <ErrorBoundary context={path}>
+        <Component />
+      </ErrorBoundary>
+    </Route>
+  );
 }

@@ -13,15 +13,31 @@ import { type Server } from "http";
 import viteConfig from "../vite.config";
 import { nanoid } from "nanoid";
 import { log } from "./logger";
+import { config } from "./config";
 
 const viteLogger = createLogger();
 
 
 export async function setupVite(app: Express, server: Server) {
+  /*
+   * ── HMR NEEDS TO BE TOLD THE PORT ────────────────────────────────────────
+   * In middleware mode Vite shares this HTTP server, so there is no separate
+   * dev-server port for it to infer from. Without `clientPort` the injected
+   * client builds its socket URL from a port it never received and produces:
+   *
+   *   WebSocket connection to 'ws://localhost:undefined/?token=…' failed
+   *   SyntaxError: Failed to construct 'WebSocket': The URL is invalid.
+   *
+   * That is not cosmetic. When the HMR socket never connects, edits do not hot
+   * apply — the browser keeps running whatever bundle it loaded, so saving a
+   * file appears to do nothing and the page has to be hard-reloaded to pick up
+   * a change. Two separate rounds of debugging this session were spent on a
+   * stale bundle before the console error was read.
+   */
   const serverOptions = {
     middlewareMode: true,
-    hmr: { server },
-    allowedHosts: true,
+    hmr: { server, clientPort: config.port },
+    allowedHosts: true as const,
   };
 
   const vite = await createViteServer({

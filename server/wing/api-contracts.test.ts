@@ -2,7 +2,7 @@ import { readFileSync, readdirSync } from "fs";
 import { join } from "path";
 
 /**
- * Static guards on two mistakes this codebase has made repeatedly.
+ * Static guards on the mistakes this codebase has made repeatedly.
  *
  * Neither is the kind of bug a type checker catches, because both produce
  * perfectly well-typed code that does the wrong thing. Both were found by a
@@ -345,6 +345,325 @@ console.log("\nMigrations from 0008 are safe to replay");
   }
 
   if (failures === before7) console.log(`  ok — ${files.length} migration(s) checked`);
+}
+
+/* ── 8 · The chat stream's event names match on both sides ────────────────
+ *
+ * The Foundation Session turn is an SSE stream, and its event vocabulary is a
+ * contract expressed as string literals in two files that never see each other.
+ * Nothing type-checks it, nothing fails when it drifts, and the failure is not
+ * an error — it is a branch that quietly never runs.
+ *
+ * It had drifted. The client listened for `user_message` and `complete`; the
+ * server sent `turn_complete`, `done` and `session_completed`. So the handler
+ * that refetched the session after a turn never fired, which meant Wing's reply
+ * was never written into the rendered message list — it lived only in React
+ * state, and the next turn's `setStreamingResponse('')` erased it.
+ *
+ * That is the whole of the "text disappears" report: not a rendering bug, a
+ * refetch that was wired to an event nobody was sending.
+ */
+console.log("\nChat stream events match between server and client");
+{
+  const before8 = failures;
+
+  const server = readFileSync(join(SERVER, "foundation-sessions-routes.ts"), "utf8");
+  const client = readFileSync(
+    join(process.cwd(), "client", "src", "pages", "foundation-session-chat.tsx"),
+    "utf8",
+  );
+
+  const emitted = new Set(
+    Array.from(server.matchAll(/type:\s*"([a-z_]+)"/g), (m) => m[1]),
+  );
+  const handled = new Set(
+    Array.from(client.matchAll(/event\.type === '([a-z_]+)'/g), (m) => m[1]),
+  );
+
+  // A handled event the server never sends is dead code that looks alive —
+  // and is exactly how this broke.
+  for (const name of Array.from(handled)) {
+    if (!emitted.has(name)) {
+      fail(`the chat client handles "${name}", which the server never emits`);
+    }
+  }
+
+  // `done` needs no branch: the client stops when the body ends. Everything
+  // else carries information the UI has to act on.
+  for (const name of Array.from(emitted)) {
+    if (name === "done") continue;
+    if (!handled.has(name)) {
+      fail(`the server emits "${name}", which the chat client ignores`);
+    }
+  }
+
+  if (failures === before8) {
+    console.log(`  ok — ${emitted.size} event(s) emitted, ${handled.size} handled`);
+  }
+}
+
+/* ── 9 · Azure OpenAI is the only model provider ──────────────────────────
+ *
+ * A second provider lived in the orchestrator through the Replit migration so
+ * the MVP's prompts could be re-tuned without the app going dark in between.
+ * Its models are no longer available to this project, and the path is gone.
+ *
+ * ── WHAT THIS ACTUALLY GUARDS ────────────────────────────────────────────
+ * Not "don't call Anthropic" — nobody is going to do that deliberately. The
+ * failure mode was the *fallback*: `activeProvider()` returned the second
+ * provider whenever AZURE_OPENAI_ENDPOINT was unset, so a config mistake did
+ * not fail. It routed elsewhere, hit a missing key, and surfaced as an
+ * authentication error several layers from the variable that was actually
+ * wrong. A provider that only runs when configuration is broken is worse than
+ * no provider, because it converts a loud failure into a quiet one.
+ *
+ * So the rule is: exactly one provider, and a missing endpoint is an error.
+ * Any reintroduction — an SDK import, or a read of a credential that no longer
+ * has a home — fails the build here rather than being discovered in a log.
+ */
+console.log("\nAzure OpenAI is the only model provider");
+{
+  const before9 = failures;
+
+  const FORBIDDEN = [
+    { re: /@anthropic-ai\/sdk/, what: "an Anthropic SDK import" },
+    { re: /\bANTHROPIC_[A-Z_]+/, what: "an ANTHROPIC_* environment variable" },
+    { re: /\bCLAUDE_MODEL\b/, what: "the legacy CLAUDE_MODEL variable" },
+    { re: /\bLLM_PROVIDER\b/, what: "LLM_PROVIDER (there is only one provider)" },
+  ];
+
+  // Walk server/ recursively — the orchestrator is a subdirectory, and the
+  // first version of this check only looked at the top level, which would have
+  // missed the exact file it exists to watch.
+  const walk = (dir: string): string[] =>
+    readdirSync(dir, { withFileTypes: true }).flatMap((e) => {
+      const p = join(dir, e.name);
+      if (e.isDirectory()) return walk(p);
+      return e.isFile() && p.endsWith(".ts") ? [p] : [];
+    });
+
+  for (const path of walk(SERVER)) {
+    // This file names the strings it forbids, so it would flag itself.
+    if (path.endsWith("api-contracts.test.ts")) continue;
+    const src = readFileSync(path, "utf8");
+    for (const { re, what } of FORBIDDEN) {
+      if (re.test(src)) {
+        fail(`${path.replace(process.cwd() + "/", "")} contains ${what}`);
+      }
+    }
+  }
+
+  // The dependency too — an unused SDK in package.json is a package that gets
+  // installed, audited and shipped in the image for no reason.
+  const pkg = JSON.parse(readFileSync(join(process.cwd(), "package.json"), "utf8"));
+  const deps = { ...pkg.dependencies, ...pkg.devDependencies };
+  for (const name of ["@anthropic-ai/sdk", "anthropic"]) {
+    if (deps[name]) fail(`package.json still depends on '${name}'`);
+  }
+
+  if (failures === before9) {
+    console.log("  ok — Azure OpenAI is the only provider, in code and in deps");
+  }
+}
+
+/* ── 10 · No side effect inside a React state updater ─────────────────────
+ *
+ * `setPending(p => { if (...) throw new Error(...); return p; })` reads as
+ * ordinary control flow and is not. The `setPending` call returns normally;
+ * React invokes the updater later, during its render phase. So the throw does
+ * not land in the surrounding `try/catch` — it surfaces as a render error, and
+ * React's response to an unhandled render error is to unmount the entire tree.
+ *
+ * The visible result was a blank page, twenty minutes into a Foundation
+ * Session, from a line written to *improve* error handling. StrictMode
+ * double-invokes updaters in development, so it also fired twice.
+ *
+ * The rule is the React one, and it is absolute: an updater must be pure. It
+ * may compute the next state from the previous state and nothing else — no
+ * throwing, no fetching, no other setState, no logging that matters.
+ *
+ * This scans for a `throw` between `setX(` and the end of its arrow body. It
+ * is a shallow check by construction; the point is to catch the shape that has
+ * already cost a session, not to be a linter.
+ */
+console.log("\nNo throw inside a React state updater");
+{
+  const before10 = failures;
+
+  const walkClient = (dir: string): string[] =>
+    readdirSync(dir, { withFileTypes: true }).flatMap((e) => {
+      const p = join(dir, e.name);
+      if (e.isDirectory()) return walkClient(p);
+      return e.isFile() && (p.endsWith(".tsx") || p.endsWith(".ts")) ? [p] : [];
+    });
+
+  // `setFoo((x) => { ... })` — the block-bodied updater form, which is the only
+  // one that can contain a statement like `throw`.
+  const updater = /\bset[A-Z]\w*\(\s*\(?[^)]*\)?\s*(?::[^=]+)?=>\s*\{/g;
+
+  for (const path of walkClient(join(process.cwd(), "client", "src"))) {
+    const src = readFileSync(path, "utf8");
+    let m: RegExpExecArray | null;
+    while ((m = updater.exec(src))) {
+      // Walk to the matching brace so nested objects don't end the body early.
+      let depth = 1;
+      let i = m.index + m[0].length;
+      for (; i < src.length && depth > 0; i++) {
+        if (src[i] === "{") depth++;
+        else if (src[i] === "}") depth--;
+      }
+      const body = src.slice(m.index + m[0].length, i);
+      if (/\bthrow\b/.test(body)) {
+        const line = src.slice(0, m.index).split("\n").length;
+        fail(
+          `${path.replace(process.cwd() + "/", "")}:${line} throws inside a ` +
+            `state updater — it will escape the surrounding try/catch and ` +
+            `unmount the tree. Throw in the async function instead.`,
+        );
+      }
+    }
+  }
+
+  if (failures === before10) console.log("  ok");
+}
+
+/* ── 11 · Every cached namespace has someone who clears it ────────────────
+ *
+ * The turn path now caches published criteria, methodology, objective sets and
+ * intervention cards for sixty seconds. That is a deliberate trade — those
+ * rows are immutable once published, so a cached copy can be stale but not
+ * wrong — and it removed most of the seven seconds of prompt assembly.
+ *
+ * The way it goes bad is not subtle and is entirely predictable: someone adds
+ * `cache.cached("templates:…")` on a new read, ships it, and never adds the
+ * matching `invalidate`. Editing the thing in the admin UI then appears to do
+ * nothing. It works after a minute, or after a redeploy, or on a colleague's
+ * machine — which is the worst possible signature, because it trains people to
+ * distrust the editor rather than look for a cache.
+ *
+ * So every namespace that is read must be cleared by someone.
+ */
+console.log("\nEvery cached namespace is invalidated somewhere");
+{
+  const before11 = failures;
+
+  const walkServer = (dir: string): string[] =>
+    readdirSync(dir, { withFileTypes: true }).flatMap((e) => {
+      const p = join(dir, e.name);
+      if (e.isDirectory()) return walkServer(p);
+      return e.isFile() && p.endsWith(".ts") ? [p] : [];
+    });
+
+  const readNamespaces = new Map<string, string>(); // prefix -> where
+  const clearedNamespaces = new Set<string>();
+
+  for (const path of walkServer(SERVER)) {
+    if (path.endsWith("api-contracts.test.ts")) continue;
+    if (path.endsWith("published-cache.ts")) continue; // the module itself
+    if (path.endsWith("published-cache.test.ts")) continue; // exercises both sides
+    const src = readFileSync(path, "utf8");
+
+    for (const m of Array.from(src.matchAll(/cache\.cached\(\s*[`"']([a-z_]+):/g))) {
+      if (!readNamespaces.has(m[1])) {
+        readNamespaces.set(m[1], path.replace(process.cwd() + "/", ""));
+      }
+    }
+    for (const m of Array.from(src.matchAll(/cache\.invalidate\(\s*[`"']([a-z_]+):/g))) {
+      clearedNamespaces.add(m[1]);
+    }
+  }
+
+  for (const [ns, where] of Array.from(readNamespaces)) {
+    if (!clearedNamespaces.has(ns)) {
+      fail(
+        `"${ns}:" is cached (${where}) but nothing calls ` +
+          `cache.invalidate("${ns}:") — an edit to it will appear to do nothing ` +
+          `for up to a minute, and only on the replica that served the write.`,
+      );
+    }
+  }
+
+  // The reverse is harmless (clearing a namespace nobody reads) but is usually
+  // a rename that only got done on one side, so it is worth saying.
+  for (const ns of Array.from(clearedNamespaces)) {
+    if (!readNamespaces.has(ns)) {
+      fail(`cache.invalidate("${ns}:") clears a namespace nothing reads — a stale name?`);
+    }
+  }
+
+  if (failures === before11) {
+    console.log(`  ok — ${readNamespaces.size} namespace(s), all cleared`);
+  }
+}
+
+/* ── 12 · The WebSocket upgrade path agrees, and is not exclusive ─────────
+ *
+ * Two separate contracts, both broken at once, both silent.
+ *
+ * (a) The path the server accepts and the path the browser dials are string
+ *     literals in two files. Same shape as the SSE event names in check 8:
+ *     change one and voice transcription stops working with no error anywhere,
+ *     because a rejected upgrade is not an exception.
+ *
+ * (b) `upgrade` is an event, not a router — Node delivers it to every
+ *     listener. The voice handler used to `socket.destroy()` anything that was
+ *     not its own path, which assumed it was the only WebSocket on the server.
+ *     In development it is not: Vite's HMR socket shares the port. That
+ *     `else` branch severed the HMR handshake, Vite read the closed socket as
+ *     "server connection lost", reloaded the page, and reconnected — an
+ *     infinite reload loop that made the app unusable.
+ *
+ * The rule: handle your path, return on everything else.
+ */
+console.log("\nWebSocket upgrade path agrees and is not exclusive");
+{
+  const before12 = failures;
+
+  const handler = readFileSync(
+    join(SERVER, "realtime", "websocket-handler.ts"),
+    "utf8",
+  );
+  const client = readFileSync(
+    join(process.cwd(), "client", "src", "hooks", "use-voice-recording.tsx"),
+    "utf8",
+  );
+
+  const serverPaths = new Set(
+    Array.from(handler.matchAll(/pathname === ['"]([^'"]+)['"]/g), (m) => m[1]),
+  );
+  const clientPaths = new Set(
+    Array.from(client.matchAll(/\$\{window\.location\.host\}(\/[a-z/]+)/g), (m) => m[1]),
+  );
+
+  for (const p of Array.from(clientPaths)) {
+    if (!serverPaths.has(p)) {
+      fail(`the voice client dials "${p}", which the upgrade handler does not accept`);
+    }
+  }
+  if (serverPaths.size === 0 || clientPaths.size === 0) {
+    fail("could not find the WebSocket path on one side — this check has gone stale");
+  }
+
+  /*
+   * Strip comments before looking for the destroy: this handler now explains
+   * the rule at length, and the explanation contains the code it forbids.
+   * Check 4 hit exactly this and it is an easy mistake to repeat.
+   */
+  const code = handler
+    .replace(/\/\*[\s\S]*?\*\//g, "")
+    .replace(/\/\/.*$/gm, "");
+
+  if (/\belse\s*\{[^}]*socket\.destroy\(\)/.test(code)) {
+    fail(
+      "the upgrade handler destroys sockets on paths it does not own — that " +
+        "kills Vite's HMR socket, which shares this server in development, and " +
+        "produces an infinite reload loop. Return instead.",
+    );
+  }
+
+  if (failures === before12) {
+    console.log(`  ok — ${Array.from(serverPaths).join(", ")}, non-owned upgrades untouched`);
+  }
 }
 
 /* ── Result ──────────────────────────────────────────────────────────── */

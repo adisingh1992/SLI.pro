@@ -962,16 +962,36 @@ isAdmin(req,res,next)          // 401 if not logged in, 403 if !req.user.isAdmin
 
 ## 9. AI & Prompt Architecture
 
-SLI.pro uses **Anthropic Claude** for all generative work. The model is configurable:
+SLI.pro uses **Azure OpenAI** for all generative work, reached through one
+module — `server/orchestrator/`. No other file constructs a model client or
+names a model.
 
-```ts
-const CLAUDE_MODEL = process.env.CLAUDE_MODEL || "claude-sonnet-4-20250514";
-```
-(Some modules — e.g. `freshness-report.ts` — hardcode `"claude-sonnet-4-20250514"`.)
+Work is routed by task to the cheapest tier that meets the bar. Tiers map to
+Azure **deployment** names through the environment, so re-pointing a tier is a
+configuration change:
 
-Each Claude integration follows a common pattern:
-- A `callClaude(systemPrompt, userPrompt, …)` helper that issues
-  `anthropic.messages.create(...)`.
+| Tier | Env var | Used for |
+|---|---|---|
+| `flagship` | `AZURE_OPENAI_DEPLOYMENT_FLAGSHIP` | Foundation Sessions, SLI generation and refinement |
+| `mid` | `AZURE_OPENAI_DEPLOYMENT_MID` | intake, daily prompts, journal/drift, document analysis, content drafts |
+| `nano` | `AZURE_OPENAI_DEPLOYMENT_NANO` | classification, tagging, turn-typing, routing |
+| — | `AZURE_OPENAI_DEPLOYMENT_EMBEDDINGS` | memory / journal / drift vectors |
+
+`_MID` is the fallback for any tier left unset, which makes a missing `_NANO`
+survivable and a missing `_MID` fatal. Readiness reflects that distinction
+rather than treating every gap as an outage.
+
+> **There was a second provider.** Anthropic ran alongside Azure during the
+> Replit migration so the MVP's prompts could be re-tuned without the app going
+> dark. It is now removed rather than dormant — the models are no longer
+> available to this project, and more to the point the fallback was a hazard:
+> `activeProvider()` returned the second provider whenever
+> `AZURE_OPENAI_ENDPOINT` was unset, so a configuration mistake surfaced as an
+> authentication error several layers from the variable that was wrong. Guard
+> check 9 in `server/wing/api-contracts.test.ts` fails the build if it returns.
+
+Each integration follows a common pattern:
+- A local retry helper wrapping `orchestrator.complete(...)`.
 - **Retry with exponential backoff** on rate‑limit (`429` / `rate_limit_error`).
 - **Robust JSON extraction**: strips markdown code fences, runs a balanced‑brace
   regex, falls back to a manual bracket scan, and finally returns a typed default
@@ -1222,8 +1242,13 @@ key is missing the service fails gracefully (logs an error rather than crashing)
 |----------|:--------:|---------|---------|
 | `DATABASE_URL` | ✅ | `server/db.ts` | Neon Postgres connection string |
 | `SESSION_SECRET` | ✅ (prod) | `auth.ts`, `realtime/websocket-handler.ts` | Session cookie signing (dev fallback exists) |
-| `ANTHROPIC_API_KEY` | ✅ | claude/sli/linkedin/freshness/routes | Claude AI access |
-| `CLAUDE_MODEL` | optional | claude/sli/linkedin/routes | Override model (default `claude-sonnet-4-20250514`) |
+| `AZURE_OPENAI_ENDPOINT` | ✅ | `orchestrator/` | Azure OpenAI resource endpoint. Readiness fails without it. |
+| `AZURE_OPENAI_KEY` | optional | `orchestrator/` | Omit to use managed identity / `az login` — the preferred posture |
+| `AZURE_OPENAI_DEPLOYMENT_MID` | ✅ | `orchestrator/` | Fallback deployment for every tier; readiness fails without it |
+| `AZURE_OPENAI_DEPLOYMENT_FLAGSHIP` | recommended | `orchestrator/` | Falls back to `_MID` |
+| `AZURE_OPENAI_DEPLOYMENT_NANO` | recommended | `orchestrator/` | Falls back to `_MID` |
+| `AZURE_OPENAI_DEPLOYMENT_EMBEDDINGS` | ✅ (vectors) | `orchestrator/` | Memory / journal / drift |
+| `FIXED_TEMPERATURE_DEPLOYMENTS` | optional | `orchestrator/` | Escape hatch for a deployment whose name doesn't reveal the model behind it |
 | `OPENAI_API_KEY` | ✅ (voice) | `realtime/openai-realtime.ts` | Whisper transcription |
 | `STRIPE_SECRET_KEY` | ✅ (**startup**) | `payment-routes.ts` | Stripe API. **Required for the server to boot** — `payment-routes.ts` throws at module load if it is missing. |
 | `STRIPE_WEBHOOK_SECRET` | ✅ (prod payments) | `payment-routes.ts` | Verify webhook signatures |
@@ -1265,9 +1290,14 @@ Create the variables from §15. **Minimum required for the server to boot:**
 ```bash
 DATABASE_URL="postgres://user:pass@host/db?sslmode=require"
 SESSION_SECRET="a-long-random-string"
-ANTHROPIC_API_KEY="sk-ant-..."
+AZURE_OPENAI_ENDPOINT="https://<resource>.openai.azure.com/"
+AZURE_OPENAI_DEPLOYMENT_MID="<deployment-name>"   # not a model name
 STRIPE_SECRET_KEY="sk_test_..."   # REQUIRED — payment-routes.ts throws on load if absent
 ```
+`AZURE_OPENAI_KEY` is deliberately absent: with no key the orchestrator uses
+`DefaultAzureCredential`, which picks up your `az login` session locally and the
+container's managed identity in Azure. No model credential in config at all is
+the target posture.
 Add these to enable the remaining features:
 ```bash
 OPENAI_API_KEY="sk-..."           # voice transcription

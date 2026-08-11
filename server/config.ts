@@ -27,7 +27,6 @@ const SECRET_MAP: Record<string, string> = {
   "LINKEDIN-CLIENT-ID": "LINKEDIN_CLIENT_ID",
   "LINKEDIN-CLIENT-SECRET": "LINKEDIN_CLIENT_SECRET",
   "AZURE-OPENAI-KEY": "AZURE_OPENAI_KEY",
-  "ANTHROPIC-API-KEY": "ANTHROPIC_API_KEY",
   "AZURE-STORAGE-ACCOUNT": "AZURE_STORAGE_ACCOUNT",
   "AZURE-OPENAI-ENDPOINT": "AZURE_OPENAI_ENDPOINT",
   "AZURE-OPENAI-DEPLOYMENT-FLAGSHIP": "AZURE_OPENAI_DEPLOYMENT_FLAGSHIP",
@@ -82,10 +81,10 @@ export async function loadSecretFromVault(envName: string): Promise<boolean> {
 /**
  * The secrets a script needs before it can call the LLM orchestrator.
  *
- * `activeProvider()` decides between Azure and Anthropic by looking for
- * AZURE_OPENAI_ENDPOINT. A script that hydrates only DATABASE_URL therefore
- * silently falls through to Anthropic and fails on a missing key — the
- * provider choice is made from an environment that was never populated.
+ * Azure OpenAI is the only provider, so a script that hydrates DATABASE_URL
+ * and nothing else fails on the first model call rather than at startup —
+ * which is a long way from the missing variable if the call happens deep in a
+ * backfill. Hydrate these up front.
  */
 export const LLM_SECRETS = [
   "AZURE_OPENAI_ENDPOINT",

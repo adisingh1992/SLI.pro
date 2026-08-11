@@ -7,7 +7,7 @@ import * as blob from "./blob-storage";
  * number of pre-migration rows may still hold inline base64 (`fileData`) or
  * the interim `blobKey`; all three are handled so callers never care.
  *
- * Consumers (claude.ts, sli.ts, freshness-report.ts, ...) should call this
+ * Consumers (document-analysis.ts, sli.ts, freshness-report.ts, ...) should call this
  * rather than reading a content field directly.
  */
 

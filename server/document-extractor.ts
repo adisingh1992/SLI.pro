@@ -39,7 +39,7 @@ export async function extractDocumentText(fileData: string, fileName: string): P
   } catch (error) {
     log(`Error extracting text from document ${fileName}: ${error}`, "document-extractor");
     
-    // Return a meaningful error message for Claude
+    // Return a meaningful error message for the model
     return `[Document text extraction failed: ${error instanceof Error ? error.message : String(error)}. File type: ${fileName.split('.').pop()?.toUpperCase() || 'unknown'}]`;
   }
 }
@@ -111,7 +111,7 @@ async function extractDocxText(buffer: Buffer): Promise<string> {
 }
 
 /**
- * Validate and clean extracted text for Claude analysis
+ * Validate and clean extracted text for the model analysis
  */
 export function validateExtractedText(text: string, maxLength: number = 100000): string {
   // Remove excessive whitespace and normalize line breaks

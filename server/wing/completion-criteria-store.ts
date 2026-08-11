@@ -1,6 +1,7 @@
 import { and, asc, desc, eq } from "drizzle-orm";
 import { db } from "../db";
 import { sessionCompletionCriteria } from "@shared/wing-schema";
+import * as cache from "./published-cache";
 import { log } from "../logger";
 
 /**
@@ -62,6 +63,17 @@ export type CriteriaVersion = {
 
 /** The live criteria for a population/session, or null to use the prompt file's. */
 export async function getPublished(
+  populationTag: string,
+  sessionType: string,
+): Promise<CriteriaVersion | null> {
+  // Cached: this sits on the turn path and the row is immutable once
+  // published. See published-cache.ts for why that distinction matters.
+  return cache.cached(`criteria:${populationTag}:${sessionType}`, () =>
+    getPublishedUncached(populationTag, sessionType),
+  );
+}
+
+async function getPublishedUncached(
   populationTag: string,
   sessionType: string,
 ): Promise<CriteriaVersion | null> {
@@ -150,7 +162,7 @@ export async function publish(params: {
     throw new Error("At least one criterion is required — an empty list would complete every session immediately");
   }
 
-  return db.transaction(async (tx) => {
+  const published = await db.transaction(async (tx) => {
     const [previous] = await tx
       .select({ versionNumber: sessionCompletionCriteria.versionNumber })
       .from(sessionCompletionCriteria)
@@ -198,6 +210,15 @@ export async function publish(params: {
 
     return created as CriteriaVersion;
   });
+
+  /*
+   * After the transaction commits, not inside it. Clearing inside would
+   * repopulate from a read that could still roll back — and a rollback
+   * would leave the cache holding a version that never existed.
+   */
+  cache.invalidate("criteria:");
+
+  return published;
 }
 
 /**

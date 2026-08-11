@@ -6,6 +6,7 @@ import { resolveCardCode } from "./card-code";
 import { parseJsonResponse } from "../json-response";
 import * as orchestrator from "../orchestrator";
 import * as objectives from "./objectives-store";
+import * as cache from "./published-cache";
 import {
   openObjectives,
   type PopulationTag,
@@ -58,20 +59,34 @@ async function interventionTextFor(
   resolved: ResolvedObjective[],
   population: PopulationTag,
 ): Promise<{ text: Record<string, string>; missing: string[] }> {
-  const rows = await db
-    .select({
-      code: heuristics.cardCode,
-      componentType: heuristicComponents.componentType,
-      content: heuristicComponents.content,
-    })
-    .from(heuristics)
-    .innerJoin(
-      heuristicComponents,
-      and(
-        eq(heuristicComponents.heuristicId, heuristics.id),
-        eq(heuristicComponents.isCurrent, true),
+  /*
+   * Every current intervention card, cached.
+   *
+   * Note there is no WHERE on population or session — this reads the whole
+   * card table and filters in JavaScript below, so it is the same rows on
+   * every turn of every session for every student. It was costing a full
+   * round trip each time to produce an identical result.
+   *
+   * Cards are versioned the same way criteria are: `isCurrent` moves to a new
+   * row rather than the content being edited in place, so a cached row cannot
+   * go wrong, only briefly out of date.
+   */
+  const rows = await cache.cached("cards:interventions", () =>
+    db
+      .select({
+        code: heuristics.cardCode,
+        componentType: heuristicComponents.componentType,
+        content: heuristicComponents.content,
+      })
+      .from(heuristics)
+      .innerJoin(
+        heuristicComponents,
+        and(
+          eq(heuristicComponents.heuristicId, heuristics.id),
+          eq(heuristicComponents.isCurrent, true),
+        ),
       ),
-    );
+  );
 
   const byCode = new Map<string, string>();
   for (const r of rows) {
@@ -108,11 +123,28 @@ export async function buildObjectivePrompt(params: {
 
   try {
     const population = populationOf(params.professionalStatus);
-    const resolved = await objectives.getResolved(params.sessionType, population);
-    if (!resolved?.length) return null;
 
-    const satisfied = await objectives.satisfiedKeys(params.sessionId);
-    const { text, missing } = await interventionTextFor(resolved, population);
+    /*
+     * `satisfiedKeys` is per-session state and cannot be cached, so it is the
+     * one genuine round trip left here. Started before `getResolved` is
+     * awaited because it depends on nothing that call produces — three
+     * sequential awaits was roughly four seconds of the seven this function
+     * used to add to every turn.
+     */
+    const satisfiedPromise = objectives.satisfiedKeys(params.sessionId);
+
+    const resolved = await objectives.getResolved(params.sessionType, population);
+    if (!resolved?.length) {
+      // Still awaited: an unhandled rejection from an abandoned promise takes
+      // the process down under Node's default policy.
+      await satisfiedPromise.catch(() => {});
+      return null;
+    }
+
+    const [satisfied, { text, missing }] = await Promise.all([
+      satisfiedPromise,
+      interventionTextFor(resolved, population),
+    ]);
 
     // A missing card renders as nothing, so the objective silently loses its
     // interventions. Logged rather than swallowed — the experiment is still

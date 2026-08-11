@@ -1,4 +1,5 @@
 import { and, asc, desc, eq } from "drizzle-orm";
+import * as cache from "./published-cache";
 import { db } from "../db";
 import { analysisMethodology } from "@shared/wing-schema";
 import { log } from "../logger";
@@ -50,6 +51,16 @@ export type MethodologyVersion = {
 /* ── Reading ────────────────────────────────────────────────────────────── */
 
 export async function getPublished(
+  populationTag: string,
+  sessionType: string,
+) {
+  // Same reasoning as the criteria store: turn path, immutable row.
+  return cache.cached(`methodology:${populationTag}:${sessionType}`, () =>
+    getPublishedUncached(populationTag, sessionType),
+  );
+}
+
+async function getPublishedUncached(
   populationTag: string,
   sessionType: string,
 ): Promise<MethodologyVersion | null> {
@@ -138,7 +149,7 @@ export async function publish(params: {
     );
   }
 
-  return db.transaction(async (tx) => {
+  const published = await db.transaction(async (tx) => {
     const [previous] = await tx
       .select({ versionNumber: analysisMethodology.versionNumber })
       .from(analysisMethodology)
@@ -186,6 +197,15 @@ export async function publish(params: {
 
     return created as MethodologyVersion;
   });
+
+  /*
+   * After the transaction commits, not inside it. Clearing inside would
+   * repopulate from a read that could still roll back — and a rollback
+   * would leave the cache holding a version that never existed.
+   */
+  cache.invalidate("methodology:");
+
+  return published;
 }
 
 /**

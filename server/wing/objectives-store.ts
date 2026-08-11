@@ -1,4 +1,5 @@
 import { and, desc, eq } from "drizzle-orm";
+import * as cache from "./published-cache";
 import { db } from "../db";
 import { objectiveSets, turnObjectives } from "@shared/wing-schema";
 import { log } from "../logger";
@@ -62,6 +63,16 @@ export async function getPublished(
 
 /** The set resolved for one population — what actually reaches a prompt. */
 export async function getResolved(
+  sessionType: string,
+  population: PopulationTag,
+): Promise<ResolvedObjective[] | null> {
+  // Editorial content on the turn path, immutable once published.
+  return cache.cached(`objectives:${sessionType}:${population}`, () =>
+    getResolvedUncached(sessionType, population),
+  );
+}
+
+async function getResolvedUncached(
   sessionType: string,
   population: PopulationTag,
 ): Promise<ResolvedObjective[] | null> {
@@ -152,7 +163,7 @@ export async function publish(params: {
     throw new Error("An objective set needs at least one objective");
   }
 
-  return db.transaction(async (tx) => {
+  const published = await db.transaction(async (tx) => {
     const [previous] = await tx
       .select({ versionNumber: objectiveSets.versionNumber })
       .from(objectiveSets)
@@ -193,6 +204,12 @@ export async function publish(params: {
 
     return created as ObjectiveSetVersion;
   });
+
+  // After commit, not inside: a rollback would otherwise leave the cache
+  // holding a version that never existed.
+  cache.invalidate("objectives:");
+
+  return published;
 }
 
 export async function revertTo(versionId: number, userId?: number | null) {

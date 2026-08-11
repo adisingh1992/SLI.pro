@@ -1,4 +1,3 @@
-import Anthropic from "@anthropic-ai/sdk";
 import { AzureOpenAI } from "openai";
 import { DefaultAzureCredential, getBearerTokenProvider } from "@azure/identity";
 import { createReadStream } from "fs";
@@ -18,10 +17,21 @@ import { createReadStream } from "fs";
  *   nano      — classification, tagging, turn-typing, routing
  *   embedding — memory / journal / drift vectors
  *
- * Provider selection:
- *   LLM_PROVIDER=azure     -> Azure OpenAI (target state)
- *   LLM_PROVIDER=anthropic -> Anthropic (interim, while prompts are re-tuned)
- *   unset                  -> azure if AZURE_OPENAI_ENDPOINT is set, else anthropic
+ * ── ONE PROVIDER: AZURE OPENAI ───────────────────────────────────────────
+ * There was a second path here — Anthropic, kept during the Replit migration
+ * so the MVP's prompts could be re-tuned against Azure without the app going
+ * dark in between. That period is over and the models are no longer available
+ * to this project, so the path is gone rather than dormant.
+ *
+ * Dormant was the dangerous state. `activeProvider()` fell back to Anthropic
+ * whenever AZURE_OPENAI_ENDPOINT was unset, so a config mistake did not fail —
+ * it quietly routed to a provider with no key and surfaced as an
+ * authentication error several layers away from the missing variable. A
+ * missing endpoint now fails at startup, naming the variable.
+ *
+ * Tiers map to Azure *deployment* names via environment, so which deployment
+ * backs which tier stays configuration:
+ *   AZURE_OPENAI_DEPLOYMENT_FLAGSHIP / _MID / _NANO
  */
 
 export type ModelTier = "flagship" | "mid" | "nano";
@@ -42,17 +52,44 @@ export interface CompletionRequest {
 
 export interface CompletionResult {
   text: string;
-  provider: "azure" | "anthropic";
+  provider: "azure";
   model: string;
   usage?: { inputTokens?: number; outputTokens?: number };
 }
 
-type Provider = "azure" | "anthropic";
+/**
+ * What the readiness check and the startup log report.
+ *
+ * This replaces `activeProvider()`, which is gone rather than stubbed. Once
+ * there is one provider, a function returning the string "azure" is not
+ * information — but it still *looks* like information at the call site, and
+ * three call sites were logging it as though it told them something. The
+ * useful question was never "which provider" but "which deployments", and a
+ * misconfigured tier is the thing that actually breaks.
+ *
+ * Names only. Never the key.
+ */
+export function modelConfiguration(): {
+  endpoint: string | null;
+  deployments: Record<ModelTier, string | null>;
+} {
+  return {
+    endpoint: process.env.AZURE_OPENAI_ENDPOINT ?? null,
+    deployments: {
+      flagship: process.env.AZURE_OPENAI_DEPLOYMENT_FLAGSHIP ?? null,
+      mid: process.env.AZURE_OPENAI_DEPLOYMENT_MID ?? null,
+      nano: process.env.AZURE_OPENAI_DEPLOYMENT_NANO ?? null,
+    },
+  };
+}
 
-export function activeProvider(): Provider {
-  const explicit = process.env.LLM_PROVIDER?.toLowerCase();
-  if (explicit === "azure" || explicit === "anthropic") return explicit;
-  return process.env.AZURE_OPENAI_ENDPOINT ? "azure" : "anthropic";
+/** One line, for a startup log: `flagship=gpt-5.6-sol mid=… nano=…`. */
+export function describeModels(): string {
+  const { endpoint, deployments } = modelConfiguration();
+  if (!endpoint) return "NOT CONFIGURED (AZURE_OPENAI_ENDPOINT is unset)";
+  return Object.entries(deployments)
+    .map(([tier, name]) => `${tier}=${name ?? "(unset → mid)"}`)
+    .join(" ");
 }
 
 // ── Model resolution ────────────────────────────────────────────────────────
@@ -73,23 +110,60 @@ function azureDeployment(tier: ModelTier): string {
   return deployment;
 }
 
-function anthropicModel(tier: ModelTier): string {
-  const byTier: Record<ModelTier, string | undefined> = {
-    flagship: process.env.ANTHROPIC_MODEL_FLAGSHIP,
-    mid: process.env.ANTHROPIC_MODEL_MID,
-    nano: process.env.ANTHROPIC_MODEL_NANO,
-  };
-  // CLAUDE_MODEL is the legacy single-model variable the MVP used.
-  return byTier[tier] ?? process.env.CLAUDE_MODEL ?? byTier.mid ?? "";
-}
-
 // ── Clients (lazily constructed) ────────────────────────────────────────────
 
 let azureClient: AzureOpenAI | null = null;
-let anthropicClient: Anthropic | null = null;
 
-/** Deployments that reject an explicit `temperature` (learned at runtime). */
-const fixedTemperatureDeployments = new Set<string>();
+/**
+ * Model families that accept only the default `temperature`.
+ *
+ * ── THIS IS A KNOWN PROPERTY, NOT A SURPRISE ─────────────────────────────
+ * The GPT-5 series and the o-series reasoning models reject any explicit
+ * temperature with a 400: "Unsupported value: 'temperature' does not support
+ * 0.7 with this model. Only the default (1) value is supported." Their decoding
+ * path involves several rounds of generation and selection, and an external
+ * temperature would cut across that.
+ *
+ * The orchestrator used to discover this by sending the request, taking the
+ * 400, and retrying without the parameter. That works and self-heals, and it
+ * costs one wasted round trip per deployment per process. In a long-lived
+ * process that is a one-off; in Container Apps every replica starts cold, and
+ * the student who sends the first turn on a new replica pays for it.
+ *
+ * Three layers, most specific first:
+ *
+ *   1. FIXED_TEMPERATURE_DEPLOYMENTS — an explicit list, for deployments whose
+ *      names say nothing about the model behind them. Azure deployment names
+ *      are arbitrary, so a name is a hint and not a guarantee.
+ *   2. the pattern below — catches the usual case where the deployment is named
+ *      after its model, as `gpt-5.6-luna` and `gpt-5.6-terra` are here.
+ *   3. runtime learning — unchanged, and still the backstop. Anything the first
+ *      two miss costs exactly what it used to.
+ *
+ * Being wrong in the cautious direction is cheap: omitting temperature from a
+ * model that would have accepted it loses a tuning knob. Being wrong the other
+ * way costs a round trip, once. So the pattern is deliberately broad.
+ */
+const FIXED_TEMPERATURE_PATTERN = /(^|[^a-z0-9])(gpt-?5|o1|o3|o4)([^a-z0-9]|$)/i;
+
+const fixedTemperatureDeployments = new Set<string>(
+  (process.env.FIXED_TEMPERATURE_DEPLOYMENTS ?? "")
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean),
+);
+
+/**
+ * Whether an explicit temperature may be sent to this deployment.
+ *
+ * Exported for the test — the interesting cases are the near-misses (`gpt-4o`
+ * must still receive one; `o4-mini` must not), and a copy of the regex in a
+ * test file would drift from the one that runs.
+ */
+export function acceptsTemperature(model: string): boolean {
+  if (fixedTemperatureDeployments.has(model)) return false;
+  return !FIXED_TEMPERATURE_PATTERN.test(model);
+}
 
 /**
  * Minimum token budget a deployment has been observed to need.
@@ -152,13 +226,6 @@ function getAzureClient(): AzureOpenAI {
   return azureClient;
 }
 
-function getAnthropicClient(): Anthropic {
-  if (!anthropicClient) {
-    anthropicClient = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
-  }
-  return anthropicClient;
-}
-
 // ── Public API ──────────────────────────────────────────────────────────────
 
 /** Runs a chat completion on the tier's model and returns the text. */
@@ -166,9 +233,8 @@ export async function complete(
   request: CompletionRequest,
 ): Promise<CompletionResult> {
   const tier = request.tier ?? "mid";
-  const provider = activeProvider();
 
-  if (provider === "azure") {
+  {
     const model = azureDeployment(tier);
     // Respect any floor learned from a previous empty completion.
     const maxTokens = Math.max(
@@ -196,7 +262,7 @@ export async function complete(
     let response;
     try {
       response = await client.chat.completions.create(
-        buildParams(!fixedTemperatureDeployments.has(model)),
+        buildParams(acceptsTemperature(model)),
       );
     } catch (err: any) {
       // A bare "Resource not found" from Azure is unhelpful — say exactly what
@@ -220,7 +286,7 @@ export async function complete(
         (err?.param === "temperature" || /temperature/i.test(err?.message ?? "")) &&
         /unsupported/i.test(err?.message ?? "");
 
-      if (isFixedTemperature && !fixedTemperatureDeployments.has(model)) {
+      if (isFixedTemperature && acceptsTemperature(model)) {
         fixedTemperatureDeployments.add(model);
         console.warn(
           `[orchestrator] deployment '${model}' only supports the default temperature; ` +
@@ -262,7 +328,7 @@ export async function complete(
       minimumTokensByDeployment.set(model, retryTokens);
 
       const retry = await client.chat.completions.create({
-        ...buildParams(!fixedTemperatureDeployments.has(model)),
+        ...buildParams(acceptsTemperature(model)),
         max_completion_tokens: retryTokens,
       });
       text = retry.choices[0]?.message?.content ?? "";
@@ -292,7 +358,7 @@ export async function complete(
 
     return {
       text,
-      provider,
+      provider: "azure",
       model,
       usage: {
         inputTokens: response.usage?.prompt_tokens,
@@ -300,45 +366,19 @@ export async function complete(
       },
     };
   }
-
-  const model = anthropicModel(tier);
-  // Anthropic's max_tokens counts output only, so no learned floor applies.
-  const response = await getAnthropicClient().messages.create({
-    model,
-    max_tokens: request.maxTokens ?? 4096,
-    ...(request.system ? { system: request.system } : {}),
-    ...(request.temperature !== undefined ? { temperature: request.temperature } : {}),
-    messages: request.messages,
-  });
-
-  const text = response.content
-    .filter((block): block is Anthropic.TextBlock => block.type === "text")
-    .map((block) => block.text)
-    .join("");
-
-  return {
-    text,
-    provider,
-    model,
-    usage: {
-      inputTokens: response.usage?.input_tokens,
-      outputTokens: response.usage?.output_tokens,
-    },
-  };
 }
 
 /**
  * Streaming variant of `complete`. Yields text deltas as they arrive, so the
- * caller can forward them to the client (SSE / WebSocket) without knowing which
- * provider produced them.
+ * caller can forward them to the client (SSE / WebSocket) without knowing how
+ * they were produced.
  */
 export async function* completeStream(
   request: CompletionRequest,
 ): AsyncGenerator<string, void, unknown> {
   const tier = request.tier ?? "mid";
-  const provider = activeProvider();
 
-  if (provider === "azure") {
+  {
     const model = azureDeployment(tier);
     // Respect any floor learned from a previous empty completion.
     const maxTokens = Math.max(
@@ -364,14 +404,14 @@ export async function* completeStream(
     let stream;
     try {
       stream = await client.chat.completions.create(
-        buildParams(!fixedTemperatureDeployments.has(model)),
+        buildParams(acceptsTemperature(model)),
       );
     } catch (err: any) {
       const isFixedTemperature =
         err?.status === 400 &&
         (err?.param === "temperature" || /temperature/i.test(err?.message ?? "")) &&
         /unsupported/i.test(err?.message ?? "");
-      if (isFixedTemperature && !fixedTemperatureDeployments.has(model)) {
+      if (isFixedTemperature && acceptsTemperature(model)) {
         fixedTemperatureDeployments.add(model);
         stream = await client.chat.completions.create(buildParams(false));
       } else {
@@ -382,26 +422,6 @@ export async function* completeStream(
     for await (const chunk of stream) {
       const delta = chunk.choices[0]?.delta?.content;
       if (delta) yield delta;
-    }
-    return;
-  }
-
-  const stream = await getAnthropicClient().messages.create({
-    model: anthropicModel(tier),
-    max_tokens: request.maxTokens ?? 4096,
-    ...(request.system ? { system: request.system } : {}),
-    ...(request.temperature !== undefined ? { temperature: request.temperature } : {}),
-    messages: request.messages,
-    stream: true,
-  });
-
-  for await (const event of stream) {
-    if (
-      event.type === "content_block_delta" &&
-      "text" in event.delta &&
-      event.delta.text
-    ) {
-      yield event.delta.text;
     }
   }
 }

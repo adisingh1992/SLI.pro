@@ -538,7 +538,7 @@ export const slis = pgTable("slis", {
   customSliText: text("custom_sli_text"), // Custom SLI text if user chooses to write their own
   
   // SLI Refinement fields
-  refinedSliText: text("refined_sli_text"), // The refined SLI created by Claude
+  refinedSliText: text("refined_sli_text"), // The refined SLI created by the model
   refinementRationale: text("refinement_rationale"), // Explanation of the refinement
   implementationGuidance: text("implementation_guidance"), // Guidance on implementing the refined SLI
   refinedAt: timestamp("refined_at"), // When the SLI was refined
@@ -570,7 +570,7 @@ export type Sli = typeof slis.$inferSelect;
 export const linkedinOptimizations = pgTable("linkedin_optimizations", {
   id: serial("id").primaryKey(),
   userId: integer("user_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
-  alignmentAssessment: text("alignment_assessment"), // Claude's evaluation of profile alignment with SLI
+  alignmentAssessment: text("alignment_assessment"), // The model's evaluation of profile alignment with SLI
   headlineOptimization: jsonb("headline_optimization").$type<{
     currentHeadline?: string;
     recommendedHeadline?: string;

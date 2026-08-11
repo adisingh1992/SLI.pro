@@ -577,7 +577,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
          * work.
          *
          * The identical shape broke registration (public.profiles) and half of
-         * claude.ts. The rule this file now follows: if the read is on wing,
+         * document-analysis.ts. The rule this file now follows: if the read is on wing,
          * the write is too. There is no case where mixing them is correct.
          */
         const { userId: _unused, ...answers } = validationResult.data;

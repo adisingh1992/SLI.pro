@@ -311,7 +311,16 @@ export async function checkSessionCompletion(
   studentId: number,
   sessionNumber: number,
   messages: any[],
-  userProfile: any,
+  /**
+   * The student's population, which selects the prompt set and criteria.
+   *
+   * Was `userProfile: any` — the whole composed profile, of which this was the
+   * only field ever read. Passing the profile meant every caller had to build
+   * one, and building one costs six queries including every document's full
+   * extracted text. Narrowing the parameter is what makes it possible to stop
+   * fetching that on the turn path.
+   */
+  professionalStatus: string | null | undefined,
   /**
    * Draft criteria to evaluate INSTEAD of the published ones.
    *
@@ -342,7 +351,7 @@ export async function checkSessionCompletion(
       sessionNumber,
     );
 
-    const promptSet = getPromptSet(userProfile?.professionalStatus);
+    const promptSet = getPromptSet(professionalStatus);
 
     // The SAME criteria the conversation was given. When these were written
     // separately they drifted, and a session could satisfy everything it was
@@ -350,7 +359,7 @@ export async function checkSessionCompletion(
     const criteria =
       criteriaOverride ??
       (await resolveCompletionCriteria(
-        userProfile?.professionalStatus,
+        professionalStatus,
         sessionNumber,
         "analysis",
       ));
@@ -358,10 +367,7 @@ export async function checkSessionCompletion(
     // How to read the transcript, as opposed to what counts as done.
     const methodology =
       methodologyOverride ??
-      (await resolveAnalysisMethodology(
-        userProfile?.professionalStatus,
-        sessionNumber,
-      ));
+      (await resolveAnalysisMethodology(professionalStatus, sessionNumber));
 
     const analysisPrompt = promptSet.getAnalysisPrompt(
       sessionNumber,
@@ -569,8 +575,9 @@ export function registerFoundationSessionsRoutes(app: Express) {
 
         // Opening guidance is Wing's first turn — captured as ai_prompt.
         if ((await store.countTurns(session.id)) === 0) {
-          const profile = await profileStore.getUserProfile(legacyUserId);
-          const promptSet = getPromptSet(profile?.professionalStatus);
+          const promptSet = getPromptSet(
+            await profileStore.getProfessionalStatus(legacyUserId),
+          );
           const initialMessage = promptSet.getInitialGuidanceMessage(sessionNumber);
           if (initialMessage) {
             await store.addAiTurn(session.id, initialMessage);
@@ -639,14 +646,14 @@ export function registerFoundationSessionsRoutes(app: Express) {
         // produced. A student who exits at a natural point should not lose the
         // work — the session is simply marked ended_early rather than completed.
         const messages = await store.getTurnsAsMessages(session.id);
-        const userProfile = await profileStore.getUserProfile(legacyUserId);
+        const professionalStatus = await profileStore.getProfessionalStatus(legacyUserId);
 
         const analysis = await checkSessionCompletion(
           legacyUserId,
           studentId,
           sessionNumber,
           messages,
-          userProfile,
+          professionalStatus,
         );
 
         let artifactWritten = false;
@@ -714,10 +721,35 @@ export function registerFoundationSessionsRoutes(app: Express) {
         }
 
         const legacyUserId = req.user!.id;
-        const studentId = await store.studentIdFor(req.user as any);
 
-        const session = await store.getSession(studentId, sessionTypeFor(sessionNumber));
-        if (!session) return res.status(404).json({ error: "Session not found" });
+        /*
+         * Per-phase timing, logged once per turn.
+         *
+         * "The chat is slow" is not actionable, and every guess at it so far
+         * has been wrong in an interesting way — the wait turned out to be
+         * post-stream analysis, then a profile fetch nobody needed, then plain
+         * network latency to a remote database. Printing the split means the
+         * next person does not have to guess either.
+         *
+         * Four numbers, one line, no dependency.
+         */
+        const t0 = Date.now();
+        const marks: Record<string, number> = {};
+        const mark = (name: string) => {
+          marks[name] = Date.now() - t0;
+        };
+
+        // One query, not two. See getSessionForUser — the pair was ~1.5s of
+        // pure latency per turn against a remote database.
+        const found = await store.getSessionForUser(
+          legacyUserId,
+          sessionTypeFor(sessionNumber),
+        );
+        const studentId = found?.studentId;
+        const session = found?.session;
+        if (!studentId || !session) {
+          return res.status(404).json({ error: "Session not found" });
+        }
 
         if (session.status !== "in_progress" && session.status !== "completed") {
           return res.status(400).json({
@@ -730,28 +762,114 @@ export function registerFoundationSessionsRoutes(app: Express) {
           return res.status(400).json({ error: "Message content is required" });
         }
 
+        mark("session");
+
+        /*
+         * ── THE CONTEXT READS START HERE TOO ─────────────────────────────────
+         * Same rule as the engine call below, applied one level further up, and
+         * found by the same measurement.
+         *
+         * These three reads need `legacyUserId`, `studentId` and the session
+         * number — all of which the session lookup has already returned. They
+         * need nothing from the turn write or the transcript read, and yet they
+         * sat behind both:
+         *
+         *   turns 3.0s | context 7.2s        two phases, strictly sequential
+         *
+         * Started here they run alongside the write and the read instead of
+         * after them. The turn cannot proceed until both are done either way,
+         * so the cost becomes the slower of the two rather than their sum.
+         *
+         * `buildStudentContext` is the expensive one — it reads the documents
+         * and the intake record — and it stays on the critical path because
+         * Wing genuinely needs it in the prompt. That is the A2 fix; dropping
+         * it would take the coaching backwards to asking for things already in
+         * the database. Overlapping it is the available win, not removing it.
+         */
+        const contextPromise = Promise.all([
+          profileStore.getProfessionalStatus(legacyUserId),
+          buildPriorSessionContexts(studentId, sessionNumber),
+          /*
+           * A2: everything Wing already knows, in the CONVERSATION prompt.
+           *
+           * This used to be `formatResumeSummary`, which filtered on
+           * type === "resume" — so the LinkedIn PDF was uploaded, extracted,
+           * stored, and never shown to Wing. Sessions then asked for the
+           * headline that was sitting in the database, which is the exact
+           * complaint A2 names.
+           *
+           * Worse, the intake answers reached only the ANALYSIS prompt. Live,
+           * Wing knew nothing the student had already said, so it asked again.
+           */
+          buildStudentContext(legacyUserId),
+        ]);
+
+        /*
+         * Marked handled the moment it is created. If `addHumanTurn` throws on
+         * the next line, nothing would ever await this promise, and an
+         * unhandled rejection terminates the process under Node's default
+         * policy — a database blip on one turn taking down every session on the
+         * replica. The `await` below still sees the rejection; this only tells
+         * Node someone is listening.
+         */
+        contextPromise.catch(() => {});
+
         // Human turn — provenance assigned at capture by the deterministic rule.
         const humanTurn = await store.addHumanTurn(session.id, content.trim());
 
         const conversation = await store.getTurnsAsMessages(session.id);
-
-        const userProfile = await profileStore.getUserProfile(legacyUserId);
-        const promptSet = getPromptSet(userProfile?.professionalStatus);
-        const priorSessions = await buildPriorSessionContexts(studentId, sessionNumber);
+        mark("turns");
 
         /*
-         * A2: everything Wing already knows, in the CONVERSATION prompt.
+         * ── THE ENGINE STARTS HERE, AS EARLY AS IT POSSIBLY CAN ──────────────
+         * `evaluateTurn` makes a nano-tier model call to decide whether a
+         * coaching signal fired. Its arguments are the four lines below and
+         * nothing else — all of them are in hand the moment the transcript
+         * read returns.
          *
-         * This used to be `formatResumeSummary`, which filtered on
-         * type === "resume" — so the LinkedIn PDF was uploaded, extracted,
-         * stored, and never shown to Wing. Sessions then asked for the headline
-         * that was sitting in the database, which is the exact complaint A2
-         * names.
+         * This used to start after the context reads, one line below a comment
+         * of mine asserting it depended only on things "already in hand".
+         * Which was true, and it was still started three seconds later than it
+         * needed to be. The timing line is what caught it:
          *
-         * Worse, the intake answers reached only the ANALYSIS prompt. Live,
-         * Wing knew nothing the student had already said, so it asked again.
+         *   turns 2.9s | context 6.0s | prompt 11.2s | first token 14.1s
+         *
+         * The 5.2s "prompt" phase was not prompt assembly. Completion criteria
+         * are cached and the objective renderer is off for this population, so
+         * almost all of that was this one model call, which had only been
+         * running since 6.0s. Started here it overlaps the context reads as
+         * well, and the phase collapses to whatever is left over.
+         *
+         * A promise created and awaited later is only a win if it is created
+         * at the earliest point its inputs exist. Otherwise it is a serial
+         * call wearing a parallel shape — and it reads as parallel in review,
+         * which is why the measurement mattered.
+         *
+         * Never rejects: it returns null on any failure by design, so a
+         * detection problem cannot take down a live session and this promise
+         * cannot go unhandled.
          */
-        const studentContext = await buildStudentContext(legacyUserId);
+        const guidancePromise = engine.evaluateTurn({
+          studentId,
+          sessionId: session.id,
+          content: content.trim(),
+          turnId: humanTurn?.id ?? null,
+          recentTurns: conversation,
+        });
+
+        /*
+         * Collected, not started, here.
+         *
+         * `professionalStatus` is one column. It was `getUserProfile()`, which
+         * returns every document with its full extracted text and every session
+         * with its artifact jsonb — and the only field ever read from it, here
+         * and everywhere below, is this one enum.
+         */
+        const [professionalStatus, priorSessions, studentContext] = await contextPromise;
+
+        mark("context");
+
+        const promptSet = getPromptSet(professionalStatus);
         const resumeSummary = studentContext.text;
 
         if (studentContext.included.length) {
@@ -762,7 +880,7 @@ export function registerFoundationSessionsRoutes(app: Express) {
         }
 
         const conversationCriteria = await resolveCompletionCriteria(
-          userProfile?.professionalStatus,
+          professionalStatus,
           sessionNumber,
           "conversation",
         );
@@ -785,7 +903,7 @@ export function registerFoundationSessionsRoutes(app: Express) {
           sessionId: session.id,
           sessionType: sessionTypeFor(sessionNumber),
           sessionTitle: `Foundation Session ${sessionNumber}`,
-          professionalStatus: userProfile?.professionalStatus,
+          professionalStatus,
           identity: promptSet.getSystemPrompt({ sessionNumber }).slice(0, 600),
           studentContext: [resumeSummary, ...priorSessions.map((p) => p.conversationTranscript)]
             .filter(Boolean)
@@ -804,18 +922,26 @@ export function registerFoundationSessionsRoutes(app: Express) {
             completionCriteria: conversationCriteria,
           });
 
-        // The real-time engine loop (spec §6): evaluate the turn against the
-        // student's active heuristic sequence before Wing replies, so an
-        // intervention lands on the turn that triggered it. evaluateTurn never
-        // throws and returns null when nothing fires, so the conversation is
-        // unaffected when no methodology is active or detection fails.
-        const guidance = await engine.evaluateTurn({
-          studentId,
-          sessionId: session.id,
-          content: content.trim(),
-          turnId: humanTurn?.id ?? null,
-          recentTurns: conversation,
-        });
+        // Everything up to here is prompt assembly proper. Marked separately
+        // from the engine wait below so the two are never confused again — the
+        // last round of this work attributed five seconds of model call to
+        // "prompt", and optimised the wrong thing as a result.
+        mark("assembled");
+
+        /*
+         * The real-time engine loop (spec §6): the turn is evaluated against
+         * the student's active heuristic sequence before Wing replies, so an
+         * intervention lands on the turn that triggered it. Started as early as
+         * its inputs allow — see above the context reads — and collected here,
+         * the first point the answer is actually needed.
+         *
+         * If `engine wait` is consistently near zero, the overlap is doing its
+         * job. If it is not, this call is the critical path and the next move
+         * is to make the intervention arrive on the following turn rather than
+         * to hold this one.
+         */
+        const guidance = await guidancePromise;
+        mark("engine wait");
 
         const systemPrompt = guidance
           ? `${basePrompt}\n\n${guidance.systemPromptFragment}`
@@ -825,6 +951,7 @@ export function registerFoundationSessionsRoutes(app: Express) {
         res.setHeader("Cache-Control", "no-cache");
         res.setHeader("Connection", "keep-alive");
 
+        mark("prompt");
         let assistantContent = "";
 
         // Foundation Session conversation — quality-critical -> flagship tier.
@@ -836,16 +963,64 @@ export function registerFoundationSessionsRoutes(app: Express) {
           temperature: 0.7,
         });
 
+        let firstToken = 0;
         for await (const chunk of stream) {
+          if (!firstToken) {
+            firstToken = Date.now() - t0;
+            marks["first token"] = firstToken;
+          }
           assistantContent += chunk;
           res.write(`data: ${JSON.stringify({ type: "chunk", content: chunk })}\n\n`);
         }
+        mark("stream done");
 
         // Wing's turn: ai_prompt, or ai_adapted if it follows a correction.
-        await store.addAiTurn(session.id, assistantContent);
+        const aiTurn = await store.addAiTurn(session.id, assistantContent);
 
-        // Completion check over the full turn list.
-        const allMessages = await store.getTurnsAsMessages(session.id);
+        /*
+         * ── THE TURN IS OVER HERE ────────────────────────────────────────────
+         * Wing has finished speaking and the reply is durable. Everything below
+         * this line is measurement and bookkeeping, and none of it changes what
+         * the student is looking at.
+         *
+         * It used to run BEFORE the client was told the turn had ended, which
+         * meant two further model calls — objective evidence, then a
+         * full-transcript completion analysis — sat between the last token
+         * appearing on screen and the input becoming usable again. The reply
+         * was visibly complete and the composer stayed disabled for several
+         * more seconds, every single turn. That is the "takes super long"
+         * complaint, and it was never the conversation being slow.
+         *
+         * `turn_complete` releases the UI. The connection stays open because a
+         * session that finishes on this turn still needs to say so, and that
+         * verdict is not known yet.
+         */
+        res.write(
+          `data: ${JSON.stringify({
+            type: "turn_complete",
+            assistantTurnId: aiTurn?.id ?? null,
+            humanTurnId: humanTurn?.id ?? null,
+          })}\n\n`,
+        );
+
+        /*
+         * The full turn list, assembled rather than re-queried.
+         *
+         * `conversation` was read before Wing replied and already contains the
+         * human turn; appending the reply gives the same list the database
+         * would return, without a second full-transcript read on the turn path.
+         */
+        mark("TURN RELEASED");
+
+        /*
+         * Everything past this point is off the student's clock. It is still
+         * timed, because it is what the server spends most of its time on and
+         * that is worth knowing even when nobody is waiting for it.
+         */
+        const allMessages = [
+          ...conversation,
+          { role: "assistant" as const, content: assistantContent },
+        ];
 
         /*
          * Which objectives this turn satisfied — the measurement half of the
@@ -859,7 +1034,7 @@ export function registerFoundationSessionsRoutes(app: Express) {
         await objectiveRuntime.recordObjectiveEvidence({
           sessionId: session.id,
           sessionType: sessionTypeFor(sessionNumber),
-          professionalStatus: userProfile?.professionalStatus,
+          professionalStatus,
           turnId: humanTurn.id,
           transcript: allMessages
             .map((m) => `${m.role.toUpperCase()}: ${m.content}`)
@@ -871,7 +1046,7 @@ export function registerFoundationSessionsRoutes(app: Express) {
           studentId,
           sessionNumber,
           allMessages,
-          userProfile,
+          professionalStatus,
         );
 
         if (completionCheck.shouldComplete) {
@@ -894,6 +1069,14 @@ export function registerFoundationSessionsRoutes(app: Express) {
             })}\n\n`,
           );
         }
+
+        mark("analysis");
+        console.log(
+          `[foundation] session ${sessionNumber} turn timing — ` +
+            Object.entries(marks)
+              .map(([k, v]) => `${k} ${(v / 1000).toFixed(1)}s`)
+              .join("  |  "),
+        );
 
         res.write(`data: ${JSON.stringify({ type: "done" })}\n\n`);
         res.end();
@@ -968,8 +1151,16 @@ export function registerFoundationSessionsRoutes(app: Express) {
     },
   );
 
-  /** Session timer. */
-  app.patch(
+  /*
+   * Session timer.
+   *
+   * Registered for PATCH and POST on the same path. PATCH is the honest verb
+   * and what the app uses; POST exists because `navigator.sendBeacon` — the
+   * only thing a browser reliably delivers while a tab is closing — can issue
+   * nothing else. Without the alias the closing flush would 404 silently,
+   * which is precisely the kind of failure that looks like working code.
+   */
+  app.all(
     "/api/foundation-sessions/:sessionNumber/timer",
     isAuthenticated,
     async (req: Request, res: Response, next: NextFunction) => {
@@ -979,17 +1170,30 @@ export function registerFoundationSessionsRoutes(app: Express) {
           return res.status(400).json({ error: "Invalid session number. Must be 1, 2, or 3" });
         }
 
+        if (req.method !== "PATCH" && req.method !== "POST") {
+          return res.status(405).json({ error: "Use PATCH, or POST from sendBeacon" });
+        }
+
         const { timerElapsedSeconds, timerElapsed } = req.body ?? {};
         const seconds = timerElapsedSeconds ?? timerElapsed;
         if (typeof seconds !== "number" || seconds < 0) {
           return res.status(400).json({ error: "timerElapsedSeconds must be a non-negative number" });
         }
 
-        const studentId = await store.studentIdFor(req.user as any);
-        const session = await store.getSession(studentId, sessionTypeFor(sessionNumber));
-        if (!session) return res.status(404).json({ error: "Session not found" });
+        /*
+         * The timer fires every few seconds for the whole session, so its cost
+         * is paid continuously rather than once. It was three sequential
+         * queries — student, session, update — which measured six seconds
+         * against the stage database from a laptop. Two now, and the first is
+         * a single indexed join.
+         */
+        const found = await store.getSessionForUser(
+          req.user!.id,
+          sessionTypeFor(sessionNumber),
+        );
+        if (!found?.session) return res.status(404).json({ error: "Session not found" });
 
-        const updated = await store.addElapsedSeconds(session.id, seconds);
+        const updated = await store.addElapsedSeconds(found.session.id, seconds);
         res.json({ timerElapsedSeconds: updated.timerElapsedSeconds });
       } catch (error) {
         console.error("Error updating session timer:", error);

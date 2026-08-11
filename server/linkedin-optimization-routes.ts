@@ -121,13 +121,13 @@ export function registerLinkedinOptimizationRoutes(app: Express) {
       }
       
       console.log(`[LinkedIn Optimization] Found freshness report ID ${freshnessReport.id}`);
-      console.log(`[LinkedIn Optimization] Calling Claude API to generate optimization...`);
+      console.log(`[LinkedIn Optimization] Generating optimization...`);
       
       let optimizationData;
       
       try {
-        // Try to generate the LinkedIn optimization with Claude
-        console.log(`[LinkedIn Optimization] Attempting to call Claude API...`);
+        // Try to generate the LinkedIn optimization with the model
+        console.log(`[LinkedIn Optimization] Attempting to call the model...`);
         optimizationData = await generateLinkedInOptimization(
           userId,
           resumeDoc,
@@ -135,9 +135,9 @@ export function registerLinkedinOptimizationRoutes(app: Express) {
           selectedSli,
           freshnessReport
         );
-        console.log(`[LinkedIn Optimization] Successfully generated recommendations from Claude`);
-      } catch (claudeError) {
-        console.error(`[LinkedIn Optimization] Error calling Claude API:`, claudeError);
+        console.log(`[LinkedIn Optimization] Successfully generated recommendations from the model`);
+      } catch (modelError) {
+        console.error(`[LinkedIn Optimization] Model call failed:`, modelError);
         
         // Fallback to a temporary mock response for testing
         console.log(`[LinkedIn Optimization] Using fallback template for testing`);

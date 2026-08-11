@@ -23,7 +23,7 @@ const isAuthenticated = (req: Request, res: Response, next: NextFunction) => {
   res.status(401).json({ error: "Not authenticated" });
 };
 
-// Helper function for exponential backoff retries when calling Claude
+// Helper function for exponential backoff retries when calling the model
 async function callWithRetry<T>(
   fn: () => Promise<T>, 
   maxRetries = 5, 
@@ -48,12 +48,12 @@ async function callWithRetry<T>(
       const backoffTime = initialBackoff * Math.pow(2, retries);
       retries++;
       
-      log(`Rate limit exceeded for ${identifier}. Retrying in ${backoffTime/1000} seconds (retry ${retries}/${maxRetries})`, "claude");
+      log(`Rate limit exceeded for ${identifier}. Retrying in ${backoffTime/1000} seconds (retry ${retries}/${maxRetries})`, "content-drafts");
       
       // Wait for the backoff period
       await new Promise(resolve => setTimeout(resolve, backoffTime));
       
-      log(`Resuming ${identifier} after backoff`, "claude");
+      log(`Resuming ${identifier} after backoff`, "content-drafts");
     }
   }
 }
@@ -94,7 +94,7 @@ async function generateLinkedinContentDrafts(userId: number) {
       : null;
     const session3Data = foundationSession3?.completionData;
     
-    // Format context for Claude
+    // Format context for the model
     let context = "";
     
     if (resumeDoc?.analysisContent) {
@@ -157,7 +157,7 @@ async function generateLinkedinContentDrafts(userId: number) {
     
     context += `## SLI (Single Lasting Impression)\n${sliText}\n\n`;
     
-    // Define Claude system prompt
+    // Define the system prompt
     /*
      * A4: the 360Brew authenticity standard is IN the system prompt, and the
      * output is checked against it afterwards.
@@ -172,7 +172,7 @@ async function generateLinkedinContentDrafts(userId: number) {
 
 ${renderStandardForPrompt()}`;
     
-    // Define user prompt with Claude prompt from the feature request
+    // Define user prompt with the model prompt from the feature request
     const userPrompt = `${context}
 
 Based on the above context about this user, please generate two distinct, ready-to-use LinkedIn posts that the client can immediately copy, paste, and publish.
@@ -223,8 +223,8 @@ When Foundation Session 3 content is available, leverage:
 
 Stay optimistic, insightful, and grounded—avoiding political or divisive topics. Each post must pass the "SLI reinforcement test": Would this strengthen the reader's understanding of the client's professional identity?`;
 
-    // Call Claude API with retry for rate limits
-    log(`Calling Claude API to generate LinkedIn content drafts`, "claude");
+    // Call the model with retry for rate limits
+    log(`Generating LinkedIn content drafts`, "content-drafts");
     const response = await callWithRetry(
       () => orchestrator.complete({
         tier: "mid", // content drafting
@@ -265,7 +265,7 @@ Stay optimistic, insightful, and grounded—avoiding political or divisive topic
 
       log(
         `content drafts scored ${authenticity.score}; regenerating with ${authenticity.findings.length} finding(s)`,
-        "claude",
+        "content-drafts",
       );
 
       try {
@@ -300,14 +300,14 @@ Stay optimistic, insightful, and grounded—avoiding political or divisive topic
         }
       } catch (err) {
         // A failed retry is not a failed generation — the first draft stands.
-        log(`authenticity retry failed: ${(err as Error).message}`, "claude");
+        log(`authenticity retry failed: ${(err as Error).message}`, "content-drafts");
       }
     }
 
     log(
       `content drafts authenticity: ${authenticity.score}/100` +
         (authenticity.findings.length ? ` (${authenticity.findings.length} finding(s))` : ""),
-      "claude",
+      "content-drafts",
     );
     
     // Extract post types and content

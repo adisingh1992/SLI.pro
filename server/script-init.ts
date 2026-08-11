@@ -31,9 +31,9 @@ export type ScriptDb = typeof import("./db");
 export type InitScriptOptions = {
   /**
    * Also hydrate the LLM secrets. Required by any script that calls the
-   * orchestrator: provider selection reads AZURE_OPENAI_ENDPOINT from the
-   * environment, so without these the script silently falls back to Anthropic
-   * and fails on a missing key.
+   * orchestrator. Without them the script starts happily and fails on its
+   * first model call, which in a backfill can be thousands of rows in — so
+   * `initScript` checks up front instead.
    */
   llm?: boolean;
 };
@@ -52,12 +52,11 @@ export async function initScript(opts: InitScriptOptions = {}): Promise<ScriptDb
   if (opts.llm) {
     const missing = await loadSecretsFromVault(LLM_SECRETS);
 
-    // Absent optional providers are fine; an absent endpoint is not, because
-    // it silently changes which provider gets used.
-    if (!process.env.AZURE_OPENAI_ENDPOINT && !process.env.ANTHROPIC_API_KEY) {
+    // Azure OpenAI is the only provider. Fail here rather than on the first
+    // model call, which in a backfill can be thousands of rows in.
+    if (!process.env.AZURE_OPENAI_ENDPOINT) {
       throw new Error(
-        "No LLM provider is configured. Neither AZURE_OPENAI_ENDPOINT nor " +
-          "ANTHROPIC_API_KEY resolved from the environment or Key Vault " +
+        "AZURE_OPENAI_ENDPOINT did not resolve from the environment or Key Vault " +
           `(unresolved: ${missing.join(", ") || "none"}). ` +
           "Check KEY_VAULT_URI and that the identity has Key Vault Secrets User.",
       );
