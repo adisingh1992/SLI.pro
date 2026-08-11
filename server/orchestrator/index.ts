@@ -83,13 +83,34 @@ export function modelConfiguration(): {
   };
 }
 
-/** One line, for a startup log: `flagship=gpt-5.6-sol mid=… nano=…`. */
+/**
+ * Whether voice dictation can work, and where it would go.
+ *
+ * Reported separately because a missing Whisper deployment breaks only the
+ * microphone — everything else on the page keeps working, so nothing surfaces
+ * it until a student taps the mic and gets "not configured on the server".
+ */
+export function voiceConfiguration(): { endpoint: string | null; deployment: string | null } {
+  return {
+    endpoint:
+      process.env.AZURE_OPENAI_ENDPOINT_ALT ?? process.env.AZURE_OPENAI_ENDPOINT ?? null,
+    deployment:
+      process.env.AZURE_OPENAI_DEPLOYMENT_WHISPER ??
+      process.env.AZURE_OPENAI_DEPLOYMENT_TRANSCRIBE ??
+      null,
+  };
+}
+
+/** One line, for a startup log: `flagship=gpt-5.6-sol mid=… nano=… voice=…`. */
 export function describeModels(): string {
   const { endpoint, deployments } = modelConfiguration();
   if (!endpoint) return "NOT CONFIGURED (AZURE_OPENAI_ENDPOINT is unset)";
-  return Object.entries(deployments)
-    .map(([tier, name]) => `${tier}=${name ?? "(unset → mid)"}`)
-    .join(" ");
+  const voice = voiceConfiguration();
+  return (
+    Object.entries(deployments)
+      .map(([tier, name]) => `${tier}=${name ?? "(unset → mid)"}`)
+      .join(" ") + ` voice=${voice.deployment ?? "(none)"}`
+  );
 }
 
 // ── Model resolution ────────────────────────────────────────────────────────
@@ -427,10 +448,78 @@ export async function* completeStream(
 }
 
 /**
- * Speech-to-text (Whisper), single-pass record-then-transcribe — the Tier 1
- * voice flow. Routes to the Azure Whisper deployment when configured, and
- * falls back to OpenAI directly only if AZURE_OPENAI_DEPLOYMENT_WHISPER is
- * unset but OPENAI_API_KEY is present.
+ * The Whisper client — a SECOND Azure OpenAI resource.
+ *
+ * ── WHY THIS IS NOT `getAzureClient()` ───────────────────────────────────────
+ * Speech-to-text has much narrower regional availability than the chat models,
+ * so the Whisper deployment lives on its own resource with its own endpoint and
+ * key: `AZURE_OPENAI_ENDPOINT_ALT` / `AZURE_OPENAI_KEY_ALT`. Reusing the main
+ * client would send the audio to a resource that has no such deployment and
+ * come back 404 — which reads exactly like a broken microphone.
+ *
+ * If the ALT endpoint is unset, this falls back to the main one, because some
+ * setups do have Whisper on the same resource. That is a fallback *within* the
+ * Azure boundary and it cannot leak audio; the worst case is a 404 that names
+ * both the deployment and the endpoint it was looked for on.
+ */
+let whisperClient: AzureOpenAI | null = null;
+
+function getWhisperClient(): AzureOpenAI {
+  if (whisperClient) return whisperClient;
+
+  const rawEndpoint =
+    process.env.AZURE_OPENAI_ENDPOINT_ALT || process.env.AZURE_OPENAI_ENDPOINT;
+  if (!rawEndpoint) {
+    throw new Error(
+      "No transcription endpoint. Set AZURE_OPENAI_ENDPOINT_ALT (the resource " +
+        "hosting the Whisper deployment), or AZURE_OPENAI_ENDPOINT if it is the " +
+        "same resource as the chat models.",
+    );
+  }
+
+  const endpoint = normaliseEndpoint(rawEndpoint);
+  const apiVersion = process.env.AZURE_OPENAI_API_VERSION || "2024-10-21";
+  const apiKey = process.env.AZURE_OPENAI_KEY_ALT || process.env.AZURE_OPENAI_KEY;
+
+  if (apiKey) {
+    whisperClient = new AzureOpenAI({ endpoint, apiKey, apiVersion });
+  } else {
+    // Managed identity, same posture as the main client. The container's
+    // identity needs a Cognitive Services OpenAI User role assignment on the
+    // ALT resource too — a separate resource means a separate assignment, and
+    // it is an easy one to miss.
+    const credential = new DefaultAzureCredential({
+      managedIdentityClientId: process.env.AZURE_MANAGED_IDENTITY_CLIENT_ID,
+    });
+    const azureADTokenProvider = getBearerTokenProvider(
+      credential,
+      "https://cognitiveservices.azure.com/.default",
+    );
+    whisperClient = new AzureOpenAI({ endpoint, azureADTokenProvider, apiVersion });
+  }
+
+  return whisperClient;
+}
+
+/**
+ * Speech-to-text, single-pass record-then-transcribe — the Tier 1 voice flow.
+ *
+ * ── AZURE ONLY. THERE IS NO FALLBACK, AND THAT IS THE POINT ──────────────────
+ * This used to call OpenAI directly whenever the Azure deployment was missing
+ * or errored, gated by `TRANSCRIBE_FALLBACK_TO_OPENAI` — opt-OUT, so the
+ * default behaviour was to send a student's recorded voice to a third party
+ * outside the Azure tenancy. A misconfiguration did not fail; it silently
+ * changed where the audio went.
+ *
+ * That is a data-residency question rather than a reliability one, and the
+ * institutions this is sold to will ask it. Voice is the most identifying
+ * content the product handles: not a transcript of what a student said, but
+ * their actual voice. The path is gone rather than defaulted off — a flag that
+ * re-enables it is a flag someone can flip without understanding what it does.
+ *
+ * A missing or broken deployment now fails loudly and the student is told the
+ * server is misconfigured, which is true and fixable. Silently succeeding by
+ * routing elsewhere is neither.
  *
  * (Live streaming transcription via Azure AI Speech is the later swap; the
  * WebSocket service that calls this stays as-is when that happens.)
@@ -444,61 +533,46 @@ export async function transcribe(
   // gpt-4o-transcribe-diarize is the current GA successor. Any of them work —
   // set the deployment name and the call is identical.
   const deployment =
-    process.env.AZURE_OPENAI_DEPLOYMENT_TRANSCRIBE ||
-    process.env.AZURE_OPENAI_DEPLOYMENT_WHISPER; // legacy alias
+    process.env.AZURE_OPENAI_DEPLOYMENT_WHISPER ||
+    process.env.AZURE_OPENAI_DEPLOYMENT_TRANSCRIBE;
 
-  // Fallback is opt-out: it sends audio to OpenAI directly, which leaves the
-  // Azure boundary. Set TRANSCRIBE_FALLBACK_TO_OPENAI=false to forbid that.
-  const fallbackAllowed =
-    Boolean(process.env.OPENAI_API_KEY) &&
-    process.env.TRANSCRIBE_FALLBACK_TO_OPENAI !== "false";
-
-  const transcribeWithOpenAI = async (reason: string): Promise<string> => {
-    console.warn(
-      `[orchestrator] Transcribing via OpenAI directly (${reason}). ` +
-        `NOTE: audio leaves the Azure boundary on this path.`,
+  if (!deployment) {
+    throw new Error(
+      "No transcription deployment configured. Set " +
+        "AZURE_OPENAI_DEPLOYMENT_WHISPER to the name of the speech-to-text " +
+        "deployment in Azure AI Foundry (the deployment name, not the model name).",
     );
-    const { default: OpenAI } = await import("openai");
-    const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-    const result = await openai.audio.transcriptions.create({
-      file: createReadStream(filePath), // fresh stream per attempt
-      model: process.env.OPENAI_TRANSCRIBE_MODEL || "whisper-1",
+  }
+
+  const endpoint =
+    process.env.AZURE_OPENAI_ENDPOINT_ALT || process.env.AZURE_OPENAI_ENDPOINT;
+
+  try {
+    const result = await getWhisperClient().audio.transcriptions.create({
+      file: createReadStream(filePath),
+      model: deployment, // in Azure this is the deployment name
       ...(opts.language ? { language: opts.language } : {}),
     });
     return result.text;
-  };
-
-  if (deployment) {
-    try {
-      const result = await getAzureClient().audio.transcriptions.create({
-        file: createReadStream(filePath), // fresh stream per attempt
-        model: deployment, // deployment name in Azure
-        ...(opts.language ? { language: opts.language } : {}),
-      });
-      return result.text;
-    } catch (err: any) {
-      const detail = `Azure deployment '${deployment}' failed: ${err?.status ?? ""} ${
-        err?.message ?? err
-      }`;
-      if (fallbackAllowed) {
-        return transcribeWithOpenAI(detail);
-      }
+  } catch (err: any) {
+    // A bare "Resource not found" says nothing about which of the two
+    // resources was asked, which is the first thing you need to know when
+    // Whisper is deployed somewhere other than the chat models.
+    if (err?.status === 404 || err?.code === "404") {
       throw new Error(
-        `${detail}. No fallback available (set OPENAI_API_KEY, or ` +
-          `TRANSCRIBE_FALLBACK_TO_OPENAI is false).`,
+        `Azure OpenAI returned 404 for the transcription deployment.\n` +
+          `  endpoint:    ${endpoint}\n` +
+          `  deployment:  ${deployment}\n` +
+          `  api-version: ${process.env.AZURE_OPENAI_API_VERSION || "2024-10-21"}\n` +
+          `Whisper often lives on a different resource from the chat models — if ` +
+          `it does, AZURE_OPENAI_ENDPOINT_ALT and AZURE_OPENAI_KEY_ALT must point ` +
+          `at that one. Verify with:\n` +
+          `  az cognitiveservices account deployment list ` +
+          `--name <openai-resource> --resource-group <rg> -o table`,
       );
     }
+    throw err;
   }
-
-  if (fallbackAllowed) {
-    return transcribeWithOpenAI("no Azure transcription deployment configured");
-  }
-
-  throw new Error(
-    "No transcription provider configured. Deploy a speech-to-text model in Azure AI " +
-      "Foundry (gpt-4o-transcribe-diarize is the current GA option) and set " +
-      "AZURE_OPENAI_DEPLOYMENT_TRANSCRIBE, or set OPENAI_API_KEY to fall back.",
-  );
 }
 
 /** Embeddings for the memory / journal / drift vector stores (pgvector). */

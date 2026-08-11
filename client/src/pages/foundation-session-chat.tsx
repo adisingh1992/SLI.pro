@@ -4,10 +4,9 @@ import { apiRequest } from '@/lib/queryClient';
 import { useState, useRef, useEffect, useMemo } from 'react';
 import { useLocation, useParams } from 'wouter';
 import NavBar from "@/components/nav-bar";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Badge } from "@/components/ui/badge";
 import {
   Dialog,
   DialogContent,
@@ -16,12 +15,26 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Loader2, Send, ArrowLeft, Lock, CheckCircle, MessageSquare, AlertCircle, LogOut } from "lucide-react";
+import { Loader2, Send, ArrowLeft, Lock, CheckCircle, MessageSquare, AlertCircle, LogOut, Compass, Sparkles } from "lucide-react";
 import VoiceMicButton from "@/components/VoiceMicButton";
 import { useVoiceRecording } from "@/hooks/use-voice-recording";
 import { useToast } from "@/hooks/use-toast";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import SessionTimer from "@/components/ui/session-timer";
+import { cn } from "@/lib/utils";
+import {
+  ChatHeader,
+  Composer,
+  Sheet,
+  OutcomeCard,
+  Prose,
+  RailFact,
+  RailHighlight,
+  RailMeter,
+  RailSection,
+  Thinking,
+  Transcript,
+  Turn,
+} from "@/components/chat";
 
 /**
  * Wing session API shapes.
@@ -636,68 +649,47 @@ export default function FoundationSessionChatPage() {
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      <NavBar />
-      
-      {/* Header — the description is desktop-only; on a phone the vertical
-          space it costs is space the conversation needs. */}
-      <div className="w-full px-4 py-2 border-b bg-background">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2 sm:gap-4">
-            <Button
-              onClick={() => navigate('/')}
-              variant="outline"
-              size="sm"
-              data-testid="button-back-to-overview"
-            >
-              <ArrowLeft className="h-4 w-4 sm:mr-2" />
-              <span className="hidden sm:inline">Back</span>
-            </Button>
-            <div className="min-w-0">
-              <h1 className="truncate text-base font-bold text-foreground sm:text-2xl" data-testid="text-session-title">
-                {sessionInfo.title}
-              </h1>
-              <p className="hidden text-sm text-muted-foreground sm:block">{sessionInfo.description}</p>
-            </div>
-          </div>
-        </div>
+    /*
+     * ── NO HEIGHT ARITHMETIC ─────────────────────────────────────────────────
+     * This was `h-[calc(100dvh-57px)]` on the row below, and it was wrong: 57px
+     * is the chat header alone. The app nav bar sits above it and was never in
+     * the sum, so the conversation ran roughly its own height past the bottom
+     * of the window and the composer sat below the fold.
+     *
+     * The previous value, 104/140px, happened to be right — it was two magic
+     * numbers that matched two components. Redesigning the header changed one
+     * of them and there was nothing to say so.
+     *
+     * So: a flex column the height of the viewport, with both bars `shrink-0`
+     * and the body `flex-1 min-h-0`. The browser does the arithmetic, and it
+     * cannot go stale when a header gains a line or a nav bar changes padding.
+     * `min-h-0` is the load-bearing part — without it a flex child refuses to
+     * shrink below its content and the overflow comes straight back.
+     */
+    <div className="flex h-[100dvh] flex-col bg-canvas">
+      <div className="shrink-0">
+        <NavBar />
       </div>
-
+      
       {/*
-        2-column layout.
+        The header carries the timer and the exit.
 
-        `dvh`, not `vh`. On iOS Safari and Android Chrome `100vh` is the
-        viewport height with the address bar HIDDEN, so a 100vh container is
-        taller than what is actually on screen — and the thing pushed off the
-        bottom here is the message box. The student opens the session and cannot
-        see where to type. `dvh` tracks the real visible height as the browser
-        chrome collapses.
-
-        The subtracted header is smaller on mobile because the header itself is:
-        the description is hidden and the title drops to text-base.
+        Both used to live only in the right-hand rail, which is `hidden lg:`.
+        On a phone the student could neither see the time nor leave a session
+        they had started — "the full journey must function on mobile" is not
+        satisfied by a journey you cannot exit. Putting them here means one
+        implementation for both widths instead of a duplicated mobile bar.
       */}
-      <div className="flex h-[calc(100dvh-104px)] sm:h-[calc(100dvh-140px)]">
-        {/* Left Column - Chat Interface (75%) */}
-        <div className="w-full lg:w-3/4 flex flex-col">
-          {/*
-            Mobile session bar.
-
-            The right-hand column is `hidden lg:block`, so on a phone the timer
-            and the End Session Early button did not exist at all — and the
-            second of those is a control, not decoration. A student on mobile
-            had no way to leave a session they had started. "The full user
-            journey must function on mobile" (B5) is not satisfied by a journey
-            you cannot exit.
-
-            Sits inside the flex column rather than above it, so it takes its
-            space from the scroll area and the height calc above stays honest.
-          */}
-          {(session.status === 'in_progress' || session.status === 'completed') && (
-            <div className="flex shrink-0 items-center justify-between gap-2 border-b px-3 py-1.5 lg:hidden">
+      <ChatHeader
+        title={sessionInfo.title}
+        subtitle={sessionInfo.description}
+        onBack={() => navigate('/')}
+        meta={
+          (session.status === 'in_progress' || session.status === 'completed') && (
+            <div className="flex items-center gap-1">
               <SessionTimer
                 isSessionActive={session.status === 'in_progress'}
                 isSessionCompleted={session.status === 'completed'}
-                className="border-0 bg-transparent p-0 text-xs"
                 sessionNumber={sessionNumber}
                 initialTimerElapsed={session.timerElapsedSeconds || 0}
               />
@@ -705,338 +697,338 @@ export default function FoundationSessionChatPage() {
                 <Button
                   variant="ghost"
                   size="sm"
-                  className="h-8 shrink-0 px-2 text-xs text-muted-foreground hover:text-destructive"
+                  className="h-8 px-2 text-[13px] text-ink-soft hover:text-bad lg:hidden"
                   onClick={() => setShowEndSessionDialog(true)}
                   disabled={isSpeaking || endSessionEarlyMutation.isPending}
                 >
-                  <LogOut className="mr-1 h-3.5 w-3.5" />
-                  End
+                  <LogOut className="h-3.5 w-3.5" />
+                  <span className="sr-only">End session early</span>
                 </Button>
               )}
             </div>
-          )}
+          )
+        }
+      />
 
-          {/* Chat Interface */}
-          <Card className="flex-1 flex flex-col overflow-hidden m-0 rounded-none">       
-          <CardContent className="flex-1 min-h-0 flex flex-col p-0 overflow-hidden py-2">
-            {/* Messages Area */}
-            <ScrollArea className="flex-1 min-h-0 px-3 sm:px-6">
-              <div className="space-y-4 pb-4">
+      {/*
+        Two columns: the conversation, and a rail that is reference material.
 
-                {/* Conversation messages */}
-                {messages.map((message, index) => (
-                  <div 
-                    key={message.id} 
-                    className={`flex gap-3 ${message.role === 'user' ? 'flex-row-reverse' : ''}`}
-                    data-testid={`message-${message.role}-${index}`}
-                  >
-                    <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
-                      message.role === 'user' 
-                        ? 'bg-primary text-primary-foreground' 
-                        : 'bg-muted text-muted-foreground'
-                    }`}>
-                      {message.role === 'user' ? (user?.firstName?.[0]?.toUpperCase() || 'U') : 'S'}
-                    </div>
-                    <div className={`flex-1 ${message.role === 'user' ? 'max-w-[calc(100%-6rem)]' : 'max-w-[calc(100%-6rem)]'}`}>
-                      <div className={`rounded-lg p-4 break-words ${
-                        message.role === 'user' 
-                          ? 'bg-primary text-primary-foreground ml-8' 
-                          : 'bg-muted mr-8'
-                      }`}>
-                        <p className="text-sm whitespace-pre-wrap break-words">{message.content}</p>
-                      </div>
-                      <p className={`text-xs text-muted-foreground mt-1 ${
-                        message.role === 'user' ? 'text-right' : ''
-                      }`}>
-                        {message.role === 'user' ? 'You' : 'SLI'} • {message.createdAt ? new Date(message.createdAt).toLocaleTimeString() : ""}
-                      </p>
-                    </div>
-                  </div>
-                ))}
+        `dvh`, not `vh`. On iOS Safari and Android Chrome `100vh` is the
+        viewport height with the address bar HIDDEN, so a 100vh container is
+        taller than what is actually on screen — and the thing pushed off the
+        bottom here is the message box. The student opens the session and cannot
+        see where to type. `dvh` tracks the real visible height as the browser
+        chrome collapses.
+      */}
+      {/*
+        Paper on a desk.
 
-                {/*
-                  The turn in flight.
+        The page is `--canvas`; the conversation and each rail card are white
+        sheets on top of it. The first pass had everything on one white plane
+        with no edges, which read as elements floating in space rather than as
+        a document with a margin — the header, the transcript and the rail all
+        appeared unrelated to each other.
 
-                  Each bubble is suppressed the moment the real turn is present
-                  in fetched data, so there is never a frame with both. The old
-                  version rendered the streamed copy until an effect cleared it
-                  a frame later, which is where the duplicate flash came from.
-                */}
-                {pending && !messages.some((m) => m.id === pending.humanTurnId) && (
-                  <div className="flex gap-3 flex-row-reverse" data-testid="message-pending-user">
-                    <div className="w-8 h-8 rounded-full flex items-center justify-center bg-primary text-primary-foreground">
-                      {user?.firstName?.[0]?.toUpperCase() || 'U'}
-                    </div>
-                    <div className="flex-1 max-w-[calc(100%-6rem)]">
-                      <div className="rounded-lg p-4 break-words bg-primary text-primary-foreground ml-8">
-                        <p className="text-sm whitespace-pre-wrap break-words">{pending.userText}</p>
-                      </div>
-                      <p className="text-xs text-muted-foreground mt-1 text-right">You</p>
-                    </div>
-                  </div>
-                )}
+        `px-6` matches the header's gutters exactly, so the title sits above
+        the sheet's left edge and the timer above the rail. Alignment is what
+        was actually missing; the surfaces make it legible.
+      */}
+      <div className="flex min-h-0 flex-1 gap-4 p-4 sm:gap-5 sm:px-6 sm:py-5">
+        <Sheet className="w-full min-w-0 lg:w-[72%]">
+          <Transcript>
+            {messages.map((message, index) => (
+              <Turn
+                key={message.id}
+                role={message.role === 'user' ? 'user' : 'assistant'}
+                time={message.createdAt}
+                testId={`message-${message.role}-${index}`}
+              >
+                {message.role === 'user' ? message.content : <Prose content={message.content} />}
+              </Turn>
+            ))}
 
-                {pending &&
-                  !messages.some((m) => m.id === pending.assistantTurnId) && (
-                    <div className="flex gap-3" data-testid="message-pending-assistant">
-                      <div className="w-8 h-8 bg-muted rounded-full flex items-center justify-center shrink-0">
-                        {pending.phase === 'settling' ? (
-                          'S'
-                        ) : (
-                          <Loader2 className="h-4 w-4 animate-spin" />
-                        )}
-                      </div>
-                      <div className="flex-1 max-w-[calc(100%-6rem)]">
-                        <div className="bg-muted rounded-lg p-4 mr-8 break-words">
-                          {pending.assistantText ? (
-                            <p className="text-sm whitespace-pre-wrap break-words">
-                              {pending.assistantText}
-                            </p>
-                          ) : (
-                            /* Nothing has arrived yet. Three dots rather than
-                               an empty bubble, which reads as a broken turn. */
-                            <span className="flex gap-1 py-1" aria-label="Wing is thinking">
-                              {[0, 150, 300].map((delay) => (
-                                <span
-                                  key={delay}
-                                  className="h-1.5 w-1.5 rounded-full bg-muted-foreground/50 animate-pulse"
-                                  style={{ animationDelay: `${delay}ms` }}
-                                />
-                              ))}
-                            </span>
-                          )}
-                        </div>
-                        <p className="text-xs text-muted-foreground mt-1">
-                          SLI{pending.phase === 'settling' ? '' : ' • typing...'}
-                        </p>
-                      </div>
-                    </div>
-                  )}
+            {/*
+              The turn in flight.
 
-                <div ref={messagesEndRef} />
-              </div>
-            </ScrollArea>
-
-            {/* Message Input */}
-            {(session.status === 'in_progress' || (session.status === 'completed' && allowContinue)) && (
-              <div className="border-t p-3 sm:p-6">
-                <form onSubmit={handleSendMessage}>
-                  <div className="flex gap-2">
-                    <VoiceMicButton
-                      isRecording={voiceRecording.isRecording}
-                      isProcessing={voiceRecording.isProcessing}
-                      disabled={isSpeaking}
-                      onClick={voiceRecording.toggleRecording}
-                    />
-                    <Textarea
-                      ref={messageInputRef}
-                      value={currentMessage}
-                      // Shorter placeholder on mobile: the full sentence wraps
-                      // to three lines in a 60px box and hides itself.
-                      placeholder="Type or tap the mic to speak..."
-                      onChange={(e) => setCurrentMessage(e.target.value)}
-                      // text-base, not text-sm. Below 16px iOS zooms the page on
-                      // focus and never zooms back — see index.css. The global
-                      // rule covers this too; it is explicit here because this
-                      // is the one input a student spends a whole session in.
-                      className="min-h-[60px] resize-none text-base sm:text-sm flex-1"
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter' && !e.shiftKey) {
-                          e.preventDefault();
-                          handleSendMessage(e);
-                        }
-                      }}
-                      disabled={isSpeaking || voiceRecording.isRecording}
-                      data-testid="input-message"
-                    />
-                    <Button 
-                      type="submit" 
-                      size="default"
-                      disabled={!currentMessage.trim() || isSpeaking || voiceRecording.isRecording}
-                      data-testid="button-send-message"
-                      className="h-[60px]"
-                    >
-                      {isSpeaking ? (
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                      ) : (
-                        <Send className="h-4 w-4" />
-                      )}
-                    </Button>
-                  </div>
-                </form>
-                
-                {/* Status indicator */}
-                {(voiceRecording.isRecording || voiceRecording.isProcessing) && (
-                  <div className="mt-2 text-sm">
-                    {voiceRecording.isProcessing ? (
-                      <p className="text-muted-foreground animate-pulse" data-testid="text-voice-status">
-                        Processing voice...
-                      </p>
-                    ) : voiceRecording.isRecording ? (
-                      <p className="text-red-600 dark:text-red-400 font-medium" data-testid="text-voice-status">
-                        Recording... Click mic to stop
-                      </p>
-                    ) : null}
-                  </div>
-                )}
-              </div>
+              Each is suppressed the moment the real turn is present in fetched
+              data, so there is never a frame with both. The old version
+              rendered the streamed copy until an effect cleared it a frame
+              later, which is where the duplicate flash came from.
+            */}
+            {pending && !messages.some((m) => m.id === pending.humanTurnId) && (
+              <Turn role="user" testId="message-pending-user">
+                {pending.userText}
+              </Turn>
             )}
 
-            {/* Completed session — the transition to what comes next. */}
+            {pending &&
+              !messages.some((m) => m.id === pending.assistantTurnId) &&
+              (pending.assistantText ? (
+                <Turn role="assistant" testId="message-pending-assistant">
+                  <Prose content={pending.assistantText} />
+                </Turn>
+              ) : (
+                <Thinking />
+              ))}
+
+            {/*
+              The end of a finished session, in the transcript rather than in
+              the rail — it is the next thing to read after Wing's last turn,
+              and on a phone the rail does not exist.
+            */}
             {session.status === 'completed' && !allowContinue && (
-              <div className="border-t p-4 sm:p-6 space-y-4">
-                <div className="flex items-start gap-2">
-                  <CheckCircle className="mt-0.5 h-5 w-5 shrink-0 text-green-600" />
-                  <p className="text-sm text-muted-foreground">
-                    This one's done — the conversation above stays here if you want to reread it.
-                  </p>
+              <div className="space-y-4 pt-2">
+                <div className="flex items-start gap-2 text-[14px] text-ink-soft">
+                  <CheckCircle className="mt-0.5 h-4 w-4 shrink-0 text-good" />
+                  <p>This one's done — the conversation above stays here if you want to reread it.</p>
                 </div>
 
-                {NEXT_STEP[sessionNumber] && (
-                  <div className="rounded-md border bg-muted/40 p-4">
-                    <p className="text-sm font-medium">Next: {NEXT_STEP[sessionNumber].title}</p>
-                    <p className="pt-1 text-sm text-muted-foreground">
-                      {NEXT_STEP[sessionNumber].does}
-                    </p>
-                    <p className="pt-2 text-sm">
-                      <span className="text-muted-foreground">You'll come away with — </span>
+                {NEXT_STEP[sessionNumber] ? (
+                  <OutcomeCard
+                    eyebrow="What's next"
+                    title={NEXT_STEP[sessionNumber].title}
+                    action={
+                      <>
+                        <Button onClick={() => navigate(`/foundation/session/${sessionNumber + 1}`)}>
+                          Start {NEXT_STEP[sessionNumber].title.split(' — ')[0]}
+                        </Button>
+                        <span className="text-[11px] uppercase tracking-[0.08em] text-ink-soft">
+                          {NEXT_STEP[sessionNumber].duration}
+                        </span>
+                      </>
+                    }
+                  >
+                    <p>{NEXT_STEP[sessionNumber].does}</p>
+                    <p className="pt-2 text-ink">
+                      <span className="text-ink-soft">You'll come away with — </span>
                       {NEXT_STEP[sessionNumber].reveals}
                     </p>
-                    <div className="flex flex-wrap items-center gap-3 pt-3">
-                      <Button onClick={() => navigate(`/foundation/session/${sessionNumber + 1}`)}>
-                        Start {NEXT_STEP[sessionNumber].title.split(' — ')[0]}
-                      </Button>
-                      <span className="text-xs uppercase tracking-wide text-muted-foreground">
-                        {NEXT_STEP[sessionNumber].duration}
-                      </span>
-                    </div>
-                  </div>
-                )}
-
-                {/* Session 3 has no next session — the arc is finished. */}
-                {!NEXT_STEP[sessionNumber] && (
-                  <div className="rounded-md border bg-muted/40 p-4">
-                    <p className="text-sm font-medium">That's all three.</p>
-                    <p className="pt-1 text-sm text-muted-foreground">
-                      Your positioning work is done. The optional modules and the rest of the
-                      tools are on your dashboard whenever you want them.
-                    </p>
-                    <Button className="mt-3" onClick={() => navigate('/')}>
-                      Back to dashboard
-                    </Button>
-                  </div>
+                  </OutcomeCard>
+                ) : (
+                  <OutcomeCard
+                    eyebrow="Finished"
+                    title="That's all three."
+                    action={<Button onClick={() => navigate('/')}>Back to dashboard</Button>}
+                  >
+                    Your positioning work is done. The optional modules and the rest of the
+                    tools are on your dashboard whenever you want them.
+                  </OutcomeCard>
                 )}
 
                 <Button
                   onClick={() => setAllowContinue(true)}
                   variant="ghost"
                   size="sm"
-                  className="text-muted-foreground"
+                  className="text-ink-soft hover:text-ink"
                   data-testid="button-continue-chat"
                 >
-                  <MessageSquare className="h-4 w-4 mr-2" />
+                  <MessageSquare className="mr-2 h-4 w-4" />
                   Or keep talking about this one
                 </Button>
               </div>
             )}
-          </CardContent>
-        </Card>
-        </div>
 
-        {/* Right Column - Timer & Status (25%) */}
-        <div className="hidden lg:block w-1/4 border-l bg-background/50">
-          <div className="p-4 space-y-4">
-            <h3 className="font-semibold text-sm text-muted-foreground uppercase tracking-wide">Session Info</h3>
-            
-            {/* Session Timer */}
-            {(session.status === 'in_progress' || session.status === 'completed') && (
-              <div className="space-y-3">
-                <SessionTimer 
-                  isSessionActive={session.status === 'in_progress'}
-                  isSessionCompleted={session.status === 'completed'}
-                  className="border-0 bg-transparent p-0"
-                  sessionNumber={sessionNumber}
-                  initialTimerElapsed={session.timerElapsedSeconds || 0}
-                  /*
-                    Display only. The desktop instance above owns persistence —
-                    both are mounted at every width, so leaving this on doubled
-                    every write. Counting is local, so this still shows the
-                    right time.
-                  */
-                  persist={false}
-                />
-                {session.status === 'in_progress' && (
+            <div ref={messagesEndRef} />
+          </Transcript>
+
+          {(session.status === 'in_progress' ||
+            (session.status === 'completed' && allowContinue)) && (
+            <Composer
+              note={
+                voiceRecording.isProcessing ? (
+                  <span className="animate-pulse" data-testid="text-voice-status">
+                    Processing voice…
+                  </span>
+                ) : voiceRecording.isRecording ? (
+                  <span className="font-medium text-bad" data-testid="text-voice-status">
+                    Recording — tap the mic to stop
+                  </span>
+                ) : null
+              }
+            >
+              <form onSubmit={handleSendMessage}>
+                {/*
+                  One framed row rather than three separate controls with gaps
+                  between them. The mic and send sit inside the field's border,
+                  which is what makes the composer read as a single place to
+                  write instead of a toolbar.
+                */}
+                <div className="flex items-end gap-1 rounded-2xl border border-rule bg-background p-1.5 transition-colors focus-within:border-brand/40">
+                  <VoiceMicButton
+                    isRecording={voiceRecording.isRecording}
+                    isProcessing={voiceRecording.isProcessing}
+                    disabled={isSpeaking}
+                    onClick={voiceRecording.toggleRecording}
+                  />
+                  <Textarea
+                    ref={messageInputRef}
+                    value={currentMessage}
+                    placeholder="Type your answer, or tap the mic…"
+                    onChange={(e) => setCurrentMessage(e.target.value)}
+                    /*
+                      text-base, not text-sm. Below 16px iOS zooms the page on
+                      focus and never zooms back — see index.css. Explicit here
+                      because this is the one input a student spends a whole
+                      session in.
+                    */
+                    className="max-h-40 min-h-9 flex-1 resize-none border-0 bg-transparent px-2 py-[6px] text-base leading-6 text-ink shadow-none placeholder:text-ink-soft/60 focus-visible:ring-0 sm:text-[15px]"
+                    rows={1}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && !e.shiftKey) {
+                        e.preventDefault();
+                        handleSendMessage(e);
+                      }
+                    }}
+                    disabled={isSpeaking || voiceRecording.isRecording}
+                    data-testid="input-message"
+                  />
                   <Button
-                    variant="outline"
-                    size="sm"
-                    className="w-full text-muted-foreground hover:text-destructive hover:border-destructive"
-                    onClick={() => setShowEndSessionDialog(true)}
-                    disabled={isSpeaking || endSessionEarlyMutation.isPending}
+                    type="submit"
+                    size="icon"
+                    disabled={!currentMessage.trim() || isSpeaking || voiceRecording.isRecording}
+                    data-testid="button-send-message"
+                    className="h-9 w-9 shrink-0 rounded-full bg-brand text-white hover:bg-brand/90"
                   >
-                    <LogOut className="h-3.5 w-3.5 mr-2" />
-                    End Session Early
+                    {isSpeaking ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Send className="h-4 w-4" />
+                    )}
                   </Button>
-                )}
-              </div>
-            )}
+                </div>
+              </form>
+            </Composer>
+          )}
+        </Sheet>
 
-            {/* Function Progress for Sessions 1 & 2 */}
+        {/*
+          The rail. Reference, not controls — everything here can be ignored
+          without losing the session, which is why it is allowed to disappear
+          below `lg`. The one genuine control it used to hold alone was End
+          Session Early; that now also lives in the header, so a student on a
+          phone can still leave.
+
+          Cards on the canvas rather than one bordered column: each of these is
+          a separate thing to look up, and they were previously distinguishable
+          only by their labels.
+        */}
+        <aside className="hidden w-[28%] min-w-[17rem] shrink-0 overflow-y-auto lg:block">
+          <div className="space-y-4">
             {(sessionNumber === 1 || sessionNumber === 2) && (
-              <div className="space-y-2">
-                <h4 className="text-sm font-medium">
-                  {sessionNumber === 1 ? "Target Functions" : "Credibility Areas"}
-                </h4>
-                <div className="flex flex-wrap gap-1">
-                  {sessionInfo.functions.map((func) => (
-                    <Badge key={func} variant="outline" className="text-xs">
-                      {func}
-                    </Badge>
-                  ))}
+              <RailSection
+                title={sessionNumber === 1 ? 'Target functions' : 'Credibility areas'}
+                tone="info"
+                icon={<Compass className="h-3.5 w-3.5" />}
+              >
+                <div className="flex flex-wrap gap-1.5">
+                  {sessionInfo.functions.map((func) => {
+                    /*
+                     * Once the session has landed on one, that chip is the
+                     * answer and the rest are the field it was chosen from.
+                     * Colour marks the difference; before that they are all
+                     * equally live and all read the same.
+                     */
+                    const chosen = sessionArtifact?.primaryFunction === func;
+                    return (
+                      <span
+                        key={func}
+                        className={cn(
+                          'rounded-full px-2.5 py-1 text-[12px] transition-colors',
+                          chosen
+                            ? 'bg-brand font-medium text-white'
+                            : 'bg-info-soft text-info',
+                        )}
+                      >
+                        {func}
+                      </span>
+                    );
+                  })}
                 </div>
-              </div>
+              </RailSection>
             )}
 
-            {/* Session outcome — read from the typed artifact */}
             {session.status === 'completed' && sessionArtifact && (
-              <div className="space-y-2">
-                <h4 className="text-sm font-medium">Results</h4>
-                <div className="space-y-2 text-sm">
+              <RailSection
+                title="What this session found"
+                tone="brand"
+                icon={<Sparkles className="h-3.5 w-3.5" />}
+              >
+                <div className="space-y-4">
+                  {/* The deliverable, treated as the deliverable. */}
                   {sessionArtifact.primaryFunction && (
-                    <div>
-                      <span className="font-medium">Primary:</span> {sessionArtifact.primaryFunction}
+                    <div className="space-y-1.5">
+                      <p className="text-[11px] uppercase tracking-[0.06em] text-ink-soft">
+                        Primary function
+                      </p>
+                      <RailHighlight>{sessionArtifact.primaryFunction}</RailHighlight>
                     </div>
                   )}
-                  {sessionArtifact.secondaryFunction && (
-                    <div>
-                      <span className="font-medium">Secondary:</span> {sessionArtifact.secondaryFunction}
-                    </div>
-                  )}
-                  {sessionArtifact.credibilityTier && (
-                    <div>
-                      <span className="font-medium">Credibility Tier:</span> {sessionArtifact.credibilityTier}
-                    </div>
-                  )}
-                  {sessionArtifact.brandClaim && (
-                    <div>
-                      <span className="font-medium">Brand Claim:</span> {sessionArtifact.brandClaim}
-                    </div>
-                  )}
-                  {sessionArtifact.confidence && (
-                    <div>
-                      <span className="font-medium">Confidence:</span> {sessionArtifact.confidence}%
-                    </div>
+
+                  <dl>
+                    {sessionArtifact.secondaryFunction && (
+                      <RailFact label="Secondary" value={sessionArtifact.secondaryFunction} />
+                    )}
+                    {sessionArtifact.credibilityTier && (
+                      <RailFact
+                        label="Credibility tier"
+                        value={
+                          /*
+                           * A badge, not a sentence — but deliberately NOT
+                           * colour-scaled by number. Whether tier 1 is the
+                           * strongest or the weakest is a methodology question
+                           * I have not confirmed, and a green tier 1 next to a
+                           * red tier 3 would assert an answer to it. `deep` is
+                           * the methodology accent and carries no ranking.
+                           */
+                          <span className="inline-flex items-center rounded-md bg-deep-soft px-2 py-0.5 text-[13px] font-medium text-deep">
+                            Tier {sessionArtifact.credibilityTier}
+                          </span>
+                        }
+                      />
+                    )}
+                    {sessionArtifact.brandClaim && (
+                      <RailFact
+                        label="Brand claim"
+                        value={
+                          <span className="border-l-2 border-brand/30 pl-3 block italic">
+                            {sessionArtifact.brandClaim}
+                          </span>
+                        }
+                      />
+                    )}
+                  </dl>
+
+                  {sessionArtifact.confidence != null && (
+                    <RailMeter value={sessionArtifact.confidence} label="Confidence" />
                   )}
                 </div>
-              </div>
+              </RailSection>
             )}
 
-            {/* The "download a PDF summary" link that used to sit here pointed
-                at /summaries, which has no server route — the conversation
-                summaries feature was superseded by Foundation Sessions and its
-                API was removed. It rendered on every completed session and
-                always led to an error page. */}
+            {session.status === 'in_progress' && (
+              <RailSection
+                title="If you need to stop"
+                tone="warn"
+                icon={<LogOut className="h-3.5 w-3.5" />}
+              >
+                <p className="text-[13px] leading-relaxed text-ink-soft">
+                  Your progress is saved as you go. Finishing in one sitting gives the best
+                  result, but you can come back.
+                </p>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="mt-3 w-full border-rule text-ink-soft hover:border-bad/40 hover:bg-bad-soft hover:text-bad"
+                  onClick={() => setShowEndSessionDialog(true)}
+                  disabled={isSpeaking || endSessionEarlyMutation.isPending}
+                >
+                  <LogOut className="mr-2 h-3.5 w-3.5" />
+                  End session early
+                </Button>
+              </RailSection>
+            )}
           </div>
-        </div>
+        </aside>
       </div>
 
       {/* End Session Early Dialog */}

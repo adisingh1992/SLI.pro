@@ -8,6 +8,16 @@ import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import {
+  ChatHeader,
+  ChatShell,
+  Composer,
+  Sheet,
+  Prose,
+  Thinking,
+  Transcript,
+  Turn,
+} from "@/components/chat";
+import {
   Select,
   SelectContent,
   SelectItem,
@@ -159,76 +169,97 @@ export default function IntakeChatPage() {
 
   const canFinish = state.data?.complete === true;
 
+  /*
+   * The intake is the first screen a new student ever sees, so it carries the
+   * most weight per pixel of anything in the product. It uses the same
+   * primitives as the two coaching surfaces — same turns, same composer, same
+   * thinking indicator — because arriving at Foundation Session 1 should feel
+   * like continuing a conversation rather than moving to a different product.
+   *
+   * No side rail and no timer: there is nothing to reference and nothing to
+   * time. The header is the only chrome.
+   */
   return (
-    <div className="flex min-h-[100dvh] flex-col bg-background">
-      <div className="mx-auto flex w-full max-w-2xl flex-1 flex-col px-4 py-6 sm:px-6">
-        <div className="flex-1 space-y-5">
-          {messages.map((m, i) => (
-            <div key={i} className={m.role === "user" ? "flex justify-end" : ""}>
-              <div
-                className={
-                  m.role === "user"
-                    ? "max-w-[85%] rounded-2xl rounded-br-sm bg-primary px-4 py-2.5 text-primary-foreground"
-                    : "max-w-[95%]"
-                }
+    <ChatShell>
+      <ChatHeader
+        title="Let's start with you"
+        subtitle="A short conversation so Wing knows who it's working with"
+      />
+
+      {/*
+        One sheet on the canvas. Narrower than a session's, because there is no
+        rail beside it and a full-width column of conversation on a large
+        display has nothing anchoring it.
+      */}
+      <div className="flex min-h-0 flex-1 justify-center p-4 sm:px-6 sm:py-5">
+        <Sheet className="w-full max-w-3xl">
+          <Transcript>
+            {messages.map((m, i) => (
+              <Turn
+                key={i}
+                role={m.role === "user" ? "user" : "assistant"}
+                testId={`intake-${m.role}-${i}`}
               >
-                <p className="whitespace-pre-wrap text-[15px] leading-relaxed">{m.content}</p>
-              </div>
-            </div>
-          ))}
+                {m.role === "user" ? m.content : <Prose content={m.content} />}
+              </Turn>
+            ))}
 
-          {(send.isPending || begin.isPending) && (
-            <div className="flex items-center gap-1.5 pt-1">
-              <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-muted-foreground [animation-delay:-0.3s]" />
-              <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-muted-foreground [animation-delay:-0.15s]" />
-              <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-muted-foreground" />
-            </div>
-          )}
+            {(send.isPending || begin.isPending) && <Thinking />}
 
-          <div ref={endRef} />
-        </div>
+            <div ref={endRef} />
+          </Transcript>
 
-        {/* Composer */}
-        <div className="sticky bottom-0 space-y-2 bg-background pt-4">
-          <div className="flex gap-2">
-            <Textarea
-              ref={inputRef}
-              value={draft}
-              onChange={(e) => setDraft(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" && !e.shiftKey) {
-                  e.preventDefault();
-                  submit();
-                }
-              }}
-              placeholder="Type your answer…"
-              rows={2}
-              // text-base: below 16px iOS zooms on focus and never zooms back.
-              className="resize-none text-base sm:text-sm"
-              disabled={send.isPending}
-            />
-            <Button onClick={submit} disabled={!draft.trim() || send.isPending} className="h-auto">
-              {send.isPending ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <Send className="h-4 w-4" />
-              )}
-            </Button>
-          </div>
-
-          {canFinish && (
-            <div className="flex items-center justify-between gap-2">
-              <p className="text-xs text-muted-foreground">
-                That's everything I need — keep going if you want, or wrap up.
-              </p>
-              <Button variant="outline" size="sm" onClick={() => setShowClosing(true)}>
+          <Composer
+        note={
+          canFinish ? (
+            <div className="flex items-center justify-between gap-3">
+              <span>That's everything I need — keep going if you want, or wrap up.</span>
+              <Button
+                variant="outline"
+                size="sm"
+                className="shrink-0 border-rule"
+                onClick={() => setShowClosing(true)}
+              >
                 Wrap up
               </Button>
             </div>
-          )}
+          ) : null
+        }
+      >
+        <div className="flex items-end gap-1 rounded-2xl border border-rule bg-background p-1.5 transition-colors focus-within:border-brand/40">
+          <Textarea
+            ref={inputRef}
+            value={draft}
+            onChange={(e) => setDraft(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && !e.shiftKey) {
+                e.preventDefault();
+                submit();
+              }
+            }}
+            placeholder="Type your answer…"
+            rows={1}
+            // text-base: below 16px iOS zooms on focus and never zooms back.
+            className="max-h-40 min-h-9 flex-1 resize-none border-0 bg-transparent px-2 py-[6px] text-base leading-6 text-ink shadow-none placeholder:text-ink-soft/60 focus-visible:ring-0 sm:text-[15px]"
+            disabled={send.isPending}
+          />
+          <Button
+            onClick={submit}
+            size="icon"
+            disabled={!draft.trim() || send.isPending}
+            className="h-9 w-9 shrink-0 rounded-full bg-brand text-white hover:bg-brand/90"
+          >
+            {send.isPending ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Send className="h-4 w-4" />
+            )}
+          </Button>
         </div>
+          </Composer>
+        </Sheet>
       </div>
-    </div>
+    </ChatShell>
   );
 }
 
@@ -258,10 +289,13 @@ function ClosingStep({
   });
 
   return (
-    <div className="mx-auto max-w-2xl space-y-6 p-4 sm:p-6">
+    <div className="min-h-[100dvh] bg-canvas">
+      <div className="mx-auto max-w-2xl space-y-6 p-4 sm:p-8">
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Last bit, and it's optional</h1>
-        <p className="pt-1 text-sm text-muted-foreground">
+        <h1 className="text-xl font-semibold tracking-tight text-ink sm:text-2xl">
+          Last bit, and it's optional
+        </h1>
+        <p className="pt-1 text-[14px] leading-relaxed text-ink-soft">
           This helps your institution understand who the programme is reaching. Every question
           here can be left blank — it changes nothing about how Wing works with you.
         </p>
@@ -337,7 +371,7 @@ function ClosingStep({
         </label>
       </div>
 
-      <div className="space-y-3 rounded-md border bg-muted/40 p-4">
+      <div className="space-y-3 rounded-xl border border-rule bg-background p-4">
         <p className="text-xs leading-relaxed text-muted-foreground">{PRIVACY_TEXT}</p>
         <label className="flex cursor-pointer items-start gap-2 text-sm">
           <Checkbox
@@ -366,6 +400,7 @@ function ClosingStep({
         >
           Skip this
         </Button>
+      </div>
       </div>
     </div>
   );

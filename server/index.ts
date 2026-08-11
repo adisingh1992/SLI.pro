@@ -110,6 +110,18 @@ app.use((req, res, next) => {
         ? `degraded: no deployment for ${degraded.join(", ")} — using mid`
         : `ok (${Object.values(llm.deployments).join(", ")})`;
 
+    /*
+     * Voice is its own line, and never fatal. A missing Whisper deployment
+     * breaks only the microphone; the rest of the page is unaffected, so
+     * failing readiness over it would take a working app out of rotation. But
+     * it also surfaces nowhere else until a student taps the mic — hence a
+     * line here rather than silence.
+     */
+    const voice = orchestrator.voiceConfiguration();
+    checks.voice = voice.deployment
+      ? `ok (${voice.deployment})`
+      : "unavailable: AZURE_OPENAI_DEPLOYMENT_WHISPER is not set";
+
     const blob = await import("./blob-storage");
     checks.blobStorage = blob.isConfigured() ? "configured" : "not configured";
 

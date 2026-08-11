@@ -98,6 +98,38 @@
     --good-soft: 152 60% 95%;
     --bad: 0 72% 45%;
     --bad-soft: 0 80% 96%;
+
+    /*
+     * ── THE STUDENT-FACING READING SURFACE ───────────────────────────────
+     * The conversation screens are where a student spends 8–10 minutes doing
+     * the actual thinking, and they had no visual identity at all: raw
+     * `bg-muted` grey, shadcn defaults, nothing shared with the dashboard or
+     * the sign-in screen either side of them.
+     *
+     * These four are not new colours. They are the values the rest of the
+     * product was already using, given names:
+     *
+     *   --ink       the sign-in screen's navy, which it hardcoded as #303454
+     *               in twenty-four places. Headings, and Wing's own voice.
+     *   --ink-soft  the same hue desaturated — timestamps, labels, anything
+     *               that must be present without competing with the prose.
+     *   --canvas    the page *behind* the reading column. Barely off-white;
+     *               its whole job is to let the column read as paper.
+     *   --rule      hairlines. Replaces the boxes: on a screen made of long
+     *               prose, a border is a much louder instruction than a rule,
+     *               and almost everything that was boxed only needed
+     *               separating.
+     *
+     * `--primary` (the 23% mint, hsl 167 23% 79%) is exactly the `#bed6d1`
+     * the sign-in screen also hardcoded, and it is what carries the student's
+     * own words. `--brand` is the same hue at usable depth for anything
+     * interactive. So the three surfaces finally share one hue family rather
+     * than three copies of it.
+     */
+    --ink: 233 27% 26%;
+    --ink-soft: 233 12% 46%;
+    --canvas: 210 24% 98%;
+    --rule: 214 22% 91%;
   }
 
   * {

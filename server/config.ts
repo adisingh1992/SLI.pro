@@ -34,7 +34,16 @@ const SECRET_MAP: Record<string, string> = {
   "AZURE-OPENAI-DEPLOYMENT-NANO": "AZURE_OPENAI_DEPLOYMENT_NANO",
   "AZURE-OPENAI-DEPLOYMENT-EMBEDDINGS": "AZURE_OPENAI_DEPLOYMENT_EMBEDDINGS",
   "AZURE-OPENAI-DEPLOYMENT-TRANSCRIBE": "AZURE_OPENAI_DEPLOYMENT_TRANSCRIBE",
-  "OPENAI-API-KEY": "OPENAI_API_KEY",
+  /*
+   * Speech-to-text, on its own Azure resource.
+   *
+   * Whisper has much narrower regional availability than the chat models, so
+   * the deployment usually lives somewhere else — hence a second endpoint and
+   * key rather than another deployment name on the main one.
+   */
+  "AZURE-OPENAI-ENDPOINT-ALT": "AZURE_OPENAI_ENDPOINT_ALT",
+  "AZURE-OPENAI-KEY-ALT": "AZURE_OPENAI_KEY_ALT",
+  "AZURE-OPENAI-DEPLOYMENT-WHISPER": "AZURE_OPENAI_DEPLOYMENT_WHISPER",
   "WING-FROM-EMAIL": "WING_FROM_EMAIL"
 };
 
@@ -93,16 +102,18 @@ export const LLM_SECRETS = [
   "AZURE_OPENAI_DEPLOYMENT_MID",
   "AZURE_OPENAI_DEPLOYMENT_NANO",
   "AZURE_OPENAI_DEPLOYMENT_EMBEDDINGS",
-  "OPENAI_API_KEY",
+  "AZURE_OPENAI_ENDPOINT_ALT",
+  "AZURE_OPENAI_KEY_ALT",
+  "AZURE_OPENAI_DEPLOYMENT_WHISPER",
 ] as const;
 
 /**
  * Hydrates several secrets, tolerating ones that are absent.
  *
  * Returns the names that could NOT be resolved, so the caller can decide
- * whether that matters — an absent OPENAI_API_KEY is fine when Azure is the
- * provider, while an absent AZURE_OPENAI_ENDPOINT changes which provider is
- * chosen at all.
+ * whether that matters — an absent AZURE_OPENAI_ENDPOINT_ALT is fine on a
+ * deployment with no voice, while an absent AZURE_OPENAI_ENDPOINT means no
+ * model calls work at all.
  */
 export async function loadSecretsFromVault(
   envNames: readonly string[],

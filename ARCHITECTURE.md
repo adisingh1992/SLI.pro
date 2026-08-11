@@ -1249,7 +1249,9 @@ key is missing the service fails gracefully (logs an error rather than crashing)
 | `AZURE_OPENAI_DEPLOYMENT_NANO` | recommended | `orchestrator/` | Falls back to `_MID` |
 | `AZURE_OPENAI_DEPLOYMENT_EMBEDDINGS` | ✅ (vectors) | `orchestrator/` | Memory / journal / drift |
 | `FIXED_TEMPERATURE_DEPLOYMENTS` | optional | `orchestrator/` | Escape hatch for a deployment whose name doesn't reveal the model behind it |
-| `OPENAI_API_KEY` | ✅ (voice) | `realtime/openai-realtime.ts` | Whisper transcription |
+| `AZURE_OPENAI_ENDPOINT_ALT` | ✅ (voice) | `orchestrator/` | Resource hosting the Whisper deployment; falls back to the main endpoint |
+| `AZURE_OPENAI_KEY_ALT` | optional | `orchestrator/` | Key for that resource; omit for managed identity |
+| `AZURE_OPENAI_DEPLOYMENT_WHISPER` | ✅ (voice) | `orchestrator/` | Speech-to-text deployment name. Absent = voice disabled, nothing else affected |
 | `STRIPE_SECRET_KEY` | ✅ (**startup**) | `payment-routes.ts` | Stripe API. **Required for the server to boot** — `payment-routes.ts` throws at module load if it is missing. |
 | `STRIPE_WEBHOOK_SECRET` | ✅ (prod payments) | `payment-routes.ts` | Verify webhook signatures |
 | `SENDGRID_API_KEY` | ✅ (email) | `email-service.ts` | Password‑reset email |

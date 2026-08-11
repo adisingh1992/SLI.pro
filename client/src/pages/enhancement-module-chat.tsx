@@ -4,11 +4,10 @@ import { apiRequest } from '@/lib/queryClient';
 import { useState, useRef, useEffect } from 'react';
 import { useLocation, useParams } from 'wouter';
 import NavBar from "@/components/nav-bar";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Badge } from "@/components/ui/badge";
-import { Loader2, Send, ArrowLeft, Lock, CheckCircle, MessageSquare, AlertCircle, LogOut } from "lucide-react";
+import { Loader2, Send, ArrowLeft, CheckCircle, MessageSquare, AlertCircle, LogOut, Compass, Sparkles } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -20,10 +19,22 @@ import {
 import VoiceMicButton from "@/components/VoiceMicButton";
 import { useVoiceRecording } from "@/hooks/use-voice-recording";
 import { useToast } from "@/hooks/use-toast";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import type { EnhancementModule, EnhancementModuleMessage } from '@shared/schema';
 import { SessionTimer } from "@/components/ui/session-timer";
 import type { SessionTimerConfig } from '@/hooks/use-session-timer';
+import {
+  ChatHeader,
+  Composer,
+  Sheet,
+  OutcomeCard,
+  Prose,
+  RailFact,
+  RailMeter,
+  RailSection,
+  Thinking,
+  Transcript,
+  Turn,
+} from "@/components/chat";
 
 // Timer configurations for Enhancement Modules
 const MODULE_A_TIMER_CONFIG: SessionTimerConfig = {
@@ -432,47 +443,29 @@ export default function EnhancementModuleChatPage() {
   const { module, messages } = moduleData;
 
   return (
-    <div className="min-h-screen bg-background">
-      <NavBar />
-      
-      {/* Header */}
-      <div className="w-full px-4 py-2 border-b bg-background">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2 sm:gap-4">
-            <Button
-              onClick={() => navigate('/')}
-              variant="outline"
-              size="sm"
-              data-testid="button-back-to-overview"
-            >
-              <ArrowLeft className="h-4 w-4 sm:mr-2" />
-              <span className="hidden sm:inline">Back</span>
-            </Button>
-            <div className="min-w-0">
-              <h1 className="truncate text-base font-bold text-foreground sm:text-2xl" data-testid="text-module-title">
-                {moduleInfo.title}
-              </h1>
-              <p className="hidden text-sm text-muted-foreground sm:block">{moduleInfo.description}</p>
-            </div>
-          </div>
-        </div>
+    /* Flex column, not calc — see foundation-session-chat.tsx. The old
+       arithmetic omitted the nav bar and pushed the composer below the fold. */
+    <div className="flex h-[100dvh] flex-col bg-canvas">
+      <div className="shrink-0">
+        <NavBar />
       </div>
-
-      {/* 2-column layout. `dvh` not `vh` — see foundation-session-chat.tsx for
-          why; the failure is the message box sitting below the fold on a
-          phone. */}
-      <div className="flex h-[calc(100dvh-104px)] sm:h-[calc(100dvh-140px)]">
-        {/* Left Column - Chat Interface (75%) */}
-        <div className="w-full lg:w-3/4 flex flex-col">
-          {/* Mobile bar — the info column is hidden below lg, so a student on a
-              phone would otherwise have neither the timer nor a way out. */}
-          {(module.status === 'in_progress' || module.status === 'completed') && (
-            <div className="flex shrink-0 items-center justify-between gap-2 border-b px-3 py-1.5 lg:hidden">
+      
+      {/*
+        Header carries the timer and the exit, so both exist on a phone. They
+        used to live only in the rail (`hidden lg:`) plus a duplicated mobile
+        bar — two implementations of one thing.
+      */}
+      <ChatHeader
+        title={moduleInfo.title}
+        subtitle={moduleInfo.description}
+        onBack={() => navigate('/')}
+        meta={
+          (module.status === 'in_progress' || module.status === 'completed') && (
+            <div className="flex items-center gap-1">
               <SessionTimer
                 config={getTimerConfig()}
                 isSessionActive={module.status === 'in_progress'}
                 isSessionCompleted={module.status === 'completed'}
-                className="border-0 bg-transparent p-0 text-xs"
                 initialTimerElapsed={module.timerElapsed || 0}
                 onTimerSave={handleTimerSave}
               />
@@ -480,251 +473,183 @@ export default function EnhancementModuleChatPage() {
                 <Button
                   variant="ghost"
                   size="sm"
-                  className="h-8 shrink-0 px-2 text-xs text-muted-foreground hover:text-destructive"
+                  className="h-8 px-2 text-ink-soft hover:text-bad lg:hidden"
                   onClick={() => setShowEndDialog(true)}
                   disabled={isStreaming || endEarlyMutation.isPending}
                 >
-                  <LogOut className="mr-1 h-3.5 w-3.5" />
-                  End
+                  <LogOut className="h-3.5 w-3.5" />
+                  <span className="sr-only">End module early</span>
                 </Button>
               )}
             </div>
-          )}
+          )
+        }
+      />
 
-          {/* Chat Interface */}
-          <Card className="flex-1 flex flex-col overflow-hidden m-0 rounded-none">       
-          <CardContent className="flex-1 min-h-0 flex flex-col p-0 overflow-hidden py-2">
-            {/* Messages Area */}
-            <ScrollArea className="flex-1 min-h-0 px-3 sm:px-6">
-              <div className="space-y-4 pb-4">
+      {/* Paper on a desk — see foundation-session-chat.tsx for the reasoning.
+          `px-6` matches the header's gutters so the title sits above the
+          sheet's left edge and the timer above the rail. */}
+      <div className="flex min-h-0 flex-1 gap-4 p-4 sm:gap-5 sm:px-6 sm:py-5">
+        <Sheet className="w-full min-w-0 lg:w-[72%]">
+          <Transcript>
+            {messages.map((message, index) => (
+              <Turn
+                key={message.id}
+                role={message.role === 'user' ? 'user' : 'assistant'}
+                time={message.createdAt}
+                testId={`message-${message.role}-${index}`}
+              >
+                {message.role === 'user' ? message.content : <Prose content={message.content} />}
+              </Turn>
+            ))}
 
-                {/* Conversation messages */}
-                {messages.map((message, index) => (
-                  <div 
-                    key={message.id} 
-                    className={`flex gap-3 ${message.role === 'user' ? 'flex-row-reverse' : ''}`}
-                    data-testid={`message-${message.role}-${index}`}
-                  >
-                    <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
-                      message.role === 'user' 
-                        ? 'bg-primary text-primary-foreground' 
-                        : 'bg-muted text-muted-foreground'
-                    }`}>
-                      {message.role === 'user' ? (user?.firstName?.[0]?.toUpperCase() || 'U') : 'S'}
-                    </div>
-                    <div className={`flex-1 ${message.role === 'user' ? 'max-w-[calc(100%-6rem)]' : 'max-w-[calc(100%-6rem)]'}`}>
-                      <div className={`rounded-lg p-4 break-words ${
-                        message.role === 'user' 
-                          ? 'bg-primary text-primary-foreground ml-8' 
-                          : 'bg-muted mr-8'
-                      }`}>
-                        <p className="text-sm whitespace-pre-wrap break-words">{message.content}</p>
-                      </div>
-                      <p className={`text-xs text-muted-foreground mt-1 ${
-                        message.role === 'user' ? 'text-right' : ''
-                      }`}>
-                        {message.role === 'user' ? 'You' : 'SLI'} • {new Date(message.createdAt).toLocaleTimeString()}
-                      </p>
-                    </div>
-                  </div>
-                ))}
-
-                {/* Optimistic user message (shown immediately when sent) */}
-                {optimisticMessage && (
-                  <div 
-                    className="flex gap-3 flex-row-reverse"
-                    data-testid="message-optimistic"
-                  >
-                    <div className="w-8 h-8 rounded-full flex items-center justify-center bg-primary text-primary-foreground">
-                      {user?.firstName?.[0]?.toUpperCase() || 'U'}
-                    </div>
-                    <div className="flex-1 max-w-[calc(100%-6rem)]">
-                      <div className="rounded-lg p-4 break-words bg-primary text-primary-foreground ml-8">
-                        <p className="text-sm whitespace-pre-wrap break-words">{optimisticMessage.content}</p>
-                      </div>
-                      <p className="text-xs text-muted-foreground mt-1 text-right">
-                        You • {new Date(optimisticMessage.createdAt).toLocaleTimeString()}
-                      </p>
-                    </div>
-                  </div>
-                )}
-
-                {/* Streaming response */}
-                {streamingResponse && (
-                  <div className="flex gap-3">
-                    <div className="w-8 h-8 bg-muted rounded-full flex items-center justify-center">
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                    </div>
-                    <div className="flex-1 max-w-[calc(100%-6rem)]">
-                      <div className="bg-muted rounded-lg p-4 mr-8 break-words">
-                        <p className="text-sm whitespace-pre-wrap break-words">{streamingResponse}</p>
-                      </div>
-                      <p className="text-xs text-muted-foreground mt-1">SLI • typing...</p>
-                    </div>
-                  </div>
-                )}
-
-                <div ref={messagesEndRef} />
-              </div>
-            </ScrollArea>
-
-            {/* Message Input */}
-            {(module.status === 'in_progress' || (module.status === 'completed' && allowContinue)) && (
-              <div className="border-t p-3 sm:p-6">
-                <form onSubmit={handleSendMessage}>
-                  <div className="flex gap-2">
-                    <VoiceMicButton
-                      isRecording={voiceRecording.isRecording}
-                      isProcessing={voiceRecording.isProcessing}
-                      disabled={isStreaming}
-                      onClick={voiceRecording.toggleRecording}
-                    />
-                    <Textarea
-                      ref={messageInputRef}
-                      value={currentMessage}
-                      onChange={(e) => setCurrentMessage(e.target.value)}
-                      placeholder="Type or click the microphone to speak your response naturally..."
-                      className="min-h-[60px] resize-none text-base sm:text-sm flex-1"
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter' && !e.shiftKey) {
-                          e.preventDefault();
-                          handleSendMessage(e);
-                        }
-                      }}
-                      disabled={isStreaming || voiceRecording.isRecording}
-                      data-testid="input-message"
-                    />
-                    <Button 
-                      type="submit" 
-                      size="default"
-                      disabled={!currentMessage.trim() || isStreaming || voiceRecording.isRecording}
-                      data-testid="button-send-message"
-                      className="h-[60px]"
-                    >
-                      {isStreaming ? (
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                      ) : (
-                        <Send className="h-4 w-4" />
-                      )}
-                    </Button>
-                  </div>
-                </form>
-                
-                {/* Status indicator */}
-                {(voiceRecording.isRecording || voiceRecording.isProcessing) && (
-                  <div className="mt-2 text-sm">
-                    {voiceRecording.isProcessing ? (
-                      <p className="text-muted-foreground animate-pulse" data-testid="text-voice-status">
-                        Processing voice...
-                      </p>
-                    ) : voiceRecording.isRecording ? (
-                      <p className="text-red-600 dark:text-red-400 font-medium" data-testid="text-voice-status">
-                        Recording... Click mic to stop
-                      </p>
-                    ) : null}
-                  </div>
-                )}
-              </div>
+            {optimisticMessage && (
+              <Turn role="user" time={optimisticMessage.createdAt} testId="message-optimistic">
+                {optimisticMessage.content}
+              </Turn>
             )}
 
-            {/* Completed module message with Continue option */}
+            {isStreaming &&
+              (streamingResponse ? (
+                <Turn role="assistant" testId="message-streaming">
+                  <Prose content={streamingResponse} />
+                </Turn>
+              ) : (
+                <Thinking />
+              ))}
+
             {module.status === 'completed' && !allowContinue && (
-              <div className="border-t p-6 text-center space-y-4">
-                <div>
-                  <CheckCircle className="h-6 w-6 text-green-600 mx-auto mb-2" />
-                  <p className="text-sm text-muted-foreground">
-                    This module has been completed. You can review the conversation above.
-                  </p>
+              <div className="space-y-4 pt-2">
+                <div className="flex items-start gap-2 text-[14px] text-ink-soft">
+                  <CheckCircle className="mt-0.5 h-4 w-4 shrink-0 text-good" />
+                  <p>This module is done — the conversation above stays here if you want to reread it.</p>
                 </div>
-                <Button 
+                <OutcomeCard
+                  eyebrow="Finished"
+                  title="Back to your dashboard"
+                  action={<Button onClick={() => navigate('/')}>Go to dashboard</Button>}
+                >
+                  Modules are optional and can be taken in any order. The rest are waiting
+                  whenever you want them.
+                </OutcomeCard>
+                <Button
                   onClick={() => setAllowContinue(true)}
-                  variant="outline"
+                  variant="ghost"
+                  size="sm"
+                  className="text-ink-soft hover:text-ink"
                   data-testid="button-continue-chat"
                 >
-                  <MessageSquare className="h-4 w-4 mr-2" />
-                  Continue the chat
+                  <MessageSquare className="mr-2 h-4 w-4" />
+                  Or keep talking about this one
                 </Button>
               </div>
             )}
-          </CardContent>
-        </Card>
-        </div>
 
-        {/* Right Column - Timer & Status (25%) */}
-        <div className="hidden lg:block w-1/4 border-l bg-background/50">
-          <div className="p-4 space-y-4">
-            <h3 className="font-semibold text-sm text-muted-foreground uppercase tracking-wide">Module Info</h3>
-            
-            {/* Module Timer */}
-            <SessionTimer
-              config={getTimerConfig()}
-              isSessionActive={module.status === 'in_progress'}
-              isSessionCompleted={module.status === 'completed'}
-              initialTimerElapsed={module.timerElapsed || 0}
-              onTimerSave={handleTimerSave}
-            />
+            <div ref={messagesEndRef} />
+          </Transcript>
 
-            {module.status === 'in_progress' && (
-              <Button
-                variant="outline"
-                size="sm"
-                className="w-full text-muted-foreground hover:text-destructive hover:border-destructive"
-                onClick={() => setShowEndDialog(true)}
-                disabled={isStreaming || endEarlyMutation.isPending}
-              >
-                <LogOut className="h-3.5 w-3.5 mr-2" />
-                End Module Early
-              </Button>
-            )}
+          {(module.status === 'in_progress' ||
+            (module.status === 'completed' && allowContinue)) && (
+            <Composer
+              note={
+                voiceRecording.isProcessing ? (
+                  <span className="animate-pulse" data-testid="text-voice-status">
+                    Processing voice…
+                  </span>
+                ) : voiceRecording.isRecording ? (
+                  <span className="font-medium text-bad" data-testid="text-voice-status">
+                    Recording — tap the mic to stop
+                  </span>
+                ) : null
+              }
+            >
+              <form onSubmit={handleSendMessage}>
+                <div className="flex items-end gap-1 rounded-2xl border border-rule bg-background p-1.5 transition-colors focus-within:border-brand/40">
+                  <VoiceMicButton
+                    isRecording={voiceRecording.isRecording}
+                    isProcessing={voiceRecording.isProcessing}
+                    disabled={isStreaming}
+                    onClick={voiceRecording.toggleRecording}
+                  />
+                  <Textarea
+                    ref={messageInputRef}
+                    value={currentMessage}
+                    onChange={(e) => setCurrentMessage(e.target.value)}
+                    placeholder="Type your answer, or tap the mic…"
+                    className="max-h-40 min-h-9 flex-1 resize-none border-0 bg-transparent px-2 py-[6px] text-base leading-6 text-ink shadow-none placeholder:text-ink-soft/60 focus-visible:ring-0 sm:text-[15px]"
+                    rows={1}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && !e.shiftKey) {
+                        e.preventDefault();
+                        handleSendMessage(e);
+                      }
+                    }}
+                    disabled={isStreaming || voiceRecording.isRecording}
+                    data-testid="input-message"
+                  />
+                  <Button
+                    type="submit"
+                    size="icon"
+                    disabled={!currentMessage.trim() || isStreaming || voiceRecording.isRecording}
+                    data-testid="button-send-message"
+                    className="h-9 w-9 shrink-0 rounded-full bg-brand text-white hover:bg-brand/90"
+                  >
+                    {isStreaming ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Send className="h-4 w-4" />
+                    )}
+                  </Button>
+                </div>
+              </form>
+            </Composer>
+          )}
+        </Sheet>
 
-
-            {/* Function Progress for Enhancement Modules */}
-            <div className="space-y-2">
-              <h4 className="text-sm font-medium">Focus Areas</h4>
-              <div className="flex flex-wrap gap-1">
+        <aside className="hidden w-[28%] min-w-[17rem] shrink-0 overflow-y-auto lg:block">
+          <div className="space-y-4">
+            <RailSection title="Focus areas" tone="info" icon={<Compass className="h-3.5 w-3.5" />}>
+              <div className="flex flex-wrap gap-1.5">
                 {moduleInfo.functions.map((func) => (
-                  <Badge key={func} variant="outline" className="text-xs">
+                  <span key={func} className="rounded-full bg-info-soft px-2.5 py-1 text-[12px] text-info">
                     {func}
-                  </Badge>
+                  </span>
                 ))}
               </div>
-            </div>
+            </RailSection>
 
-            {/* Completion Data */}
-            {module.status === 'completed' && module.completionData && (
-              <div className="space-y-2">
-                <h4 className="text-sm font-medium">Results</h4>
-                <div className="space-y-2 text-sm">
-                  {module.completionData.confidence && (
-                    <div>
-                      <span className="font-medium">Confidence:</span> {module.completionData.confidence}%
-                    </div>
-                  )}
-                  {module.completionData.brandClaim && (
-                    <div>
-                      <span className="font-medium">Brand Claim:</span> {module.completionData.brandClaim}
-                    </div>
-                  )}
-                </div>
-              </div>
+            {module.status === 'completed' && module.completionData?.confidence != null && (
+              <RailSection
+                title="What this module found"
+                tone="brand"
+                icon={<Sparkles className="h-3.5 w-3.5" />}
+              >
+                <RailMeter value={module.completionData.confidence} label="Confidence" />
+              </RailSection>
             )}
 
-            {/* Removed: a "download a PDF summary" link to /summaries, which
-                has no server route. See the same note in
-                foundation-session-chat.tsx. */}
+            {module.status === 'in_progress' && (
+              <RailSection title="If you need to stop" tone="warn" icon={<LogOut className="h-3.5 w-3.5" />}>
+                <p className="text-[13px] leading-relaxed text-ink-soft">
+                  Your progress is saved as you go. Modules are optional, so stopping costs
+                  you nothing.
+                </p>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="w-full border-rule text-ink-soft hover:border-bad/40 hover:text-bad"
+                  onClick={() => setShowEndDialog(true)}
+                  disabled={isStreaming || endEarlyMutation.isPending}
+                >
+                  <LogOut className="mr-2 h-3.5 w-3.5" />
+                  End module early
+                </Button>
+              </RailSection>
+            )}
           </div>
-        </div>
+        </aside>
       </div>
 
-      {/*
-        Ending early is a legitimate stopping point, so the copy says so.
-
-        Deliberately gentler than the Foundation Session equivalent, which warns
-        that partial completion means partial results. That is true there — the
-        three sessions build on each other and produce the positioning. Modules
-        are optional and non-progressive, so implying a penalty for stopping
-        would be both untrue and exactly the pressure A3 exists to remove.
-      */}
       <Dialog open={showEndDialog} onOpenChange={setShowEndDialog}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>

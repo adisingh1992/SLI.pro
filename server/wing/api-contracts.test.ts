@@ -666,6 +666,86 @@ console.log("\nWebSocket upgrade path agrees and is not exclusive");
   }
 }
 
+/* ── 13 · Audio never leaves the Azure boundary ───────────────────────────
+ *
+ * Voice dictation used to fall back to OpenAI's API directly whenever the
+ * Azure transcription deployment was missing or returned an error. The flag
+ * that controlled it, `TRANSCRIBE_FALLBACK_TO_OPENAI`, was opt-OUT — so the
+ * default was to send a student's recorded voice to a third party outside the
+ * tenancy, and a configuration mistake did not fail. It quietly changed where
+ * the audio went.
+ *
+ * ── WHY THIS ONE GETS A TEST OF ITS OWN ──────────────────────────────────
+ * Check 9 already forbids a second *model* provider, and this would arguably
+ * fall under it. It is separated because the failure is a different kind:
+ * that one is about consistency, this one is about a promise made to
+ * institutions. Voice is the most identifying content the product handles —
+ * not a record of what a student said, but their actual voice — and "where
+ * does the audio go" is a question Berkeley and Vanderbilt will ask in
+ * procurement. A named check answers it.
+ *
+ * `AzureOpenAI` is imported from the `openai` package and is fine; it is the
+ * default export — a plain OpenAI client — that talks to api.openai.com.
+ */
+console.log("\nAudio cannot leave the Azure boundary");
+{
+  const before13 = failures;
+
+  const walk = (dir: string): string[] =>
+    readdirSync(dir, { withFileTypes: true }).flatMap((e) => {
+      const p = join(dir, e.name);
+      if (e.isDirectory()) return walk(p);
+      return e.isFile() && p.endsWith(".ts") ? [p] : [];
+    });
+
+  const FORBIDDEN = [
+    { re: /\bnew OpenAI\s*\(/, what: "a direct OpenAI client (`new OpenAI(...)`)" },
+    { re: /\bOPENAI_API_KEY\b/, what: "OPENAI_API_KEY" },
+    { re: /\bTRANSCRIBE_FALLBACK_TO_OPENAI\b/, what: "the removed transcription fallback flag" },
+    { re: /api\.openai\.com/, what: "a hardcoded api.openai.com URL" },
+    // `import OpenAI from "openai"` is the plain client. The named
+    // `{ AzureOpenAI }` import is the one we want and must still pass.
+    { re: /import\s+OpenAI\s+from\s+["']openai["']/, what: "the default (non-Azure) OpenAI import" },
+    { re: /import\(\s*["']openai["']\s*\)/, what: "a dynamic import of the OpenAI SDK" },
+  ];
+
+  for (const path of walk(SERVER)) {
+    if (path.endsWith("api-contracts.test.ts")) continue;
+    // Strip comments: this codebase explains its rules at length, and check 4
+    // has already been caught flagging the explanation of a rule as a breach
+    // of it.
+    const src = readFileSync(path, "utf8")
+      .replace(/\/\*[\s\S]*?\*\//g, "")
+      .replace(/\/\/.*$/gm, "");
+
+    for (const { re, what } of FORBIDDEN) {
+      if (re.test(src)) {
+        fail(
+          `${path.replace(process.cwd() + "/", "")} contains ${what} — ` +
+            `audio and prompts must stay inside the Azure tenancy.`,
+        );
+      }
+    }
+  }
+
+  // And the transcription path must actually be reachable: a deployment name
+  // with no client to send it to is the same outage as no deployment at all.
+  const orch = readFileSync(join(SERVER, "orchestrator", "index.ts"), "utf8");
+  for (const needed of [
+    "AZURE_OPENAI_DEPLOYMENT_WHISPER",
+    "AZURE_OPENAI_ENDPOINT_ALT",
+    "AZURE_OPENAI_KEY_ALT",
+  ]) {
+    if (!orch.includes(needed)) {
+      fail(`the orchestrator never reads ${needed} — transcription cannot reach its resource`);
+    }
+  }
+
+  if (failures === before13) {
+    console.log("  ok — transcription is Azure-only, on the ALT resource");
+  }
+}
+
 /* ── Result ──────────────────────────────────────────────────────────── */
 if (failures) {
   console.error(`\n${failures} contract violation(s)\n`);

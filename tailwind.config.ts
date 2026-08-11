@@ -10,6 +10,42 @@ export default {
         md: "calc(var(--radius) - 2px)",
         sm: "calc(var(--radius) - 4px)",
       },
+      /*
+       * Two shadows, tinted with `--ink` rather than black.
+       *
+       * A neutral-black shadow over a slightly blue-grey canvas goes muddy —
+       * the grey it produces is not on the same axis as anything else on the
+       * page. Tinting with the navy that already carries the type keeps the
+       * whole surface on one hue.
+       *
+       * Each is two layers, which is what makes a shadow read as depth rather
+       * than as a blur: a tight, nearly-opaque contact shadow that says the
+       * edge is sitting ON something, plus a wide, very faint one that says
+       * how far above it. A single mid-blur layer reads as a glow.
+       *
+       * Deliberately weak. The point is to lift the sheet off the canvas by a
+       * millimetre, not to float it — this is a reading surface and a strong
+       * shadow would put a grey halo around every line of text at the edges.
+       */
+      boxShadow: {
+        /*
+         * NOT named after a colour token.
+         *
+         * Tailwind emits `shadow-{name}` for every key here AND for every key
+         * in `colors`. `shadow-card` was both — a size and a shadow-colour —
+         * and the colour rule, emitted later, replaced the shadow with one
+         * tinted to `--card`, which is near-white. It compiled, it shipped, and
+         * the shadow was simply invisible. Nothing warns.
+         *
+         * So: check `colors` before naming anything in here. `raised` is safe;
+         * `card`, `sheet`, `panel`... only `card` collides today, but the list
+         * is long and grows.
+         */
+        sheet:
+          "0 1px 2px hsl(var(--ink) / 0.04), 0 10px 28px -12px hsl(var(--ink) / 0.13)",
+        raised:
+          "0 1px 2px hsl(var(--ink) / 0.03), 0 5px 14px -8px hsl(var(--ink) / 0.10)",
+      },
       colors: {
         background: "hsl(var(--background))",
         foreground: "hsl(var(--foreground))",
@@ -59,6 +95,17 @@ export default {
           DEFAULT: "hsl(var(--bad))",
           soft: "hsl(var(--bad-soft))",
         },
+        /*
+         * The student-facing reading surface. Same story as above: semantic
+         * roles, not a palette. `ink` is the sign-in screen's navy, `canvas`
+         * is the page behind the reading column, `rule` is a hairline.
+         */
+        ink: {
+          DEFAULT: "hsl(var(--ink))",
+          soft: "hsl(var(--ink-soft))",
+        },
+        canvas: "hsl(var(--canvas))",
+        rule: "hsl(var(--rule))",
         muted: {
           DEFAULT: "hsl(var(--muted))",
           foreground: "hsl(var(--muted-foreground))",
