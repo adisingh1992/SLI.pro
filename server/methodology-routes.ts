@@ -1,7 +1,7 @@
 import { Express, Request, Response, NextFunction } from "express";
 import * as store from "./wing/analysis-methodology-store";
 import { log } from "./logger";
-import { isPlatformAdmin as isAdmin } from "./admin-guards";
+import { isPlatformAdmin } from "./admin-guards";
 
 /**
  * Analysis methodology API — how the analysis reads a transcript, editable
@@ -34,7 +34,7 @@ function validSelector(populationTag: string, sessionType: string) {
 }
 
 export function registerMethodologyRoutes(app: Express) {
-  app.get("/api/admin/methodology", isAdmin, async (_req, res, next) => {
+  app.get("/api/admin/methodology", isPlatformAdmin, async (_req, res, next) => {
     try {
       res.json({
         populations: POPULATIONS,
@@ -48,7 +48,7 @@ export function registerMethodologyRoutes(app: Express) {
 
   app.get(
     "/api/admin/methodology/:populationTag/:sessionType",
-    isAdmin,
+    isPlatformAdmin,
     async (req, res, next) => {
       try {
         const { populationTag, sessionType } = req.params;
@@ -73,7 +73,7 @@ export function registerMethodologyRoutes(app: Express) {
    */
   app.post(
     "/api/admin/methodology/:populationTag/:sessionType/replay",
-    isAdmin,
+    isPlatformAdmin,
     async (req, res, next) => {
       try {
         const { populationTag, sessionType } = req.params;
@@ -114,7 +114,7 @@ export function registerMethodologyRoutes(app: Express) {
   /** Publishes new sections, retiring the current version. */
   app.post(
     "/api/admin/methodology/:populationTag/:sessionType",
-    isAdmin,
+    isPlatformAdmin,
     async (req, res, next) => {
       try {
         const { populationTag, sessionType } = req.params;
@@ -160,7 +160,7 @@ export function registerMethodologyRoutes(app: Express) {
   );
 
   /** Republishes an earlier version — the rollback. */
-  app.post("/api/admin/methodology/revert/:versionId", isAdmin, async (req, res, next) => {
+  app.post("/api/admin/methodology/revert/:versionId", isPlatformAdmin, async (req, res, next) => {
     try {
       const versionId = parseInt(req.params.versionId, 10);
       if (Number.isNaN(versionId)) {

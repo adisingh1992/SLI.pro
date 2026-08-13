@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { useLocation, useParams } from "wouter";
-import { ChevronLeft, Loader2, Linkedin, Stars, Award, ArrowRight, Lightbulb, FileText } from "lucide-react";
+import { ChevronLeft, Loader2, Linkedin, Stars, Award, ArrowRight, Lightbulb, FileText, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -129,6 +129,30 @@ export default function LinkedinOptimizationPage() {
     ? formatDistanceToNow(new Date(optimization.createdAt), { addSuffix: true })
     : "recently";
 
+  /*
+   * Does this record actually carry the integrated review?
+   *
+   * NOT `!!optimization.holisticReview`, which is what this used to test and is
+   * always true. The server stores the whole payload in one `holistic_review`
+   * jsonb column, so the read path hands back a populated object under that name
+   * whether or not the integrated review is in it. The panel below therefore
+   * opened for every record and filled none of it — every field inside is
+   * separately guarded, so each one silently rendered nothing — and the tabs
+   * were captioned "detail behind the changes above" with nothing above.
+   *
+   * Any real field counts, not just `throughLine`: a partial generation that
+   * returned changes but no through-line is still worth showing.
+   */
+  const review = optimization.holisticReview;
+  const hasIntegratedReview = !!(
+    review &&
+    (review.throughLine ||
+      review.readsAsToday ||
+      review.readsAsAfter ||
+      (review.changes?.length ?? 0) > 0 ||
+      review.sequence)
+  );
+
   return (
     <div className="min-h-screen bg-background flex flex-col">
       <NavBar />
@@ -185,49 +209,75 @@ export default function LinkedinOptimizationPage() {
             Rendered only when present — records created before A4 have no
             holisticReview, and their tabs still work exactly as they did.
           */}
-          {optimization.holisticReview && (
+          {/*
+            Records generated before A4 have no integrated review, and there is
+            no way to derive one from the six sections — it is a different read
+            of the profile, not a summary of them. So say that plainly and offer
+            the one action that fixes it, rather than showing an empty panel or
+            silently dropping to the tabs as though nothing were missing.
+          */}
+          {!hasIntegratedReview && (
+            <div className="border-b bg-slate-50 px-6 py-4 sm:flex sm:items-center sm:justify-between sm:gap-4">
+              <p className="text-sm text-slate-600">
+                This optimization predates the integrated profile review, so it only has the
+                section-by-section detail below. Regenerating adds the whole-profile read —
+                the through-line, what your profile says today, and each change in context.
+              </p>
+              <Button
+                variant="outline"
+                size="sm"
+                className="mt-3 shrink-0 sm:mt-0"
+                onClick={handleGenerateNew}
+              >
+                <RefreshCw className="mr-2 h-4 w-4" />
+                Regenerate
+              </Button>
+            </div>
+          )}
+
+          {hasIntegratedReview && (
             <div className="border-b bg-slate-50 p-6 space-y-5">
-              {optimization.holisticReview.throughLine && (
+              {review!.throughLine && (
                 <div>
                   <p className="text-xs uppercase tracking-wide text-slate-500">
                     What this profile should say
                   </p>
                   <p className="pt-1 text-lg leading-relaxed text-slate-900">
-                    {optimization.holisticReview.throughLine}
+                    {review!.throughLine}
                   </p>
                 </div>
               )}
 
               <div className="grid gap-4 sm:grid-cols-2">
-                {optimization.holisticReview.readsAsToday && (
+                {review!.readsAsToday && (
                   <div className="rounded-lg border border-amber-200 bg-amber-50 p-4">
                     <p className="text-xs uppercase tracking-wide text-amber-700">
                       What it says today
                     </p>
                     <p className="pt-1 text-sm leading-relaxed text-amber-900 whitespace-pre-line">
-                      {optimization.holisticReview.readsAsToday}
+                      {review!.readsAsToday}
                     </p>
                   </div>
                 )}
-                {optimization.holisticReview.readsAsAfter && (
+                {review!.readsAsAfter && (
                   <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-4">
                     <p className="text-xs uppercase tracking-wide text-emerald-700">
                       What it would say after
                     </p>
                     <p className="pt-1 text-sm leading-relaxed text-emerald-900 whitespace-pre-line">
-                      {optimization.holisticReview.readsAsAfter}
+                      {review!.readsAsAfter}
                     </p>
                   </div>
                 )}
               </div>
 
               {/* Changes in context — current beside proposed, never apart. */}
-              {(optimization.holisticReview.changes ?? []).length > 0 && (
+              {(review!.changes ?? []).length > 0 && (
                 <div className="space-y-3">
                   <p className="text-xs uppercase tracking-wide text-slate-500">
                     The changes, in order
                   </p>
-                  {(optimization.holisticReview.changes ?? []).map(
+                  {(review!.changes ?? []).map(
                     (change, i) => (
                       <div key={i} className="rounded-lg border bg-white p-4">
                         <p className="text-sm font-medium">{change.section}</p>
@@ -262,11 +312,11 @@ export default function LinkedinOptimizationPage() {
                 </div>
               )}
 
-              {optimization.holisticReview.sequence && (
+              {review!.sequence && (
                 <div className="rounded-lg border bg-white p-4">
                   <p className="text-xs uppercase tracking-wide text-slate-500">Start here</p>
                   <p className="pt-1 text-sm leading-relaxed text-slate-800 whitespace-pre-line">
-                    {optimization.holisticReview.sequence}
+                    {review!.sequence}
                   </p>
                 </div>
               )}
@@ -274,7 +324,7 @@ export default function LinkedinOptimizationPage() {
           )}
 
           <Tabs defaultValue="overview" className="p-6">
-            {optimization.holisticReview && (
+            {hasIntegratedReview && (
               <p className="mb-3 text-xs text-slate-500">
                 Section-by-section detail behind the changes above.
               </p>

@@ -57,28 +57,51 @@ stages:
     - script: npm ci --cache $(Pipeline.Workspace)/.npm
       displayName: Install dependencies
 
-    # The MVP carries pre-existing type errors, so this reports without failing.
-    # Tighten to a hard gate once they are cleared.
-    - script: npx tsc --noEmit || echo "##vso[task.logissue type=warning]typecheck reported errors"
-      displayName: Typecheck (advisory)
+    # ── Typecheck: a ratchet, not a gate ─────────────────────────────────────
+    #
+    # The MVP carries pre-existing type errors, so a hard gate is not available
+    # today — it would fail every build until all of them are cleared, which is
+    # why this step was advisory. Advisory means new errors land unnoticed, and
+    # they have: `error TS18048: 'req.user' is possibly undefined` appears 31
+    # times in routes.ts alone.
+    #
+    # So it fails on an INCREASE instead. The baseline only ever goes down; when
+    # somebody clears errors, they lower TYPECHECK_BASELINE in the same commit
+    # and the ratchet holds the new floor. When it reaches 0, replace all of this
+    # with `npx tsc --noEmit`.
+    - script: |
+        set -uo pipefail
+        TYPECHECK_BASELINE=95
+        npx tsc --noEmit > /tmp/tsc.log 2>&1 || true
+        COUNT=$(grep -c "error TS" /tmp/tsc.log || true)
+        echo "type errors: $COUNT (baseline $TYPECHECK_BASELINE)"
+        if [ "$COUNT" -gt "$TYPECHECK_BASELINE" ]; then
+          echo "##vso[task.logissue type=error]typecheck regressed: $COUNT errors, baseline $TYPECHECK_BASELINE"
+          grep "error TS" /tmp/tsc.log | head -40
+          exit 1
+        fi
+        if [ "$COUNT" -lt "$TYPECHECK_BASELINE" ]; then
+          echo "##vso[task.logissue type=warning]typecheck improved to $COUNT — lower TYPECHECK_BASELINE to hold it"
+        fi
+      displayName: Typecheck (ratchet, baseline 95)
 
-    # The provenance rule is the mechanism the entire behavioural-data asset
-    # depends on — this one IS a hard gate.
-    - script: npx tsx server/wing/provenance.test.ts
-      displayName: Provenance rule tests
-
-    # The engine's decision rules decide which methodology fires at students and
-    # how the evidence that validates it accumulates. A silent regression here
-    # would corrupt the corpus rather than break anything visibly, so it is a
-    # hard gate too. Both suites are pure functions — no database, no LLM.
-    - script: npx tsx server/wing/engine-rules.test.ts
-      displayName: Engine rule tests
-
-    # The classifier decides whether the provenance record gets overwritten.
-    # A wrong reclassification corrupts the corpus silently — nothing
-    # downstream reveals it — so the confirm/overturn asymmetry is gated too.
-    - script: npx tsx server/wing/classifier-rules.test.ts
-      displayName: Classifier rule tests
+    # ── The whole contract suite, as one hard gate ───────────────────────────
+    #
+    # This used to run three suites by name — provenance, engine rules,
+    # classifier rules — while `npm test` runs TEN. The seven not listed here
+    # were therefore never enforced in CI, and one of them,
+    # api-contracts.test.ts, carries eighteen static checks including the ones
+    # that fail the build on a leaked credential shape, a migration missing from
+    # drizzle's journal, an Anthropic import reappearing, or audio leaving the
+    # Azure tenancy. The most important suite in the repo was the one CI did not
+    # run.
+    #
+    # Every suite is pure functions reading source files — no database, no LLM,
+    # no network — so there is no reason to be selective. Naming them
+    # individually was the whole problem: a new suite is not covered until
+    # somebody remembers to add a step, and nobody did.
+    - script: npm test
+      displayName: Contract and rule tests (all suites)
 
 # ── 2. Build image ───────────────────────────────────────────────────────────
 - stage: Build

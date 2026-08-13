@@ -27,7 +27,7 @@ import {
   RefreshCw,
   Share2,
 } from "lucide-react";
-import { queryClient } from "@/lib/query-client";
+import { queryClient } from "@/lib/queryClient";
 
 /**
  * LinkedIn content drafts — one card per post.

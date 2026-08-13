@@ -1,7 +1,7 @@
 import { Express, Request, Response, NextFunction } from "express";
 import * as store from "./wing/completion-criteria-store";
 import { log } from "./logger";
-import { isPlatformAdmin as isAdmin } from "./admin-guards";
+import { isPlatformAdmin } from "./admin-guards";
 
 /**
  * Completion criteria API — methodology the owner can change without a deploy.
@@ -30,7 +30,7 @@ function validSelector(populationTag: string, sessionType: string) {
 
 export function registerCriteriaRoutes(app: Express) {
   /** Everything published, for the index. */
-  app.get("/api/admin/criteria", isAdmin, async (_req, res, next) => {
+  app.get("/api/admin/criteria", isPlatformAdmin, async (_req, res, next) => {
     try {
       res.json({
         populations: POPULATIONS,
@@ -45,7 +45,7 @@ export function registerCriteriaRoutes(app: Express) {
   /** One population/session: what is live, plus its version history. */
   app.get(
     "/api/admin/criteria/:populationTag/:sessionType",
-    isAdmin,
+    isPlatformAdmin,
     async (req, res, next) => {
       try {
         const { populationTag, sessionType } = req.params;
@@ -71,7 +71,7 @@ export function registerCriteriaRoutes(app: Express) {
    */
   app.post(
     "/api/admin/criteria/:populationTag/:sessionType/replay",
-    isAdmin,
+    isPlatformAdmin,
     async (req, res, next) => {
       try {
         const { populationTag, sessionType } = req.params;
@@ -109,7 +109,7 @@ export function registerCriteriaRoutes(app: Express) {
   /** Publishes new criteria, retiring the current version. */
   app.post(
     "/api/admin/criteria/:populationTag/:sessionType",
-    isAdmin,
+    isPlatformAdmin,
     async (req, res, next) => {
       try {
         const { populationTag, sessionType } = req.params;
@@ -154,7 +154,7 @@ export function registerCriteriaRoutes(app: Express) {
   );
 
   /** Republishes an earlier version — the rollback. */
-  app.post("/api/admin/criteria/revert/:versionId", isAdmin, async (req, res, next) => {
+  app.post("/api/admin/criteria/revert/:versionId", isPlatformAdmin, async (req, res, next) => {
     try {
       const versionId = parseInt(req.params.versionId, 10);
       if (Number.isNaN(versionId)) {

@@ -12,6 +12,7 @@ import {
   Target,
   CalendarClock,
   Mail,
+  Building2,
   ChevronsUpDown,
   type LucideIcon,
 } from "lucide-react";
@@ -141,6 +142,23 @@ const OPERATIONS: NavItem[] = [
   },
 ];
 
+/**
+ * Cohort operations that only SLIpro staff may perform. platform_admin only.
+ *
+ * Separate from Operations because a partner cannot see these, and separate from
+ * Methodology because they are not methodology — filing "Attribution" under a
+ * heading that says Methodology would misdescribe the one screen in it.
+ */
+const PLATFORM_OPERATIONS: NavItem[] = [
+  {
+    tone: "warn",
+    title: "Attribution",
+    icon: Building2,
+    href: "/admin/attribution",
+    description: "Students attached to no institution, and who should own them",
+  },
+];
+
 /** The methodology engine. platform_admin only. */
 const METHODOLOGY: NavItem[] = [
   {
@@ -232,7 +250,7 @@ function NavGroup({
  * the whole point of a breadcrumb.
  */
 function Crumbs({ location, tail }: { location: string; tail?: ReactNode }) {
-  const all = [...OPERATIONS, ...METHODOLOGY];
+  const all = [...OPERATIONS, ...PLATFORM_OPERATIONS, ...METHODOLOGY];
   const section = all.find((i) => matches(i, location));
 
   return (
@@ -335,7 +353,10 @@ export default function AdminLayout({
             belongs to them.
           */}
           {isPlatformAdmin && (
-            <NavGroup label="Methodology" items={METHODOLOGY} location={location} />
+            <>
+              <NavGroup label="Platform" items={PLATFORM_OPERATIONS} location={location} />
+              <NavGroup label="Methodology" items={METHODOLOGY} location={location} />
+            </>
           )}
         </SidebarContent>
 

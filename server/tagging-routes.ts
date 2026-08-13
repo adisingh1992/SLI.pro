@@ -2,7 +2,7 @@ import { Express, Request, Response, NextFunction } from "express";
 import * as store from "./wing/tagging-store";
 import { CLASSIFIABLE_TYPES } from "./wing/classifier-rules";
 import { log } from "./logger";
-import { isPlatformAdmin as isAdmin } from "./admin-guards";
+import { isPlatformAdmin } from "./admin-guards";
 
 /**
  * Turn-tagging API — building the gold standard (spec §14).
@@ -31,7 +31,7 @@ function parseId(raw: string): number | null {
 
 export function registerTaggingRoutes(app: Express) {
   /** Sessions available to tag, with progress on each. */
-  app.get("/api/admin/tagging/sessions", isAdmin, async (_req, res, next) => {
+  app.get("/api/admin/tagging/sessions", isPlatformAdmin, async (_req, res, next) => {
     try {
       res.json(await store.listTaggableSessions());
     } catch (error) {
@@ -40,7 +40,7 @@ export function registerTaggingRoutes(app: Express) {
   });
 
   /** One session's turns, in order, with the current label on each. */
-  app.get("/api/admin/tagging/sessions/:id", isAdmin, async (req, res, next) => {
+  app.get("/api/admin/tagging/sessions/:id", isPlatformAdmin, async (req, res, next) => {
     try {
       const id = parseId(req.params.id);
       if (!id) return res.status(400).json({ error: "Invalid session id" });
@@ -55,7 +55,7 @@ export function registerTaggingRoutes(app: Express) {
   });
 
   /** Records a human judgement on one turn. */
-  app.put("/api/admin/tagging/turns/:id", isAdmin, async (req, res, next) => {
+  app.put("/api/admin/tagging/turns/:id", isPlatformAdmin, async (req, res, next) => {
     try {
       const id = parseId(req.params.id);
       if (!id) return res.status(400).json({ error: "Invalid turn id" });
@@ -94,7 +94,7 @@ export function registerTaggingRoutes(app: Express) {
   });
 
   /** Removes a hand tag, returning the turn to the classifier. */
-  app.delete("/api/admin/tagging/turns/:id", isAdmin, async (req, res, next) => {
+  app.delete("/api/admin/tagging/turns/:id", isPlatformAdmin, async (req, res, next) => {
     try {
       const id = parseId(req.params.id);
       if (!id) return res.status(400).json({ error: "Invalid turn id" });
@@ -110,7 +110,7 @@ export function registerTaggingRoutes(app: Express) {
   });
 
   /** How much of the corpus is labelled. */
-  app.get("/api/admin/tagging/coverage", isAdmin, async (_req, res, next) => {
+  app.get("/api/admin/tagging/coverage", isPlatformAdmin, async (_req, res, next) => {
     try {
       res.json(await store.taggingCoverage());
     } catch (error) {
@@ -121,7 +121,7 @@ export function registerTaggingRoutes(app: Express) {
   /* ── Classifier prompt (the feedback loop) ─────────────────────────────── */
 
   /** The built-in rules, so the editor starts from what is actually running. */
-  app.get("/api/admin/classifier/default-rules", isAdmin, async (_req, res, next) => {
+  app.get("/api/admin/classifier/default-rules", isPlatformAdmin, async (_req, res, next) => {
     try {
       const { DEFAULT_RULES } = await import("./wing/classifier");
       res.json({ rules: DEFAULT_RULES });
@@ -131,7 +131,7 @@ export function registerTaggingRoutes(app: Express) {
   });
 
   /** The published prompt in force, with its rules and examples. */
-  app.get("/api/admin/classifier/prompt", isAdmin, async (_req, res, next) => {
+  app.get("/api/admin/classifier/prompt", isPlatformAdmin, async (_req, res, next) => {
     try {
       const training = await import("./wing/classifier-training");
       res.json(await training.currentPrompt());
@@ -141,7 +141,7 @@ export function registerTaggingRoutes(app: Express) {
   });
 
   /** What publishing would produce — examples, split sizes — without writing. */
-  app.get("/api/admin/classifier/preview", isAdmin, async (_req, res, next) => {
+  app.get("/api/admin/classifier/preview", isPlatformAdmin, async (_req, res, next) => {
     try {
       const training = await import("./wing/classifier-training");
       res.json(await training.previewExamples());
@@ -156,7 +156,7 @@ export function registerTaggingRoutes(app: Express) {
    * This is what makes tagging compound: labels become worked examples that
    * every future classification sees, for every student, without a deploy.
    */
-  app.post("/api/admin/classifier/publish", isAdmin, async (req, res, next) => {
+  app.post("/api/admin/classifier/publish", isPlatformAdmin, async (req, res, next) => {
     try {
       const { rules, cycleId, name } = req.body ?? {};
       if (typeof rules !== "string" || rules.trim().length < 50) {
@@ -189,7 +189,7 @@ export function registerTaggingRoutes(app: Express) {
    * despite being read-only: it costs real money and time, so it should not be
    * triggered by a page load, a prefetch, or a refresh.
    */
-  app.post("/api/admin/tagging/validate", isAdmin, async (req, res, next) => {
+  app.post("/api/admin/tagging/validate", isPlatformAdmin, async (req, res, next) => {
     try {
       const limit = Math.min(Number(req.body?.limit ?? 200), 500);
       const result = await store.runValidation(limit);

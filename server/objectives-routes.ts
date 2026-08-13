@@ -5,7 +5,7 @@ import { turnObjectives, sessions, students, users } from "@shared/wing-schema";
 import * as store from "./wing/objectives-store";
 import { validateObjectiveSet, POPULATIONS } from "./wing/objective-rules";
 import { log } from "./logger";
-import { isPlatformAdmin as isAdmin } from "./admin-guards";
+import { isPlatformAdmin } from "./admin-guards";
 
 /**
  * Objective sets API — what a session is trying to achieve, in order.
@@ -32,7 +32,7 @@ const SESSION_TYPES = [
 ];
 
 export function registerObjectiveRoutes(app: Express) {
-  app.get("/api/admin/objectives", isAdmin, async (_req, res, next) => {
+  app.get("/api/admin/objectives", isPlatformAdmin, async (_req, res, next) => {
     try {
       res.json({
         sessionTypes: SESSION_TYPES,
@@ -44,7 +44,7 @@ export function registerObjectiveRoutes(app: Express) {
     }
   });
 
-  app.get("/api/admin/objectives/:sessionType", isAdmin, async (req, res, next) => {
+  app.get("/api/admin/objectives/:sessionType", isPlatformAdmin, async (req, res, next) => {
     try {
       const { sessionType } = req.params;
       if (!SESSION_TYPES.includes(sessionType)) {
@@ -70,7 +70,7 @@ export function registerObjectiveRoutes(app: Express) {
    * sessions — otherwise a session abandoned at turn two would count as a
    * failure of every later objective and drown the signal.
    */
-  app.get("/api/admin/objectives/:sessionType/stats", isAdmin, async (req, res, next) => {
+  app.get("/api/admin/objectives/:sessionType/stats", isPlatformAdmin, async (req, res, next) => {
     try {
       const { sessionType } = req.params;
       if (!SESSION_TYPES.includes(sessionType)) {
@@ -120,7 +120,7 @@ export function registerObjectiveRoutes(app: Express) {
   });
 
   /** Validates without publishing — the pre-flight the editor calls on edit. */
-  app.post("/api/admin/objectives/:sessionType/validate", isAdmin, async (req, res, next) => {
+  app.post("/api/admin/objectives/:sessionType/validate", isPlatformAdmin, async (req, res, next) => {
     try {
       const { objectives } = req.body ?? {};
       if (!Array.isArray(objectives)) {
@@ -132,7 +132,7 @@ export function registerObjectiveRoutes(app: Express) {
     }
   });
 
-  app.post("/api/admin/objectives/:sessionType", isAdmin, async (req, res, next) => {
+  app.post("/api/admin/objectives/:sessionType", isPlatformAdmin, async (req, res, next) => {
     try {
       const { sessionType } = req.params;
       if (!SESSION_TYPES.includes(sessionType)) {
@@ -173,7 +173,7 @@ export function registerObjectiveRoutes(app: Express) {
     }
   });
 
-  app.post("/api/admin/objectives/revert/:versionId", isAdmin, async (req, res, next) => {
+  app.post("/api/admin/objectives/revert/:versionId", isPlatformAdmin, async (req, res, next) => {
     try {
       const versionId = parseInt(req.params.versionId, 10);
       if (Number.isNaN(versionId)) {

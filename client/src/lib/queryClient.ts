@@ -117,32 +117,54 @@ export const getQueryFn: <T>(options: {
       url = `${url}/${queryKey[1]}`;
     }
 
-    console.log('Making API request to:', url);
-    
     const res = await fetch(apiUrl(url), {
       credentials: "include",
     });
-
-    console.log('API response status:', res.status);
 
     if (unauthorizedBehavior === "returnNull" && res.status === 401) {
       return null;
     }
 
     await throwIfResNotOk(res);
-    const data = await res.json();
-    console.log('API response data:', data);
-    return data;
+    return await res.json();
   };
 
+/**
+ * THE query client. There must be exactly one.
+ *
+ * ── WHY THIS COMMENT EXISTS ───────────────────────────────────────────────
+ * There used to be two. `lib/query-client.ts` constructed a second client and
+ * App.tsx passed *that* one to the provider, while 46 files imported the
+ * singleton from here and called `invalidateQueries` on it. Those calls were
+ * not failing — they were succeeding against a cache with no observers, which
+ * is worse, because nothing anywhere reported a problem.
+ *
+ * What it looked like from outside: an admin saves a heuristic card, the save
+ * returns 200, and the panel keeps showing the old text until a reload. A
+ * student refines their SLI, the server writes it correctly, and the page never
+ * shows the result — so the page keeps resubmitting the pre-refinement row and
+ * the three-refinement cap never counts past one.
+ *
+ * If you are about to write `new QueryClient(` anywhere in this app: don't.
+ * Import this one. `api-contracts.test.ts` fails the build on a second
+ * instance.
+ *
+ * ── ON THESE DEFAULTS ─────────────────────────────────────────────────────
+ * `staleTime` is five minutes, not Infinity. Infinity is the better setting
+ * once every screen's invalidation is known to be correct, and that is not yet
+ * established here: invalidation has never actually run in this app, so any
+ * screen with a wrong or missing `invalidateQueries` call has been coasting on
+ * staleness to refresh itself. Five minutes keeps that safety net while
+ * invalidation starts working. Tighten to Infinity deliberately, per screen.
+ */
 export const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       queryFn: getQueryFn({ on401: "throw" }),
       refetchInterval: false,
       refetchOnWindowFocus: false,
-      staleTime: Infinity,
-      retry: false,
+      staleTime: 1000 * 60 * 5,
+      retry: 1,
     },
     mutations: {
       retry: false,

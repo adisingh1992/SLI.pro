@@ -123,54 +123,55 @@ export function registerLinkedinOptimizationRoutes(app: Express) {
       console.log(`[LinkedIn Optimization] Found freshness report ID ${freshnessReport.id}`);
       console.log(`[LinkedIn Optimization] Generating optimization...`);
       
-      let optimizationData;
-      
-      try {
-        // Try to generate the LinkedIn optimization with the model
-        console.log(`[LinkedIn Optimization] Attempting to call the model...`);
-        optimizationData = await generateLinkedInOptimization(
-          userId,
-          resumeDoc,
-          linkedinDoc,
-          selectedSli,
-          freshnessReport
-        );
-        console.log(`[LinkedIn Optimization] Successfully generated recommendations from the model`);
-      } catch (modelError) {
-        console.error(`[LinkedIn Optimization] Model call failed:`, modelError);
-        
-        // Fallback to a temporary mock response for testing
-        console.log(`[LinkedIn Optimization] Using fallback template for testing`);
-        optimizationData = {
-          alignmentAssessment: "Based on the client's SLI and documents, their LinkedIn profile needs optimization to better showcase their expertise.",
-          headlineOptimization: {
-            currentHeadline: "Developer",
-            recommendedHeadline: "Full-Stack Developer | Creating Innovative Solutions with Modern Technologies",
-            rationale: "This headline better aligns with the SLI by emphasizing technical expertise."
-          },
-          aboutSection: {
-            currentAnalysis: "Current about section lacks specific achievements and technical skills.",
-            recommendations: "Include specific examples of projects and technologies used.",
-            suggestedStructure: "Introduction, expertise areas, key achievements, personal mission.",
-            keyElements: "Problem-solving, technical versatility, collaboration.",
-            draftContent: "Full-stack developer with experience building scalable web applications using React, Node.js, and PostgreSQL."
-          },
-          profileEnhancements: {
-            experienceSection: "Add quantifiable metrics and results to job descriptions.",
-            skillsEndorsements: "Prioritize skills like JavaScript, React, and API development.",
-            activityEngagement: "Share technical content and engage with industry discussions weekly.",
-            visualImprovements: "Use a professional headshot with a clean background."
-          },
-          contentStrategy: {
-            themes: "Technical insights, problem-solving approaches, industry trends.",
-            postIdeas: "Tutorial snippets, project showcases, technology comparisons.",
-            engagementTips: "Ask questions, respond to comments, participate in groups."
-          },
-          implementationPriorities: "1. Update headline and about section (Week 1)\n2. Enhance job descriptions (Week 2)\n3. Begin content sharing (Week 3-4)"
-        };
-      }
-      
-      // Save the optimization to the database
+      /*
+       * NO FALLBACK. A model failure fails the request.
+       *
+       * There used to be a `catch` here that substituted a hardcoded
+       * "temporary mock response for testing" — advice about React, Node.js and
+       * PostgreSQL, with `currentHeadline: "Developer"` presented as the
+       * student's own headline — and then fell through to the save below and
+       * returned 201. So any rate limit, timeout or malformed JSON produced a
+       * persisted optimization that was invented, indistinguishable in the
+       * database from a real one, and shown to the student as their own
+       * positioning advice. A Vanderbilt MBA moving into healthcare operations
+       * was told to prioritise JavaScript.
+       *
+       * It also lied about provenance: `createLinkedinOptimization` stamps
+       * every row `source_type: 'ai_generated'`, which for that row was false in
+       * the one direction this schema exists to prevent — it was neither human
+       * nor model output, and it would have entered the corpus as model output.
+       *
+       * Failing is not a worse outcome than a wrong answer here. It is the only
+       * correct one: the student can retry, and the page already renders the
+       * error.
+       */
+      console.log(`[LinkedIn Optimization] Calling the model...`);
+      const optimizationData = await generateLinkedInOptimization(
+        userId,
+        resumeDoc,
+        linkedinDoc,
+        selectedSli,
+        freshnessReport
+      );
+      console.log(`[LinkedIn Optimization] Model returned recommendations`);
+
+      /*
+       * Every field the generator declares, including `holisticReview`.
+       *
+       * `holisticReview` was generated and then dropped here — the six legacy
+       * sections were passed and it was not. Because `createLinkedinOptimization`
+       * stores whatever it is handed into the single `holistic_review` column,
+       * the read path then found a truthy object under that name whose every
+       * expected field was undefined: the page opened its holistic panel, filled
+       * none of it, and captioned the tabs below "Section-by-section detail
+       * behind the changes above" with no changes above. A4's headline
+       * requirement — one integrated view instead of per-section chunks — was
+       * implemented in `linkedin-optimization.ts`, asked for in the prompt, and
+       * discarded one line before it landed.
+       *
+       * Contract check 17 fails the build if this call stops passing a key the
+       * generator's return type declares.
+       */
       console.log(`[LinkedIn Optimization] Saving data to database...`);
       const newOptimization = await artifactStore.createLinkedinOptimization({
         userId,
@@ -179,7 +180,8 @@ export function registerLinkedinOptimizationRoutes(app: Express) {
         headlineOptimization: optimizationData.headlineOptimization,
         aboutSection: optimizationData.aboutSection,
         profileEnhancements: optimizationData.profileEnhancements,
-        implementationPriorities: optimizationData.implementationPriorities
+        implementationPriorities: optimizationData.implementationPriorities,
+        holisticReview: optimizationData.holisticReview
       });
       
       console.log(`[LinkedIn Optimization] Created new optimization with ID ${newOptimization.id}`);

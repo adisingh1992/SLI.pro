@@ -746,6 +746,328 @@ console.log("\nAudio cannot leave the Azure boundary");
   }
 }
 
+/* ── 14 · Exactly one React Query client ──────────────────────────────────
+ *
+ * There were two, in `lib/query-client.ts` and `lib/queryClient.ts` — one
+ * hyphen apart, each exporting a `queryClient` and an `apiRequest` with
+ * different signatures. App.tsx handed the provider the first one; 46 files
+ * imported the second and called `invalidateQueries` on it. Those calls did not
+ * throw. They resolved successfully against a cache with no observers.
+ *
+ * Nothing reports this. The mutation succeeds, the server is correct, the toast
+ * fires, and the screen keeps showing the old value until a manual reload. It
+ * cost us the entire admin methodology UI appearing not to save, and an SLI
+ * refinement flow that resubmitted its pre-refinement row every time — which in
+ * turn meant the three-refinement cap counted to one forever.
+ *
+ * A provider mismatch is invisible to the type checker and to every test that
+ * does not render the real tree, so the only cheap guard is arithmetic: one
+ * instance, or fail.
+ */
+console.log("\nExactly one React Query client is constructed");
+{
+  const before14 = failures;
+  const root = join(process.cwd(), "client", "src");
+
+  const walk = (dir: string): string[] =>
+    readdirSync(dir, { withFileTypes: true }).flatMap((e) => {
+      const p = join(dir, e.name);
+      if (e.isDirectory()) return walk(p);
+      return /\.(ts|tsx)$/.test(e.name) ? [p] : [];
+    });
+
+  // Comments stripped first, as in check 13: both client modules now *describe*
+  // this rule at length, and the description contains the literal being
+  // searched for. Scanning raw source flags the explanation as the breach.
+  const stripped = (p: string) =>
+    readFileSync(p, "utf8")
+      .replace(/\/\*[\s\S]*?\*\//g, "")
+      .replace(/\/\/.*$/gm, "");
+
+  const built = walk(root).filter((p) => /\bnew QueryClient\s*\(/.test(stripped(p)));
+
+  if (built.length !== 1) {
+    fail(
+      `${built.length} file(s) construct a QueryClient — expected exactly 1: ` +
+        built.map((p) => p.replace(root + "/", "")).join(", "),
+    );
+  }
+
+  // And the provider must be handed that instance, not a locally built one.
+  const app = stripped(join(root, "App.tsx"));
+  if (!/QueryClientProvider\s+client=\{queryClient\}/.test(app)) {
+    fail("App.tsx does not pass the imported `queryClient` to QueryClientProvider");
+  }
+
+  if (failures === before14) {
+    console.log(`  ok — one client, in ${built[0]?.replace(root + "/", "")}`);
+  }
+}
+
+/* ── 15 · Admin guards are not aliased ────────────────────────────────────
+ *
+ * Five route files opened with `import { isPlatformAdmin as isAdmin }`. Every
+ * route in them then read `isAdmin`, so 28 routes that were correctly locked to
+ * SLIpro staff looked — to a reader, to a reviewer, and to every grep anyone
+ * ran while auditing this — exactly like the routes that are open to any
+ * administrator.
+ *
+ * That cost real time: an audit of who can reach what has to resolve each file's
+ * import before it can classify a single route, and an audit that needs a
+ * footnote to be correct is one that will eventually be read without it. The
+ * inverse alias is the dangerous version — `import { isAdmin as isPlatformAdmin }`
+ * would read as locked while being open — and nothing distinguishes the two at
+ * the call site.
+ *
+ * Guards are named what they are. If a file wants the platform-staff guard, it
+ * imports `isPlatformAdmin` and says so on every route.
+ */
+console.log("\nAdmin guards are imported under their own names");
+{
+  const before15 = failures;
+
+  for (const { name, src } of serverFiles()) {
+    if (name === "admin-guards.ts") continue;
+
+    const code = src.replace(/\/\*[\s\S]*?\*\//g, "").replace(/\/\/.*$/gm, "");
+    const imports = code.match(/import\s*\{[^}]*\}\s*from\s*["']\.\/admin-guards["']/g) ?? [];
+
+    for (const imp of imports) {
+      for (const m of imp.matchAll(/\b(is[A-Za-z]+)\s+as\s+(\w+)/g)) {
+        fail(
+          `${name} imports \`${m[1]}\` as \`${m[2]}\` — a renamed guard hides ` +
+            `which routes it protects. Import it under its own name.`,
+        );
+      }
+    }
+  }
+
+  if (failures === before15) console.log("  ok — no renamed guards");
+}
+
+/* ── 16 · Cohort-admin routes that read student data are scoped ────────────
+ *
+ * `isAdmin` admits both admin roles, and until scoping existed every route
+ * behind it served the whole platform: `/api/admin/metrics/export` took
+ * `institutionId` from the query string without comparing it to the caller, and
+ * an absent one meant every student. Harmless while every administrator is
+ * SLIpro staff — nothing creates an `institution_admin` today — and not
+ * harmless the moment a partner account exists.
+ *
+ * This check covers the routes scoped so far. It is deliberately an allowlist of
+ * DONE work rather than an inventory of every admin route: the rest of the
+ * cohort-admin surface (advisor, homework, portfolio, SLI, calendar, template)
+ * is still unscoped, and a check that enumerated it would have to encode the
+ * whole list to say anything, which is a second place to keep in sync with the
+ * routes. What this catches is the regression that actually threatens: one of
+ * these handlers losing its scope call while keeping its `isAdmin` guard.
+ *
+ * When the remaining routes are scoped, extend SCOPED and delete this note.
+ */
+console.log("\nScoped admin routes still resolve their scope");
+{
+  const before16 = failures;
+
+  const SCOPED: { file: string; helper: RegExp; routes: string[] }[] = [
+    {
+      file: "metrics-routes.ts",
+      helper: /resolveInstitutionFilter|requireScope/,
+      routes: ["/api/admin/metrics", "/api/admin/metrics/export", "/api/admin/metrics/options"],
+    },
+    {
+      file: "routes.ts",
+      helper: /requireScope/,
+      routes: [
+        "/api/admin/users",
+        "/api/admin/users/count",
+        "/api/admin/users/:id",
+        "/api/admin/users/:userId/coaching-notes",
+        "/api/admin/users/:userId/foundation-sessions",
+        "/api/admin/users/:userId/foundation-sessions/:sessionNumber/messages",
+        "/api/admin/users/:userId/enhancement-modules/:moduleCode/messages",
+      ],
+    },
+  ];
+
+  for (const { file, helper, routes } of SCOPED) {
+    const src = readFileSync(join(SERVER, file), "utf8");
+    const code = src.replace(/\/\*[\s\S]*?\*\//g, "").replace(/\/\/.*$/gm, "");
+
+    if (!helper.test(code)) {
+      fail(`${file} no longer calls a scope helper — every route in it reads the whole platform`);
+      continue;
+    }
+
+    for (const route of routes) {
+      // The route must still exist, and must still sit behind `isAdmin` — a
+      // silent change to `isPlatformAdmin` is safe, so it is not a failure, but
+      // the path vanishing means this list has gone stale.
+      const registered = new RegExp(
+        `["']${route.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}["']\\s*,\\s*is(Admin|PlatformAdmin)`,
+      );
+      if (!registered.test(code)) {
+        fail(`${file}: ${route} is no longer registered with an admin guard — this list is stale`);
+      }
+    }
+  }
+
+  // The legacy Excel exports build their own joins and none filters by
+  // institution, so they are closed to partner administrators until each is
+  // narrowed. If one is reopened to `isAdmin`, it must be scoped first.
+  {
+    const code = readFileSync(join(SERVER, "routes.ts"), "utf8")
+      .replace(/\/\*[\s\S]*?\*\//g, "")
+      .replace(/\/\/.*$/gm, "");
+    for (const m of code.matchAll(/["'](\/api\/admin\/export\/[^"']+)["']\s*,\s*(is\w+)/g)) {
+      if (m[2] !== "isPlatformAdmin") {
+        fail(
+          `${m[1]} is guarded by \`${m[2]}\` — these exports are unscoped, so they ` +
+            `must stay platform-staff-only until their queries filter by institution`,
+        );
+      }
+    }
+  }
+
+  if (failures === before16) console.log("  ok — scoped routes intact, exports closed");
+}
+
+/* ── 17 · The LinkedIn route persists everything it generates ──────────────
+ *
+ * `generateLinkedInOptimization` returns seven fields. The route passed six of
+ * them to `createLinkedinOptimization` and dropped `holisticReview` — the field
+ * its own prompt calls "THE PRODUCT", and the entire point of A4's "holistic,
+ * integrated view of the full profile … not as disconnected pieces".
+ *
+ * Nothing caught it, and nothing could have:
+ *
+ *   - `createLinkedinOptimization`'s parameter is `{ userId, sliId?,
+ *     [section: string]: unknown }`, so it accepts any set of keys. Passing six
+ *     of seven is not a type error. Passing none would not be either.
+ *   - the store puts whatever it receives into the single `holistic_review`
+ *     jsonb column, so on read the client found a populated object under that
+ *     name whose every expected field was undefined. The page opened its panel
+ *     and filled none of it. A missing field looked like an empty one.
+ *
+ * That is the shape of bug this file exists for: a generator and its caller
+ * drifting apart with no compiler error and no visible failure. So the keys are
+ * compared directly.
+ */
+console.log("\nThe LinkedIn optimization route persists every generated field");
+{
+  const before17 = failures;
+
+  // Comments stripped, as in checks 13 and 14. The route now explains at length
+  // what the removed fallback did, quoting it — and the explanation of a rule
+  // must not be read as a breach of it.
+  const decomment = (s: string) =>
+    s.replace(/\/\*[\s\S]*?\*\//g, "").replace(/\/\/.*$/gm, "");
+
+  const gen = decomment(readFileSync(join(SERVER, "linkedin-optimization.ts"), "utf8"));
+  const route = decomment(
+    readFileSync(join(SERVER, "linkedin-optimization-routes.ts"), "utf8"),
+  );
+
+  // Top-level keys of the inline `Promise<{ ... }>` return type. Nested fields
+  // are indented four spaces; the ones that matter here sit at two.
+  const start = gen.indexOf("): Promise<{");
+  const end = gen.indexOf("\n}>", start);
+  if (start === -1 || end === -1) {
+    fail("could not find generateLinkedInOptimization's return type — this check has gone stale");
+  } else {
+    const declared = Array.from(
+      gen.slice(start, end).matchAll(/^ {2}(\w+)\??:/gm),
+      (m) => m[1],
+    );
+
+    // The keys actually handed to the store.
+    const callStart = route.indexOf("createLinkedinOptimization({");
+    const callEnd = route.indexOf("});", callStart);
+    if (callStart === -1 || callEnd === -1) {
+      fail("could not find the createLinkedinOptimization call — this check has gone stale");
+    } else {
+      const passed = new Set(
+        Array.from(route.slice(callStart, callEnd).matchAll(/(\w+)\s*:/g), (m) => m[1]),
+      );
+
+      for (const key of declared) {
+        if (!passed.has(key)) {
+          fail(
+            `generateLinkedInOptimization returns \`${key}\` but the route never passes it ` +
+              `to createLinkedinOptimization — it is generated, paid for, and discarded`,
+          );
+        }
+      }
+
+      if (declared.length === 0) fail("parsed zero declared fields — the anchor has moved");
+      if (failures === before17) console.log(`  ok — all ${declared.length} field(s) persisted`);
+    }
+  }
+
+  // And no fabricated fallback. A model failure must fail the request, not
+  // persist invented advice under a student's name at HTTP 201.
+  for (const marker of ["mock response", "Full-Stack Developer |", "fallback template"]) {
+    if (route.includes(marker)) {
+      fail(
+        `linkedin-optimization-routes.ts contains "${marker}" — the hardcoded fallback ` +
+          `saved invented recommendations as a student's own, tagged ai_generated`,
+      );
+    }
+  }
+}
+
+/* ── 18 · Every test suite is actually run ─────────────────────────────────
+ *
+ * Two lists have to agree and nothing made them: the `*.test.ts` files on disk,
+ * and the ones `npm test` names. A suite that exists and is not in the script is
+ * not "not yet wired up" — it is a passing test in everybody's mental model that
+ * has never executed.
+ *
+ * The pipeline had the same problem one level up. It ran three suites by name
+ * while `npm test` ran ten, so seven were unenforced in CI — including this
+ * file, the one that gates credential shapes, migration-journal drift and the
+ * single-provider rule. The pipeline now runs `npm test`, which makes this check
+ * the thing that keeps `npm test` honest.
+ *
+ * Known and deliberate: the script chains with `&&`, so a failure in an early
+ * suite hides the rest. Fail-fast is acceptable for a gate; just be aware that
+ * one red suite does not mean only one is red.
+ */
+console.log("\nEvery test suite is in the npm test script");
+{
+  const before18 = failures;
+
+  const pkg = JSON.parse(readFileSync(join(process.cwd(), "package.json"), "utf8"));
+  const script: string = pkg.scripts?.test ?? "";
+
+  const walk = (dir: string): string[] =>
+    readdirSync(dir, { withFileTypes: true }).flatMap((e) => {
+      const p = join(dir, e.name);
+      if (e.isDirectory()) return walk(p);
+      return e.name.endsWith(".test.ts") ? [p] : [];
+    });
+
+  const onDisk = walk(SERVER)
+    .map((p) => p.replace(process.cwd() + "/", ""))
+    .sort();
+
+  for (const file of onDisk) {
+    if (!script.includes(file)) {
+      fail(`${file} exists but \`npm test\` does not run it — it has never executed in CI`);
+    }
+  }
+
+  // And the reverse: a named suite that no longer exists makes `npm test` fail
+  // with a module-not-found rather than a test failure, which reads as a broken
+  // repo instead of a stale script.
+  for (const m of script.matchAll(/(server\/[\w/.-]+\.test\.ts)/g)) {
+    if (!onDisk.includes(m[1])) {
+      fail(`\`npm test\` runs ${m[1]}, which does not exist`);
+    }
+  }
+
+  if (failures === before18) console.log(`  ok — ${onDisk.length} suite(s), all run`);
+}
+
 /* ── Result ──────────────────────────────────────────────────────────── */
 if (failures) {
   console.error(`\n${failures} contract violation(s)\n`);

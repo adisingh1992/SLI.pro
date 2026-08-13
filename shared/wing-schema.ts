@@ -213,6 +213,18 @@ export const users = wing.table("users", {
   lastName: text("last_name").notNull(),
   phoneNumber: text("phone_number"), // E.164; SMS requires verified opt-in
   role: userRole("role").notNull().default("student"),
+  /*
+   * The institution an ADMINISTRATOR belongs to — the scope of what they may
+   * see. Not a student's binding: that lives on `students.institution_id`, and
+   * duplicating it here would give the same fact two homes.
+   *
+   *   platform_admin    NULL → unrestricted (SLI.pro staff)
+   *   institution_admin set  → that institution only
+   *                     NULL → nothing. Fail closed; see migration 0018.
+   *   advisor           set  → mirrors `advisors.institution_id`
+   *   student           NULL → unused
+   */
+  institutionId: fk("institution_id").references((): AnyPgColumn => institutions.id),
   linkedinId: text("linkedin_id").unique(),
   linkedinAccessToken: text("linkedin_access_token"), // encrypted at rest
   linkedinRefreshToken: text("linkedin_refresh_token"),

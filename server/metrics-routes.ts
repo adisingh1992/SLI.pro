@@ -1,6 +1,6 @@
 import { Express, Request, Response, NextFunction } from "express";
 import * as metrics from "./wing/cohort-metrics";
-import { isAdmin } from "./admin-guards";
+import { isAdmin, requireScope, resolveInstitutionFilter } from "./admin-guards";
 
 /**
  * Institutional admin dashboard API (Feature List B4).
@@ -10,6 +10,27 @@ import { isAdmin } from "./admin-guards";
  * front of someone who controls their funding. So the API returns counts
  * alongside every rate and never invents a denominator.
  */
+
+/**
+ * Query string → filter, narrowed to what the caller may read.
+ *
+ * `institutionId` used to be taken straight from the query string and never
+ * compared to the caller, and an absent one meant "no filter" — every student on
+ * the platform. Both are fine while every admin is SLIpro staff and neither
+ * survives the first partner account, so the scope comes from the session and
+ * the query string may only narrow within it.
+ *
+ * Returns null having already responded, so a handler reads:
+ *
+ *     const filter = parseScopedFilter(req, res);
+ *     if (!filter) return;
+ */
+function parseScopedFilter(req: Request, res: Response): metrics.MetricsFilter | null {
+  const raw = parseFilter(req);
+  const scoped = resolveInstitutionFilter(req, res, raw.institutionId ?? null);
+  if (!scoped) return null;
+  return { ...raw, institutionId: scoped.institutionId };
+}
 
 /** Query string → filter. Absent and unparseable both mean "no filter". */
 function parseFilter(req: Request): metrics.MetricsFilter {
@@ -34,9 +55,14 @@ function parseFilter(req: Request): metrics.MetricsFilter {
 
 export function registerMetricsRoutes(app: Express) {
   /** Institutions and their cycles, for the filter controls. */
-  app.get("/api/admin/metrics/options", isAdmin, async (_req, res, next) => {
+  app.get("/api/admin/metrics/options", isAdmin, async (req, res, next) => {
     try {
-      res.json(await metrics.filterOptions());
+      const scope = requireScope(req, res);
+      if (!scope) return;
+      // A partner administrator is offered their own institution and no other.
+      res.json(
+        await metrics.filterOptions(scope.kind === "all" ? null : scope.institutionId),
+      );
     } catch (error) {
       next(error);
     }
@@ -44,7 +70,9 @@ export function registerMetricsRoutes(app: Express) {
 
   app.get("/api/admin/metrics", isAdmin, async (req, res, next) => {
     try {
-      res.json(await metrics.cohortMetrics(parseFilter(req)));
+      const filter = parseScopedFilter(req, res);
+      if (!filter) return;
+      res.json(await metrics.cohortMetrics(filter));
     } catch (error) {
       next(error);
     }
@@ -59,7 +87,8 @@ export function registerMetricsRoutes(app: Express) {
    */
   app.get("/api/admin/metrics/export", isAdmin, async (req, res, next) => {
     try {
-      const filter = parseFilter(req);
+      const filter = parseScopedFilter(req, res);
+      if (!filter) return;
       const rows = await metrics.studentRows(filter);
 
       const csv = metrics.toCsv(

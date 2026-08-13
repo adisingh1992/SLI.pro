@@ -13,7 +13,7 @@ import {
 import * as store from "./wing/heuristics-store";
 import type { ComponentType } from "./wing/heuristics-store";
 import { log } from "./logger";
-import { isPlatformAdmin as isAdmin } from "./admin-guards";
+import { isPlatformAdmin } from "./admin-guards";
 
 /**
  * Methodology authoring API — the surface Danielle and Sam use to write the
@@ -96,7 +96,7 @@ function evaluationWindowState(cycle: {
 export function registerHeuristicsRoutes(app: Express) {
   /* ── Cards ───────────────────────────────────────────────────────────── */
 
-  app.get("/api/admin/heuristics", isAdmin, async (req, res, next) => {
+  app.get("/api/admin/heuristics", isPlatformAdmin, async (req, res, next) => {
     try {
       res.json(await store.listHeuristics(req.query.includeRetired === "true"));
     } catch (error) {
@@ -105,7 +105,7 @@ export function registerHeuristicsRoutes(app: Express) {
   });
 
   /** One card with the full version history of every component. */
-  app.get("/api/admin/heuristics/:id", isAdmin, async (req, res, next) => {
+  app.get("/api/admin/heuristics/:id", isPlatformAdmin, async (req, res, next) => {
     try {
       const id = parseId(req.params.id);
       if (!id) return res.status(400).json({ error: "Invalid heuristic id" });
@@ -119,7 +119,7 @@ export function registerHeuristicsRoutes(app: Express) {
     }
   });
 
-  app.post("/api/admin/heuristics", isAdmin, async (req, res, next) => {
+  app.post("/api/admin/heuristics", isPlatformAdmin, async (req, res, next) => {
     try {
       const { name, description, populationTags, components } = req.body ?? {};
 
@@ -164,7 +164,7 @@ export function registerHeuristicsRoutes(app: Express) {
    */
   app.put(
     "/api/admin/heuristics/:id/components/:componentType",
-    isAdmin,
+    isPlatformAdmin,
     async (req, res, next) => {
       try {
         const id = parseId(req.params.id);
@@ -211,7 +211,7 @@ export function registerHeuristicsRoutes(app: Express) {
    * excludes retired cards regardless of sequence membership — while keeping
    * it as a permanent record so past applications stay interpretable.
    */
-  app.patch("/api/admin/heuristics/:id/status", isAdmin, async (req, res, next) => {
+  app.patch("/api/admin/heuristics/:id/status", isPlatformAdmin, async (req, res, next) => {
     try {
       const id = parseId(req.params.id);
       if (!id) return res.status(400).json({ error: "Invalid heuristic id" });
@@ -237,7 +237,7 @@ export function registerHeuristicsRoutes(app: Express) {
   });
 
   /** Aggregate performance for a card — the evidence behind promotion. */
-  app.get("/api/admin/heuristics/:id/performance", isAdmin, async (req, res, next) => {
+  app.get("/api/admin/heuristics/:id/performance", isPlatformAdmin, async (req, res, next) => {
     try {
       const id = parseId(req.params.id);
       if (!id) return res.status(400).json({ error: "Invalid heuristic id" });
@@ -280,7 +280,7 @@ export function registerHeuristicsRoutes(app: Express) {
 
   /* ── Cycles and sequences ────────────────────────────────────────────── */
 
-  app.get("/api/admin/cycles", isAdmin, async (_req, res, next) => {
+  app.get("/api/admin/cycles", isPlatformAdmin, async (_req, res, next) => {
     try {
       const rows = await db
         .select({
@@ -306,7 +306,7 @@ export function registerHeuristicsRoutes(app: Express) {
   });
 
   /** The sequence a cycle's students are currently governed by. */
-  app.get("/api/admin/cycles/:id/sequence", isAdmin, async (req, res, next) => {
+  app.get("/api/admin/cycles/:id/sequence", isPlatformAdmin, async (req, res, next) => {
     try {
       const id = parseId(req.params.id);
       if (!id) return res.status(400).json({ error: "Invalid cycle id" });
@@ -346,7 +346,7 @@ export function registerHeuristicsRoutes(app: Express) {
    * and logs it. Retiring a single card via the status route is the better
    * tool for that case; this override is for genuine emergencies.
    */
-  app.put("/api/admin/cycles/:id/sequence", isAdmin, async (req, res, next) => {
+  app.put("/api/admin/cycles/:id/sequence", isPlatformAdmin, async (req, res, next) => {
     try {
       const id = parseId(req.params.id);
       if (!id) return res.status(400).json({ error: "Invalid cycle id" });
@@ -476,7 +476,7 @@ export function registerHeuristicsRoutes(app: Express) {
   });
 
   /** Sequence history for a cycle — what was live, and when. */
-  app.get("/api/admin/cycles/:id/sequence/history", isAdmin, async (req, res, next) => {
+  app.get("/api/admin/cycles/:id/sequence/history", isPlatformAdmin, async (req, res, next) => {
     try {
       const id = parseId(req.params.id);
       if (!id) return res.status(400).json({ error: "Invalid cycle id" });
@@ -499,7 +499,7 @@ export function registerHeuristicsRoutes(app: Express) {
   });
 
   /** Component types, for building the authoring form. */
-  app.get("/api/admin/heuristic-component-types", isAdmin, (_req, res) => {
+  app.get("/api/admin/heuristic-component-types", isPlatformAdmin, (_req, res) => {
     res.json(COMPONENT_TYPES);
   });
 }

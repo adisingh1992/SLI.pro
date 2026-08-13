@@ -30,6 +30,14 @@ export type AuthenticatedUser = {
   /** True for both admin roles. Use `role` when the distinction matters. */
   isAdmin: boolean;
   /**
+   * For an administrator, the institution they are scoped to. NULL means
+   * unrestricted for a `platform_admin` and nothing at all for an
+   * `institution_admin`. Present so the admin UI can label and pre-filter by
+   * the viewer's own cohort — the server re-derives it from the session on
+   * every request and never trusts it coming back from the client.
+   */
+  institutionId: number | null;
+  /**
    * Whether a LinkedIn account is linked — never the token that links it.
    * The endpoint used to serialise `linkedinAccessToken` and
    * `linkedinRefreshToken` to the browser on every page load.

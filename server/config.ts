@@ -214,7 +214,28 @@ export const config = {
     return process.env.DATABASE_URL as string;
   },
   get sessionSecret(): string {
-    return process.env.SESSION_SECRET || "supersecretkey";
+    /*
+     * No fallback. This used to return "supersecretkey" when unset.
+     *
+     * `SESSION_SECRET` is in REQUIRED_KEYS, so `loadConfig()` throws before the
+     * app serves anything — which made the fallback unreachable on the normal
+     * boot path and therefore easy to leave in place. It was not unreachable
+     * everywhere: standalone script entrypoints deliberately skip `loadConfig()`
+     * (see `loadSecretFromVault`), so anything importing this getter outside the
+     * server got a known constant instead of a failure.
+     *
+     * A predictable signing key is a session-forgery key. Throwing is the only
+     * correct answer, and it is loud at the point of use rather than silently
+     * signing cookies with a value published in a git repository.
+     */
+    const secret = process.env.SESSION_SECRET;
+    if (!secret) {
+      throw new Error(
+        "[config] SESSION_SECRET is not set. Sessions cannot be signed. " +
+          "Set it in Key Vault (with KEY_VAULT_URI) or the environment.",
+      );
+    }
+    return secret;
   },
   get nodeEnv(): string {
     return process.env.NODE_ENV || "development";

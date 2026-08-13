@@ -1,6 +1,6 @@
 import React from "react";
 import { Switch, Route } from "wouter";
-import { queryClient } from "./lib/query-client";
+import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import NotFound from "@/pages/not-found";
@@ -36,6 +36,7 @@ import AdminOverviewPage from "@/pages/admin/overview/overview-page";
 import AdminStudentsPage from "@/pages/admin/students-page";
 import AdminStudentRecordPage from "@/pages/admin/student/record-page";
 import AdminAdvisorsPage from "@/pages/admin/advisors-page";
+import AdminAttributionPage from "@/pages/admin/attribution-page";
 import AdminMessagesPage from "@/pages/admin/messages/messages-page";
 import AdminMethodologyPage from "@/pages/admin/methodology/methodology-page";
 import AdminSessionDesignPage from "@/pages/admin/methodology/session-design-page";
@@ -109,6 +110,9 @@ function Router() {
       <Route path="/admin/users/:id/:tab" component={AdminStudentRecordPage} />
 
       <Route path="/admin/advisors" component={AdminAdvisorsPage} />
+
+      {/* Platform staff only; the page itself refuses others (RequirePlatformAdmin). */}
+      <Route path="/admin/attribution" component={AdminAttributionPage} />
 
       <Route path="/admin/messages" component={AdminMessagesPage} />
       <Route path="/admin/messages/:tab" component={AdminMessagesPage} />

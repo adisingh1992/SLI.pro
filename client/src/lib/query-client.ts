@@ -1,74 +1,23 @@
-import { QueryClient } from "@tanstack/react-query";
-
-interface ApiRequestOptions {
-  url: string;
-  method?: "GET" | "POST" | "PUT" | "DELETE" | "PATCH";
-  body?: any;
-  headers?: Record<string, string>;
-}
-
-interface ApiRequestConfig {
-  credentials?: RequestCredentials;
-  headers?: Record<string, string>;
-  method?: string;
-  body?: string;
-}
-
-export async function apiRequest<T>({
-  url,
-  method = "GET",
-  body,
-  headers = {},
-}: ApiRequestOptions): Promise<T> {
-  const config: ApiRequestConfig = {
-    credentials: "include",
-    headers: {
-      "Content-Type": "application/json",
-      ...headers,
-    },
-    method,
-  };
-
-  if (body) {
-    config.body = JSON.stringify(body);
-  }
-
-  const response = await fetch(url, config);
-
-  if (!response.ok) {
-    const errorData = await response.json().catch(() => ({}));
-    const error = new Error(
-      errorData.error || `API request failed with status ${response.status}`
-    );
-    throw Object.assign(error, { status: response.status, data: errorData });
-  }
-
-  // Handle empty responses (like for 204 No Content)
-  if (response.status === 204) {
-    return {} as T;
-  }
-
-  return response.json();
-}
-
-// Set up Query Client with default fetcher
-const defaultQueryFn = async ({ queryKey }: { queryKey: (string | number)[] }) => {
-  // Build the URL - if queryKey has multiple items, handle the path params
-  let url = queryKey[0] as string;
-  if (queryKey.length > 1 && queryKey[1] !== null && queryKey[1] !== undefined) {
-    // Assuming the second item is the ID parameter
-    url = `${url}/${queryKey[1]}`;
-  }
-  return apiRequest({ url });
-};
-
-export const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      queryFn: defaultQueryFn,
-      retry: 1,
-      refetchOnWindowFocus: false,
-      staleTime: 1000 * 60 * 5, // 5 minutes
-    },
-  },
-});
+/**
+ * DEPRECATED — kept only so this path cannot construct a second query client.
+ *
+ * This module used to export its own `new QueryClient(...)` plus an
+ * `apiRequest` with a different signature to the one in `./queryClient`
+ * (object-form `apiRequest({ url, method, body })` returning parsed JSON,
+ * versus positional `apiRequest(method, url, data)` returning a `Response`).
+ * Two clients and two same-named helpers, one hyphen apart in the filename.
+ *
+ * App.tsx passed this file's client to the provider while 46 files imported the
+ * other one, so every `invalidateQueries` in those files ran against a cache
+ * nothing was subscribed to. See the comment in `./queryClient`.
+ *
+ * Nothing imports this any more. It re-exports the real client rather than
+ * being deleted outright so that a stray or reintroduced
+ * `from "@/lib/query-client"` still resolves to the single instance instead of
+ * quietly recreating the bug. `apiRequest` is deliberately NOT re-exported —
+ * the two signatures were incompatible, so a caller expecting the old one
+ * should fail at the type level rather than at runtime.
+ *
+ * Safe to `git rm` once you are happy nothing references it.
+ */
+export { queryClient } from "./queryClient";

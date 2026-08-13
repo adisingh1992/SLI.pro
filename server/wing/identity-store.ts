@@ -35,6 +35,13 @@ export type AuthUser = {
   phoneNumber: string | null;
   role: "student" | "advisor" | "institution_admin" | "platform_admin";
   isAdmin: boolean; // derived from role
+  /**
+   * The institution an ADMIN may see. NULL means unrestricted for a
+   * platform_admin and NOTHING for an institution_admin — see `adminScope()` in
+   * ../admin-guards.ts, which is the only place that distinction is decided.
+   * Not a student's institution; that is `students.institution_id`.
+   */
+  institutionId: number | null;
   linkedinId: string | null;
   linkedinAccessToken: string | null;
   linkedinRefreshToken: string | null;
@@ -62,6 +69,7 @@ function toAuthUser(row: any): AuthUser {
     phoneNumber: row.phoneNumber ?? null,
     role: row.role,
     isAdmin: ADMIN_ROLES.has(row.role),
+    institutionId: row.institutionId ?? null,
     linkedinId: row.linkedinId ?? null,
     linkedinAccessToken: row.linkedinAccessToken ?? null,
     linkedinRefreshToken: row.linkedinRefreshToken ?? null,
@@ -105,6 +113,10 @@ export function publicUser(u: AuthUser) {
     phoneNumber: u.phoneNumber,
     role: u.role,
     isAdmin: u.isAdmin,
+    // Published so the admin UI can label and pre-filter by the caller's own
+    // cohort. It is the viewer's own institution, not anybody else's, and the
+    // server never trusts it coming back in — see `resolveInstitutionFilter`.
+    institutionId: u.institutionId,
     linkedinConnected: !!u.linkedinId,
     professionalStatus: u.professionalStatus,
     discoverySource: u.discoverySource,
@@ -256,6 +268,8 @@ export async function updateUser(
     professionalStatus: string | null;
     discoverySource: string | null;
     role: AuthUser["role"];
+    /** Set when an administrator is bound to a partner institution. */
+    institutionId: number | null;
     status: AuthUser["status"];
     lastLoginAt: Date;
   }>,

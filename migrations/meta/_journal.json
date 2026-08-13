@@ -127,6 +127,13 @@
       "when": 1786508400000,
       "tag": "0017_cohort_summary_indexes",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1786594800000,
+      "tag": "0018_user_institution_scope",
+      "breakpoints": true
     }
   ]
 }

@@ -12,6 +12,13 @@ import type { AuthUser } from "./wing/identity-store";
 import { z } from "zod";
 import { sendPasswordResetEmail } from "./email-service";
 import * as profileStore from "./wing/profile-store";
+import { config } from "./config";
+import {
+  rateLimitByIp,
+  limitFailedLogins,
+  recordLoginFailure,
+  clearLoginFailures,
+} from "./rate-limit";
 
 declare global {
   namespace Express {
@@ -77,7 +84,10 @@ export function setupAuth(app: Express) {
   const isProduction = process.env.NODE_ENV !== 'development';
   
   const sessionSettings: session.SessionOptions = {
-    secret: process.env.SESSION_SECRET || "supersecretkey",
+    // `config.sessionSecret`, which throws when unset, rather than a second
+    // copy of the env read with its own "supersecretkey" fallback. Two places
+    // resolving the signing key meant fixing one still left the other.
+    secret: config.sessionSecret,
     resave: false,
     saveUninitialized: false,
     store: storage.sessionStore,
@@ -202,7 +212,14 @@ export function setupAuth(app: Express) {
     }
   });
 
-  app.post("/api/register", async (req, res, next) => {
+  /*
+   * Per-IP here, unlike login: a student registers once, so legitimate
+   * volume from a shared campus address is low even at this threshold.
+   */
+  app.post(
+    "/api/register",
+    rateLimitByIp("register", { windowMs: 60 * 60 * 1000, max: 10 }),
+    async (req, res, next) => {
     try {
       // Validate the request body
       const validationResult = registerSchema.safeParse(req.body);
@@ -259,11 +276,24 @@ export function setupAuth(app: Express) {
     }
   });
 
-  app.post("/api/login", (req, res, next) => {
+  /*
+   * `limitFailedLogins` counts failures per EMAIL, not per IP, and clears them
+   * on success — see the NAT note in rate-limit.ts. A career centre runs thirty
+   * students through onboarding from one address; per-IP limiting here would
+   * lock out the room.
+   */
+  app.post("/api/login", limitFailedLogins, (req, res, next) => {
     passport.authenticate("local", async (err: any, user: any, info: any) => {
       if (err) return next(err);
-      if (!user) return res.status(401).json({ message: "Invalid username or password" });
-      
+      if (!user) {
+        recordLoginFailure(req.body?.username);
+        return res.status(401).json({ message: "Invalid username or password" });
+      }
+
+      // Right password: the window is forgotten, so two typos followed by a
+      // correct attempt never strand anybody.
+      clearLoginFailures(req.body?.username);
+
       // Update the lastLoginAt timestamp
       try {
         await identity.recordLogin(user.id);
@@ -272,7 +302,7 @@ export function setupAuth(app: Express) {
       } catch (updateError) {
         console.error("Error updating last login time:", updateError);
       }
-      
+
       req.login(user, (err: any) => {
         if (err) return next(err);
         res.status(200).json(identity.publicUser(user));
@@ -325,7 +355,15 @@ export function setupAuth(app: Express) {
     username: z.string().email("Please enter a valid email")
   });
 
-  app.post("/api/forgot-password", async (req, res, next) => {
+  /*
+   * Tighter than the others because this one SENDS EMAIL to an address the
+   * caller chose. Unthrottled it is a way to flood somebody else's inbox
+   * from our domain, which costs deliverability reputation as well as money.
+   */
+  app.post(
+    "/api/forgot-password",
+    rateLimitByIp("forgot-password", { windowMs: 60 * 60 * 1000, max: 5 }),
+    async (req, res, next) => {
     try {
       const validationResult = forgotPasswordSchema.safeParse(req.body);
       if (!validationResult.success) {
@@ -407,7 +445,12 @@ export function setupAuth(app: Express) {
     path: ["confirmPassword"]
   });
 
-  app.post("/api/reset-password", async (req, res, next) => {
+  // Guessing reset tokens is the attack; the token is already single-use
+  // and expiring, so this only removes the free brute-force attempt.
+  app.post(
+    "/api/reset-password",
+    rateLimitByIp("reset-password", { windowMs: 60 * 60 * 1000, max: 20 }),
+    async (req, res, next) => {
     try {
       const validationResult = resetPasswordSchema.safeParse(req.body);
       if (!validationResult.success) {

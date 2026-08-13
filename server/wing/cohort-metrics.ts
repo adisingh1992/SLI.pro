@@ -247,8 +247,18 @@ export async function cohortMetrics(f: MetricsFilter): Promise<CohortMetrics> {
   };
 }
 
-/** Institutions and cycles, for the filter controls. */
-export async function filterOptions() {
+/**
+ * Institutions and cycles, for the filter controls.
+ *
+ * Scoped, because this endpoint is how a caller learns which institution ids
+ * exist. Returning all of them to a partner administrator both names the other
+ * partner and hands over the exact id needed to ask for their cohort — the
+ * filter control becoming the reconnaissance step for the export endpoint.
+ *
+ * `onlyInstitutionId` comes from the session via `adminScope`, never from the
+ * request.
+ */
+export async function filterOptions(onlyInstitutionId?: number | null) {
   const rows = await db
     .select({
       institutionId: institutions.id,
@@ -259,6 +269,7 @@ export async function filterOptions() {
     })
     .from(institutions)
     .leftJoin(schoolCycles, eq(schoolCycles.institutionId, institutions.id))
+    .where(onlyInstitutionId == null ? undefined : eq(institutions.id, onlyInstitutionId))
     .orderBy(asc(institutions.name), asc(schoolCycles.cycleYear));
 
   const byInstitution = new Map<number, { id: number; name: string; cycles: any[] }>();

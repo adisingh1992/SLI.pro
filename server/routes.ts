@@ -24,6 +24,7 @@ import { registerObjectiveRoutes } from "./objectives-routes";
 import { registerAdvisorRoutes } from "./advisor-routes";
 import { registerTemplateRoutes } from "./template-routes";
 import { registerMetricsRoutes } from "./metrics-routes";
+import { registerInstitutionRoutes } from "./institution-routes";
 import { registerLifeLogRoutes } from "./life-log-routes";
 import { registerIntakeRoutes } from "./intake-routes";
 import { registerRefreshRoutes } from "./refresh-routes";
@@ -63,7 +64,12 @@ import { extractDocumentText, validateExtractedText } from "./document-extractor
 import * as docStore from "./wing/document-store";
 import * as intakeStore from "./wing/intake-store";
 import * as profileStore from "./wing/profile-store";
-import { isAdmin } from "./admin-guards";
+import { isAdmin, isPlatformAdmin, requireScope } from "./admin-guards";
+import {
+  userIdsForInstitution,
+  isStudentInScope,
+  requireStudentInScope,
+} from "./wing/admin-scope";
 
 const scryptAsync = promisify(scrypt);
 
@@ -131,6 +137,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   registerAdvisorRoutes(app);
   registerTemplateRoutes(app);
   registerMetricsRoutes(app);
+  registerInstitutionRoutes(app);
   registerLifeLogRoutes(app);
   registerIntakeRoutes(app);
   registerRefreshRoutes(app);
@@ -946,7 +953,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/admin/users", isAdmin, async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const nonAdminUsers = (await getAllUsers(false)).filter((u) => !u.isAdmin);
+      const scope = requireScope(req, res);
+      if (!scope) return;
+
+      let nonAdminUsers = (await getAllUsers(false)).filter((u) => !u.isAdmin);
+
+      /*
+       * Narrowed to the caller's institution. This is the busiest admin screen
+       * and it listed every student on the platform to anybody who passed
+       * `isAdmin` — which is correct for SLIpro staff and would not be for a
+       * partner administrator.
+       *
+       * Filtered in memory against one extra query rather than pushed into
+       * `getAllUsers`: the cohort list is already assembled here, and a student
+       * with no `students` row would silently vanish from a join where this way
+       * they are simply out of scope for a partner and still visible to staff.
+       */
+      if (scope.kind === "institution") {
+        const inScope = await userIdsForInstitution(scope.institutionId);
+        nonAdminUsers = nonAdminUsers.filter((u) => inScope.has(u.id));
+      }
 
       /*
        * `user.id` here is a WING id, and every store below is a wing store.
@@ -1012,12 +1038,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/admin/users/count", isAdmin, async (req: Request, res: Response, next: NextFunction) => {
     try {
-      // Get all users from storage, then manually filter
+      const scope = requireScope(req, res);
+      if (!scope) return;
+
       const allUsers = await getAllUsers(false);
-      
-      // FORCE filter admin users out - manual approach to bypass any caching issues
-      const nonAdminUsers = allUsers.filter(user => user.isAdmin !== true);
-      
+      let nonAdminUsers = allUsers.filter(user => user.isAdmin !== true);
+
+      // Same narrowing as the list above — a count of the whole platform shown
+      // under a partner's own heading is a wrong number, not just a wide one.
+      if (scope.kind === "institution") {
+        const inScope = await userIdsForInstitution(scope.institutionId);
+        nonAdminUsers = nonAdminUsers.filter((u) => inScope.has(u.id));
+      }
+
       res.json({ count: nonAdminUsers.length });
     } catch (error) {
       next(error);
@@ -1027,12 +1060,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get user details (for admin)
   app.get("/api/admin/users/:id", isAdmin, async (req, res, next) => {
     try {
+      const scope = requireScope(req, res);
+      if (!scope) return;
+
       const userId = parseInt(req.params.id);
       const user = await identity.getUser(userId);
 
       if (!user) {
         return res.status(404).json({ message: "User not found" });
       }
+      // Out of scope answers exactly as not-found does, so a partner
+      // administrator cannot tell another institution's students apart from ids
+      // that do not exist. See the note in wing/admin-scope.ts.
+      if (!(await requireStudentInScope(scope, userId, res))) return;
 
       /*
        * ── ALLOWLIST, NOT DENYLIST ──────────────────────────────────────────
@@ -1066,7 +1106,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Admin Excel export: branding intake data for all users
-  app.get("/api/admin/export/branding-intake", isAdmin, async (req: Request, res: Response, next: NextFunction) => {
+  /*
+   * PLATFORM STAFF ONLY, pending scoping.
+   *
+   * These five legacy Excel exports each build their own multi-table join and
+   * none of them filters by institution. Rather than half-scope them now —
+   * which would read as done — they are closed to partner administrators
+   * until each query is narrowed. `/api/admin/metrics/export` is scoped and
+   * is the B4 export a career centre actually needs.
+   */
+  app.get("/api/admin/export/branding-intake", isPlatformAdmin, async (req: Request, res: Response, next: NextFunction) => {
     try {
       const allUsers = await getAllUsers();
       const nonAdminUsers = allUsers.filter((u) => !u.isAdmin && !u.isTestUser);
@@ -1184,7 +1233,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Admin Excel export: questionnaire Q&A for all users
-  app.get("/api/admin/export/questionnaire", isAdmin, async (req: Request, res: Response, next: NextFunction) => {
+  /*
+   * PLATFORM STAFF ONLY, pending scoping.
+   *
+   * These five legacy Excel exports each build their own multi-table join and
+   * none of them filters by institution. Rather than half-scope them now —
+   * which would read as done — they are closed to partner administrators
+   * until each query is narrowed. `/api/admin/metrics/export` is scoped and
+   * is the B4 export a career centre actually needs.
+   */
+  app.get("/api/admin/export/questionnaire", isPlatformAdmin, async (req: Request, res: Response, next: NextFunction) => {
     try {
       const allUsers = await getAllUsers();
       const nonAdminUsers = allUsers.filter((u) => !u.isAdmin && !u.isTestUser);
@@ -1316,7 +1374,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Admin Excel export: all non-test users with key coaching profile fields
-  app.get("/api/admin/export/users", isAdmin, async (req: Request, res: Response, next: NextFunction) => {
+  /*
+   * PLATFORM STAFF ONLY, pending scoping.
+   *
+   * These five legacy Excel exports each build their own multi-table join and
+   * none of them filters by institution. Rather than half-scope them now —
+   * which would read as done — they are closed to partner administrators
+   * until each query is narrowed. `/api/admin/metrics/export` is scoped and
+   * is the B4 export a career centre actually needs.
+   */
+  app.get("/api/admin/export/users", isPlatformAdmin, async (req: Request, res: Response, next: NextFunction) => {
     try {
       const allUsers = await getAllUsers();
       const targetUsers = allUsers
@@ -1395,7 +1462,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Admin Excel export: chatbot session data (foundation sessions + enhancement modules)
-  app.get("/api/admin/export/chatbot-sessions", isAdmin, async (req: Request, res: Response, next: NextFunction) => {
+  /*
+   * PLATFORM STAFF ONLY, pending scoping.
+   *
+   * These five legacy Excel exports each build their own multi-table join and
+   * none of them filters by institution. Rather than half-scope them now —
+   * which would read as done — they are closed to partner administrators
+   * until each query is narrowed. `/api/admin/metrics/export` is scoped and
+   * is the B4 export a career centre actually needs.
+   */
+  app.get("/api/admin/export/chatbot-sessions", isPlatformAdmin, async (req: Request, res: Response, next: NextFunction) => {
     try {
       const allUsers = await getAllUsers();
       const nonAdminUsers = allUsers.filter((u) => !u.isAdmin && !u.isTestUser);
@@ -1540,7 +1616,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Admin Excel export: full chat transcripts for a single Foundation Session or Enhancement Module
-  app.get("/api/admin/export/transcripts", isAdmin, async (req: Request, res: Response, next: NextFunction) => {
+  /*
+   * PLATFORM STAFF ONLY, pending scoping.
+   *
+   * These five legacy Excel exports each build their own multi-table join and
+   * none of them filters by institution. Rather than half-scope them now —
+   * which would read as done — they are closed to partner administrators
+   * until each query is narrowed. `/api/admin/metrics/export` is scoped and
+   * is the B4 export a career centre actually needs.
+   */
+  app.get("/api/admin/export/transcripts", isPlatformAdmin, async (req: Request, res: Response, next: NextFunction) => {
     try {
       const type = String(req.query.type || "");
       const id = String(req.query.id || "");
@@ -1808,10 +1893,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Foundation Sessions routes - ADMIN only
   app.get("/api/admin/users/:userId/foundation-sessions", isAdmin, async (req, res, next) => {
     try {
+      const scope = requireScope(req, res);
+      if (!scope) return;
       const userId = parseInt(req.params.userId);
 
       const target = await identity.getUser(userId);
       if (!target) return res.status(404).json({ error: "User not found" });
+      if (!(await requireStudentInScope(scope, userId, res))) return;
 
       // Sessions live in wing; create the arc on first access (1 available,
       // 2 and 3 locked until their prerequisite completes).
@@ -1836,10 +1924,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Transcript routes - ADMIN only
   app.get("/api/admin/users/:userId/foundation-sessions/:sessionNumber/messages", isAdmin, async (req, res, next) => {
     try {
+      const scope = requireScope(req, res);
+      if (!scope) return;
       const userId = parseInt(req.params.userId);
       const sessionNumber = parseInt(req.params.sessionNumber);
       const target = await identity.getUser(userId);
       if (!target) return res.json({ session: null, messages: [] });
+      // Matches the empty answer above rather than 404: this route already
+      // reports "no such student" as an empty transcript, and an out-of-scope
+      // student must be indistinguishable from that.
+      if (!(await isStudentInScope(scope, userId))) {
+        return res.json({ session: null, messages: [] });
+      }
 
       const session = await wingStore.getFoundationSessionForUser(target, sessionNumber);
       if (!session) {
@@ -1855,8 +1951,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/admin/users/:userId/enhancement-modules/:moduleCode/messages", isAdmin, async (req, res, next) => {
     try {
+      const scope = requireScope(req, res);
+      if (!scope) return;
       const userId = parseInt(req.params.userId);
       const { moduleCode } = req.params;
+      if (!(await isStudentInScope(scope, userId))) {
+        return res.json({ module: null, messages: [] });
+      }
       const result = await wingModuleStore.getEnhancementModuleWithMessages(userId, moduleCode);
       if (!result) {
         return res.json({ module: null, messages: [] });
@@ -1883,8 +1984,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
    */
   app.get("/api/admin/users/:userId/coaching-notes", isAdmin, async (req, res, next) => {
     try {
+      const scope = requireScope(req, res);
+      if (!scope) return;
       const userId = parseInt(req.params.userId, 10);
       if (Number.isNaN(userId)) return res.status(400).json({ message: "Invalid user id" });
+      if (!(await requireStudentInScope(scope, userId, res))) return;
 
       res.json(await checkinStore.listNotes(userId));
     } catch (error) {

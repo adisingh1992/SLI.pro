@@ -109,9 +109,37 @@ export function registerFreshnessRoutes(app: Express) {
         return res.status(404).json({ error: "User profile not found" });
       }
       
-      // Check if user has questionnaire data
+      /*
+       * KNOWN COUPLING, left in place deliberately.
+       *
+       * The freshness report's first step is `generateQuestionnaireSummary`,
+       * which reads `userProfile.questionnaire` — the seven fields of the legacy
+       * form. The conversational intake does not populate them: it writes its own
+       * structured responses under a different key, and the two vocabularies do
+       * not line up field for field.
+       *
+       * So this precondition still means the FORM specifically. That is now an
+       * odd thing to require, because A1 stopped funnelling students through it —
+       * the dashboard gate accepts a completed intake, so a student can reach
+       * here having never seen the questionnaire.
+       *
+       * It is left requiring the form rather than "fixed" by deriving the seven
+       * fields from intake answers, because a derived mapping would put invented
+       * phrasing into an analysis the student reads as their own — the same class
+       * of mistake as the LinkedIn fallback that used to fabricate a profile.
+       * Teaching `generateQuestionnaireSummary` to read intake responses directly
+       * is the real fix and is a freshness-report change, not a gate change.
+       *
+       * Until then the message names the actual action instead of a requirement
+       * the student cannot place.
+       */
       if (!userProfile.questionnaire) {
-        return res.status(400).json({ error: "User must complete the questionnaire before generating a freshness report" });
+        return res.status(400).json({
+          error:
+            "The freshness report needs the detailed branding assessment. " +
+            "Complete it at /questionnaire and then generate the report.",
+          missingQuestionnaire: true,
+        });
       }
       
       // Check if user has required documents

@@ -8,7 +8,7 @@ import { insertUserSchema } from "@shared/schema";
 // `User` describes public.users; /api/user returns a wing user. See the note
 // in shared/auth-user.ts — the client was typed against the wrong table.
 import type { AuthenticatedUser as User } from "@shared/auth-user";
-import { apiRequest, queryClient } from "../lib/query-client";
+import { apiRequest, getQueryFn, queryClient } from "../lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { z } from "zod";
 
@@ -74,28 +74,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     data: user,
     error,
     isLoading,
-  } = useQuery<User | undefined, Error>({
+  } = useQuery<User | null, Error>({
     queryKey: ["/api/user"],
-    queryFn: async () => {
-      try {
-        const response = await apiRequest<User>({ url: "/api/user" });
-        return response as User;
-      } catch (error) {
-        if (error instanceof Error && error.message.includes("401")) {
-          return undefined;
-        }
-        throw error;
-      }
-    },
+    /*
+     * `on401: "returnNull"` rather than a catch on the error text.
+     *
+     * The previous form tested `error.message.includes("401")`, but the request
+     * helper builds its message from the response *body*, and /api/user answers
+     * a signed-out browser with `{ error: "Not signed in" }`. The string "401"
+     * never appeared, so that branch never ran and an ordinary signed-out visit
+     * resolved to the query's error state instead of to "no user".
+     */
+    queryFn: getQueryFn<User | null>({ on401: "returnNull" }),
   });
 
   const loginMutation = useMutation({
     mutationFn: async (credentials: LoginData) => {
-      return await apiRequest<User>({
-        url: "/api/login",
-        method: "POST",
-        body: credentials
-      }) as User;
+      const res = await apiRequest("POST", "/api/login", credentials);
+      return (await res.json()) as User;
     },
     onSuccess: (userData: User) => {
       queryClient.setQueryData(["/api/user"], userData);
@@ -106,11 +102,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const registerMutation = useMutation({
     mutationFn: async (credentials: RegisterData) => {
-      return await apiRequest<User>({
-        url: "/api/register",
-        method: "POST",
-        body: credentials
-      }) as User;
+      const res = await apiRequest("POST", "/api/register", credentials);
+      return (await res.json()) as User;
     },
     onSuccess: () => {
     },
@@ -121,32 +114,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const logoutMutation = useMutation<void, Error, void>({
     mutationFn: async () => {
-      try {
-        // Make a direct fetch call for logout since it doesn't return JSON
-        const response = await fetch('/api/logout', {
-          method: 'POST',
-          credentials: 'include',
-        });
-        
-        if (!response.ok) {
-          throw new Error(`Logout failed with status ${response.status}`);
-        }
-        
-        // Explicitly clear query cache here to ensure it happens even on server error
-        queryClient.clear();
-        
-        // Also invalidate the user query to force a refetch
-        queryClient.invalidateQueries({ queryKey: ["/api/user"] });
-        
-        return;
-      } catch (error) {
-        console.error("Logout error:", error);
-        throw error;
-      }
+      /*
+       * `apiRequest` rather than a bare fetch, so this call goes through
+       * `apiUrl()` like every other request. The bare fetch ignored
+       * VITE_API_BASE_URL, which means logout was the one call that would break
+       * if the SPA were ever served from a different origin than the API — the
+       * split-origin setup the Front Door architecture describes.
+       */
+      await apiRequest("POST", "/api/logout");
+
+      /*
+       * Clear, not invalidate. The cache holds the previous student's sessions,
+       * SLI and intake answers, and now that there is a single client this
+       * actually empties it — which matters on a shared library machine. The
+       * follow-up invalidate that used to sit here was redundant after a clear.
+       */
+      queryClient.clear();
     },
     onSuccess: () => {
-      // Clear all query cache again for extra safety
-      queryClient.clear();
       toast({
         title: "Logout successful",
         description: "You have been logged out.",

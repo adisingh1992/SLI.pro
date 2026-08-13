@@ -108,8 +108,27 @@ function useDashboardStatus(
   foundationSessions?: FoundationSession[],
   enhancementModules?: EnhancementModule[],
 ) {
-  const isAssessmentComplete =
+  /*
+   * A1: the conversational intake REPLACES the form, so completing it must open
+   * the journey.
+   *
+   * It did not. This tested `userProfile.questionnaire` only, which is read from
+   * `structuredResponses.questionnaire`, while the conversational intake writes
+   * `structuredResponses.brandingIntake.responses`. Two namespaces in the same
+   * jsonb column with no overlap — so a student could finish the entire intake
+   * conversation, be told they were done, and land on a dashboard that sent them
+   * to the 1,700-line questionnaire form with Foundation Sessions still locked.
+   * The form A1 set out to remove was still the real gate, one step further back.
+   *
+   * Either answer counts. `completed` on the intake record is set by the
+   * conversation itself (intake-conversation.ts), and the legacy questionnaire
+   * still satisfies the gate for the migrated students who filled it in before
+   * A1 and must not be asked again.
+   */
+  const isIntakeComplete = userProfile?.brandingIntake?.completed === true;
+  const isLegacyQuestionnaireComplete =
     !!userProfile?.questionnaire && userProfile.questionnaire.isDraft !== true;
+  const isAssessmentComplete = isIntakeComplete || isLegacyQuestionnaireComplete;
 
   const hasResume =
     userProfile?.documents?.some((doc) => doc.type === "resume") ?? false;
@@ -448,7 +467,9 @@ export default function NewDashboardPage() {
   const handleNavItemClick = (item: { label: string; locked?: boolean }) => {
     if (item.locked) return;
     if (item.label === "Professional Branding Assessment") {
-      navigate("/questionnaire");
+      // The intake conversation, not the retired form. A1 replaced the form,
+      // and this was still pointing at it.
+      navigate("/intake");
     } else if (item.label === "Document Vault") {
       if (status.isAssessmentComplete) {
         navigate("/profile?tab=documents");
@@ -609,7 +630,7 @@ export default function NewDashboardPage() {
             note="To enhance session accuracy, you may complete a prior assessment (MBTI, StrengthsFinder, Enneagram, or 360° Leadership). This is non-blocking."
             metaInfo="Duration: 5 Minutes"
             buttonLabel="Begin"
-            onButtonClick={() => navigate("/questionnaire")}
+            onButtonClick={() => navigate("/intake")}
           />
         )}
 
