@@ -1,4 +1,4 @@
-import { and, desc, eq } from "drizzle-orm";
+import { and, count, desc, eq, isNull } from "drizzle-orm";
 import { db } from "../db";
 import { homeworkAssignments, students } from "@shared/wing-schema";
 
@@ -132,3 +132,34 @@ export async function answer(params: {
 export async function remove(id: number) {
   await db.delete(homeworkAssignments).where(eq(homeworkAssignments.id, id));
 }
+
+/**
+ * How many assigned questions the student has not answered.
+ *
+ * ── WHY THIS ONE TAKES A STUDENT ID ──────────────────────────────────────
+ * Every other function here takes a `wing.users.id` because its caller is a
+ * route holding a session or an admin URL. This one is called by the heuristics
+ * engine, which works in student ids throughout and would otherwise have to
+ * translate back to a user id purely to have this file translate it forward
+ * again. The parameter is named for what it is so the two cannot be confused.
+ *
+ * ── WHAT IT IS FOR ───────────────────────────────────────────────────────
+ * IG-U05, the between-session task follow-up tone gate, says it "fires at
+ * session start or Radar check-in when uncompleted tasks exist in the task log".
+ * This is that condition. Without it the gate's rule text — a page on how to
+ * follow up on tasks without shaming anyone — would be compiled into turns where
+ * no task exists, which is likelier to invent a follow-up than to shape one.
+ */
+export async function countUnansweredForStudent(studentId: number): Promise<number> {
+  const [row] = await db
+    .select({ n: count() })
+    .from(homeworkAssignments)
+    .where(
+      and(
+        eq(homeworkAssignments.studentId, studentId),
+        isNull(homeworkAssignments.answeredAt),
+      ),
+    );
+  return Number(row?.n ?? 0);
+}
+

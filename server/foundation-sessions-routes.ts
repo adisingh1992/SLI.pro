@@ -14,6 +14,7 @@ import * as docStore from "./wing/document-store";
 import * as intakeStore from "./wing/intake-store";
 import * as profileStore from "./wing/profile-store";
 import * as engine from "./wing/engine";
+import * as voice from "./wing/voice";
 import * as scoring from "./wing/scoring";
 import * as classifier from "./wing/classifier";
 
@@ -149,6 +150,17 @@ function toApiSession(row: any) {
     createdAt: row.createdAt,
   };
 }
+
+/**
+ * The `buildStudentContext` sections that come from a file the student uploaded.
+ *
+ * IG-U03, the user-uploaded data handling gate, only applies when Wing is working
+ * from uploaded data — it must confirm what it found and disclose what it infers.
+ * `intake` and `pathway:*` are answers the student typed into a form, so they are
+ * deliberately not in this list: they are the student's words already, not a file
+ * Wing read on their behalf and is now interpreting.
+ */
+const UPLOADED_SECTIONS: readonly string[] = ["linkedin", "resume", "supplementary"];
 
 /* ── Context builders (unchanged behaviour, wing-backed) ────────────────── */
 
@@ -858,6 +870,42 @@ export function registerFoundationSessionsRoutes(app: Express) {
         });
 
         /*
+         * The integrity gates for this session, started alongside the detector so
+         * the two DB reads overlap rather than queue.
+         *
+         * Separate from `guidancePromise` deliberately: gates govern every reply
+         * Wing makes, and `evaluateTurn` returns null on the majority of turns
+         * because most turns contain no signal. Attaching the rules to its result
+         * would drop them on exactly those turns.
+         *
+         * Also never rejects — null on any failure, logged inside.
+         */
+        const gatesPromise = engine.loadTurnGates({
+          studentId,
+          sessionId: session.id,
+        });
+
+        /*
+         * The voice section (T5), started here for the same reason as the gates:
+         * its inputs are the student and the transcript, both already in hand.
+         *
+         * Its doorway choice reads the student's own turns and nothing else — no
+         * persisted personality estimate, deliberately, so a bad early read
+         * cannot follow somebody through every future session.
+         *
+         * Never rejects. A cohort with no published voice profile, or a failure
+         * reading one, yields null and the prompt is exactly what it was before
+         * this existed.
+         */
+        const voicePromise = voice.voiceSectionFor({
+          studentId,
+          sessionType: sessionTypeFor(sessionNumber),
+          studentTurns: conversation
+            .filter((m: { role: string }) => m.role === "user")
+            .map((m: { content: string }) => m.content),
+        });
+
+        /*
          * Collected, not started, here.
          *
          * `professionalStatus` is one column. It was `getUserProfile()`, which
@@ -943,9 +991,73 @@ export function registerFoundationSessionsRoutes(app: Express) {
         const guidance = await guidancePromise;
         mark("engine wait");
 
-        const systemPrompt = guidance
-          ? `${basePrompt}\n\n${guidance.systemPromptFragment}`
-          : basePrompt;
+        /*
+         * Gates first, then the base prompt, then this turn's coaching guidance.
+         *
+         * Order is deliberate. The gates are constraints on every reply and the
+         * guidance is an instruction for this one, so the guidance must be the
+         * last thing the model reads — a constraint stated after the instruction
+         * it constrains reads as an afterthought.
+         *
+         * Today this is a no-op: no cycle points at a sequence containing the v2
+         * cards, so `gateSection` is null and the prompt is byte-identical to what
+         * it was. It becomes live the moment a sequence is published, which is the
+         * intended risk profile — the wiring lands and is exercised before the
+         * methodology behind it does.
+         */
+        /*
+         * Compiled here rather than inside the load because two gates only apply
+         * when a fact about this turn holds, and one of those facts — whether
+         * anything the student uploaded is in this turn's context — is not known
+         * until `studentContext` returns above. The database read still overlaps
+         * the detector; only the rendering waits.
+         */
+        const gateContext = engine.compileTurnGates(await gatesPromise, {
+          hasUploadedDocument: studentContext.included.some(
+            (name) => UPLOADED_SECTIONS.indexOf(name) >= 0,
+          ),
+        });
+        const gateSection = gateContext?.section ?? null;
+
+        const voiceContext = await voicePromise;
+        if (voiceContext.section) {
+          console.log(
+            `[foundation] voice profile #${voiceContext.profileId}` +
+              ` (${voiceContext.tokens} tokens, ` +
+              /*
+               * The register that is in the prompt — not the population that was
+               * resolved. When a population resolves and the profile carries no
+               * register for it, that is worth saying out loud rather than
+               * printing a register nobody was given.
+               */
+              (voiceContext.register
+                ? `${voiceContext.register} register`
+                : voiceContext.audience
+                  ? `${voiceContext.audience} resolved but this profile has no register for it`
+                  : "no register") +
+              `${voiceContext.doorway ? `, doorway ${voiceContext.doorway}` : ", no doorway"})`,
+          );
+        }
+
+        /*
+         * Identity, then constraints, then the task, then this turn.
+         *
+         * The voice section goes FIRST, ahead of the gates, on the personality
+         * directive's own reasoning: "The personality directive is the SYSTEM
+         * PROMPT. The gates are the QUALITY CHECKS... If the directive is strong,
+         * the gates fire rarely. If the directive is weak, the gates fire
+         * constantly — they're doing the personality's job, which they're not
+         * designed for." A model told what it must never say before it is told
+         * who it is will produce careful, characterless coaching.
+         */
+        const systemPrompt = [
+          voiceContext.section,
+          gateSection,
+          basePrompt,
+          guidance?.systemPromptFragment,
+        ]
+          .filter(Boolean)
+          .join("\n\n");
 
         res.setHeader("Content-Type", "text/event-stream");
         res.setHeader("Cache-Control", "no-cache");
@@ -1002,6 +1114,28 @@ export function registerFoundationSessionsRoutes(app: Express) {
             humanTurnId: humanTurn?.id ?? null,
           })}\n\n`,
         );
+
+        /*
+         * The gate audit — deliberately here, after `turn_complete` has released
+         * the UI.
+         *
+         * Thirteen gates ask to inspect Wing's output BEFORE delivery, and this
+         * path streams, so the choice was between not streaming and measuring
+         * afterwards. Measuring afterwards is what makes "did the rule hold?"
+         * answerable at all, and it is the evidence that decides whether any gate
+         * earns the latency of buffering the stream. Placed after the release so
+         * it cannot cost the student a millisecond either way.
+         *
+         * Not awaited for its result and never throws — findings are written to
+         * gate_audit_findings for review, and a failure costs a log line.
+         */
+        void engine.auditDeliveredReply({
+          studentId,
+          sessionId: session.id,
+          turnId: aiTurn?.id ?? null,
+          reply: assistantContent,
+          gates: gateContext,
+        });
 
         /*
          * The full turn list, assembled rather than re-queried.

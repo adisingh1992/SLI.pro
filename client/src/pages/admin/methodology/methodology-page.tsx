@@ -1,11 +1,13 @@
 import { useLocation, useParams } from "wouter";
-import { BookOpen, ListOrdered } from "lucide-react";
+import { BookOpen, ListOrdered, ShieldCheck, MessageSquareQuote } from "lucide-react";
 import AdminLayout from "../layout";
 import { RequirePlatformAdmin } from "../require-platform-admin";
 import { PageShell, PageHeader } from "@/components/admin/page";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { CardsPanel } from "./cards-panel";
 import { SequencesPanel } from "./sequences-panel";
+import { IntegrityPanel } from "./integrity-panel";
+import { VoicePanel } from "./voice-panel";
 
 /**
  * The methodology library.
@@ -22,6 +24,8 @@ import { SequencesPanel } from "./sequences-panel";
 const TABS = [
   { id: "cards", label: "Cards", icon: BookOpen },
   { id: "sequences", label: "Sequences", icon: ListOrdered },
+  { id: "integrity", label: "Integrity", icon: ShieldCheck },
+  { id: "voice", label: "Voice", icon: MessageSquareQuote },
 ] as const;
 
 type TabId = (typeof TABS)[number]["id"];
@@ -35,11 +39,11 @@ export default function MethodologyPage() {
 
   return (
     <RequirePlatformAdmin>
-      <AdminLayout breadcrumb={tab === "sequences" ? "Sequences" : undefined}>
+      <AdminLayout breadcrumb={TABS.find((t) => t.id === tab && t.id !== "cards")?.label}>
         <PageShell width="wide">
           <PageHeader
             title="Methodology"
-            description="The heuristic cards Wing executes during a conversation, and the sequences that decide which are live for a cohort. Changes take effect without a deploy."
+            description="The heuristic cards Wing executes during a conversation, the sequences that decide which are live for a cohort, and whether the integrity gates are holding. Changes take effect without a deploy."
           />
 
           <Tabs
@@ -58,6 +62,8 @@ export default function MethodologyPage() {
 
             {tab === "cards" && <CardsPanel />}
             {tab === "sequences" && <SequencesPanel />}
+            {tab === "integrity" && <IntegrityPanel />}
+            {tab === "voice" && <VoicePanel />}
           </Tabs>
         </PageShell>
       </AdminLayout>

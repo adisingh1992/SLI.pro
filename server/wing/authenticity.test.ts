@@ -2,8 +2,11 @@ import assert from "node:assert/strict";
 import {
   ENGAGEMENT_BAIT,
   FLAGGED_VOCABULARY,
+  GATE_COVERAGE,
+  GENERIC_CONNECTORS,
   HEDGES,
   checkAuthenticity,
+  checkSpokenVoicePreserved,
   renderStandardForPrompt,
 } from "./authenticity";
 
@@ -193,6 +196,118 @@ test("the prompt lists every banned word", () => {
   for (const { phrase } of FLAGGED_VOCABULARY) {
     assert.ok(rendered.includes(phrase), `"${phrase}" missing from the prompt`);
   }
+});
+
+/* ── The v2 content gates: IG-V05, IG-V07, IG-V04 ───────────────────────── */
+
+const rules = (t: string) => checkAuthenticity(t).findings.map((f) => f.rule);
+
+test("IG-V07 · generic connectors are flagged", () => {
+  assert.ok(rules("Moreover, the results were clear.").indexOf("connectors") >= 0);
+  assert.ok(rules("It's worth noting that this took two years.").indexOf("connectors") >= 0);
+  assert.ok(rules("In conclusion, ship it.").indexOf("connectors") >= 0);
+});
+
+test("no connector is duplicated in the vocabulary list", () => {
+  // A phrase in two lists produces two findings for one problem and the score
+  // punishes it twice. "at the end of the day" already lives in the vocabulary.
+  const vocab = FLAGGED_VOCABULARY.map((f) => f.phrase.toLowerCase());
+  for (const c of GENERIC_CONNECTORS) {
+    assert.equal(vocab.indexOf(c.replace(/,$/, "")), -1, `"${c}" is in both lists`);
+  }
+});
+
+test("IG-V05 check 3 · content with no first person is flagged", () => {
+  // Comfortably past the 40-word floor: the previous version of this fixture was
+  // 39 words and the check correctly declined to fire, which read as a bug in the
+  // check rather than in the fixture.
+  const thirdPerson =
+    "Teams often struggle to prioritise the work in front of them. The fix is to " +
+    "name the binding constraint first, out loud, and only then decide. Most groups " +
+    "skip that step entirely and argue about symptoms for weeks on end. A single " +
+    "named owner resolves it faster than a committee ever will, every time.";
+  assert.ok(rules(thirdPerson).indexOf("first_person") >= 0);
+});
+
+test("a short post is not required to say I", () => {
+  // A one-liner can legitimately have no first person. Firing there would make
+  // the check noise, and noise is how a check gets switched off.
+  assert.equal(rules("Cut chart review from six hours to one.").indexOf("first_person"), -1);
+});
+
+test("first-person content passes the first-person check", () => {
+  const mine =
+    "I cut chart review from six hours to under one at Cooey. The trick was not a " +
+    "better model. It was deleting three of the seven fields nobody read. " +
+    "I had argued for the opposite for a year before that.";
+  assert.equal(rules(mine).indexOf("first_person"), -1);
+});
+
+test("IG-V07 · a stack of fragments is flagged, a real list is not", () => {
+  const fragments = "Things I learned:\n- Ship early\n- Talk to users\n- Measure twice\n- Say no\n- Repeat";
+  assert.ok(rules(fragments).indexOf("list_heavy") >= 0);
+
+  const substantive =
+    "Three things changed how I run reviews.\n" +
+    "- I stopped asking for status and started asking what decision is blocked, which cut the meeting in half.\n" +
+    "- I put the constraint on the board before anyone spoke, so we argued about the right thing.\n" +
+    "- I gave one person the call at the end, because a committee never chooses.\n" +
+    "- I dropped the fourth agenda item entirely and nobody has asked for it since.";
+  assert.equal(rules(substantive).indexOf("list_heavy"), -1);
+});
+
+test("IG-V04 · an edit that flattens the spoken voice is reported", () => {
+  const spoken =
+    "So I was terrified. Absolutely terrified. I'd never run a review with the CFO in " +
+    "the room and I had about nine minutes to explain why we'd cut three fields from " +
+    "the intake form at Cooey. It worked.";
+  const polished =
+    "The presentation to the chief financial officer represented a significant " +
+    "professional challenge. The rationale for the reduction of intake form fields " +
+    "was communicated within the allocated time. The outcome was satisfactory.";
+
+  const found = checkSpokenVoicePreserved(spoken, polished).map((f) => f.found);
+  assert.ok(found.length >= 3, `expected several drifts, got ${found.length}`);
+  assert.ok(found.some((f) => f.indexOf("first-person") >= 0));
+  assert.ok(found.some((f) => f.indexOf("contractions") >= 0));
+});
+
+test("IG-V04 · a faithful edit reports nothing", () => {
+  const spoken =
+    "I was terrified. I'd never run a review with the CFO there and I had nine " +
+    "minutes to explain why we cut three fields at Cooey. It worked.";
+  const tidied =
+    "I was terrified. I'd never run a review with the CFO in the room, and I had " +
+    "nine minutes to explain why we cut three fields at Cooey. It worked.";
+  assert.deepEqual(checkSpokenVoicePreserved(spoken, tidied), []);
+});
+
+test("IG-V04 · missing input is not a violation", () => {
+  assert.deepEqual(checkSpokenVoicePreserved("", "anything"), []);
+  assert.deepEqual(checkSpokenVoicePreserved("anything", "  "), []);
+});
+
+test("the gate coverage map is honest about what is not enforced", () => {
+  /*
+   * The point of the map. "The gate is implemented" needs a scope, and two of
+   * IG-V05's five checks are genuine judgement calls — whether a claim is
+   * debatable is not a string match. Claiming otherwise would be worse than
+   * saying so.
+   */
+  const codes = Array.from(new Set(GATE_COVERAGE.map((g) => g.cardCode))).sort();
+  assert.deepEqual(codes, ["IG-V04", "IG-V05", "IG-V07"]);
+  assert.equal(GATE_COVERAGE.filter((g) => g.cardCode === "IG-V05").length, 5);
+  assert.ok(GATE_COVERAGE.some((g) => g.status === "judgement"));
+  for (const g of GATE_COVERAGE) assert.ok(g.by.length > 5, g.requirement);
+});
+
+test("the prompt states the three new rules, not just the checker", () => {
+  // The file's own philosophy: generation is instructed AND the output measured.
+  // A check with no matching instruction is a trap rather than a standard.
+  const rendered = renderStandardForPrompt();
+  assert.ok(rendered.indexOf("Moreover") >= 0);
+  assert.ok(rendered.indexOf('Say "I"') >= 0);
+  assert.ok(rendered.toLowerCase().indexOf("fragments") >= 0);
 });
 
 console.log("");

@@ -1,9 +1,12 @@
 import { useState } from "react";
 import { useParams, useLocation } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { Loader2, ArrowLeft, History, Check, Archive, AlertTriangle } from "lucide-react";
+import {
+  Loader2, ArrowLeft, History, Check, Archive, AlertTriangle,
+  Pencil, Shield, Puzzle, MessageCircle, ChevronDown, X,
+} from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -15,8 +18,37 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import AdminLayout from "./layout";
 import { StatusBadge, type Heuristic } from "./methodology/heuristic";
-import { ComponentField, COMPONENT_TYPES, COMPONENT_SPECS, type ComponentType } from "./heuristic-editor";
+import {
+  ComponentField, ComponentReadout, EngineUseBadge, COMPONENT_SPECS,
+  GROUP_LABELS, fieldsIn, type ComponentType, type FieldGroup,
+} from "./heuristic-editor";
 import { PageShell } from "@/components/admin/page";
+import { StatCard } from "@/components/admin/stat-card";
+
+/**
+ * One card, for reviewing and revising.
+ *
+ * ── WHY THIS OPENS IN READ MODE ──────────────────────────────────────────
+ * The job in front of the methodology owner is reading 53 seeded cards against
+ * the source document and deciding which are right. The previous version of
+ * this screen rendered every component as a live textarea stacked in a narrow
+ * column, which made a card unreadable and gave a `signal` — matched against
+ * every student turn — exactly the same visual weight as `notes`, which nothing
+ * reads. Now each field shows its content, says what the engine does with it,
+ * and is one click from editing.
+ *
+ * ── WHY THE FIELDS ARE GROUPED ───────────────────────────────────────────
+ * A v2 card has no `intervention` and no `outcome`; v2 replaced them with
+ * `coaching_move` and `success_criteria`. Rendering all eleven fields flat meant
+ * three permanently-empty boxes with placeholder text, which reads as "somebody
+ * forgot these" rather than "the methodology moved on". The pre-v2 band is
+ * collapsed and labelled, and says so.
+ *
+ * ── AND WHY `intervention_type` IS NOT A FIELD ───────────────────────────
+ * It is a column on the card, not a versioned component — one classifier per
+ * card, which either changes or does not. It appears in the header beside the
+ * card kind, as a property rather than something to write prose into.
+ */
 
 type ComponentRow = {
   id: number;
@@ -28,54 +60,84 @@ type ComponentRow = {
 };
 
 type Performance = {
-  studentsScored: number;
   totalSessionsApplied: number;
+  studentsScored: number;
   meanComposite: number | null;
   recentOutcomes: Record<string, number>;
 };
 
-/**
- * One card: edit its components, see their history, and read the evidence.
- *
- * Revising a component writes a NEW version rather than overwriting, so the
- * page shows the version number and keeps the history visible. That is not
- * incidental — every application log points at the exact component text the
- * student received, and overwriting would silently rewrite the past.
- */
+const KIND_META = {
+  coaching_card: {
+    icon: MessageCircle,
+    label: "Coaching card",
+    note: "Fires on the student's turn. This is what the detector matches against.",
+  },
+  integrity_gate: {
+    icon: Shield,
+    label: "Integrity gate",
+    note:
+      "Fires on Wing's own output before delivery, not on the student's turn — so it " +
+      "never enters the detector catalogue. Its signal describes something Wing is " +
+      "about to say.",
+  },
+  exercise: {
+    icon: Puzzle,
+    label: "Exercise",
+    note:
+      "Reached by an explicit reference from another card's coaching move, not by " +
+      "signal match. That is why exercise cards carry no sequence weight — they are " +
+      "not competing to fire.",
+  },
+} as const;
+
 export default function AdminHeuristicDetailPage() {
   const { id } = useParams<{ id: string }>();
   const [, navigate] = useLocation();
   const { toast } = useToast();
   const [drafts, setDrafts] = useState<Record<string, string>>({});
+  const [editing, setEditing] = useState<Record<string, boolean>>({});
+  const [openHistory, setOpenHistory] = useState<Record<string, boolean>>({});
+  const [showLegacy, setShowLegacy] = useState(false);
   const [confirmRetire, setConfirmRetire] = useState(false);
 
+  /*
+   * These calls address `/api/admin/heuristics/...`, which is where the routes
+   * actually live (`heuristics-routes.ts`).
+   *
+   * They previously addressed a path no server route registers, and the failure
+   * was silent rather than obvious: another route matched it first with different
+   * params, so every card returned 400 and this page rendered "Card not found."
+   * for all of them while the cards LIST kept working. Contract check 19 now
+   * fails the build if a client admin path has no matching server route.
+   */
   const { data: card, isLoading } = useQuery<Heuristic & { components: ComponentRow[] }>({
-    queryKey: [`/api/admin/methodology/cards/${id}`],
-    queryFn: async () => (await apiRequest("GET", `/api/admin/methodology/cards/${id}`)).json(),
+    queryKey: [`/api/admin/heuristics/${id}`],
+    queryFn: async () => (await apiRequest("GET", `/api/admin/heuristics/${id}`)).json(),
   });
 
   const { data: performance } = useQuery<Performance>({
-    queryKey: [`/api/admin/methodology/cards/${id}/performance`],
+    queryKey: [`/api/admin/heuristics/${id}/performance`],
     queryFn: async () =>
-      (await apiRequest("GET", `/api/admin/methodology/cards/${id}/performance`)).json(),
+      (await apiRequest("GET", `/api/admin/heuristics/${id}/performance`)).json(),
   });
 
   const reviseMutation = useMutation({
     mutationFn: async ({ type, content }: { type: ComponentType; content: string }) => {
       const res = await apiRequest(
         "PUT",
-        `/api/admin/methodology/cards/${id}/components/${type}`,
+        `/api/admin/heuristics/${id}/components/${type}`,
         { content },
       );
       return res.json();
     },
     onSuccess: (revised: ComponentRow, { type }) => {
-      queryClient.invalidateQueries({ queryKey: [`/api/admin/methodology/cards/${id}`] });
+      queryClient.invalidateQueries({ queryKey: [`/api/admin/heuristics/${id}`] });
       setDrafts((d) => {
         const next = { ...d };
         delete next[type];
         return next;
       });
+      setEditing((e) => ({ ...e, [type]: false }));
       toast({
         title: `${COMPONENT_SPECS[type].label} saved as v${revised.versionNumber}`,
         description: "The previous version is kept, so past sessions still resolve correctly.",
@@ -87,11 +149,11 @@ export default function AdminHeuristicDetailPage() {
 
   const statusMutation = useMutation({
     mutationFn: async (status: string) => {
-      const res = await apiRequest("PATCH", `/api/admin/methodology/cards/${id}/status`, { status });
+      const res = await apiRequest("PATCH", `/api/admin/heuristics/${id}/status`, { status });
       return res.json();
     },
     onSuccess: (updated: Heuristic) => {
-      queryClient.invalidateQueries({ queryKey: [`/api/admin/methodology/cards/${id}`] });
+      queryClient.invalidateQueries({ queryKey: [`/api/admin/heuristics/${id}`] });
       queryClient.invalidateQueries({ queryKey: ["/api/admin/heuristics"] });
       setConfirmRetire(false);
       toast({
@@ -119,46 +181,229 @@ export default function AdminHeuristicDetailPage() {
   if (!card) {
     return (
       <AdminLayout>
-        <PageShell width="prose">
-          <p className="text-muted-foreground">Card not found.</p>
+        <PageShell>
+          <Button variant="ghost" size="sm" onClick={() => navigate("/admin/methodology/cards")}>
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            Methodology
+          </Button>
+          <Card>
+            <CardContent className="py-12 text-center">
+              <p className="font-medium">No card with id {id}</p>
+              <p className="mt-1 text-sm text-muted-foreground">
+                It may have been deleted. The card list shows everything that exists.
+              </p>
+            </CardContent>
+          </Card>
         </PageShell>
       </AdminLayout>
     );
   }
 
-  const current = (card.components ?? []).filter((c) => c.isCurrent);
-  const currentFor = (type: ComponentType) => current.find((c) => c.componentType === type);
+  const all = card.components ?? [];
+  const currentFor = (type: ComponentType) =>
+    all.find((c) => c.componentType === type && c.isCurrent);
   const historyFor = (type: ComponentType) =>
-    (card.components ?? [])
+    all
       .filter((c) => c.componentType === type && !c.isCurrent)
       .sort((a, b) => b.versionNumber - a.versionNumber);
 
-  const valueFor = (type: ComponentType) =>
-    drafts[type] ?? currentFor(type)?.content ?? "";
+  const valueFor = (type: ComponentType) => drafts[type] ?? currentFor(type)?.content ?? "";
   const isDirty = (type: ComponentType) =>
     drafts[type] !== undefined && drafts[type] !== (currentFor(type)?.content ?? "");
+
+  const startEdit = (type: ComponentType) => {
+    setDrafts((d) => ({ ...d, [type]: currentFor(type)?.content ?? "" }));
+    setEditing((e) => ({ ...e, [type]: true }));
+  };
+  const cancelEdit = (type: ComponentType) => {
+    setDrafts((d) => {
+      const next = { ...d };
+      delete next[type];
+      return next;
+    });
+    setEditing((e) => ({ ...e, [type]: false }));
+  };
+
+  const kind = KIND_META[(card.cardKind ?? "coaching_card") as keyof typeof KIND_META];
+  const KindIcon = kind.icon;
+
+  const legacyWithContent = fieldsIn("legacy").filter((t) => currentFor(t));
+  const coreMissing = fieldsIn("core").filter((t) => !currentFor(t));
 
   const enoughEvidence =
     (performance?.totalSessionsApplied ?? 0) >= 10 && (performance?.meanComposite ?? 0) > 0;
 
+  /* ── One field, read or editing ───────────────────────────────────────── */
+  function FieldRow({ type }: { type: ComponentType }) {
+    const spec = COMPONENT_SPECS[type];
+    const existing = currentFor(type);
+    const history = historyFor(type);
+    const isEditing = !!editing[type];
+    const saving = reviseMutation.isPending && reviseMutation.variables?.type === type;
+
+    return (
+      <div className="border-t px-5 py-4 first:border-t-0">
+        <div className="mb-2 flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <div className="flex flex-wrap items-center gap-2">
+              <h3 className="text-sm font-medium">{spec.label}</h3>
+              <EngineUseBadge type={type} />
+            </div>
+            <p className="mt-0.5 text-xs text-muted-foreground">
+              {existing
+                ? `Version ${existing.versionNumber}${
+                    history.length ? ` · ${history.length} earlier` : ""
+                  }`
+                : "Not written yet"}
+            </p>
+          </div>
+
+          {!isEditing && (
+            <Button variant="ghost" size="sm" onClick={() => startEdit(type)}>
+              <Pencil className="mr-1.5 h-3.5 w-3.5" />
+              {existing ? "Edit" : "Write"}
+            </Button>
+          )}
+        </div>
+
+        {isEditing ? (
+          <div className="space-y-3">
+            <ComponentField
+              type={type}
+              value={valueFor(type)}
+              onChange={(v) => setDrafts((d) => ({ ...d, [type]: v }))}
+              rows={type === "notes" ? 6 : 5}
+            />
+            <div className="flex items-center gap-2">
+              <Button
+                size="sm"
+                disabled={!isDirty(type) || saving}
+                onClick={() => reviseMutation.mutate({ type, content: drafts[type] ?? "" })}
+              >
+                {saving && <Loader2 className="mr-2 h-3 w-3 animate-spin" />}
+                Save new version
+              </Button>
+              <Button variant="ghost" size="sm" onClick={() => cancelEdit(type)} disabled={saving}>
+                <X className="mr-1.5 h-3.5 w-3.5" />
+                Cancel
+              </Button>
+              {isDirty(type) && (
+                <span className="text-xs text-muted-foreground">
+                  The current version is kept, not overwritten.
+                </span>
+              )}
+            </div>
+          </div>
+        ) : (
+          <ComponentReadout type={type} content={existing?.content ?? null} />
+        )}
+
+        {history.length > 0 && !isEditing && (
+          <div className="mt-3">
+            <button
+              type="button"
+              onClick={() => setOpenHistory((h) => ({ ...h, [type]: !h[type] }))}
+              className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
+            >
+              <History className="h-3 w-3" />
+              {openHistory[type] ? "Hide" : "Show"} {history.length} earlier version
+              {history.length === 1 ? "" : "s"}
+              <ChevronDown
+                className={`h-3 w-3 transition-transform ${openHistory[type] ? "rotate-180" : ""}`}
+              />
+            </button>
+            {openHistory[type] && (
+              <div className="mt-2 space-y-2 rounded-md border bg-muted/30 p-3">
+                {history.map((h) => (
+                  <div key={h.id} className="border-l-2 pl-3 text-xs">
+                    <p className="text-muted-foreground">
+                      v{h.versionNumber} · {new Date(h.createdAt).toLocaleDateString()}
+                    </p>
+                    <p className="mt-0.5 whitespace-pre-wrap">{h.content}</p>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  function FieldGroupCard({ group }: { group: FieldGroup }) {
+    return (
+      <div>
+        <h2 className="mb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+          {GROUP_LABELS[group]}
+        </h2>
+        <Card className="overflow-hidden">
+          <CardContent className="p-0">
+            {fieldsIn(group).map((type) => (
+              <FieldRow key={type} type={type} />
+            ))}
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
   return (
     <AdminLayout>
-      <PageShell width="prose">
-        <Button variant="ghost" size="sm" className="mb-4" onClick={() => navigate("/admin/methodology/cards")}>
+      <PageShell>
+        <Button
+          variant="ghost"
+          size="sm"
+          className="-ml-2 w-fit"
+          onClick={() => navigate("/admin/methodology/cards")}
+        >
           <ArrowLeft className="mr-2 h-4 w-4" />
           Methodology
         </Button>
 
-        <div className="mb-6 flex items-start justify-between gap-4">
-          <div className="min-w-0">
-            <h1 className="text-2xl font-semibold tracking-tight">{card.name}</h1>
-            <p className="mt-1 text-sm text-muted-foreground">{card.description}</p>
-          </div>
-          <StatusBadge status={card.status} />
-        </div>
+        {/* ── Identity ───────────────────────────────────────────────────── */}
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex items-start justify-between gap-4">
+              <div className="min-w-0">
+                <div className="flex flex-wrap items-center gap-2">
+                  {card.cardCode && (
+                    <code className="rounded bg-muted px-1.5 py-0.5 font-mono text-sm">
+                      {card.cardCode}
+                    </code>
+                  )}
+                  <h1 className="text-xl font-semibold tracking-tight">{card.name}</h1>
+                </div>
+                <p className="mt-1.5 text-sm text-muted-foreground">{card.description}</p>
+              </div>
+              <StatusBadge status={card.status} />
+            </div>
+
+            <div className="mt-4 flex flex-wrap items-center gap-x-5 gap-y-2 border-t pt-4 text-xs">
+              <span className="flex items-center gap-1.5">
+                <KindIcon className="h-3.5 w-3.5 text-muted-foreground" />
+                <span className="font-medium">{kind.label}</span>
+              </span>
+              {card.interventionType && (
+                <span className="text-muted-foreground">
+                  Intervention type{" "}
+                  <Badge variant="outline" className="ml-1 font-mono text-[10px]">
+                    {card.interventionType}
+                  </Badge>
+                </span>
+              )}
+              <span className="text-muted-foreground">
+                {card.populationTags?.length
+                  ? `Populations: ${card.populationTags.join(", ")}`
+                  : "Applies to every population"}
+              </span>
+            </div>
+
+            <p className="mt-3 text-xs text-muted-foreground">{kind.note}</p>
+          </CardContent>
+        </Card>
 
         {card.status === "candidate" && (
-          <Alert className="mb-6 border-warn/30 bg-warn-soft">
+          <Alert className="border-warn/30 bg-warn-soft">
             <AlertTriangle className="h-4 w-4 text-warn" />
             <AlertTitle className="text-warn">This card is a candidate</AlertTitle>
             <AlertDescription className="text-warn">
@@ -168,122 +413,115 @@ export default function AdminHeuristicDetailPage() {
           </Alert>
         )}
 
-        <Tabs defaultValue="components">
-          <TabsList className="mb-4">
-            <TabsTrigger value="components">Components</TabsTrigger>
+        <Tabs defaultValue="card">
+          <TabsList>
+            <TabsTrigger value="card">The card</TabsTrigger>
             <TabsTrigger value="evidence">Evidence</TabsTrigger>
           </TabsList>
 
-          <TabsContent value="components" className="space-y-6">
-            {COMPONENT_TYPES.map((type) => {
-              const existing = currentFor(type);
-              const history = historyFor(type);
-              return (
-                <Card key={type}>
-                  <CardContent className="space-y-3 pt-6">
-                    <ComponentField
-                      type={type}
-                      value={valueFor(type)}
-                      onChange={(v) => setDrafts((d) => ({ ...d, [type]: v }))}
-                      rows={3}
-                    />
-                    <div className="flex items-center justify-between">
-                      <p className="text-xs text-muted-foreground">
-                        {existing ? `Version ${existing.versionNumber}` : "Not written yet"}
-                        {history.length > 0 && ` · ${history.length} earlier version${history.length === 1 ? "" : "s"}`}
-                      </p>
-                      <Button
-                        size="sm"
-                        disabled={!isDirty(type) || reviseMutation.isPending}
-                        onClick={() =>
-                          reviseMutation.mutate({ type, content: drafts[type] ?? "" })
-                        }
-                      >
-                        {reviseMutation.isPending && reviseMutation.variables?.type === type && (
-                          <Loader2 className="mr-2 h-3 w-3 animate-spin" />
-                        )}
-                        Save new version
-                      </Button>
-                    </div>
+          <TabsContent value="card" className="mt-4 space-y-6">
+            {coreMissing.length > 0 && (
+              <p className="text-xs text-muted-foreground">
+                {coreMissing.map((t) => COMPONENT_SPECS[t].label).join(", ")} not written on this
+                card.
+              </p>
+            )}
 
-                    {history.length > 0 && (
-                      <details className="rounded-md border bg-muted/30 p-2">
-                        <summary className="cursor-pointer text-xs text-muted-foreground">
-                          <History className="mr-1 inline h-3 w-3" />
-                          Version history
-                        </summary>
-                        <div className="mt-2 space-y-2">
-                          {history.map((h) => (
-                            <div key={h.id} className="border-l-2 pl-2 text-xs">
-                              <p className="text-muted-foreground">
-                                v{h.versionNumber} · {new Date(h.createdAt).toLocaleDateString()}
-                              </p>
-                              <p className="mt-0.5 whitespace-pre-wrap">{h.content}</p>
-                            </div>
-                          ))}
-                        </div>
-                      </details>
-                    )}
-                  </CardContent>
-                </Card>
-              );
-            })}
+            <FieldGroupCard group="core" />
+            <FieldGroupCard group="reference" />
+
+            {/* Pre-v2 fields, collapsed. A v2 card leaves all three empty and
+                that is correct, so they are not shown as gaps by default. */}
+            <div>
+              <button
+                type="button"
+                onClick={() => setShowLegacy((v) => !v)}
+                className="flex items-center gap-1.5 text-xs font-medium uppercase tracking-wide text-muted-foreground hover:text-foreground"
+              >
+                <ChevronDown
+                  className={`h-3.5 w-3.5 transition-transform ${showLegacy ? "rotate-180" : ""}`}
+                />
+                {GROUP_LABELS.legacy}
+                <span className="font-normal normal-case tracking-normal">
+                  {legacyWithContent.length
+                    ? `— ${legacyWithContent.length} in use on this card`
+                    : "— none in use, which is expected on a v2 card"}
+                </span>
+              </button>
+              {showLegacy && (
+                <div className="mt-2">
+                  <Card className="overflow-hidden">
+                    <CardContent className="p-0">
+                      {fieldsIn("legacy").map((type) => (
+                        <FieldRow key={type} type={type} />
+                      ))}
+                    </CardContent>
+                  </Card>
+                </div>
+              )}
+            </div>
           </TabsContent>
 
-          <TabsContent value="evidence">
+          <TabsContent value="evidence" className="mt-4 space-y-6">
+            <div className="grid gap-4 sm:grid-cols-3">
+              <StatCard
+                label="Sessions applied"
+                value={performance?.totalSessionsApplied ?? 0}
+                hint="Times this card has fired."
+              />
+              <StatCard
+                label="Students"
+                value={performance?.studentsScored ?? 0}
+                hint="How many people it has reached."
+              />
+              <StatCard
+                label="Mean composite"
+                value={
+                  performance?.meanComposite != null
+                    ? performance.meanComposite.toFixed(2)
+                    : "—"
+                }
+                hint="Outcome score across those sessions."
+              />
+            </div>
+
+            {performance && Object.keys(performance.recentOutcomes).length > 0 && (
+              <Card>
+                <CardContent className="space-y-3 pt-6">
+                  <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                    Recent outcomes
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    {Object.entries(performance.recentOutcomes).map(([outcome, count]) => (
+                      <Badge key={outcome} variant="outline">
+                        {outcome}: {count}
+                      </Badge>
+                    ))}
+                  </div>
+                  {performance.recentOutcomes.correction > 0 && (
+                    <p className="text-xs text-muted-foreground">
+                      Corrections mean students pushed back on this card's framing. Those turns
+                      are the most valuable data in the corpus, so a correction counts only −0.5
+                      rather than as a failure. Many corrections usually means the framing is too
+                      narrow, not that the pattern is wrong.
+                    </p>
+                  )}
+                </CardContent>
+              </Card>
+            )}
+
             <Card>
-              <CardHeader>
-                <CardTitle className="text-base">Performance</CardTitle>
-                <CardDescription>
-                  The evidence behind promoting this card, or retiring it.
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid grid-cols-3 gap-4">
-                  <div>
-                    <p className="text-2xl font-semibold">
-                      {performance?.totalSessionsApplied ?? 0}
-                    </p>
-                    <p className="text-xs text-muted-foreground">sessions applied</p>
-                  </div>
-                  <div>
-                    <p className="text-2xl font-semibold">{performance?.studentsScored ?? 0}</p>
-                    <p className="text-xs text-muted-foreground">students</p>
-                  </div>
-                  <div>
-                    <p className="text-2xl font-semibold">
-                      {performance?.meanComposite != null
-                        ? performance.meanComposite.toFixed(2)
-                        : "—"}
-                    </p>
-                    <p className="text-xs text-muted-foreground">mean composite</p>
-                  </div>
-                </div>
-
-                {performance && Object.keys(performance.recentOutcomes).length > 0 && (
-                  <div>
-                    <p className="mb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                      Recent outcomes
-                    </p>
-                    <div className="flex flex-wrap gap-2">
-                      {Object.entries(performance.recentOutcomes).map(([outcome, count]) => (
-                        <Badge key={outcome} variant="outline">
-                          {outcome}: {count}
-                        </Badge>
-                      ))}
-                    </div>
-                    {performance.recentOutcomes.correction > 0 && (
-                      <p className="mt-3 text-xs text-muted-foreground">
-                        Corrections mean students pushed back on this card's framing. Those
-                        turns are the most valuable data in the corpus, so a correction counts
-                        only −0.5 rather than as a failure. Many corrections usually means the
-                        framing is too narrow, not that the pattern is wrong.
-                      </p>
+              <CardContent className="space-y-4 pt-6">
+                <div>
+                  <p className="text-sm font-medium">Lifecycle</p>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    Promotion is your judgement, not a threshold the system enforces.
+                    {card.status === "candidate" && !enoughEvidence && (
+                      <> This card has little evidence behind it so far.</>
                     )}
-                  </div>
-                )}
-
-                <div className="flex gap-2 border-t pt-4">
+                  </p>
+                </div>
+                <div className="flex flex-wrap gap-2">
                   {card.status !== "validated" && (
                     <Button
                       variant="outline"
@@ -314,13 +552,6 @@ export default function AdminHeuristicDetailPage() {
                     </Button>
                   )}
                 </div>
-
-                {card.status === "candidate" && !enoughEvidence && (
-                  <p className="text-xs text-muted-foreground">
-                    Promotion is your judgement, not a threshold the system enforces — but
-                    this card has little evidence behind it so far.
-                  </p>
-                )}
               </CardContent>
             </Card>
           </TabsContent>

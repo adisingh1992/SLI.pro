@@ -183,7 +183,9 @@ PUT /api/admin/heuristics/31/components/intervention
 GET  /api/admin/cycles
 GET  /api/admin/cycles/:id/sequence
 GET  /api/admin/cycles/:id/sequence/history
+GET  /api/admin/sequences/:id/cards
 PUT  /api/admin/cycles/:id/sequence
+PUT  /api/admin/cycles/:id/active-sequence
 ```
 
 Publish a new sequence — order matters, weight breaks ties:
@@ -197,6 +199,41 @@ PUT /api/admin/cycles/1/sequence
   ]
 }
 ```
+
+### Publishing a sequence that already exists
+
+`PUT .../sequence` composes: it takes entries, writes a new version, points the
+cycle at it. `wing:build-sequences` writes a sequence WITHOUT pointing at it, on
+purpose, so a build can be reviewed before it reaches anyone — and publishing that
+build through the compose path would produce a duplicate differing from the
+reviewed version only by id.
+
+So there is a second route that moves the pointer and nothing else:
+
+```json
+PUT /api/admin/cycles/1/active-sequence
+{ "sequenceId": 42 }
+```
+
+It refuses a sequence owned by another cycle, one with no entries, and one whose
+every card is retired. It carries the same evaluation-window gate and the same
+`force` + `reason` override. It is also the rollback: point at the previous
+version and the cohort is back where it was, in one write.
+
+Two differences from the compose route worth knowing:
+
+- **The empty-sequence refusal.** A cycle can point at a sequence with no entries
+  — one did, because `wing:reset-cards` deletes every sequence entry and leaves
+  the pointer alone. The engine then resolves a sequence, finds nothing in it, and
+  coaches with no methodology while every screen reports a published cycle. This
+  route will not create that state.
+- **The size limit counts coaching cards, not entries.** `SEQUENCE_HARD_LIMIT` was
+  measured when every entry's signal went into the detector prompt on every turn.
+  It no longer does: the detector asks for `kinds: ["coaching_card"]` and narrows
+  by session and population, gates compile on a separate path, and exercises never
+  reach the detector. A 53-card sequence puts 22 cards in front of the detector and
+  fewer than that in any one session. The compose route still counts entries,
+  correctly — it receives a bare list whose kinds it cannot know.
 
 ---
 

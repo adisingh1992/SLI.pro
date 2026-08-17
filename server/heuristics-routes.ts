@@ -1,5 +1,5 @@
 import { Express, Request, Response, NextFunction } from "express";
-import { and, desc, eq, inArray } from "drizzle-orm";
+import { and, count, desc, eq, inArray } from "drizzle-orm";
 import { db } from "./db";
 import {
   schoolCycles,
@@ -14,6 +14,7 @@ import * as store from "./wing/heuristics-store";
 import type { ComponentType } from "./wing/heuristics-store";
 import { log } from "./logger";
 import { isPlatformAdmin } from "./admin-guards";
+import { evaluationWindowState } from "./wing/evaluation-window";
 
 /**
  * Methodology authoring API — the surface Danielle and Sam use to write the
@@ -30,6 +31,11 @@ import { isPlatformAdmin } from "./admin-guards";
 const COMPONENT_TYPES: ComponentType[] = [
   "signal", "intervention", "coaching_move", "outcome",
   "module_mapping", "population_context", "notes",
+  // v2 (migration 0019). Without these the editor renders a v2 card's
+  // detection_method and delivery_adaptation and then rejects the save with
+  // "Unknown component type", which reads as a bug in the field rather than a
+  // gap in this list.
+  "detection_method", "delivery_adaptation", "failure_path", "success_criteria",
 ];
 
 /**
@@ -69,29 +75,6 @@ function parseId(raw: string): number | null {
  * makes that principle real rather than aspirational — see the sequence
  * publishing route for how it is applied.
  */
-function evaluationWindowState(cycle: {
-  status: string;
-  evaluationWindowStart: string | null;
-  evaluationWindowEnd: string | null;
-}): { open: boolean; reason: string } {
-  if (cycle.status !== "active") {
-    return { open: true, reason: "cycle is not active, so no student is mid-cycle" };
-  }
-  if (!cycle.evaluationWindowStart || !cycle.evaluationWindowEnd) {
-    return { open: false, reason: "cycle has no evaluation window defined" };
-  }
-
-  const today = new Date().toISOString().slice(0, 10);
-  const open =
-    today >= cycle.evaluationWindowStart && today <= cycle.evaluationWindowEnd;
-
-  return {
-    open,
-    reason: open
-      ? `inside the evaluation window (${cycle.evaluationWindowStart} to ${cycle.evaluationWindowEnd})`
-      : `outside the evaluation window (${cycle.evaluationWindowStart} to ${cycle.evaluationWindowEnd})`,
-  };
-}
 
 export function registerHeuristicsRoutes(app: Express) {
   /* ── Cards ───────────────────────────────────────────────────────────── */
@@ -475,24 +458,336 @@ export function registerHeuristicsRoutes(app: Express) {
     }
   });
 
-  /** Sequence history for a cycle — what was live, and when. */
+  /**
+   * Points a cycle at a sequence that already exists.
+   *
+   * ── WHY THIS EXISTS ALONGSIDE THE PUBLISH ROUTE ──────────────────────────
+   * `PUT .../sequence` composes a new version from a posted entry list. There was
+   * no way to publish a version that had already been built, and
+   * `wing:build-sequences` deliberately builds without publishing — so the
+   * 53-card Foundation sequence existed, was reviewable, and could only be
+   * switched on with a hand-written UPDATE. Doing it through the compose path
+   * would have created a duplicate differing from the reviewed version only by
+   * id, which defeats the point of reviewing it.
+   *
+   * The same route is the rollback. Pointing back at the previous version is the
+   * fastest possible undo, and it is one pointer.
+   *
+   * ── WHY THE SIZE LIMIT IS COUNTED DIFFERENTLY HERE ───────────────────────
+   * SEQUENCE_HARD_LIMIT is 40 and this route will happily activate 53 cards. That
+   * is not an oversight. The limit was measured when every entry's signal went
+   * into the detector prompt on every turn — the comment above the constants has
+   * the numbers. That is no longer how the engine reads a sequence: the detector
+   * asks for `kinds: ["coaching_card"]` and then narrows by session and
+   * population, gates are compiled on a separate path, and exercises never reach
+   * the detector at all. Of the 53-card build, 22 are coaching cards and a single
+   * session sees fewer still.
+   *
+   * So the limit is applied to what the detector will actually see. The publish
+   * route keeps counting entries, correctly — it receives a bare list whose kinds
+   * it cannot know without a lookup, and a caller composing a sequence by hand is
+   * a different kind of caller from one activating a reviewed build.
+   */
+  app.put("/api/admin/cycles/:id/active-sequence", isPlatformAdmin, async (req, res, next) => {
+    try {
+      const id = parseId(req.params.id);
+      if (!id) return res.status(400).json({ error: "Invalid cycle id" });
+
+      const { force, reason } = req.body ?? {};
+      const sequenceId = Number(req.body?.sequenceId);
+      if (!Number.isInteger(sequenceId) || sequenceId < 1) {
+        return res.status(400).json({ error: "sequenceId must be a positive integer" });
+      }
+
+      const [cycle] = await db
+        .select()
+        .from(schoolCycles)
+        .where(eq(schoolCycles.id, id))
+        .limit(1);
+      if (!cycle) return res.status(404).json({ error: "Cycle not found" });
+
+      const [sequence] = await db
+        .select({
+          id: heuristicSequences.id,
+          ownerType: heuristicSequences.ownerType,
+          ownerId: heuristicSequences.ownerId,
+          versionNumber: heuristicSequences.versionNumber,
+        })
+        .from(heuristicSequences)
+        .where(eq(heuristicSequences.id, sequenceId))
+        .limit(1);
+      if (!sequence) return res.status(404).json({ error: "Sequence not found" });
+
+      /*
+       * Ownership, not merely existence. Two integers and no constraint between
+       * them is exactly how one cohort ends up governed by another cohort's
+       * methodology — `heuristic_sequences.owner_id` is polymorphic and carries no
+       * foreign key by design, so nothing else would catch it.
+       */
+      if (sequence.ownerType !== "school_cycle" || sequence.ownerId !== id) {
+        return res.status(400).json({
+          error: "That sequence belongs to a different owner",
+          detail:
+            `Sequence #${sequenceId} is owned by ${sequence.ownerType} ` +
+            `#${sequence.ownerId}, not cycle #${id}.`,
+        });
+      }
+
+      if (cycle.activeHeuristicSequenceId === sequenceId) {
+        return res.status(409).json({
+          error: `Version ${sequence.versionNumber} is already live for this cycle`,
+        });
+      }
+
+      const [entryRow] = await db
+        .select({ n: count() })
+        .from(heuristicSequenceEntries)
+        .where(eq(heuristicSequenceEntries.sequenceId, sequenceId));
+      const entryCount = Number(entryRow?.n ?? 0);
+
+      /*
+       * The refusal this route exists to make impossible to reach by accident.
+       * A cycle CAN point at an empty sequence — one does today, because
+       * `wing:reset-cards` deletes every sequence entry and left the pointer
+       * where it was — and the result is a cohort whose engine resolves a
+       * sequence, finds nothing in it, and coaches with no methodology while
+       * every screen reports a published cycle.
+       */
+      if (!entryCount) {
+        return res.status(409).json({
+          error: `Version ${sequence.versionNumber} contains no cards`,
+          detail:
+            "Publishing it would resolve to a sequence with nothing in it: no card " +
+            "would fire, no gate would be compiled, and the cycle would still read " +
+            "as published everywhere.",
+          remedy: "Build the sequence first, then activate it.",
+        });
+      }
+
+      // Retired cards are filtered out at resolution, so this is the set that
+      // will actually be in force.
+      const effective = await store.getSequenceCards(sequenceId);
+      const retiredCount = entryCount - effective.length;
+
+      if (!effective.length) {
+        return res.status(409).json({
+          error: `Every card in version ${sequence.versionNumber} is retired`,
+          detail: `All ${entryCount} entries point at retired cards, which resolution skips.`,
+          remedy: "Un-retire the cards, or build a sequence from live ones.",
+        });
+      }
+
+      const detectorCards = effective.filter((c) => c.cardKind === "coaching_card");
+      const gates = effective.filter((c) => c.cardKind === "integrity_gate");
+      const unclassified = effective.filter((c) => !c.cardKind);
+
+      if (detectorCards.length > SEQUENCE_HARD_LIMIT) {
+        return res.status(400).json({
+          error: `A sequence may put at most ${SEQUENCE_HARD_LIMIT} coaching cards in front of the detector`,
+          detail:
+            `Version ${sequence.versionNumber} has ${detectorCards.length}. Every one of ` +
+            `their signal definitions is sent to the detector on every student turn.`,
+          remedy: "Split the set, or narrow it by session scope so a single turn sees fewer.",
+        });
+      }
+
+      const warnings: string[] = [];
+      if (detectorCards.length > SEQUENCE_SOFT_LIMIT) {
+        warnings.push(
+          `${detectorCards.length} coaching cards is above the recommended ` +
+            `${SEQUENCE_SOFT_LIMIT}. Session scope narrows this further per turn, but ` +
+            "detection accuracy still falls as the detector has more near-neighbour " +
+            "signals to choose between.",
+        );
+      }
+      if (retiredCount > 0) {
+        warnings.push(
+          `${retiredCount} of the ${entryCount} entries point at retired cards and will ` +
+            "be skipped at resolution. That is the expected result of retiring a card " +
+            "under a live sequence, not an error.",
+        );
+      }
+      if (unclassified.length) {
+        warnings.push(
+          `${unclassified.length} card(s) have no kind set. The detector asks for ` +
+            "coaching cards specifically, so an unclassified card is invisible to it — " +
+            "these are almost certainly pre-v2 cards that predate migration 0019.",
+        );
+      }
+
+      const window = evaluationWindowState(cycle as any);
+      if (!window.open && force !== true) {
+        return res.status(409).json({
+          error: "Methodology changes belong in the evaluation window",
+          detail: window.reason,
+          remedy:
+            "Wait for the evaluation window, or retire the specific card via " +
+            "PATCH /api/admin/heuristics/:id/status, which takes effect immediately. " +
+            "To override, resend with force: true and a reason.",
+        });
+      }
+
+      if (!window.open && force === true) {
+        if (typeof reason !== "string" || reason.trim().length < 10) {
+          return res.status(400).json({
+            error: "An override requires a reason of at least 10 characters",
+          });
+        }
+        log(
+          `MID-CYCLE OVERRIDE: cycle ${id} pointed at sequence #${sequenceId} ` +
+            `(version ${sequence.versionNumber}) by user ${req.user!.id} outside the ` +
+            `evaluation window. Reason: ${reason.trim()}`,
+          "methodology",
+        );
+      }
+
+      const { previousSequenceId } = await store.activateExistingSequence({
+        cycleId: id,
+        sequenceId,
+      });
+
+      log(
+        `cycle ${id} now points at sequence #${sequenceId} (version ` +
+          `${sequence.versionNumber}, ${effective.length} live card(s): ` +
+          `${detectorCards.length} coaching, ${gates.length} gates) by user ` +
+          `${req.user!.id}. Previous: ${previousSequenceId ?? "none"}`,
+        "methodology",
+      );
+
+      res.json({
+        cycleId: id,
+        sequenceId,
+        versionNumber: sequence.versionNumber,
+        previousSequenceId,
+        entryCount,
+        liveCards: effective.length,
+        detectorCards: detectorCards.length,
+        gates: gates.length,
+        warnings,
+      });
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  /**
+   * Every sequence ever built for a cycle — what was live, what is live, and
+   * what has been built and not published.
+   *
+   * ── WHY entryCount AND isActive ARE HERE ─────────────────────────────────
+   * This route returned bare `heuristic_sequences` rows, and no screen called it.
+   * That combination hid something real: `wing:build-sequences` writes a full
+   * sequence per cycle WITHOUT pointing the cycle at it, deliberately, so the
+   * methodology can be assembled and reviewed before it reaches a student. The
+   * result was a sequence that existed, governed nobody, and was visible nowhere
+   * — the row said nothing about how many cards were in it or whether it was the
+   * live one, so even reading the table by hand answered neither question.
+   *
+   * `isActive` is derived from the cycle's own pointer, `activeHeuristicSequenceId`,
+   * because that pointer is the single thing `resolveSequenceId` reads. A row's
+   * `supersededAt` being null does NOT mean it is live; it means nothing replaced
+   * it. Publishing is the pointer, and only the pointer.
+   */
   app.get("/api/admin/cycles/:id/sequence/history", isPlatformAdmin, async (req, res, next) => {
     try {
       const id = parseId(req.params.id);
       if (!id) return res.status(400).json({ error: "Invalid cycle id" });
 
+      const [cycle] = await db
+        .select({ activeSequenceId: schoolCycles.activeHeuristicSequenceId })
+        .from(schoolCycles)
+        .where(eq(schoolCycles.id, id))
+        .limit(1);
+      if (!cycle) return res.status(404).json({ error: "Cycle not found" });
+
       const rows = await db
-        .select()
+        .select({
+          id: heuristicSequences.id,
+          versionNumber: heuristicSequences.versionNumber,
+          activeFrom: heuristicSequences.activeFrom,
+          supersededAt: heuristicSequences.supersededAt,
+          createdAt: heuristicSequences.createdAt,
+          entryCount: count(heuristicSequenceEntries.id),
+        })
         .from(heuristicSequences)
+        .leftJoin(
+          heuristicSequenceEntries,
+          eq(heuristicSequenceEntries.sequenceId, heuristicSequences.id),
+        )
         .where(
           and(
             eq(heuristicSequences.ownerType, "school_cycle"),
             eq(heuristicSequences.ownerId, id),
           ),
         )
+        // Grouped by the primary key, so the other columns come along by
+        // functional dependency rather than being repeated here.
+        .groupBy(heuristicSequences.id)
         .orderBy(desc(heuristicSequences.versionNumber));
 
-      res.json(rows);
+      res.json({
+        cycleId: id,
+        activeSequenceId: cycle.activeSequenceId,
+        sequences: rows.map((r) => ({
+          ...r,
+          entryCount: Number(r.entryCount),
+          isActive: r.id === cycle.activeSequenceId,
+        })),
+      });
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  /**
+   * The cards in one sequence, live or not.
+   *
+   * `/api/admin/cycles/:id/sequence` answers "what governs this cohort now" and
+   * returns nothing at all when the cycle points at no sequence. This answers
+   * "what is in this sequence", which is the only way to review a build before
+   * publishing it — and, when a cycle points at nothing, the only way to see that
+   * the methodology exists and is simply not switched on.
+   *
+   * Components are dropped deliberately. The full card is `/api/admin/heuristics/:id`
+   * and a reviewer of a 53-card sequence wants the shape of the set, not 371
+   * component bodies.
+   */
+  app.get("/api/admin/sequences/:id/cards", isPlatformAdmin, async (req, res, next) => {
+    try {
+      const id = parseId(req.params.id);
+      if (!id) return res.status(400).json({ error: "Invalid sequence id" });
+
+      const [sequence] = await db
+        .select({
+          id: heuristicSequences.id,
+          ownerType: heuristicSequences.ownerType,
+          ownerId: heuristicSequences.ownerId,
+          versionNumber: heuristicSequences.versionNumber,
+          activeFrom: heuristicSequences.activeFrom,
+          supersededAt: heuristicSequences.supersededAt,
+        })
+        .from(heuristicSequences)
+        .where(eq(heuristicSequences.id, id))
+        .limit(1);
+      if (!sequence) return res.status(404).json({ error: "Sequence not found" });
+
+      const cards = await store.getSequenceCards(id);
+
+      res.json({
+        sequence,
+        cards: cards.map((c) => ({
+          heuristicId: c.heuristicId,
+          cardCode: c.cardCode,
+          name: c.name,
+          status: c.status,
+          cardKind: c.cardKind,
+          interventionType: c.interventionType,
+          populationTags: c.populationTags,
+          position: c.position,
+          weight: c.weight,
+          appliesToSession: c.appliesToSession,
+        })),
+      });
     } catch (error) {
       next(error);
     }

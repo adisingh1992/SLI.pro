@@ -17,6 +17,8 @@ import { setupEnhancementModulesRoutes } from "./enhancement-modules-routes";
 import { setupWebSocketServer } from "./realtime/websocket-handler";
 import { registerPaymentRoutes } from "./payment-routes";
 import { registerHeuristicsRoutes } from "./heuristics-routes";
+import { registerGateAuditRoutes } from "./gate-audit-routes";
+import { registerVoiceRoutes } from "./voice-routes";
 import { registerTaggingRoutes } from "./tagging-routes";
 import { registerCriteriaRoutes } from "./criteria-routes";
 import { registerMethodologyRoutes } from "./methodology-routes";
@@ -130,6 +132,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   setupEnhancementModulesRoutes(app);
   registerPaymentRoutes(app);
   registerHeuristicsRoutes(app);
+  registerGateAuditRoutes(app);
+  registerVoiceRoutes(app);
   registerTaggingRoutes(app);
   registerCriteriaRoutes(app);
   registerMethodologyRoutes(app);

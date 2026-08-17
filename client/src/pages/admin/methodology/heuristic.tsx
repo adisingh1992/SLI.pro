@@ -16,6 +16,13 @@ export type Heuristic = {
   populationTags: string[];
   versionNumber: number;
   modifiedAt: string;
+  /** The methodology's own identifier — "H-309". Present on v2 cards. */
+  cardCode?: string;
+  /** v2 (migration 0019). Absent on cards created before it. */
+  cardKind?: "coaching_card" | "integrity_gate" | "exercise";
+  interventionType?:
+    | "COACH" | "CHALLENGE" | "REDIRECT" | "REFRAME" | "AFFIRM" | "META" | "GATE"
+    | null;
 };
 
 /**

@@ -86,6 +86,27 @@ that table has had. It is also the only path permitted to *reassign*, which the
 automatic matcher deliberately never does: moving someone between cohorts is a
 decision for a person, and now there is a record of which person.
 
+### The gate integrity surface
+
+Twenty-four Tier 1 cards are integrity gates. The rules are compiled into every
+reply Wing composes, the delivered reply is audited against them, and the
+findings drive two decisions: which patterns are too broad, and which gates earn
+the latency of blocking a turn. `/admin/methodology/integrity` is where that is
+read. All four routes are `isPlatformAdmin`.
+
+| Route | Why staff only |
+|---|---|
+| `GET /api/admin/gate-audit/summary` | The methodology engine, so `isPlatformAdmin` by the ordinary rule. It also cannot be scoped into usefulness: tuning a gate means looking across every student it fired on, so a per-cohort view answers a different question. |
+| `GET /api/admin/gate-audit/findings` | `excerpt` is a window of Wing's own reply and will often quote the student back, so it carries the sensitivity of `transcript_turns.content`. The response deliberately carries no name, email or free-text profile field — a student id and a session id, which reach the transcript only through the screens that already guard it. |
+| `PATCH /api/admin/gate-audit/findings/:id` | The review state decides which patterns get narrowed and which gates earn hard enforcement. A methodology judgement, not a cohort operation. |
+| `GET /api/admin/sequences/:id/cards` | Which cards are in a sequence, live or not. Methodology rather than student data — and it is how an unpublished build gets reviewed before it reaches anyone. |
+| `PUT /api/admin/cycles/:id/active-sequence` | Moves a cycle's pointer to an existing sequence. This is what makes a methodology reach students, so it is the highest-consequence write on the screen — and it carries the evaluation-window gate for the same reason the publish route does. |
+
+Accepted means the finding was real. **Rejected means the pattern was too broad**
+and Wing behaved correctly, so a gate with many rejections is a fault in our
+regex — not in the methodology and not in the coaching. The screen says so out
+loud, because the intuitive reading is the other way round.
+
 ## Closed to partners pending scoping
 
 The five legacy Excel exports each build their own multi-table join and none

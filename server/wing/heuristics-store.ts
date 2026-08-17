@@ -1,4 +1,4 @@
-import { and, asc, eq, inArray, ne } from "drizzle-orm";
+import { and, asc, desc, eq, inArray, isNull, ne, or } from "drizzle-orm";
 import * as cache from "./published-cache";
 import { db } from "../db";
 import {
@@ -8,9 +8,13 @@ import {
   heuristicComponents,
   heuristicSequences,
   heuristicSequenceEntries,
+  intakeRecords,
+  sessions,
   userHeuristicApplications,
+  users,
 } from "@shared/wing-schema";
 import { codeFromName, uniqueCode } from "./card-code";
+import { cardAppliesTo, populationTagsFor } from "./population-tags";
 
 /**
  * Methodology store — reads and authors heuristics-as-data.
@@ -36,17 +40,49 @@ import { codeFromName, uniqueCode } from "./card-code";
 
 export type ComponentType =
   | "signal" | "intervention" | "coaching_move" | "outcome"
-  | "module_mapping" | "population_context" | "notes";
+  | "module_mapping" | "population_context" | "notes"
+  // v2 (migration 0019). A v2 card has no `intervention`: that split into
+  // `intervention_type` (a column) and `coaching_move`.
+  | "detection_method" | "delivery_adaptation" | "failure_path" | "success_criteria";
+
+export type CardKind = "coaching_card" | "integrity_gate" | "exercise";
 
 export type HeuristicCard = {
   heuristicId: number;
+  /**
+   * The methodology's own identifier — "H-309".
+   *
+   * Carried into the engine because that is what the methodology, the routing
+   * maps and every conversation about a card use, so a log line or a gate
+   * exclusion keyed on a numeric id is unreadable.
+   */
+  cardCode: string;
   name: string;
   description: string;
   status: "candidate" | "validated" | "retired";
   populationTags: string[];
+  /**
+   * coaching_card fires on the student's turn; integrity_gate fires on Wing's
+   * own output and must never enter the detector catalogue; exercise is routed
+   * to by explicit reference from another card.
+   */
+  cardKind: CardKind;
+  /** COACH · CHALLENGE · REDIRECT · REFRAME · AFFIRM · META · GATE. Null pre-v2. */
+  interventionType: string | null;
+  /** Session this entry fires in; null means every session. */
+  appliesToSession: string | null;
   /** Position within the active sequence (1-based). */
   position: number;
-  /** Sequence weight; higher means the engine prefers it when several match. */
+  /**
+   * Sequence weight. Higher wins when several signals fire.
+   *
+   * This comment used to describe behaviour that did not exist — the column was
+   * written by the seeds, editable in the admin UI, and read by nothing. It is
+   * true as of T3: `getSequenceCards` orders by weight and the detector prompt
+   * states it with an instruction to prefer the higher one. The methodology
+   * depends on it: H-309 trust vault protection is weight 2.0 specifically so it
+   * pre-empts everything else.
+   */
   weight: number;
   /** Current version of each component, plus the row id for the audit log. */
   components: Partial<Record<ComponentType, { id: number; content: string }>>;
@@ -121,16 +157,23 @@ export async function resolveSequenceId(
  * methodology owner's explicit act, and candidates need live application to
  * ever accumulate the evidence that validates them.
  */
-export async function getSequenceCards(sequenceId: number): Promise<HeuristicCard[]> {
+export async function getSequenceCards(
+  sequenceId: number,
+  opts: { kinds?: readonly CardKind[]; sessionType?: string | null } = {},
+): Promise<HeuristicCard[]> {
   const rows = await db
     .select({
       heuristicId: heuristics.id,
+      cardCode: heuristics.cardCode,
       name: heuristics.name,
       description: heuristics.description,
       status: heuristics.status,
       populationTags: heuristics.populationTags,
+      cardKind: heuristics.cardKind,
+      interventionType: heuristics.interventionType,
       position: heuristicSequenceEntries.position,
       weight: heuristicSequenceEntries.weight,
+      appliesToSession: heuristicSequenceEntries.appliesToSession,
     })
     .from(heuristicSequenceEntries)
     .innerJoin(heuristics, eq(heuristics.id, heuristicSequenceEntries.heuristicId))
@@ -138,9 +181,29 @@ export async function getSequenceCards(sequenceId: number): Promise<HeuristicCar
       and(
         eq(heuristicSequenceEntries.sequenceId, sequenceId),
         ne(heuristics.status, "retired"),
+        ...(opts.kinds && opts.kinds.length
+          ? [inArray(heuristics.cardKind, opts.kinds as CardKind[])]
+          : []),
+        /*
+         * Session scope (migration 0020). An entry with no session applies
+         * everywhere — the universal and voice gates. Omitting sessionType
+         * entirely returns the whole sequence, which is what the admin UI wants
+         * and what a reviewer inspecting a cycle's methodology needs to see.
+         */
+        ...(opts.sessionType
+          ? [
+              or(
+                isNull(heuristicSequenceEntries.appliesToSession),
+                eq(heuristicSequenceEntries.appliesToSession, opts.sessionType as never),
+              )!,
+            ]
+          : []),
       ),
     )
-    .orderBy(asc(heuristicSequenceEntries.position));
+    // Weight first, position second. Weight is precedence — the methodology sets
+    // H-309 to 2.0 so it pre-empts — and position is the sequence's own reading
+    // order, which decides ties. Ordering by position alone made weight inert.
+    .orderBy(desc(heuristicSequenceEntries.weight), asc(heuristicSequenceEntries.position));
 
   if (!rows.length) return [];
 
@@ -168,10 +231,14 @@ export async function getSequenceCards(sequenceId: number): Promise<HeuristicCar
 
   return rows.map((r) => ({
     heuristicId: r.heuristicId,
+    cardCode: r.cardCode,
     name: r.name,
     description: r.description,
     status: r.status as HeuristicCard["status"],
     populationTags: r.populationTags ?? [],
+    cardKind: (r.cardKind ?? "coaching_card") as CardKind,
+    interventionType: r.interventionType ?? null,
+    appliesToSession: r.appliesToSession ?? null,
     position: r.position,
     // numeric() comes back as a string from pg; the engine wants a number.
     weight: Number(r.weight ?? "1.0"),
@@ -179,20 +246,151 @@ export async function getSequenceCards(sequenceId: number): Promise<HeuristicCar
   }));
 }
 
-/** Convenience: resolve and load in one call. Null when no methodology applies. */
+/**
+ * The population tags that may apply to a student.
+ *
+ * `professional_status` is on `users`; `pathway` is on `intake_records`. Both are
+ * nullable and a student mid-intake has neither, which resolves to no tags and
+ * therefore to no filtering — see `cardAppliesTo`.
+ */
+export async function populationTagsForStudent(studentId: number): Promise<string[]> {
+  const [row] = await db
+    .select({
+      status: users.professionalStatus,
+      pathway: intakeRecords.pathway,
+    })
+    .from(students)
+    .innerJoin(users, eq(users.id, students.userId))
+    .leftJoin(intakeRecords, eq(intakeRecords.studentId, students.id))
+    .where(eq(students.id, studentId))
+    .limit(1);
+
+  if (!row) return [];
+  return populationTagsFor(row.status as never, row.pathway as never);
+}
+
+/**
+ * Convenience: resolve and load in one call. Null when no methodology applies.
+ *
+ * Filters by the student's population, which nothing did before T3 — every card
+ * in a sequence entered the detector catalogue for every student regardless of
+ * who they were. Only 5 of the 53 Tier 1 cards fire for a single population, so
+ * this changes less than it sounds; those five are the ones that were reaching
+ * the wrong people. `kinds` defaults to coaching cards only: a gate's signal
+ * describes something WING is about to say, so offering it to a detector that
+ * matches against the student's words is a category error.
+ */
 export async function getActiveSequenceForStudent(
   studentId: number,
+  opts: { kinds?: readonly CardKind[]; sessionId?: number | null } = {
+    kinds: ["coaching_card"],
+  },
 ): Promise<ResolvedSequence | null> {
   const resolved = await resolveSequenceId(studentId);
   if (!resolved) return null;
 
-  const cards = await getSequenceCards(resolved.sequenceId);
+  /*
+   * Scope to the session the student is actually in. Without this every card in
+   * the sequence entered the catalogue on every turn, so a Foundation 1 student
+   * could have H-201 fire — the Foundation 2 credibility test. The compendium
+   * separates its sequence maps by session for exactly this reason.
+   *
+   * A missing or unknown session leaves the scope unset, which returns the whole
+   * sequence rather than nothing: an unscoped catalogue offers a few cards
+   * pitched at the wrong session, an empty one silently switches the methodology
+   * off. Same fail-open reasoning as an unresolved population.
+   */
+  let sessionType: string | null = null;
+  if (opts.sessionId) {
+    const [session] = await db
+      .select({ type: sessions.sessionType })
+      .from(sessions)
+      .where(eq(sessions.id, opts.sessionId))
+      .limit(1);
+    sessionType = session?.type ?? null;
+  }
+
+  const all = await getSequenceCards(resolved.sequenceId, {
+    kinds: opts.kinds,
+    sessionType,
+  });
+  if (!all.length) return null;
+
+  const tags = await populationTagsForStudent(studentId);
+  const cards = all.filter((c) => cardAppliesTo(c.populationTags, tags));
   if (!cards.length) return null;
 
   return { ...resolved, cards };
 }
 
 /* ── Application log ────────────────────────────────────────────────────── */
+
+/**
+ * A gate's row id and current coaching-move component, by card code.
+ *
+ * Used only on the rare path where a gate actually changes what Wing does, so the
+ * query cost is paid when something happens rather than on every turn. Returns
+ * null when the gate is not in this sequence — which is the correct answer, not an
+ * error: a cohort whose methodology omits H-003 should not have it enforced.
+ */
+export async function findGateInSequence(
+  sequenceId: number,
+  cardCode: string,
+): Promise<{ heuristicId: number; componentId: number } | null> {
+  const [row] = await db
+    .select({
+      heuristicId: heuristics.id,
+      componentId: heuristicComponents.id,
+    })
+    .from(heuristicSequenceEntries)
+    .innerJoin(heuristics, eq(heuristics.id, heuristicSequenceEntries.heuristicId))
+    .innerJoin(
+      heuristicComponents,
+      and(
+        eq(heuristicComponents.heuristicId, heuristics.id),
+        eq(heuristicComponents.componentType, "coaching_move"),
+        eq(heuristicComponents.isCurrent, true),
+      ),
+    )
+    .where(
+      and(
+        eq(heuristicSequenceEntries.sequenceId, sequenceId),
+        eq(heuristics.cardCode, cardCode),
+        ne(heuristics.status, "retired"),
+      ),
+    )
+    .limit(1);
+
+  return row ?? null;
+}
+
+/**
+ * The intervention types of this session's most recent applications, newest first.
+ *
+ * For H-003, which forbids three consecutive high-intensity interactions. Only
+ * the types are returned, not the cards: the gate cares about how hard the last
+ * few turns landed, not which rule produced them.
+ *
+ * Selects from the applications rather than the transcript because a turn where
+ * no card fired is LOW by the gate's own list ("general conversation"), so an
+ * absent row and a low-intensity row mean the same thing — and reading the
+ * applications keeps the query to one join.
+ */
+export async function recentIntensities(
+  sessionId: number,
+  limit = 4,
+): Promise<Array<string | null>> {
+  const rows = await db
+    .select({ interventionType: heuristics.interventionType })
+    .from(userHeuristicApplications)
+    .innerJoin(heuristics, eq(heuristics.id, userHeuristicApplications.heuristicId))
+    .where(eq(userHeuristicApplications.sessionId, sessionId))
+    .orderBy(desc(userHeuristicApplications.appliedAt))
+    .limit(limit);
+
+  return rows.map((r) => r.interventionType ?? null);
+}
+
 
 /**
  * Records that a heuristic fired. This is what makes the system able to answer
@@ -407,6 +605,69 @@ export async function setHeuristicStatus(
  * possible. It is recorded honestly either way: the old sequence keeps its
  * rows and gains a superseded_at stamp.
  */
+/**
+ * Points a cycle at a sequence that already exists.
+ *
+ * ── WHY THIS IS SEPARATE FROM `publishCycleSequence` ─────────────────────
+ * That function COMPOSES a sequence: it takes a list of entries, writes a new
+ * version, and points the cycle at it. There was no way to point a cycle at a
+ * version that had already been built — and `wing:build-sequences` builds
+ * without publishing on purpose, so the 53-card Foundation sequence could be
+ * assembled, inspected, and never switched on. Publishing it through the compose
+ * path would have meant re-sending all 53 entries and producing a duplicate
+ * version differing from the reviewed one only by id.
+ *
+ * It is also the rollback: pointing back at the previous version is the fastest
+ * way to undo a bad publish, and it is one row.
+ *
+ * ── THE THREE WRITES, AND WHY THE MIDDLE ONE MATTERS ────────────────────
+ * 1. The outgoing sequence gets `superseded_at`, exactly as publishing does.
+ * 2. The incoming sequence has `superseded_at` CLEARED. It may well have been
+ *    superseded — by a later build, or by the publish that replaced it — and
+ *    leaving that set would have the history screen label the live sequence
+ *    "Superseded", which is a lie it would repeat on every load. `active_from`
+ *    moves to now for the same reason: the column means when this became live.
+ * 3. The cycle pointer moves. This is the publication. `resolveSequenceId` reads
+ *    nothing else.
+ *
+ * One transaction, because a pointer moved without the supersession bookkeeping
+ * leaves two sequences that both look current.
+ */
+export async function activateExistingSequence(params: {
+  cycleId: number;
+  sequenceId: number;
+}): Promise<{ previousSequenceId: number | null }> {
+  return db.transaction(async (tx) => {
+    const [cycle] = await tx
+      .select({ activeSequenceId: schoolCycles.activeHeuristicSequenceId })
+      .from(schoolCycles)
+      .where(eq(schoolCycles.id, params.cycleId))
+      .limit(1);
+
+    const previous = cycle?.activeSequenceId ?? null;
+    const now = new Date();
+
+    if (previous && previous !== params.sequenceId) {
+      await tx
+        .update(heuristicSequences)
+        .set({ supersededAt: now })
+        .where(eq(heuristicSequences.id, previous));
+    }
+
+    await tx
+      .update(heuristicSequences)
+      .set({ supersededAt: null, activeFrom: now })
+      .where(eq(heuristicSequences.id, params.sequenceId));
+
+    await tx
+      .update(schoolCycles)
+      .set({ activeHeuristicSequenceId: params.sequenceId, updatedAt: now })
+      .where(eq(schoolCycles.id, params.cycleId));
+
+    return { previousSequenceId: previous };
+  });
+}
+
 export async function publishCycleSequence(params: {
   cycleId: number;
   entries: Array<{ heuristicId: number; weight?: number }>;

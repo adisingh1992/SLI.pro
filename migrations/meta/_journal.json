@@ -134,6 +134,27 @@
       "when": 1786594800000,
       "tag": "0018_user_institution_scope",
       "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1786681200000,
+      "tag": "0019_heuristic_v2_components",
+      "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1786767600000,
+      "tag": "0020_sequence_entry_session_scope",
+      "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "7",
+      "when": 1786854000000,
+      "tag": "0021_gate_audit_findings",
+      "breakpoints": true
     }
   ]
 }

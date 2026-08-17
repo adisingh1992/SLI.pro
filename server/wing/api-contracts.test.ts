@@ -318,18 +318,31 @@ console.log("\nMigrations from 0008 are safe to replay");
     // Comments explain the rule at length; they must not be read as code.
     const code = readFileSync(join(dir, file), "utf8").replace(/--.*$/gm, "");
 
-    const creates = (code.match(/\bcreate (table|index|unique index|type)\b/gi) ?? []).length;
+    /*
+     * CREATE TYPE is counted separately from the rest.
+     *
+     * Postgres has no `CREATE TYPE IF NOT EXISTS`, so the only way to make one
+     * replayable is the `DO $$ ... EXCEPTION WHEN duplicate_object` block that
+     * drizzle-kit itself emits — the same idiom this check already credits for
+     * ADD CONSTRAINT below. Lumping it into the IF NOT EXISTS tally made the
+     * arithmetic accidental: 0019 passed only because its two ADD COLUMN IF NOT
+     * EXISTS clauses happened to cover its two DO-guarded CREATE TYPEs, and 0021
+     * failed while being demonstrably replay-safe.
+     */
+    const creates = (code.match(/\bcreate (table|index|unique index)\b/gi) ?? []).length;
     const guards = (code.match(/if not exists/gi) ?? []).length;
     if (creates > guards) {
       fail(`${file}: ${creates} CREATE(s) but only ${guards} IF NOT EXISTS — fails on replay`);
     }
 
     const constraints = (code.match(/add constraint/gi) ?? []).length;
+    const createTypes = (code.match(/\bcreate type\b/gi) ?? []).length;
     const handled = (code.match(/duplicate_object/gi) ?? []).length;
-    if (constraints > handled) {
+    if (createTypes + constraints > handled) {
       fail(
-        `${file}: ADD CONSTRAINT without an EXCEPTION WHEN duplicate_object block — ` +
-          `Postgres has no ADD CONSTRAINT IF NOT EXISTS`,
+        `${file}: ${createTypes} CREATE TYPE and ${constraints} ADD CONSTRAINT but only ` +
+          `${handled} EXCEPTION WHEN duplicate_object block(s) — Postgres has neither ` +
+          `CREATE TYPE IF NOT EXISTS nor ADD CONSTRAINT IF NOT EXISTS, so each needs one`,
       );
     }
 
@@ -1066,6 +1079,192 @@ console.log("\nEvery test suite is in the npm test script");
   }
 
   if (failures === before18) console.log(`  ok — ${onDisk.length} suite(s), all run`);
+}
+
+/* -- 19 . Every client admin API call reaches a real route -----------------
+ *
+ * `heuristic-detail-page.tsx` called `/api/admin/methodology/cards/:id`. No
+ * server route registers that path. The page rendered "Card not found." for
+ * every card and read as a data problem.
+ *
+ * What made it invisible: `/api/admin/methodology/:populationTag/:sessionType`
+ * matched the URL first, with populationTag="cards" and sessionType=<the id>,
+ * so the request got a 400 from an unrelated handler rather than a 404 from a
+ * missing one. Meanwhile the cards LIST worked, because it calls a different
+ * endpoint -- so the feature looked half-broken rather than unwired.
+ *
+ * Third bug of this shape here. The two QueryClients made invalidation silently
+ * no-op; five route files imported `isPlatformAdmin as isAdmin`, so 28 locked
+ * routes read as open. Each time the surface existed and the wiring was wrong,
+ * and no type checker can see it because a URL is just a string.
+ *
+ * The rule: every `/api/admin/...` literal in the client must match a path some
+ * server file registers. Concatenated paths are not checked; the literal case is
+ * the one that has bitten us.
+ *
+ * A known blind spot, verified by reintroducing the bug: the base path
+ * `/api/admin/methodology/cards/:id` is NOT flagged, because it genuinely matches
+ * `/api/admin/methodology/:populationTag/:sessionType` — two segments, two
+ * params. That collision is precisely why the bug was invisible to begin with,
+ * and no purely structural check can see through it. What saves the build is that
+ * the three deeper paths (`/performance`, `/components/:type`, `/status`) have no
+ * such twin and do fail. One violation is enough; this check does not need to
+ * find every instance, only to stop a whole screen shipping unwired.
+ */
+console.log("\nEvery client admin API call reaches a real route");
+{
+  const before19 = failures;
+  const CLIENT = join(process.cwd(), "client", "src");
+
+  function clientFiles(dir: string): string[] {
+    const out: string[] = [];
+    for (const entry of readdirSync(dir, { withFileTypes: true })) {
+      const full = join(dir, entry.name);
+      if (entry.isDirectory()) out.push(...clientFiles(full));
+      else if (/\.tsx?$/.test(entry.name)) out.push(full);
+    }
+    return out;
+  }
+
+  /** `${...}` becomes `:param`, query string dropped, trailing slash trimmed. */
+  function normalise(path: string): string {
+    return path.replace(/\$\{[^}]*\}/g, ":param").split("?")[0].replace(/\/+$/, "");
+  }
+
+  const registered: string[] = [];
+  for (const f of serverFiles()) {
+    const re = /app\.(?:get|post|put|patch|delete)\(\s*["\'`](\/api\/[^"\'`]+)["\'`]/g;
+    let m: RegExpExecArray | null;
+    while ((m = re.exec(f.src))) registered.push(normalise(m[1]));
+  }
+
+  /** A server pattern matches when every segment matches or is a `:param`. */
+  function isRegistered(clientPath: string): boolean {
+    const want = clientPath.split("/");
+    return registered.some((route) => {
+      const have = route.split("/");
+      if (have.length !== want.length) return false;
+      return have.every((seg, i) => seg.startsWith(":") || seg === want[i]);
+    });
+  }
+
+  /*
+   * Comments are stripped before matching. The first run of this check failed on
+   * the comment that explains the bug, because it quotes `/api/admin/...` as
+   * prose. Checks 13, 14 and 17 learned the same lesson: a static guard that
+   * reads its own documentation as evidence is a guard that punishes writing any.
+   */
+  const decomment = (src: string) =>
+    src.replace(/\/\*[\s\S]*?\*\//g, "").replace(/\/\/.*$/gm, "");
+
+  const seen: Record<string, boolean> = {};
+  for (const file of clientFiles(CLIENT)) {
+    const src = decomment(readFileSync(file, "utf8"));
+    const re = /["\'`](\/api\/admin\/[^"\'`\s]*)["\'`]/g;
+    let m: RegExpExecArray | null;
+    while ((m = re.exec(src))) {
+      const path = normalise(m[1]);
+      if (!path || path === "/api/admin") continue;
+      const key = path + " " + file;
+      if (seen[key]) continue;
+      seen[key] = true;
+      if (!isRegistered(path)) {
+        fail(
+          file.replace(process.cwd() + "/", "") + " calls " + path +
+            ", which no server route registers",
+        );
+      }
+    }
+  }
+
+  if (failures === before19) {
+    console.log("  ok - " + registered.length + " server route(s), every client admin call resolves");
+  }
+}
+
+/* ── 20 · A standalone script hydrates the secret before the data layer ────
+ *
+ * `server/db.ts` builds its pool at module load and throws when DATABASE_URL is
+ * absent, and on this project that value usually arrives from Key Vault rather
+ * than the environment. So a script that names the data layer in its import list
+ * is evaluated — and throws — before any code in its own main() can fetch the
+ * secret. `script-init.ts` exists for exactly this, and says so at length:
+ * hydrate first, then import.
+ *
+ * `wing:seed-voice` shipped with the wrong pattern and failed on its first run
+ * with "DATABASE_URL must be set" from db.ts, before one line of the seeder ran.
+ * Nothing could have caught it earlier: the import is correct TypeScript, the
+ * script typechecks, and the only symptom is a stack trace on a machine where the
+ * secret is not in the environment. Which is every developer machine here.
+ *
+ * The transitive case is checked one level deep, because that is how the same bug
+ * arrived twice in one file: the seeder also imported a store, and the store
+ * imports the data layer, so removing the direct import was not enough. One level
+ * is not proof — a store importing a store would slip through — but it covers the
+ * shape that actually happens, and a full module graph walk is a lot of machinery
+ * for a rule with a two-line fix.
+ */
+console.log("\nStandalone scripts hydrate DATABASE_URL before importing the data layer");
+{
+  const before20 = failures;
+
+  const pkg = JSON.parse(readFileSync(join(process.cwd(), "package.json"), "utf8"));
+  const scripts: Record<string, string> = pkg.scripts ?? {};
+
+  const decomment = (src: string) =>
+    src.replace(/\/\*[\s\S]*?\*\//g, "").replace(/\/\/.*$/gm, "");
+
+  // An import STATEMENT naming db from a relative path. Anchored to the start of
+  // a line and terminated by a semicolon on purpose: prose about this rule quotes
+  // the statement, and three earlier checks here learned that a guard which reads
+  // its own documentation as evidence punishes writing any.
+  const IMPORTS_DB = /^import\s+[^;]*\bdb\b[^;]*from\s+"(?:\.\.?\/)+db";/m;
+
+  let checked = 0;
+
+  for (const name of Object.keys(scripts)) {
+    const cmd = scripts[name];
+    const m = /tsx\s+(server\/[^\s]+\.ts)/.exec(cmd);
+    if (!m) continue;
+
+    const entry = m[1];
+    let src: string;
+    try {
+      src = decomment(readFileSync(join(process.cwd(), entry), "utf8"));
+    } catch {
+      fail(`npm script "${name}" runs ${entry}, which does not exist`);
+      continue;
+    }
+    checked++;
+
+    if (IMPORTS_DB.test(src)) {
+      fail(
+        `${entry} (npm run ${name}) imports the data layer at the top level — it will ` +
+          `throw "DATABASE_URL must be set" before main() runs. Use initScript().`,
+      );
+      continue;
+    }
+
+    const dir = entry.slice(0, entry.lastIndexOf("/"));
+    for (const rel of Array.from(src.matchAll(/from\s+"(\.[^"]+)"/g))) {
+      const target = join(process.cwd(), dir, rel[1] + ".ts");
+      let dep: string;
+      try {
+        dep = decomment(readFileSync(target, "utf8"));
+      } catch {
+        continue;
+      }
+      if (IMPORTS_DB.test(dep)) {
+        fail(
+          `${entry} (npm run ${name}) statically imports "${rel[1]}", which imports the ` +
+            `data layer — so the pool is built before initScript() can fetch the secret. ` +
+            `Import it dynamically after initScript() returns.`,
+        );
+      }
+    }
+  }
+
+  if (failures === before20) console.log(`  ok — ${checked} script(s), all hydrate first`);
 }
 
 /* ── Result ──────────────────────────────────────────────────────────── */

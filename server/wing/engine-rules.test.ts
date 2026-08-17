@@ -12,8 +12,14 @@
 import {
   interpretDetection,
   aggregateOutcomes,
+  buildSignalCatalogue,
+  catalogueRules,
   OUTCOME_WEIGHTS,
   MIN_CONFIDENCE,
+  PREEMPTING_WEIGHT,
+  INTENSITY_RECOVERY_GUIDANCE,
+  intensityOf,
+  shouldDeferHighIntensity,
 } from "./engine-rules";
 
 let failures = 0;
@@ -153,6 +159,133 @@ check(
     { sessionId: 2, outcomeSignal: "regression" },
   ]),
   { sessionsApplied: 2, positiveSignalCount: 1, regressionCount: 1, compositeScore: 0.5 },
+);
+
+/* ── H-003 · coaching intensity sequencing ──────────────────────────────── */
+
+/*
+ * The only Tier 1 gate that changes what Wing does rather than what it says. Its
+ * rule is a run of THREE, not a per-session cap, and getting that wrong in either
+ * direction is costly: too strict and the session stalls on ordinary coaching,
+ * too loose and the gate does nothing.
+ */
+
+check("CHALLENGE is the high tier", intensityOf("CHALLENGE"), "high");
+check("COACH is medium", intensityOf("COACH"), "medium");
+check("REDIRECT is medium", intensityOf("REDIRECT"), "medium");
+check("REFRAME is medium — it challenges a frame, not a self-model", intensityOf("REFRAME"), "medium");
+check("AFFIRM is low — the gate's own recovery example", intensityOf("AFFIRM"), "low");
+check("META is low — a rule about output, not coaching delivered", intensityOf("META"), "low");
+check("a turn where no card fired is low", intensityOf(null), "low");
+check("an unknown type is low, never high", intensityOf("SOMETHING_NEW"), "low");
+
+check("two consecutive HIGH defers the third", shouldDeferHighIntensity(["high", "high"]), true);
+check(
+  "two HIGH with older history still defers",
+  shouldDeferHighIntensity(["high", "high", "low", "medium"]),
+  true,
+);
+check("one HIGH does not defer", shouldDeferHighIntensity(["high", "medium"]), false);
+check("a single interaction never defers", shouldDeferHighIntensity(["high"]), false);
+check("an empty history never defers", shouldDeferHighIntensity([]), false);
+check(
+  "recovery resets it — the gate says one interaction, not a waiting period",
+  shouldDeferHighIntensity(["low", "high", "high"]),
+  false,
+);
+check(
+  "a MEDIUM counts as recovery",
+  shouldDeferHighIntensity(["medium", "high", "high"]),
+  false,
+);
+check(
+  "two MEDIUM in a row is not a breach — the rule is about HIGH",
+  shouldDeferHighIntensity(["medium", "medium"]),
+  false,
+);
+
+check(
+  "the recovery guidance forbids challenging on the recovery turn",
+  INTENSITY_RECOVERY_GUIDANCE.indexOf("Do NOT challenge") >= 0,
+  true,
+);
+check(
+  "and says the harder work resumes next turn, not after a wait",
+  INTENSITY_RECOVERY_GUIDANCE.indexOf("next turn") >= 0,
+  true,
+);
+
+/* ── The detector catalogue (T3: weight becomes load-bearing) ───────────── */
+
+/*
+ * Weight was written by every seed, editable in the admin UI, and read by
+ * nothing. The methodology depends on it: H-309 trust vault protection is 2.0
+ * specifically so it pre-empts. These checks are what make that claim true.
+ */
+
+const CARDS = [
+  { heuristicId: 11, name: "H-102 Strategy-as-function redirect", weight: 1.0, signal: "names strategy as function" },
+  { heuristicId: 12, name: "H-309 Trust Vault Protection", weight: 2.0, signal: "about to surface trust vault content" },
+  { heuristicId: 13, name: "H-202 Evidence probing", weight: 1.5, signal: "vague evidence claim" },
+];
+
+const catalogue = buildSignalCatalogue(CARDS);
+const lines = catalogue.split("\n").filter((l) => l.startsWith("- id:"));
+
+check("the catalogue lists every card", lines.length, 3);
+
+check(
+  "highest weight first, so the pre-empting card is never buried",
+  lines.map((l) => Number(l.replace("- id: ", ""))),
+  [12, 13, 11],
+);
+
+check(
+  "the weight is stated per card, not merely implied by order",
+  catalogue.indexOf("weight: 2.0") >= 0 && catalogue.indexOf("weight: 1.0") >= 0,
+  true,
+);
+
+check(
+  "ties break on id, so the prompt is stable across calls",
+  buildSignalCatalogue([
+    { heuristicId: 30, name: "b", weight: 1.0, signal: "s" },
+    { heuristicId: 20, name: "a", weight: 1.0, signal: "s" },
+  ])
+    .split("\n")
+    .filter((l) => l.startsWith("- id:"))
+    .map((l) => Number(l.replace("- id: ", ""))),
+  [20, 30],
+);
+
+check(
+  "the input array is not mutated",
+  CARDS.map((c) => c.heuristicId),
+  [11, 12, 13],
+);
+
+check("an empty catalogue renders empty rather than throwing", buildSignalCatalogue([]), "");
+
+const rules = catalogueRules().join(" ");
+check(
+  "the detector is told to prefer the higher weight",
+  rules.indexOf("HIGHEST") >= 0,
+  true,
+);
+check(
+  "the pre-empting threshold appears in the rules",
+  rules.indexOf(PREEMPTING_WEIGHT.toFixed(1)) >= 0,
+  true,
+);
+check(
+  "the no-invented-ids rule survived the rewrite",
+  rules.indexOf("Never invent a heuristic id") >= 0,
+  true,
+);
+check(
+  "returning nothing is still strongly preferred",
+  rules.indexOf("strongly preferred") >= 0,
+  true,
 );
 
 console.log(

@@ -8,7 +8,7 @@
     "build": "npm run build:client && npm run build:server",
     "start": "NODE_ENV=production node dist/index.js",
     "check": "tsc",
-    "test": "tsx server/wing/objective-rules.test.ts && tsx server/wing/engine-rules.test.ts && tsx server/wing/classifier-rules.test.ts && tsx server/wing/provenance.test.ts && tsx server/wing/intake-beats.test.ts && tsx server/wing/nace-competencies.test.ts && tsx server/wing/authenticity.test.ts && tsx server/wing/api-contracts.test.ts && tsx server/wing/published-cache.test.ts && tsx server/orchestrator/temperature.test.ts",
+    "test": "tsx server/wing/objective-rules.test.ts && tsx server/wing/engine-rules.test.ts && tsx server/wing/classifier-rules.test.ts && tsx server/wing/provenance.test.ts && tsx server/wing/intake-beats.test.ts && tsx server/wing/nace-competencies.test.ts && tsx server/wing/parse-compendium.test.ts && tsx server/wing/population-tags.test.ts && tsx server/wing/gate-compiler.test.ts && tsx server/wing/gate-audit.test.ts && tsx server/wing/voice-compiler.test.ts && tsx server/wing/voice-doorway.test.ts && tsx server/wing/authenticity.test.ts && tsx server/wing/api-contracts.test.ts && tsx server/wing/published-cache.test.ts && tsx server/orchestrator/temperature.test.ts",
     "db:push": "drizzle-kit push",
     "db:wing-ddl": "psql \"$DATABASE_URL\" -v ON_ERROR_STOP=1 -f rehearsal-public-prereqs.sql -f migrations/0003_optimal_spyke.sql -f migrations/0005_milky_calypso.sql -f migrations/0006_optimal_princess_powerful.sql -f migrations/0007_content_draft_share_count.sql -f migrations/0008_analysis_methodology.sql -f migrations/0009_objective_sets.sql -f migrations/0010_heuristic_card_code.sql -f migrations/0011_student_onboarding_state.sql -f migrations/0012_message_event_failures.sql -f migrations/0013_wing_homework.sql -f migrations/0014_wing_checkins_and_notes.sql -f migrations/0015_institution_email_domains.sql -f migrations/0016_internship_milestones.sql -f migrations/0017_cohort_summary_indexes.sql",
     "db:generate": "drizzle-kit generate",
@@ -37,8 +37,13 @@
     "wing:check-journey": "tsx server/wing/check-journey.ts",
     "wing:preview-context": "tsx server/wing/preview-student-context.ts",
     "wing:check-sequences": "tsx server/wing/check-sequences.ts",
+    "wing:check-compendium": "tsx server/wing/check-compendium.ts",
+    "wing:reset-cards": "tsx server/wing/reset-cards.ts",
+    "wing:seed-compendium": "tsx server/wing/seed-compendium.ts",
+    "wing:build-sequences": "tsx server/wing/build-foundation-sequences.ts",
     "wing:check-documents": "tsx server/wing/check-documents.ts",
-    "wing:check-migrations": "tsx server/wing/check-migrations.ts"
+    "wing:check-migrations": "tsx server/wing/check-migrations.ts",
+    "wing:seed-voice": "tsx server/wing/seed-voice-profile.ts"
   },
   "dependencies": {
     "@azure/identity": "^4.5.0",

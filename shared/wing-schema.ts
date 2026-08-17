@@ -92,9 +92,67 @@ export const appointmentStatus = wing.enum("appointment_status", [
 export const heuristicStatus = wing.enum("heuristic_status", [
   "candidate", "validated", "retired",
 ]);
+/**
+ * Card components. The first seven predate the final methodology; the last four
+ * arrive with it (migration 0019).
+ *
+ * v2 cards carry seven components and this enum held three of them by name.
+ * All 182 cards in the compendium carry all seven with no omissions, so the four
+ * added here are not edge cases — without them a v2 import stores four sevenths
+ * of every card nowhere. `delivery_adaptation` matters most: it is where the
+ * seven audiences differ, so losing it gives every population identical
+ * coaching language.
+ *
+ * `outcome` and `success_criteria` are the same concept under two names for one
+ * release. Post-session scoring reads `outcome` today; `outcome` retires with
+ * the rest of the superseded methodology rather than being repointed inside a
+ * migration that changes the enum. Order matters — ALTER TYPE ADD VALUE appends.
+ */
 export const heuristicComponentType = wing.enum("heuristic_component_type", [
   "signal", "intervention", "coaching_move", "outcome", "module_mapping",
   "population_context", "notes",
+  "detection_method", "delivery_adaptation", "failure_path", "success_criteria",
+]);
+
+/**
+ * What a card does to the conversation.
+ *
+ * A column on `heuristics` rather than a component row: one classifier per card
+ * is a single fact, not versioned prose, and the engine needs it on every turn
+ * without a JOIN and a version walk.
+ *
+ * SEVEN values. An earlier inventory of the compendium found six and missed
+ * `GATE`, which 19 cards declare — every `IG-*` gate in Modules 10 and 11 plus
+ * all six universal `IG-U` gates. An enum built from the six-value list rejects
+ * them at seed time. Found by `parse-compendium.ts`.
+ */
+export const heuristicInterventionType = wing.enum("heuristic_intervention_type", [
+  "COACH", "CHALLENGE", "REDIRECT", "REFRAME", "AFFIRM", "META", "GATE",
+]);
+
+/**
+ * What KIND of card a row is — the discriminator the engine was missing.
+ *
+ * `status` is candidate/validated/retired, a lifecycle. Nothing said whether a
+ * card fires on the student's turn or on Wing's own output, and the difference
+ * is not cosmetic:
+ *
+ *   coaching_card   fires on the STUDENT's turn. What the detector matches.
+ *   integrity_gate  fires on WING's OUTPUT, before delivery. Must never enter
+ *                   the detector catalogue — a gate's signal describes something
+ *                   Wing is about to say, so offering it to the detector asks
+ *                   the model to match Wing's rules against the student's words.
+ *   exercise        routed to by explicit reference from another card's
+ *                   coaching_move, not by signal match. Which is why all 19
+ *                   exercise-library cards state no sequence weight: they are
+ *                   not in the precedence ordering because they are not
+ *                   competing to fire.
+ *
+ * 54 of the 184 specifications are gates. Without this column a v2 import loads
+ * all 54 as student-turn signals.
+ */
+export const heuristicCardKind = wing.enum("heuristic_card_kind", [
+  "coaching_card", "integrity_gate", "exercise",
 ]);
 export const sequenceOwnerType = wing.enum("sequence_owner_type", ["school_cycle", "student"]);
 export const classifierTask = wing.enum("classifier_task", [
@@ -152,6 +210,15 @@ export const sourceType = wing.enum("source_type", ["human_originated", "ai_gene
 export const outcomeSignal = wing.enum("outcome_signal", [
   "breakthrough", "positive", "neutral", "regression", "correction",
 ]);
+/**
+ * Whether a gate finding IS a breach, or only means the rule now applies.
+ *
+ * H-109's "your function is Marketing" is a breach outright. H-002's "you
+ * mentioned" is not — it signals a cross-session reference, at which point
+ * provenance is required. Recording the second as a breach would make every
+ * legitimate callback a violation.
+ */
+export const gateFindingMode = wing.enum("gate_finding_mode", ["violation", "review"]);
 export const patternStatus = wing.enum("pattern_status", [
   "pending_review", "accepted", "rejected", "authored",
 ]);
@@ -444,9 +511,20 @@ export const heuristics = wing.table("heuristics", {
   versionNumber: integer("version_number").notNull().default(1),
   populationTags: text("population_tags").array().notNull().default(sql`'{}'`),
   status: heuristicStatus("status").notNull().default("candidate"),
+  /** Nullable: the 253 pre-v2 extracted cards were never classified. */
+  interventionType: heuristicInterventionType("intervention_type"),
+  /**
+   * Defaults to coaching_card, which is correct rather than merely convenient —
+   * every pre-v2 card came out of the prompt files as student-turn coaching.
+   */
+  cardKind: heuristicCardKind("card_kind").notNull().default("coaching_card"),
   createdAt: tsNow("created_at"),
   modifiedAt: tsNow("modified_at"),
-});
+}, (t) => ({
+  // "which non-retired cards in this sequence may fire on a student turn" is
+  // asked on every turn, and it is now two columns wide.
+  kindStatusIdx: index("heuristics_kind_status_idx").on(t.cardKind, t.status),
+}));
 
 /** Build now · The seven components as rows, not columns. A refinement
  *  inserts a new row and flips the prior row's is_current to false. */
@@ -490,9 +568,24 @@ export const heuristicSequenceEntries = wing.table("heuristic_sequence_entries",
   heuristicId: fk("heuristic_id").notNull().references(() => heuristics.id),
   position: smallint("position").notNull(),
   weight: numeric("weight", { precision: 5, scale: 2 }).notNull().default("1.0"),
+  /**
+   * Which session this entry fires in. NULL = every session (migration 0020).
+   *
+   * The compendium publishes three Foundation sequence maps but the schema has
+   * one active sequence per cycle, so all 53 Tier 1 cards live in one sequence
+   * and this column is what keeps a Foundation 1 student from being offered
+   * H-201, the Foundation 2 credibility test.
+   *
+   * On the ENTRY rather than the card because it is a deployment decision, like
+   * `position` and `weight` beside it: the same card may be deployed in more
+   * than one session, and the methodology owner's sequence decides where. NULL
+   * covers the 18 universal and voice gates that apply wherever Wing speaks.
+   */
+  appliesToSession: sessionType("applies_to_session"),
 }, (t) => ({
   positionUnique: uniqueIndex("heuristic_sequence_entries_position_unique").on(t.sequenceId, t.position),
   heuristicUnique: uniqueIndex("heuristic_sequence_entries_heuristic_unique").on(t.sequenceId, t.heuristicId),
+  sessionIdx: index("heuristic_sequence_entries_session_idx").on(t.sequenceId, t.appliesToSession),
 }));
 
 /** Build now · ★ Review addition. Versioned classifier definition; Tier 1
@@ -725,6 +818,37 @@ export const userHeuristicScores = wing.table("user_heuristic_scores", {
   lastUpdated: tsNow("last_updated"),
 }, (t) => ({
   pk: primaryKey({ columns: [t.studentId, t.heuristicId, t.cycleId] }),
+}));
+
+/** Build now · What the gate audit found in Wing's delivered output.
+ *
+ *  NOT `user_heuristic_applications`: that table means "this card was applied"
+ *  and `user_heuristic_scores` aggregates from it to decide which methodology
+ *  earns promotion. A breach written there would build a card's composite score
+ *  out of its own failures. See migration 0021.
+ *
+ *  `excerpt` is a window of Wing's reply and may quote the student, so it carries
+ *  the same sensitivity as `transcript_turns.content` and needs the same access
+ *  control on any admin surface over it. */
+export const gateAuditFindings = wing.table("gate_audit_findings", {
+  id: id(),
+  studentId: fk("student_id").notNull().references(() => students.id),
+  sessionId: fk("session_id").notNull().references(() => sessions.id),
+  /** The AI turn whose text broke the rule. */
+  turnId: fk("turn_id").references(() => transcriptTurns.id),
+  heuristicId: fk("heuristic_id").notNull().references(() => heuristics.id),
+  /** Denormalised: how the methodology names the gate, and it survives a rename. */
+  cardCode: text("card_code").notNull(),
+  mode: gateFindingMode("mode").notNull(),
+  matched: text("matched").notNull(),
+  excerpt: text("excerpt").notNull(),
+  /** Danielle's review state. A rejected finding means the PATTERN is too broad. */
+  status: patternStatus("status").notNull().default("pending_review"),
+  detectedAt: tsNow("detected_at"),
+}, (t) => ({
+  cardStatusIdx: index("gate_audit_findings_card_status_idx").on(t.cardCode, t.status),
+  studentIdx: index("gate_audit_findings_student_idx").on(t.studentId, t.detectedAt),
+  sessionIdx: index("gate_audit_findings_session_idx").on(t.sessionId),
 }));
 
 /** Stub for later · Human review queue for candidates surfaced by the
