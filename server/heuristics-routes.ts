@@ -15,6 +15,11 @@ import type { ComponentType } from "./wing/heuristics-store";
 import { log } from "./logger";
 import { isPlatformAdmin } from "./admin-guards";
 import { evaluationWindowState } from "./wing/evaluation-window";
+import {
+  SEQUENCE_HARD_LIMIT,
+  SEQUENCE_SOFT_LIMIT,
+  peakDetectorLoad,
+} from "./wing/sequence-limits";
 
 /**
  * Methodology authoring API — the surface Danielle and Sam use to write the
@@ -59,8 +64,12 @@ const COMPONENT_TYPES: ComponentType[] = [
  * A library of hundreds of cards is fine and desirable. A SEQUENCE of hundreds
  * is not. The sequence is a deliberate selection from the library.
  */
-const SEQUENCE_SOFT_LIMIT = 15;
-const SEQUENCE_HARD_LIMIT = 40;
+/*
+ * The constants and the measurement now live in server/wing/sequence-limits.ts,
+ * because what they should be measured AGAINST changed: session scope and
+ * card_kind mean "cards in the sequence" is no longer "signals the detector
+ * chooses between". The reasoning above is still why the numbers are 15 and 40.
+ */
 
 function parseId(raw: string): number | null {
   const n = parseInt(raw, 10);
@@ -280,8 +289,60 @@ export function registerHeuristicsRoutes(app: Express) {
         .innerJoin(institutions, eq(institutions.id, schoolCycles.institutionId))
         .orderBy(desc(schoolCycles.cycleYear));
 
+      /*
+       * What the pointer actually resolves to, alongside the pointer itself.
+       *
+       * `activeSequenceId` alone cannot distinguish a cohort governed by 53 cards
+       * from one pointing at a sequence that `wing:reset-cards` emptied — and that
+       * second state existed on dev, reading as a healthy published cycle
+       * everywhere. Any screen answering "is anything live?" needs the count, so it
+       * is returned here rather than fetched per cycle by each caller.
+       */
+      const active = rows
+        .map((c) => c.activeSequenceId)
+        .filter((id): id is number => id != null);
+
+      const counts = active.length
+        ? await db
+            .select({
+              sequenceId: heuristicSequenceEntries.sequenceId,
+              versionNumber: heuristicSequences.versionNumber,
+              n: count(),
+            })
+            .from(heuristicSequenceEntries)
+            .innerJoin(
+              heuristicSequences,
+              eq(heuristicSequences.id, heuristicSequenceEntries.sequenceId),
+            )
+            .where(inArray(heuristicSequenceEntries.sequenceId, active))
+            .groupBy(heuristicSequenceEntries.sequenceId, heuristicSequences.versionNumber)
+        : [];
+
+      // A sequence with no entries has no row in the group-by at all, so the
+      // default is zero rather than unknown.
+      const bySequence = new Map(
+        counts.map((r) => [r.sequenceId, { cards: Number(r.n), version: r.versionNumber }]),
+      );
+
+      const versions = active.length
+        ? await db
+            .select({ id: heuristicSequences.id, versionNumber: heuristicSequences.versionNumber })
+            .from(heuristicSequences)
+            .where(inArray(heuristicSequences.id, active))
+        : [];
+      const versionById = new Map(versions.map((v) => [v.id, v.versionNumber]));
+
       res.json(
-        rows.map((c) => ({ ...c, evaluationWindow: evaluationWindowState(c as any) })),
+        rows.map((c) => ({
+          ...c,
+          evaluationWindow: evaluationWindowState(c as any),
+          activeSequenceCards: c.activeSequenceId
+            ? (bySequence.get(c.activeSequenceId)?.cards ?? 0)
+            : null,
+          activeSequenceVersion: c.activeSequenceId
+            ? (versionById.get(c.activeSequenceId) ?? null)
+            : null,
+        })),
       );
     } catch (error) {
       next(error);
@@ -581,21 +642,37 @@ export function registerHeuristicsRoutes(app: Express) {
       const gates = effective.filter((c) => c.cardKind === "integrity_gate");
       const unclassified = effective.filter((c) => !c.cardKind);
 
-      if (detectorCards.length > SEQUENCE_HARD_LIMIT) {
+      /*
+       * Per session, not per sequence. An entry scoped to foundation_2 is invisible
+       * during intake, so the detector never chooses between all of them at once;
+       * the number that matters is the worst single turn. For a sequence with no
+       * scope — everything publishCycleSequence writes — the peak equals the total
+       * and this is exactly the old check. See wing/sequence-limits.ts.
+       */
+      const peak = peakDetectorLoad(effective);
+
+      if (peak.count > SEQUENCE_HARD_LIMIT) {
         return res.status(400).json({
-          error: `A sequence may put at most ${SEQUENCE_HARD_LIMIT} coaching cards in front of the detector`,
+          error: `A sequence may put at most ${SEQUENCE_HARD_LIMIT} coaching cards in front of the detector in one session`,
           detail:
-            `Version ${sequence.versionNumber} has ${detectorCards.length}. Every one of ` +
-            `their signal definitions is sent to the detector on every student turn.`,
-          remedy: "Split the set, or narrow it by session scope so a single turn sees fewer.",
+            `Version ${sequence.versionNumber} has ${detectorCards.length} coaching card(s) in ` +
+            `total, and ${peak.count} of them are visible in ` +
+            `${peak.session ?? "every session, because the sequence has no session scope"}. ` +
+            `Every one of their signal definitions is sent to the detector on that turn.`,
+          remedy:
+            peak.session === null
+              ? "Scope the entries by session — a sequence built by wing:build-sequences " +
+                "sets applies_to_session, so a single turn sees only the cards for that session."
+              : `Split the ${peak.session} set, or move some of its cards to another session.`,
         });
       }
 
       const warnings: string[] = [];
-      if (detectorCards.length > SEQUENCE_SOFT_LIMIT) {
+      if (peak.count > SEQUENCE_SOFT_LIMIT) {
         warnings.push(
-          `${detectorCards.length} coaching cards is above the recommended ` +
-            `${SEQUENCE_SOFT_LIMIT}. Session scope narrows this further per turn, but ` +
+          `${peak.count} coaching cards in ${peak.session ?? "every session"} is above ` +
+            `the recommended ${SEQUENCE_SOFT_LIMIT} (${detectorCards.length} in the ` +
+            `sequence overall). Session scope has already been applied, but ` +
             "detection accuracy still falls as the detector has more near-neighbour " +
             "signals to choose between.",
         );

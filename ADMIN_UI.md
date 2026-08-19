@@ -35,7 +35,7 @@ what was already installed*.
 
 | Screen | Route | Absorbed |
 |---|---|---|
-| Methodology | `/admin/methodology/:tab` | heuristics + sequences + **integrity** (new) |
+| Methodology | `/admin/methodology/:tab` | heuristics + sequences + **integrity** + **voice** (new) |
 | Session design | `/admin/session-design/:tab` | objectives + criteria + analysis |
 | Tagging | `/admin/tagging/:tab` | tagging + validate + classifier |
 

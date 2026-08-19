@@ -1,0 +1,28 @@
+-- Two intervention types the intake module needs and the enum does not have.
+--
+-- WHY: `heuristic_intervention_type` was built from the six values the MVP prompt
+-- files used, then gained GATE when parse-compendium.ts found 19 cards declaring
+-- it. Danielle's intake module, delivered 18 August 2026, declares two more:
+--
+--   ELICIT   8 cards. The intake questions themselves — Q1 through Q7 and Q5.5.
+--            Wing is asking, not coaching. Distinct from COACH on purpose: the
+--            intake lead traits are ENCOURAGING and CURIOUS, and the document is
+--            explicit that intake does not coach, because there is nothing to
+--            coach yet and no trust built.
+--   OBSERVE  15 cards. Every reveal template. Also distinct from COACH by her
+--            instruction — "OBSERVE (not COACH — intake lead traits)" appears in
+--            the intervention_type row of all fifteen. Wing states what it
+--            noticed and stops; the coaching starts in Foundation 1.
+--
+-- WHY IT IS A MIGRATION AND NOT A MAPPING: the alternative was folding both into
+-- COACH at seed time. That would make 23 of the 29 intake cards indistinguishable
+-- from Foundation coaching in the database, and the distinction is the whole point
+-- of the intake redesign — an intake that coaches is the 18-question assessment
+-- this module replaces. A lossy seed is a methodology decision taken by an
+-- engineer, which is the thing the corrections layer exists to avoid.
+--
+-- ADD VALUE IF NOT EXISTS so re-running is safe. Postgres 12+ permits this inside
+-- a transaction as long as the new value is not used in the same transaction, and
+-- nothing here inserts.
+ALTER TYPE "wing"."heuristic_intervention_type" ADD VALUE IF NOT EXISTS 'ELICIT';--> statement-breakpoint
+ALTER TYPE "wing"."heuristic_intervention_type" ADD VALUE IF NOT EXISTS 'OBSERVE';

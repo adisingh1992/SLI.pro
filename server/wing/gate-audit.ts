@@ -141,7 +141,7 @@ export const AUDIT_RULES: readonly AuditRule[] = [
     ],
   },
   {
-    cardCode: "IG-U04",
+    cardCode: "IG-U013",
     mode: "violation",
     what: "Behavioural characterisation stated without the disclosure the rule requires",
     source: '"you tend to avoid conflict," "your networking style is transactional"',
@@ -152,7 +152,7 @@ export const AUDIT_RULES: readonly AuditRule[] = [
     ],
   },
   {
-    cardCode: "IG-U05",
+    cardCode: "IG-U014",
     mode: "violation",
     what: "Between-session task follow-up framed as accountability rather than curiosity",
     source:
@@ -252,11 +252,12 @@ export const NOT_AUDITABLE: ReadonlyArray<{ cardCode: string; reason: string }> 
       "voice_profiles has no rows yet, so there is nothing to compare against.",
   },
   {
-    cardCode: "H-308",
+    // H-308 until Danielle moved chunked messaging to the universal range.
+    cardCode: "H-007",
     reason: "A delivery pattern about message chunking, not a property of the text.",
   },
   {
-    cardCode: "IG-U03",
+    cardCode: "IG-U012",
     reason:
       "Its requirements are things Wing must DO — confirm what it found in the " +
       "file, disclose each inference it draws from a field. An absence has no " +

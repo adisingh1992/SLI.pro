@@ -6,6 +6,9 @@ import { parseJsonResponse } from "../json-response";
 import * as orchestrator from "../orchestrator";
 import * as sessionStore from "./session-store";
 import * as intakeStore from "./intake-store";
+import * as engine from "./engine";
+import * as voice from "./voice";
+import { compileSafety, safetyTokenEstimate } from "./safety-rules";
 import { recordAiTurn, recordHumanTurn } from "./provenance";
 import {
   BEATS,
@@ -250,8 +253,38 @@ function buildSystemPrompt(params: {
   withInsight: boolean;
   firstName: string;
   wrapUp: boolean;
+  /** Unconditional. A module constant with no inputs — see safety-rules.ts. */
+  safetySection: string;
+  /** Null until a cohort points at a published voice profile. */
+  voiceSection: string | null;
+  /** Null until a published sequence carries gates scoped to intake. */
+  gateSection: string | null;
 }): string {
-  const parts = [IDENTITY, `Their first name is ${params.firstName}.`, renderStyle(params.style)];
+  /*
+   * ── WHY THESE THREE COME FIRST, AND WHY THEY ARE HERE AT ALL ───────────
+   * They were missing. Every other student-facing surface assembles safety →
+   * voice → gates → its own prompt (see foundation-sessions-routes.ts), and this
+   * one — the first thing a student ever talks to — had none of the three. It ran
+   * on IDENTITY plus the current beat.
+   *
+   * The safety gap is the one that mattered. IG-INT04 is explicit: "IG-S01
+   * (crisis language), IG-S02 (harm prevention), IG-S07 (anti-sycophancy), IG-S09
+   * (cultural attribution) all active from Q1." Those four shipped as a module
+   * constant precisely so no missing pointer could switch them off — and then the
+   * surface with the most first-time users never called it.
+   *
+   * Order is Danielle's hierarchy: safety > methodology > helpfulness. The safety
+   * section's own first line claims it outranks everything below it, which is only
+   * true if what it outranks comes after.
+   */
+  const parts = [
+    params.safetySection,
+    ...(params.voiceSection ? [params.voiceSection] : []),
+    ...(params.gateSection ? [params.gateSection] : []),
+    IDENTITY,
+    `Their first name is ${params.firstName}.`,
+    renderStyle(params.style),
+  ];
 
   parts.push(renderCaptured(params.captured));
 
@@ -393,6 +426,45 @@ export async function respond(userId: number, message: string): Promise<TurnResu
 
   const style = readStyle(before.captured);
 
+  /*
+   * Safety is not fetched, not conditional and not filtered — it cannot be, or it
+   * would not be a safety rule. Voice and gates are legitimately absent until a
+   * cohort points at a published profile and a published sequence carries
+   * intake-scoped gates, and both render nothing in the meantime rather than
+   * failing the turn. Same fail-open shape as the Foundation path.
+   *
+   * Danielle's intake trait hierarchy — lead with ENCOURAGING and CURIOUS, prove
+   * you are paying attention before asking for anything — is in voice profile v2
+   * and reaches a student through this call and nowhere else.
+   */
+  const studentId = await sessionStore.studentIdFor(userId);
+  const safetySection = compileSafety();
+
+  const [voiceContext, loadedGates] = await Promise.all([
+    voice.voiceSectionFor({
+      studentId,
+      sessionType: "intake",
+      studentTurns: before.messages
+        .filter((m) => m.role === "user")
+        .map((m) => m.content)
+        .concat([text]),
+    }),
+    engine.loadTurnGates({ studentId, sessionId: before.sessionId }),
+  ]);
+  const gateContext = engine.compileTurnGates(loadedGates);
+
+  log(
+    `[intake] safety ${safetyTokenEstimate(safetySection)} tokens; ` +
+      (voiceContext.section
+        ? `voice profile #${voiceContext.profileId} (${voiceContext.tokens} tokens` +
+          `${voiceContext.register ? `, ${voiceContext.register} register` : ""}` +
+          `${voiceContext.doorway ? `, ${voiceContext.doorway} doorway` : ", no doorway"})`
+        : "no voice profile") +
+      "; " +
+      (gateContext ? `${gateContext.active.length} gate(s)` : "no gates"),
+    "intake",
+  );
+
   const system = buildSystemPrompt({
     beat,
     captured: before.captured,
@@ -400,6 +472,9 @@ export async function respond(userId: number, message: string): Promise<TurnResu
     withInsight: wantsInsight,
     firstName: who?.firstName ?? "there",
     wrapUp,
+    safetySection,
+    voiceSection: voiceContext.section,
+    gateSection: gateContext?.section ?? null,
   });
 
   let parsed: {

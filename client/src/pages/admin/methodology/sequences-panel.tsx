@@ -20,6 +20,7 @@ import {
 } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { StatusBadge, type Heuristic } from "./heuristic";
+import { SequenceVersions } from "./sequence-versions";
 
 /**
  * Sequence editor — which cards are live for a cohort, in what order.
@@ -84,28 +85,6 @@ export function SequencesPanel() {
     queryFn: async () => (await apiRequest("GET", `/api/admin/cycles/${cycleId}/sequence`)).json(),
     enabled: !!cycleId,
   });
-
-  /*
-   * Sequences built for this cycle and never published.
-   *
-   * This screen only ever showed the ACTIVE sequence, so a cycle whose pointer
-   * names an empty sequence read as "no methodology exists" when in fact a full
-   * one had been built by `wing:build-sequences` and simply never switched on.
-   * The empty state now says so and points at the screen that can publish it.
-   */
-  const { data: history } = useQuery<{
-    activeSequenceId: number | null;
-    sequences: Array<{ id: number; versionNumber: number; entryCount: number; isActive: boolean }>;
-  }>({
-    queryKey: [`/api/admin/cycles/${cycleId}/sequence/history`],
-    queryFn: async () =>
-      (await apiRequest("GET", `/api/admin/cycles/${cycleId}/sequence/history`)).json(),
-    enabled: !!cycleId,
-  });
-
-  const unpublishedBuilds = (history?.sequences ?? []).filter(
-    (sq) => !sq.isActive && sq.entryCount > 0,
-  );
 
   const { data: allCards } = useQuery<Heuristic[]>({
     queryKey: ["/api/admin/heuristics", false],
@@ -290,29 +269,10 @@ export function SequencesPanel() {
                     <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
                   </div>
                 ) : !entries.length ? (
-                  <div className="space-y-3 py-8 text-center">
-                    <p className="text-sm text-muted-foreground">
-                      No cards in this sequence. Wing coaches normally until one is added.
-                    </p>
-                    {!!unpublishedBuilds.length && (
-                      <p className="text-sm text-muted-foreground">
-                        {unpublishedBuilds.length === 1
-                          ? "One sequence has been built for this cycle and never published"
-                          : `${unpublishedBuilds.length} sequences have been built for this cycle and never published`}
-                        {" "}
-                        (version {unpublishedBuilds[0].versionNumber} carries{" "}
-                        {unpublishedBuilds[0].entryCount} cards).{" "}
-                        <button
-                          type="button"
-                          className="font-medium text-brand underline"
-                          onClick={() => navigate("/admin/methodology/integrity")}
-                        >
-                          Review and publish one
-                        </button>{" "}
-                        rather than rebuilding it by hand here.
-                      </p>
-                    )}
-                  </div>
+                  <p className="py-8 text-center text-sm text-muted-foreground">
+                    No cards in this sequence. Wing coaches normally until one is added — or
+                    publish one of the builds below.
+                  </p>
                 ) : (
                   <div className="space-y-2">
                     {entries.map((entry, i) => (
@@ -366,6 +326,26 @@ export function SequencesPanel() {
                     </Button>
                   </div>
                 )}
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">Every version built for this cycle</CardTitle>
+                <CardDescription>
+                  `wing:build-sequences` writes a sequence without publishing it, so a build can
+                  be reviewed before it reaches anyone. Publishing moves this cycle's pointer —
+                  it composes nothing new, so the version you publish is the one that was
+                  reviewed.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <SequenceVersions
+                  cycleId={cycleId}
+                  cycleLabel={
+                    cycle ? `${cycle.institutionName} · ${cycle.label ?? cycle.cycleYear}` : undefined
+                  }
+                />
               </CardContent>
             </Card>
           </>

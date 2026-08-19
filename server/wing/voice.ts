@@ -38,12 +38,21 @@ import { log } from "../logger";
  *   high-signal, minimal scaffolding" — that is the one to be sure about before
  *   applying.
  *
- * A career returner resolves through their stage tags and so lands on
- * mid-career. That is a fallback, not a decision — recorded in voice-source.ts
- * UNSTATED, because neither document gives them a register.
+ * - A career returner outranks mid-career, because the two tags co-occur and only one
+ *   of them is a decision. Answered by Danielle on 18 August; before that a returner
+ *   received the mid-career register by accident of ordering.
  */
 const REGISTER_PRECEDENCE = [
   "entrepreneur",
+  /*
+   * Ahead of mid-career, and that ordering is the entire point of having asked.
+   * `career_break_or_transition` resolves to both `career_returner` and `mid_career`,
+   * so before 18 August a returner silently got the mid-career register — a fallback
+   * dressed as a decision. Danielle's is a different register deliberately: warm but
+   * not pitying, forward-looking, confidence rebuilt through evidence. Placing it
+   * after mid-career here would preserve the old behaviour while looking fixed.
+   */
+  "career_returner",
   "undergraduate",
   "early_career",
   "mid_career",

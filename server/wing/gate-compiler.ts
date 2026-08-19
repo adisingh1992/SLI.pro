@@ -74,11 +74,12 @@ export const NO_TIER1_SURFACE: readonly string[] = ["H-005"];
  *
  * ── WHY A GATE CAN BE WRONG TO INCLUDE ───────────────────────────────────
  * Most gates describe something Wing must never say, and those belong in every
- * turn. Two do not. IG-U03 says "fires upon file upload in any module context".
- * IG-U05 says "fires at session start or Radar check-in WHEN UNCOMPLETED TASKS
- * EXIST in the task log". Both name a state of the world, and on a turn where
- * that state does not hold the rule is not merely wasted tokens — it is
- * suggestive. IG-U05's rule text is a page of guidance on how to follow up on
+ * turn. Two do not. IG-U012 — IG-U03 as the document still numbers it — says
+ * "fires upon file upload in any module context". IG-U014 says "fires at session
+ * start or Radar check-in WHEN UNCOMPLETED TASKS EXIST in the task log". Both name
+ * a state of the world, and on a turn where that state does not hold the rule is
+ * not merely wasted tokens — it is suggestive. IG-U014's rule text is a page of
+ * guidance on how to follow up on
  * between-session tasks; handed to a model with no tasks to follow up on, the
  * likeliest effect is that it asks about tasks nobody assigned. A constraint
  * compiled unconditionally can cause the behaviour it was written to shape.
@@ -103,13 +104,23 @@ type Precondition = {
   source: string;
 };
 
+/*
+ * Keyed on the corrected codes. Both of these are Module 11 universal gates, and
+ * both were renumbered twice on 18 August: IG-U03 → IG-U006 → IG-U012 and
+ * IG-U05 → IG-U008 → IG-U014. The second move was forced by her research-derived
+ * gates, which claim IG-U006–IG-U011; see CORRECTIONS in parse-compendium.ts.
+ *
+ * No superseded code appears in this file, deliberately. A stale key here fails
+ * OPEN — the gate compiles on every turn regardless of the student's state, and
+ * nothing anywhere says why — so the only safe number is the current one.
+ */
 export const GATE_PRECONDITIONS: Readonly<Record<string, Precondition>> = {
-  "IG-U03": {
+  "IG-U012": {
     holds: (c) => c.hasUploadedDocument !== false,
     reason: "nothing the student uploaded is in this turn's context",
     source: '"Fires upon file upload in any module context"',
   },
-  "IG-U05": {
+  "IG-U014": {
     holds: (c) => c.openTasks === undefined || c.openTasks > 0,
     reason: "the student has no unanswered tasks to follow up on",
     source:
@@ -161,11 +172,31 @@ export function excludedGates(
 }
 
 /**
- * A card code as it appears in the compendium — `H-109`, `IG-U04`, `IG-V01`.
+ * A card code in any family the methodology uses — `H-109`, `IG-U04`, `IG-V01`,
+ * `IG-S01`, `IG-INT06`, `H-019.5`, `RT-01`.
+ *
+ * Deliberately the DOCUMENT's numbering as well as ours: this pattern reads rule
+ * text that came out of the compendium, where the Module 11 trio is still
+ * IG-U03/04/05. It matches both, which is what makes it safe for a renumbering to
+ * happen underneath it.
+ *
+ * ── WHY THE FAMILY LIST GREW ON 18 AUGUST ────────────────────────────────
+ * It was `(?:V|UX|MJ|U)?` and two-to-four digits, which was every family that
+ * existed. Then the intake module arrived with `IG-INT01`–`IG-INT13`, a decimal
+ * code in `H-019.5`, and fifteen reveal templates referred to as `RT-01`–`RT-15`;
+ * and the safety architecture is cited as `IG-S01` and friends. Five real leaks
+ * followed, all of them measured rather than imagined: IG-INT04's rule names
+ * IG-S01, IG-S02, IG-S07 and IG-S09, and H-019.5's coaching move cites IG-INT06.
+ * Every one would have reached a student as written.
+ *
+ * `\d{1,4}` rather than `\d{2,4}` because RT-1 and H-7 are one bad edit away, and
+ * a redaction pattern that is too narrow fails silently in the one direction that
+ * matters.
  *
  * Used to redact, not to parse. See `redactCardCodes`.
  */
-const CARD_CODE = /\b(?:H|IG)-(?:V|UX|MJ|U)?\d{2,4}\b/g;
+const CARD_CODE =
+  /\b(?:H|IG|EX|RT)-(?:V|UX|MJ|U|S|INT)?\d{1,4}(?:\.\d)?\b/g;
 
 /** What a redacted citation is replaced with. */
 const REDACTION = "another of these rules";
@@ -191,6 +222,27 @@ const REDACTION = "another of these rules";
  */
 export function redactCardCodes(text: string): string {
   return text.replace(CARD_CODE, REDACTION);
+}
+
+/**
+ * A card's human label: its name with the methodology's identifiers stripped.
+ *
+ * `buildGuidance` puts the matched card's NAME into the system prompt — "A
+ * coaching signal has been detected: H-308 Wing chunked messaging" — and every
+ * one of the 46 Tier 1 coaching card names begins with its code. The intake cards
+ * carry two: "H-020 RT-01 Title/Function Split".
+ *
+ * Redacting a name is the wrong move: "another of these rules Title/Function
+ * Split" is worse than the leak. Stripping the leading identifiers leaves the part
+ * that was always meant for a human reader.
+ */
+export function cardLabel(name: string): string {
+  const stripped = name
+    .replace(/^(?:(?:H|IG|EX|RT)-(?:V|UX|MJ|U|S|INT)?\d{1,4}(?:\.\d)?[\s—–:.-]*)+/, "")
+    .trim();
+  // Never return nothing. A card whose whole name is its code is a data problem,
+  // and an empty signal label would read to the model as a missing instruction.
+  return stripped || name;
 }
 
 /** Which gates needed a citation redacted, and which codes they cited. */

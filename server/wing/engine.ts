@@ -14,8 +14,10 @@ import {
   shouldDeferHighIntensity,
 } from "./engine-rules";
 import {
+  cardLabel,
   compileGates,
   excludedGates,
+  redactCardCodes,
   turnPathGates,
   type GateCard,
   type GateConditions,
@@ -220,8 +222,8 @@ export type GateContext = {
  * The gate cards for this session, loaded but not yet rendered.
  *
  * ── WHY LOADING AND COMPILING ARE SEPARATE ───────────────────────────────
- * Two gates apply only when a fact about this turn holds: IG-U03 when the student
- * has uploaded something, IG-U05 when they have an unanswered task — see
+ * Two gates apply only when a fact about this turn holds: IG-U012 when the student
+ * has uploaded something, IG-U014 when they have an unanswered task — see
  * GATE_PRECONDITIONS in gate-compiler.ts for why compiling them regardless is
  * worse than wasteful. One of those facts, whether an uploaded document is in
  * this turn's context, is not known until the context read returns, and the
@@ -236,7 +238,7 @@ export type LoadedGates = {
   gates: GateCard[];
   /** Card code → heuristic id, so an audit finding can be attributed. */
   byCode: Map<string, number>;
-  /** Unanswered assigned tasks. IG-U05's precondition. */
+  /** Unanswered assigned tasks. IG-U014's precondition. */
   openTasks: number;
 };
 
@@ -378,14 +380,31 @@ export async function auditDeliveredReply(params: {
 /* ── The per-turn cycle ─────────────────────────────────────────────────── */
 
 function buildGuidance(detected: DetectedSignal): string {
+  /*
+   * ── WHY EVERY FIELD HERE IS FILTERED ─────────────────────────────────────
+   * This fragment goes into a system prompt, so IG-U005 applies: no internal
+   * methodology vocabulary in user-facing output. The gate path has redacted
+   * citations since it was written; this path did not, and it was leaking two
+   * different things.
+   *
+   * The NAME, on every card. All 46 Tier 1 coaching card names begin with their
+   * code — "H-308 Wing chunked messaging" — and the intake cards carry two
+   * identifiers, "H-020 RT-01 Title/Function Split". `cardLabel` strips them and
+   * keeps the human part.
+   *
+   * The CITATIONS, on six cards. H-201's delivery adaptation points at H-207,
+   * H-202's at H-205 and H-206, H-018's at four reveal templates by number. Those
+   * are editorial asides to a human reader; the instruction survives without them.
+   */
   const parts = [
-    `A coaching signal has been detected in the student's last message: ${detected.name}.`,
+    `A coaching signal has been detected in the student's last message: ` +
+      `${cardLabel(detected.name)}.`,
   ];
   if (detected.intervention) {
     parts.push(`Intervention to apply: ${detected.intervention}`);
   }
   if (detected.coachingMove) {
-    parts.push(`How to deliver it: ${detected.coachingMove}`);
+    parts.push(`How to deliver it: ${redactCardCodes(detected.coachingMove)}`);
   }
   /*
    * delivery_adaptation is where the seven audiences actually differ, so without
@@ -394,7 +413,7 @@ function buildGuidance(detected: DetectedSignal): string {
    * v2 components.
    */
   if (detected.deliveryAdaptation) {
-    parts.push(`Adapt the delivery: ${detected.deliveryAdaptation}`);
+    parts.push(`Adapt the delivery: ${redactCardCodes(detected.deliveryAdaptation)}`);
   }
   /*
    * failure_path is given as a contingency, not an instruction. It describes what

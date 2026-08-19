@@ -1267,6 +1267,72 @@ console.log("\nStandalone scripts hydrate DATABASE_URL before importing the data
   if (failures === before20) console.log(`  ok — ${checked} script(s), all hydrate first`);
 }
 
+/* ── 21 · The two component→column maps agree ──────────────────────────────
+ *
+ * `seed-compendium.ts` and `seed-shared.ts` each hold a map from the seven v2
+ * component keys to `heuristic_component_type`. There are two copies on purpose:
+ * the compendium seeder has already run against the live database and cannot be
+ * executed from a developer machine to prove a refactor preserved its behaviour,
+ * so it was left alone rather than rewritten to save eight lines.
+ *
+ * That trade only holds while the copies agree. If one gains a mapping the other
+ * lacks, the same component lands in a different column depending on which
+ * document a card came from — and nothing would surface it: both seeds succeed,
+ * both report the row counts they wrote, and a prompt quietly loses a component
+ * for one half of the methodology.
+ *
+ * Compared as text rather than by importing either module, because importing
+ * `seed-compendium.ts` runs it: its `main()` is called at module scope.
+ */
+console.log("\nBoth seeders map components to the same columns");
+{
+  const before21 = failures;
+
+  const MAP = /COMPONENT_COLUMN[^=]*=\s*\{([\s\S]*?)\n\};/;
+  // Local, like every other block's copy: each check is a scope of its own so a
+  // later one cannot quietly depend on an earlier one's helpers.
+  const decomment = (src: string) =>
+    src.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
+
+  function mappings(file: string): string[] {
+    const src = decomment(readFileSync(join(process.cwd(), "server/wing", file), "utf8"));
+    const block = MAP.exec(src);
+    if (!block) {
+      fail(`${file} has no COMPONENT_COLUMN map — check 21 cannot compare what it cannot find`);
+      return [];
+    }
+    return Array.from(block[1].matchAll(/(\w+)\s*:\s*"([^"]+)"/g))
+      .map((m) => `${m[1]} → ${m[2]}`)
+      .sort();
+  }
+
+  const compendium = mappings("seed-compendium.ts");
+  const shared = mappings("seed-shared.ts");
+
+  if (compendium.length && shared.length) {
+    if (compendium.join(", ") !== shared.join(", ")) {
+      fail(
+        "seed-compendium.ts and seed-shared.ts disagree about component columns.\n" +
+          `    seed-compendium: ${compendium.join(", ")}\n` +
+          `    seed-shared:     ${shared.join(", ")}`,
+      );
+    }
+    // Six of the seven. intervention_type is a column on `heuristics`, not a row —
+    // writing the classifier into a component would put "Intervention to apply:
+    // META (system rule)" within reach of a prompt, which IG-U005 forbids.
+    if (compendium.length !== 6) {
+      fail(`expected 6 mapped components, seed-compendium.ts maps ${compendium.length}`);
+    }
+    if (compendium.join(", ").indexOf("intervention_type") >= 0) {
+      fail("intervention_type is mapped to a component row — it is a column on heuristics");
+    }
+  }
+
+  if (failures === before21) {
+    console.log(`  ok — ${compendium.length} component(s), both seeders agree`);
+  }
+}
+
 /* ── Result ──────────────────────────────────────────────────────────── */
 if (failures) {
   console.error(`\n${failures} contract violation(s)\n`);

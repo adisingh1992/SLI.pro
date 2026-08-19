@@ -149,9 +149,16 @@ export type ParseResult = {
  * Foundation Sessions"), the universal and voice gates are in because they
  * govern every surface that ships, and Modules 4–11 are out because the client
  * document puts them out. See WING_TIER1_SCOPE.md §2.
+ *
+ * `intake` joined this set on 18 August, when Danielle delivered the intake
+ * module as 42 cards. A1 conversational intake is Tier 1 and has been listed as
+ * an open Tier 1 gap since the gap analysis; the module simply had no cards
+ * until now. No compendium card derives to `intake`, so adding it changes
+ * nothing about what the compendium contributes.
  */
 export const TIER1_MODULES = new Set([
   "universal",
+  "intake",
   "foundation_1",
   "foundation_2",
   "foundation_3",
@@ -271,8 +278,14 @@ export function unescapeMd(s: string): string {
   return s.replace(/\\([^A-Za-z0-9\s])/g, "$1");
 }
 
-/** Stable, dependency-free hash. Only needs to separate equal from unequal. */
-function hash(s: string): string {
+/**
+ * Stable, dependency-free hash. Only needs to separate equal from unequal.
+ *
+ * Exported for `parse-intake.ts`: two parsers that hashed card bodies differently
+ * could not report a card as the same card, which is the one comparison a body
+ * hash exists to make.
+ */
+export function hash(s: string): string {
   let h1 = 0x811c9dc5;
   let h2 = 0x01000193;
   for (let i = 0; i < s.length; i++) {
@@ -298,14 +311,38 @@ function hash(s: string): string {
 export function moduleFromCode(code: string): string {
   if (code === "H-900") return "universal";
   if (/^IG-V\d+$/.test(code)) return "voice";
+  if (/^IG-INT\d+$/.test(code)) return "intake";
   if (/^IG-U0*\d+$/.test(code)) return "universal";
   if (/^IG-UX\d+$/.test(code)) return "ux";
   if (/^IG-MJ\d+$/.test(code)) return "micro_journaling";
 
-  const m = /^(?:H|IG|EX)-(\d+)$/.exec(code);
+  // The decimal suffix is H-019.5's: Danielle numbered a card between H-019 and
+  // H-020 rather than renumber the fifteen reveal templates that follow it.
+  const m = /^(?:H|IG|EX)-(\d+)(?:\.\d+)?$/.exec(code);
   if (!m) return "unknown";
 
   const digits = m[1];
+
+  /*
+   * The H-0xx range is two ranges now, and conflating them would be expensive.
+   *
+   * H-001–H-009 are the universal rules that bound every module. H-010–H-037 are
+   * the intake module, which Danielle numbered into the same hundred on 18
+   * August. A `universal` card carries no session scope — it compiles into every
+   * prompt Wing assembles — so filing the intake cards there would fire the party
+   * question inside Foundation 2 and put all 15 reveal templates in every turn.
+   *
+   * Anything else in the H-0xx range returns `unknown` rather than falling
+   * through to universal. Unknown is loud and stays out of Tier 1; universal is
+   * quiet and goes everywhere.
+   */
+  if (digits.length === 3 && digits.charAt(0) === "0") {
+    const inHundred = Number(digits);
+    if (inHundred <= 9) return "universal";
+    if (inHundred <= 37) return "intake";
+    return "unknown";
+  }
+
   // Four-digit codes are Modules 10 and 11: H-1001, IG-1107.
   const n = digits.length >= 4 ? Number(digits.slice(0, 2)) : Number(digits[0]);
 
@@ -341,6 +378,143 @@ function moduleFromHeading(heading: string): string | null {
 }
 
 /* ── The parser ──────────────────────────────────────────────────────────── */
+
+/**
+ * Corrections applied to the document as delivered.
+ *
+ * ── WHY THIS EXISTS ──────────────────────────────────────────────────────
+ * Danielle approved five changes on 18 August and compendium v3 does not contain
+ * them. That was verified rather than assumed: v2 and v3 hold 182 cards each with
+ * identical code sets, and hashing all seven components of every card shows not one
+ * body changed between them. v3's own summary lists the corrections as applied;
+ * they exist only in that list.
+ *
+ * So the source stays exactly as delivered and the corrections live here, each
+ * quoting the decision that authorises it. Editing the committed compendium would
+ * have been faster and would have destroyed the one property that makes it useful
+ * — that it is the document she sent. When a reissue carries a change itself, its
+ * entry is deleted and the test that pins it fails until the entry goes.
+ *
+ * ── WHY ONE CARD CAN BE RENUMBERED TWICE ─────────────────────────────────
+ * The Module 11 universal trio moved to IG-U006–IG-U008 on the morning of 18
+ * August and to IG-U012–IG-U014 the same afternoon, because the research-derived
+ * gates she sent later claim IG-U006 through IG-U011 for six new universal gates.
+ * Her later document governs. The first move is not erased from the record — it
+ * lives in `supersededFrom`, because the seeded rows answer to those codes until
+ * the corrections script runs, and a correction that cannot find its row is worse
+ * than no correction: it reports success and leaves the database disagreeing.
+ *
+ * ── WHY SOME MATCH ON THE HEADING ────────────────────────────────────────
+ * H-710 is two different cards: a Radar coaching card and a Module 7 gate. Only the
+ * gate is renumbered, so the entry has to identify which of the two bodies it
+ * means. That also fixes the collision rather than hiding it — before this, the
+ * parser kept the first body and dropped the second, so one real card was
+ * unreachable.
+ */
+export type Correction =
+  | {
+      kind: "recode";
+      from: string;
+      to: string;
+      /** Disambiguates when one code carries two bodies. */
+      headingContains?: string;
+      /**
+       * Codes this card already wears in the database from an earlier correction.
+       *
+       * The parser never reads this — in the document the code is still `from`.
+       * `apply-card-corrections` does: a row renamed once no longer answers to
+       * `from`, so without this the script would print "not seeded, nothing to
+       * rename" and the rename would silently not happen. Most recent first.
+       */
+      supersededFrom?: readonly string[];
+      why: string;
+    }
+  | { kind: "interventionType"; code: string; to: string; why: string };
+
+export const CORRECTIONS: readonly Correction[] = [
+  {
+    kind: "recode",
+    from: "H-308",
+    to: "H-007",
+    why:
+      'Danielle, 18 August: "Approved. Move chunked messaging to the universal range as ' +
+      'H-007. It fires at every module opening and the routing document depends on it ' +
+      'everywhere." Also removes the named exception the sequence builder carried to treat ' +
+      "an H-3xx code as universal.",
+  },
+  {
+    kind: "recode",
+    from: "IG-U03",
+    to: "IG-U012",
+    supersededFrom: ["IG-U006"],
+    why:
+      'Danielle, 18 August, morning: "Renumber the Module 11 universal gates to ' +
+      'IG-U006–IG-U008 so no two IDs are one character apart." Applied that morning, then ' +
+      "superseded the same afternoon: Wing_Research_Derived_Gates takes IG-U006 through " +
+      "IG-U011 for six new universal gates, IG-U006 being Barnum Falsifiability. The later " +
+      "document governs, so the trio moves again — to the first three free codes above her " +
+      "block, which keeps her numbering intact and ours contiguous. IG-U03/04/05 are the " +
+      "Module 11 trio: they arrive in Part 4 of the Module 11 section, while IG-U003/004/005 " +
+      "were delivered with Module 10, whose own header lists them. Mapped in order.",
+  },
+  {
+    kind: "recode",
+    from: "IG-U04",
+    to: "IG-U013",
+    supersededFrom: ["IG-U007"],
+    why: "Second of the Module 11 trio. Same two rulings.",
+  },
+  {
+    kind: "recode",
+    from: "IG-U05",
+    to: "IG-U014",
+    supersededFrom: ["IG-U008"],
+    why: "Third of the Module 11 trio. Same two rulings.",
+  },
+  {
+    kind: "recode",
+    from: "H-710",
+    to: "H-711",
+    headingContains: "Content Seed Alignment",
+    why:
+      'Danielle, 18 August: "Renumber the gate versions. H-710 gate becomes H-711. The ' +
+      'exercise/card versions keep their original numbers." H-711 was unused. Both bodies now ' +
+      "survive the parse; before this the gate was dropped as a duplicate.",
+  },
+  {
+    kind: "interventionType",
+    code: "H-916",
+    to: "META",
+    why:
+      'Danielle, 18 August: "You\'re right, it\'s mislabeled. Change it to META. It\'s a ' +
+      'safety check that runs before Wing speaks, not a user-facing coaching move."',
+  },
+  /*
+   * NOT here, deliberately: H-411 gate → H-412. H-412 is already the Odyssey
+   * planning exercise and the same ruling keeps exercise numbers, so applying the
+   * instruction literally recreates the collision it was meant to remove. H-408 is
+   * free and recommended, and it is waiting on her word. A Module 4 gate, Tier 2,
+   * nothing published touches it — see WING_DECISIONS.md §3.
+   */
+];
+
+/** The code a card is filed under after corrections. */
+export function correctedCode(cardCode: string, heading: string): string {
+  for (const c of CORRECTIONS) {
+    if (c.kind !== "recode" || c.from !== cardCode) continue;
+    if (c.headingContains && heading.indexOf(c.headingContains) < 0) continue;
+    return c.to;
+  }
+  return cardCode;
+}
+
+/** The intervention type a card carries after corrections, or null for none. */
+export function correctedInterventionType(cardCode: string): string | null {
+  for (const c of CORRECTIONS) {
+    if (c.kind === "interventionType" && c.code === cardCode) return c.to;
+  }
+  return null;
+}
 
 const CARD_HEADING = /^#{2,3}\s+((?:H|IG|EX)-(?:V|UX|MJ|U)?\d+)\b(.*)$/;
 const SECTION_HEADING = /^(#{1,2})\s+(.*)$/;
@@ -383,8 +557,14 @@ export function parseCompendium(text: string): ParseResult {
       continue;
     }
 
-    const cardCode = cardMatch[1];
     const headingRest = unescapeMd(cardMatch[2]).replace(/^[\s—–-]+/, "").trim();
+    /*
+     * Corrected here, at the moment the code is read, rather than after the cards
+     * are built. Everything downstream derives from the code — the module comes from
+     * `moduleFromCode`, and Tier 1 membership comes from the module — so correcting
+     * it later would leave H-007 filed as a Foundation 3 card.
+     */
+    const cardCode = correctedCode(cardMatch[1], headingRest);
 
     // The block runs to the next heading or horizontal rule.
     let end = i + 1;
@@ -434,9 +614,16 @@ export function parseCompendium(text: string): ParseResult {
       /Sequence weight:\s*([0-9]+(?:\.[0-9]+)?)/.exec(block);
     const weight = weightMatch ? Number(weightMatch[1]) : null;
 
-    const interventionType = components.intervention_type
+    const declaredInterventionType = components.intervention_type
       ? (/^\s*\*{0,2}([A-Z][A-Z_]+)/.exec(components.intervention_type)?.[1] ?? null)
       : null;
+    /*
+     * The correction wins over what the card says. H-916 declares COACH while sitting
+     * among Module 9's system rules, and Danielle confirmed that is a slip — so
+     * `cardKindOf` and the disagreement report below both work from the corrected
+     * value, which is what removes H-916 from `kindDisagreements`.
+     */
+    const interventionType = correctedInterventionType(cardCode) ?? declaredInterventionType;
 
     const cardKind = cardKindOf(cardCode, interventionType, heading);
     const typeSaysGate = interventionType === "META" || interventionType === "GATE";
@@ -480,7 +667,17 @@ export function parseCompendium(text: string): ParseResult {
 
     cards.push({
       cardCode,
-      name: nameMatch ? nameMatch[1].trim() : `${cardCode} ${headingRest}`.trim(),
+      /*
+       * A corrected card's name must not keep the code it was corrected away from.
+       * The metadata line carries the old code — "H-308 Wing chunked messaging" — and
+       * the name is what the admin surface shows, so leaving it would put a retired
+       * code back in front of the person reading the card.
+       */
+      name: renameForCode(
+        nameMatch ? nameMatch[1].trim() : `${cardCode} ${headingRest}`.trim(),
+        cardMatch[1],
+        cardCode,
+      ),
       description: descMatch ? descMatch[1].trim() : "",
       populationTags: tags,
       components,
@@ -522,6 +719,23 @@ export function parseCompendium(text: string): ParseResult {
  * between a reservation and a card lost during consolidation, and only the
  * methodology owner can say which.
  */
+/** Replaces a leading pre-correction code in a name with the corrected one. */
+export function renameForCode(name: string, from: string, to: string): string {
+  if (from === to) return name;
+  return name.indexOf(from) === 0 ? to + name.slice(from.length) : name;
+}
+
+/**
+ * Codes this file deliberately vacated. Not gaps.
+ *
+ * Without this, moving H-308 to H-007 reports H-308 as a hole in the Foundation 3
+ * run for ever — and a defect report that flags an approved decision as a defect is
+ * a report people learn to skip.
+ */
+const VACATED = CORRECTIONS.filter((c) => c.kind === "recode").map((c) =>
+  c.kind === "recode" ? c.from : "",
+);
+
 export function findNumberingGaps(cards: ParsedCard[]): string[] {
   const byPrefix = new Map<string, number[]>();
 
@@ -536,6 +750,7 @@ export function findNumberingGaps(cards: ParsedCard[]): string[] {
   }
 
   const gaps: string[] = [];
+  const vacated = new Set(VACATED);
   // forEach rather than for...of: tsconfig sets no `target`, so it defaults to
   // ES5 and iterating a Map directly is TS2802 under the typecheck ratchet.
   byPrefix.forEach((numbers, prefix) => {
@@ -545,7 +760,8 @@ export function findNumberingGaps(cards: ParsedCard[]): string[] {
     const start = prefix === "9" ? sorted.find((n) => n !== 900) ?? sorted[0] : sorted[0];
     const present = new Set(sorted);
     for (let n = start; n < sorted[sorted.length - 1]; n++) {
-      if (!present.has(n)) gaps.push(`H-${n}`);
+      const code = `H-${n}`;
+      if (!present.has(n) && !vacated.has(code)) gaps.push(code);
     }
   });
   return gaps.sort();

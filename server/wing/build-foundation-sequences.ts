@@ -7,7 +7,14 @@ import {
   heuristics,
   schoolCycles,
 } from "@shared/wing-schema";
-import { isTier1, parseCompendium, type ParsedCard } from "./parse-compendium";
+import { isTier1, parseCompendium } from "./parse-compendium";
+import { INTAKE_SOURCE, parseIntake } from "./parse-intake";
+import { RESEARCH_GATES_SOURCE, parseResearchGates } from "./parse-research-gates";
+import {
+  SEQUENCE_HARD_LIMIT,
+  detectorLoadBySession,
+  peakDetectorLoad,
+} from "./sequence-limits";
 
 /**
  * Builds the Tier 1 heuristic sequence for each active cycle — WITHOUT publishing it.
@@ -38,15 +45,27 @@ import { isTier1, parseCompendium, type ParsedCard } from "./parse-compendium";
  * Splitting into three would produce three sequences per cycle that nothing can
  * tell apart and that the single pointer cannot express.
  *
- * So the sequence holds all 53 cards and scoping a student's catalogue to their
- * CURRENT session is a read-time filter that does not exist yet. Until it does,
- * publishing this would offer H-201 (the Foundation 2 credibility test) to a
- * student sitting in Foundation 1. That is the blocker on publication, and it is
- * the reason this script stops short of it.
+ * So the sequence holds every Tier 1 card and scoping a student's catalogue to
+ * their CURRENT session is a read-time filter — `applies_to_session` on the entry,
+ * migration 0020, which `getSequenceCards` filters on. That was once the blocker on
+ * publication: without it, publishing would have offered H-201, the Foundation 2
+ * credibility test, to a student sitting in Foundation 1.
+ *
+ * ── WHAT IS IN IT SINCE 18 AUGUST ────────────────────────────────────────
+ * Three documents, not one. The compendium's 53 Tier 1 cards, the intake module's
+ * 42, and 9 of the research-derived gates — the six universal ones plus H-111,
+ * H-210 and H-315. 104 entries.
+ *
+ * That is more than the activation route's hard limit of 40 would allow if the
+ * limit were counted per sequence, and less than it if counted per turn, which is
+ * the measurement that describes what a student experiences: 23 coaching cards in
+ * intake, 7 or 8 in each Foundation session. This script refuses to build a
+ * sequence whose worst turn exceeds the limit, so a set that cannot be activated
+ * is never written. See sequence-limits.ts.
  */
 
 const DRY_RUN = process.argv.includes("--dry-run");
-const SOURCE = "methodology/wing-master-module-compendium-v2.md";
+const COMPENDIUM_SOURCE = "methodology/wing-master-module-compendium-v2.md";
 
 /**
  * Reading order within the sequence.
@@ -56,7 +75,23 @@ const SOURCE = "methodology/wing-master-module-compendium-v2.md";
  * UI. Universal rules first because they bound everything after them, then the
  * voice gates, then the sessions in the order a student meets them.
  */
-const MODULE_ORDER = ["universal", "voice", "foundation_1", "foundation_2", "foundation_3"];
+const MODULE_ORDER = [
+  "universal",
+  "voice",
+  "intake",
+  "foundation_1",
+  "foundation_2",
+  "foundation_3",
+];
+
+/** The four fields the builder needs from a card, whatever document it came from. */
+type SequenceCard = {
+  cardCode: string;
+  name: string;
+  module: string;
+  weight: number | null;
+  cardKind: string;
+};
 
 /**
  * The session a card's entry fires in — null for every session.
@@ -78,13 +113,24 @@ const MODULE_ORDER = ["universal", "voice", "foundation_1", "foundation_2", "fou
  * disagree the card's own words win, and the disagreement is listed here so it is
  * visible rather than buried in a switch.
  */
-const UNIVERSAL_DESPITE_CODE: Record<string, string> = {
-  "H-308": 'detection_method: "Fires at every module opening"',
-};
+/*
+ * Empty since 18 August, and worth keeping empty rather than deleting.
+ *
+ * It held one entry: H-308, whose own detection method said "fires at every module
+ * opening" while its H-3xx code confined it to Foundation 3. Danielle renumbered it
+ * to H-007, universal — so the code and the behaviour now agree and the exception is
+ * dead. The mechanism stays because the next card whose number contradicts its own
+ * text will need it, and because an empty table with this comment explains the
+ * decision better than its absence would.
+ */
+const UNIVERSAL_DESPITE_CODE: Record<string, string> = {};
 
 function sessionScopeFor(module: string, cardCode?: string): string | null {
   if (cardCode && cardCode in UNIVERSAL_DESPITE_CODE) return null;
   switch (module) {
+    // `intake` is the first value of wing.session_type, so the enum already had
+    // it — the module simply had no cards until 18 August.
+    case "intake": return "intake";
     case "foundation_1": return "foundation_1";
     case "foundation_2": return "foundation_2";
     case "foundation_3": return "foundation_3";
@@ -115,7 +161,7 @@ function codeNumber(cardCode: string): number {
  * different gates whose IDs differ only by a leading zero, and having them side
  * by side in the sequence makes that defect visible rather than buried.
  */
-function sequenceOrder(a: ParsedCard, b: ParsedCard): number {
+function sequenceOrder(a: SequenceCard, b: SequenceCard): number {
   const ma = MODULE_ORDER.indexOf(a.module);
   const mb = MODULE_ORDER.indexOf(b.module);
   if (ma !== mb) return ma - mb;
@@ -134,11 +180,94 @@ let pool: ScriptDb["pool"];
 async function main() {
   ({ db, pool } = await initScript());
 
-  const parsed = parseCompendium(readFileSync(SOURCE, "utf8"));
-  const cards = parsed.cards.filter(isTier1).slice().sort(sequenceOrder);
+  const compendium = parseCompendium(readFileSync(COMPENDIUM_SOURCE, "utf8"));
+  const intake = parseIntake(readFileSync(INTAKE_SOURCE, "utf8"));
+  const research = parseResearchGates(readFileSync(RESEARCH_GATES_SOURCE, "utf8"));
 
-  if (cards.length !== 53) {
-    throw new Error(`Expected 53 Tier 1 cards, parsed ${cards.length}. Re-run wing:check-compendium.`);
+  const compendiumCards = compendium.cards.filter(isTier1);
+  const researchGates = research.moduleGates.filter(isTier1);
+
+  const cards: SequenceCard[] = ([] as SequenceCard[])
+    .concat(
+      compendiumCards.map((c) => ({
+        cardCode: c.cardCode,
+        name: c.name,
+        module: c.module,
+        weight: c.weight,
+        cardKind: c.cardKind,
+      })),
+    )
+    .concat(
+      intake.cards.map((c) => ({
+        cardCode: c.cardCode,
+        name: c.name,
+        module: c.module,
+        weight: c.weight,
+        cardKind: c.cardKind,
+      })),
+    )
+    .concat(
+      // The 13 intake integrity gates are two lines and a rule, not seven-component
+      // cards, so they have no ParsedCard. Weight is irrelevant to a gate: gates do
+      // not compete to fire, they all apply.
+      intake.gates.map((g) => ({
+        cardCode: g.cardCode,
+        name: `${g.cardCode} ${g.name}`,
+        module: "intake",
+        weight: null,
+        cardKind: "integrity_gate",
+      })),
+    )
+    .concat(
+      research.universalGates.map((g) => ({
+        cardCode: g.cardCode,
+        name: `${g.cardCode} ${g.name}`,
+        module: "universal",
+        weight: null,
+        cardKind: "integrity_gate",
+      })),
+    )
+    .concat(
+      researchGates.map((c) => ({
+        cardCode: c.cardCode,
+        name: c.name,
+        module: c.module,
+        weight: c.weight,
+        cardKind: c.cardKind,
+      })),
+    )
+    .sort(sequenceOrder);
+
+  const expected = 53 + 42 + 6 + 3;
+  if (compendiumCards.length !== 53 || intake.cards.length !== 29 || intake.gates.length !== 13) {
+    throw new Error(
+      `Source counts moved: ${compendiumCards.length} compendium Tier 1 (expected 53), ` +
+        `${intake.cards.length} intake cards (29), ${intake.gates.length} intake gates (13). ` +
+        "Re-run wing:check-compendium and the parser suites before building.",
+    );
+  }
+  if (cards.length !== expected) {
+    throw new Error(`Expected ${expected} entries, assembled ${cards.length}.`);
+  }
+
+  /*
+   * Refuse to build what cannot be activated. The route checks this too, but
+   * finding out at activation means a version exists that a reviewer has already
+   * read and cannot use.
+   */
+  const peak = peakDetectorLoad(
+    cards.map((c) => ({
+      cardKind: c.cardKind,
+      appliesToSession: sessionScopeFor(c.module, c.cardCode),
+    })),
+  );
+  if (peak.count > SEQUENCE_HARD_LIMIT) {
+    throw new Error(
+      `${peak.count} coaching cards would be in front of the detector in ` +
+        `${peak.session ?? "every session"}, above the limit of ${SEQUENCE_HARD_LIMIT}. ` +
+        "Narrow the set for that session — this is a methodology decision, not a " +
+        "number to raise.",
+    );
   }
 
   /* Map card codes to the rows the seed created. */
@@ -151,7 +280,7 @@ async function main() {
   if (missing.length) {
     throw new Error(
       `${missing.length} card(s) are not in the database: ${missing.map((c) => c.cardCode).join(", ")}. ` +
-        "Run npm run wing:seed-compendium first.",
+        "Run wing:seed-compendium, wing:seed-intake and wing:seed-research-gates first.",
     );
   }
 
@@ -288,9 +417,31 @@ async function main() {
 
   const scoped = cards.filter((c) => sessionScopeFor(c.module, c.cardCode) !== null).length;
   console.log(
-    `\n  ${scoped} entr(ies) are session-scoped, ${cards.length - scoped} apply everywhere.\n` +
-      "  A Foundation 1 student's catalogue is the 12 universal + 6 voice cards\n" +
-      "  plus Foundation 1's 10 — not all 53.",
+    `\n  ${scoped} entr(ies) are session-scoped, ${cards.length - scoped} apply everywhere.`,
+  );
+
+  /*
+   * What one turn actually puts in front of the detector — the number the hard
+   * limit applies to, and the one worth reading before publishing. Gates and
+   * exercises are excluded because they never enter the detector catalogue.
+   */
+  const loads = detectorLoadBySession(
+    cards.map((c) => ({
+      cardKind: c.cardKind,
+      appliesToSession: sessionScopeFor(c.module, c.cardCode),
+    })),
+  );
+  const coachingTotal = cards.filter((c) => c.cardKind === "coaching_card").length;
+  console.log(
+    `\nCoaching cards in front of the detector, per turn (limit ${SEQUENCE_HARD_LIMIT})\n` +
+      "──────────────────────────────────────────────────────────",
+  );
+  for (const l of loads.slice().sort((a, b) => b.count - a.count)) {
+    console.log(`  ${String(l.session ?? "every session").padEnd(14)} ${String(l.count).padStart(3)}`);
+  }
+  console.log(
+    `  ${coachingTotal} in the sequence overall, which is NOT the number that matters:\n` +
+      "  an entry scoped to one session is invisible in the others.",
   );
 
   const weights: Record<string, number> = {};
@@ -301,9 +452,23 @@ async function main() {
   console.log(
     `\n  weights: ${Object.entries(weights).sort((a, b) => Number(b[0]) - Number(a[0])).map(([w, n]) => `${w} × ${n}`).join(", ")}`,
   );
+  /*
+   * Split by kind, because only one of the three groups matters. Weight is
+   * precedence among cards competing to fire, and gates do not compete — they all
+   * apply — while exercises are routed to by explicit reference. So 40 gates and 7
+   * exercises with no stated weight is not a gap; the coaching cards are.
+   */
+  const unweightedCoaching = noWeight.filter((c) => c.cardKind === "coaching_card");
+  const unweightedOther = noWeight.length - unweightedCoaching.length;
   console.log(
-    `  ${noWeight.length} card(s) had no stated weight and were written as 1.00:\n` +
-      `    ${noWeight.map((c) => c.cardCode).join(", ")}`,
+    `  ${noWeight.length} entr(ies) had no stated weight and were written as 1.00, of which\n` +
+      `  ${unweightedOther} are gates or exercises, where weight decides nothing. The ${unweightedCoaching.length} coaching\n` +
+      `  card(s) that do compete to fire and have no stated weight:\n` +
+      `    ${unweightedCoaching.map((c) => c.cardCode).join(", ")}\n` +
+      "  Twelve of those are reveal templates, and the document does weight four of\n" +
+      "  its templates — so this looks like an oversight of hers rather than a\n" +
+      "  decision. It changes nothing yet: the reveal is chosen by H-019.5 scoring\n" +
+      "  the templates, not by sequence weight.",
   );
 
   const preempting = cards.filter((c) => (c.weight ?? 1.0) >= 2.0);
@@ -322,9 +487,10 @@ async function main() {
       "  Session scoping (migration 0020) closed the blocker that made publishing\n" +
       "  unsafe: entries now carry the session they fire in, so a Foundation 1\n" +
       "  student is no longer offered Foundation 2's cards. What publishing still\n" +
-      "  changes is real — 22 coaching cards start competing to fire, and the four\n" +
-      "  at weight 2.0 pre-empt everything else. Review the cards in the admin UI\n" +
-      "  first; that is what they were seeded as candidates for.\n",
+      `  changes is real — ${peak.count} coaching cards start competing to fire in ` +
+      `${peak.session ?? "every session"},\n` +
+      `  and the ${preempting.length} at weight 2.0 pre-empt everything else. Review the cards in\n` +
+      "  the admin UI first; that is what they were seeded as candidates for.\n",
   );
 
   await pool.end();

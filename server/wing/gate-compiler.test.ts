@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 import {
   DRAFT_PATH_GATES,
   GATE_PRECONDITIONS,
+  cardLabel,
   redactCardCodes,
   redactedFrom,
   NO_TIER1_SURFACE,
@@ -12,6 +13,8 @@ import {
   type GateCard,
 } from "./gate-compiler";
 import { isTier1, parseCompendium } from "./parse-compendium";
+import { INTAKE_SOURCE, parseIntake } from "./parse-intake";
+import { RESEARCH_GATES_SOURCE, parseResearchGates } from "./parse-research-gates";
 
 /**
  * Tests for gate compilation (methodology v2, T4).
@@ -137,8 +140,8 @@ test("an unlisted gate is INCLUDED by default", () => {
 
 test("a precondition gate is dropped when its condition is absent", () => {
   const gates = [
-    gate({ cardCode: "IG-U03", coachingMove: "Confirm what you found in the file." }),
-    gate({ cardCode: "IG-U05", coachingMove: "Lead with curiosity, not disappointment." }),
+    gate({ cardCode: "IG-U012", coachingMove: "Confirm what you found in the file." }),
+    gate({ cardCode: "IG-U014", coachingMove: "Lead with curiosity, not disappointment." }),
     gate({ cardCode: "H-001" }),
   ];
   const none = { hasUploadedDocument: false, openTasks: 0 };
@@ -149,11 +152,11 @@ test("a precondition gate is dropped when its condition is absent", () => {
 
 test("a precondition gate is kept when its condition holds", () => {
   const gates = [
-    gate({ cardCode: "IG-U03", coachingMove: "Confirm what you found in the file." }),
-    gate({ cardCode: "IG-U05", coachingMove: "Lead with curiosity, not disappointment." }),
+    gate({ cardCode: "IG-U012", coachingMove: "Confirm what you found in the file." }),
+    gate({ cardCode: "IG-U014", coachingMove: "Lead with curiosity, not disappointment." }),
   ];
   const both = { hasUploadedDocument: true, openTasks: 2 };
-  assert.deepEqual(turnPathGates(gates, both).map((g) => g.cardCode), ["IG-U03", "IG-U05"]);
+  assert.deepEqual(turnPathGates(gates, both).map((g) => g.cardCode), ["IG-U012", "IG-U014"]);
   assert.ok(compileGates(gates, { conditions: both }).indexOf("Confirm what you found") >= 0);
 });
 
@@ -163,22 +166,22 @@ test("an unsupplied condition counts as satisfied", () => {
    * knowing whether the student uploaded anything must never be the reason a rule
    * about handling their data goes missing.
    */
-  const gates = [gate({ cardCode: "IG-U03" }), gate({ cardCode: "IG-U05" })];
+  const gates = [gate({ cardCode: "IG-U012" }), gate({ cardCode: "IG-U014" })];
   assert.equal(turnPathGates(gates).length, 2);
   assert.equal(turnPathGates(gates, {}).length, 2);
   assert.equal(turnPathGates(gates, { openTasks: 0 }).length, 1);
 });
 
 test("an unmet precondition is reported with the reason", () => {
-  const gates = [gate({ cardCode: "IG-U05" })];
+  const gates = [gate({ cardCode: "IG-U014" })];
   assert.deepEqual(excludedGates(gates, { openTasks: 0 }), [
-    { cardCode: "IG-U05", reason: "the student has no unanswered tasks to follow up on" },
+    { cardCode: "IG-U014", reason: "the student has no unanswered tasks to follow up on" },
   ]);
 });
 
 test("every precondition quotes the detection method it came from", () => {
   const codes = Object.keys(GATE_PRECONDITIONS);
-  assert.deepEqual(codes.sort(), ["IG-U03", "IG-U05"]);
+  assert.deepEqual(codes.sort(), ["IG-U012", "IG-U014"]);
   for (const code of codes) {
     assert.ok(GATE_PRECONDITIONS[code].source.indexOf("Fires") >= 0, code);
     assert.ok(GATE_PRECONDITIONS[code].reason.length > 20, code);
@@ -217,8 +220,8 @@ test("two of the 20 are conditional, so a quiet turn compiles 18", () => {
   const quiet = { hasUploadedDocument: false, openTasks: 0 };
   assert.equal(turnPathGates(tier1Gates, quiet).length, 18);
   const reasons = excludedGates(tier1Gates, quiet).map((e) => e.cardCode);
-  assert.ok(reasons.indexOf("IG-U03") >= 0);
-  assert.ok(reasons.indexOf("IG-U05") >= 0);
+  assert.ok(reasons.indexOf("IG-U012") >= 0);
+  assert.ok(reasons.indexOf("IG-U014") >= 0);
 });
 
 test("the compiled section stays under 3,200 tokens for every session", () => {
@@ -258,7 +261,7 @@ test("the two real gates that cite others are reported", () => {
   // Danielle removes the asides this drops to an empty list and the test says so.
   assert.deepEqual(redactedFrom(tier1Gates), [
     { cardCode: "H-109", cited: ["H-103"] },
-    { cardCode: "IG-U04", cited: ["H-001", "H-807"] },
+    { cardCode: "IG-U013", cited: ["H-001", "H-807"] },
   ]);
 });
 
@@ -272,6 +275,91 @@ test("every rule in the real compiled section is unattributed", () => {
       `${g.cardCode} appears in the compiled prompt`,
     );
   }
+});
+
+test("cardLabel keeps the human part of a name and drops the identifiers", () => {
+  /*
+   * `buildGuidance` puts the matched card's NAME into a system prompt. Every one of
+   * the 46 Tier 1 coaching card names starts with its code, and the intake cards
+   * carry two — so the coaching path was leaking "H-308" into prompts through a
+   * field nobody had thought of as rule text.
+   *
+   * Redacting a name would be worse than the leak: "another of these rules Wing
+   * chunked messaging" is not an improvement. Stripping leaves what was always
+   * meant for a human reader.
+   */
+  assert.equal(cardLabel("H-308 Wing chunked messaging"), "Wing chunked messaging");
+  assert.equal(cardLabel("H-020 RT-01 Title/Function Split"), "Title/Function Split");
+  assert.equal(
+    cardLabel("IG-INT01 Never make the user feel assessed"),
+    "Never make the user feel assessed",
+  );
+  assert.equal(cardLabel("H-019.5 Reveal template selection"), "Reveal template selection");
+  assert.equal(
+    cardLabel("IG-U012 User-Uploaded Data Handling Gate"),
+    "User-Uploaded Data Handling Gate",
+  );
+  // Nothing to strip, nothing lost.
+  assert.equal(cardLabel("Wing chunked messaging"), "Wing chunked messaging");
+  // A name that is only its code returns itself rather than an empty label.
+  assert.equal(cardLabel("H-308"), "H-308");
+});
+
+test("the five citations the widened pattern caught are redacted", () => {
+  /*
+   * Measured, not imagined. IG-INT04's rule names the four safety gates and
+   * H-019.5's coaching move cites IG-INT06. The pattern was `(?:V|UX|MJ|U)?` with
+   * two-to-four digits, so `IG-S01` and `IG-INT06` both sailed through it and would
+   * have reached a student as written.
+   */
+  for (const code of ["IG-S01", "IG-S02", "IG-S07", "IG-S09", "IG-INT06"]) {
+    const out = redactCardCodes(`Per ${code}, Wing defers.`);
+    assert.equal(out.indexOf(code), -1, `${code} survived redaction`);
+    assert.ok(out.indexOf("another of these rules") >= 0);
+  }
+  assert.equal(redactCardCodes("It must fire before H-019.5.").indexOf("H-019"), -1);
+  assert.equal(redactCardCodes("direct RT-04 trigger").indexOf("RT-04"), -1);
+});
+
+test("nothing bound for a prompt leaks a code, across all three documents", () => {
+  /*
+   * The whole-corpus version of the two above, because a redaction pattern is only
+   * as good as the text it has actually seen. Every field that reaches a system
+   * prompt — a gate's rule and failure path, a coaching card's move and adaptation,
+   * and every card's name — filtered the way its own path filters it.
+   *
+   * If this fails, a document has introduced an identifier family the pattern does
+   * not know about, and the fix is the pattern, not the document.
+   */
+  const intake = parseIntake(readFileSync(INTAKE_SOURCE, "utf8"));
+  const research = parseResearchGates(readFileSync(RESEARCH_GATES_SOURCE, "utf8"));
+
+  const CODE_SHAPED = /\b(?:H|IG|EX|RT)-(?:V|UX|MJ|U|S|INT)?\d{1,4}(?:\.\d)?\b/;
+  const leaks: string[] = [];
+
+  function check(code: string, field: string, text: string | null | undefined): void {
+    if (!text) return;
+    if (CODE_SHAPED.test(redactCardCodes(text))) leaks.push(`${code} ${field}`);
+  }
+
+  function checkCard(c: {
+    cardCode: string;
+    name: string;
+    components: { coaching_move?: string; delivery_adaptation?: string; failure_path?: string };
+  }): void {
+    check(c.cardCode, "name", cardLabel(c.name));
+    check(c.cardCode, "coaching_move", c.components.coaching_move);
+    check(c.cardCode, "delivery_adaptation", c.components.delivery_adaptation);
+    check(c.cardCode, "failure_path", c.components.failure_path);
+  }
+
+  for (const g of intake.gates) check(g.cardCode, "rule", g.rule);
+  for (const g of research.universalGates) check(g.cardCode, "rule", g.rule);
+  for (const c of intake.cards) checkCard(c);
+  for (const c of research.moduleGates) checkCard(c);
+  for (const c of parsed.cards.filter(isTier1)) checkCard(c);
+
+  assert.deepEqual(leaks, []);
 });
 
 console.log("");

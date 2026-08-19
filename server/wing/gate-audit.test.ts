@@ -105,19 +105,22 @@ test("IG-V03 catches prescriptive framing", () => {
   assert.ok(codes("You need to rewrite that headline.").indexOf("IG-V03") >= 0);
 });
 
-test("IG-U04 catches an undisclosed behavioural characterisation", () => {
-  assert.ok(codes("You tend to avoid conflict in those meetings.").indexOf("IG-U04") >= 0);
-  assert.ok(codes("Your networking style is transactional.").indexOf("IG-U04") >= 0);
+test("IG-U013 catches an undisclosed behavioural characterisation", () => {
+  // IG-U04, then IG-U007 for one morning. The Module 11 trio was renumbered twice on
+  // 18 August; the second move made room for her research-derived gates.
+  assert.ok(codes("You tend to avoid conflict in those meetings.").indexOf("IG-U013") >= 0);
+  assert.ok(codes("Your networking style is transactional.").indexOf("IG-U013") >= 0);
 });
 
-test("IG-U05 catches accountability framing in a task follow-up", () => {
-  assert.ok(codes("You didn't do the tasks I assigned last week.").indexOf("IG-U05") >= 0);
-  assert.ok(codes("You still haven't sent those messages.").indexOf("IG-U05") >= 0);
-  assert.ok(codes("You've completed 1 of 3 tasks so far.").indexOf("IG-U05") >= 0);
-  assert.ok(codes("I'm disappointed — this was what you said you'd do.").indexOf("IG-U05") >= 0);
+test("IG-U014 catches accountability framing in a task follow-up", () => {
+  // IG-U05, then IG-U008, now IG-U014. Same two rulings of 18 August.
+  assert.ok(codes("You didn't do the tasks I assigned last week.").indexOf("IG-U014") >= 0);
+  assert.ok(codes("You still haven't sent those messages.").indexOf("IG-U014") >= 0);
+  assert.ok(codes("You've completed 1 of 3 tasks so far.").indexOf("IG-U014") >= 0);
+  assert.ok(codes("I'm disappointed — this was what you said you'd do.").indexOf("IG-U014") >= 0);
 });
 
-test("IG-U05 does not fire on the follow-up the gate asks for", () => {
+test("IG-U014 does not fire on the follow-up the gate asks for", () => {
   /*
    * The gate's own wording: "How did those tasks go?" not "You didn't do the
    * tasks I assigned." Both halves are in its text, so a rule derived from it
@@ -215,7 +218,7 @@ test("coverage separates what was checked from what was not", () => {
 test("the unauditable gates are named with a reason", () => {
   assert.deepEqual(
     NOT_AUDITABLE.map((g) => g.cardCode).sort(),
-    ["H-110", "H-308", "H-310", "IG-U003", "IG-U03", "IG-V02"],
+    ["H-007", "H-110", "H-310", "IG-U003", "IG-U012", "IG-V02"],
   );
   for (const g of NOT_AUDITABLE) assert.ok(g.reason.length > 30, g.cardCode);
 });

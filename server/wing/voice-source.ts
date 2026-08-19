@@ -78,6 +78,19 @@ export type VoiceSeedComponent = {
 export const TRAIT_HIERARCHIES: VoiceSeedComponent[] = [
   {
     componentType: "trait_hierarchy",
+    context: "intake",
+    key: "hierarchy_intake",
+    short:
+      "Lead with encouraging and curious. Prove you are paying attention before asking for anything.",
+    full:
+      "Danielle, 18 August 2026: \"Intake should lead with ENCOURAGING and CURIOUS. Not coaching " +
+      "(nothing to coach yet, no trust built). Not challenging (they just arrived). Wing is warm, " +
+      "gently surprising, and proves it's paying attention before asking for investment.\" Neither " +
+      "the Voice Guide nor IG-V02 assigned intake a hierarchy; this answers the question this " +
+      "file recorded as unstated.",
+  },
+  {
+    componentType: "trait_hierarchy",
     context: "foundation_session",
     key: "hierarchy_foundation",
     short:
@@ -726,36 +739,21 @@ export const NOT_RENDERED: ReadonlyArray<{ what: string; why: string }> = [
  */
 export const UNSTATED: ReadonlyArray<{ what: string; why: string }> = [
   {
-    what: "No trait hierarchy for intake",
-    why:
-      "The Voice Guide gives hierarchies for Foundation, ongoing engagement and setbacks; IG-V02 " +
-      "adds Module 8 and Module 9. Intake is a Tier 1 surface and is named in neither, so it " +
-      "renders with the universal rules and its own calibration example and no hierarchy.",
-  },
-  {
     what: "No trait hierarchy for notifications",
     why:
       "Same omission. The anti-patterns cover what a notification must not be, and there is one " +
       "calibration example, but nothing states which traits lead.",
   },
   {
-    what: "No detection rules for the four doorways",
+    what: "Still no rule connecting a signal to a doorway",
     why:
       "The Voice Guide names the signals Wing observes — response length, vocabulary complexity, " +
       "emotional tone, self-reference patterns, resistance to vulnerability, speed of engagement " +
-      "— and describes each doorway, but never connects the two. The mapping in " +
-      "voice-doorway.ts is therefore inferred and needs review.",
-  },
-  {
-    what: "A career returner has no register",
-    why:
-      "IG-V01 sets Wing's register for five audiences — undergraduate, early career, " +
-      "mid-career, executive, entrepreneur. `career_break_or_transition` is a population this " +
-      "platform records and enrols, and it is not one of them. The Voice & Tone document gives " +
-      "career returners a content standard (\"the gap is the story, not the apology\") but " +
-      "nothing about how Wing itself should sound to them, so they currently fall back to the " +
-      "mid-career register by way of population-tags. Which register they should get is a " +
-      "decision rather than a default.",
+      "— and describes each of the four doorways, but never connects the two. Asked on 17 August " +
+      "and answered on the 18th with something adjacent: thresholds for four ADAPTATION " +
+      "DIMENSIONS (audience track, emotional tone, response length, vocabulary), which are not " +
+      "the four doorways. So the doorway mapping in voice-doorway.ts is still inferred, and the " +
+      "four dimensions are a separate thing not yet built. See WING_DECISIONS.md §3.",
   },
   {
     what: "Speed of engagement is not derivable from the transcript",
@@ -815,6 +813,22 @@ export const REGISTERS: VoiceSeedComponent[] = [
     key: "register_executive",
     short: "Concise and high-signal, with minimal scaffolding.",
     full: "Executive: Concise, high-signal, minimal scaffolding.",
+  },
+  {
+    componentType: "tone_rule",
+    context: null,
+    audience: "career_returner",
+    key: "register_career_returner",
+    short:
+      "Warm but never pitying. Forward-looking — the gap is the story, not the obstacle.",
+    full:
+      "Danielle, 18 August 2026: \"Warm but not pitying. Wing treats them as accomplished " +
+      "professionals who took time away, not people who need rebuilding. Forward-looking, never " +
+      "backward-apologizing — the gap is the story, not the obstacle. Confidence-rebuilding " +
+      "through evidence, not affirmation — 'look at what you actually did before you stepped " +
+      "away. That evidence is still yours.'\" IG-V01 names five audiences and this is the sixth: " +
+      "asked because the platform enrols career returners and had been giving them the " +
+      "mid-career register by default.",
   },
   {
     componentType: "tone_rule",

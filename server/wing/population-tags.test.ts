@@ -34,8 +34,10 @@ function test(name: string, fn: () => void) {
 
 console.log("\npopulation-tags\n");
 
-test("the eight methodology populations are the ones the cards use", () => {
-  assert.equal(METHODOLOGY_POPULATIONS.length, 8);
+test("the eleven methodology populations are the ones the cards use", () => {
+  // Eight from the compendium, three funding stages from the intake module of
+  // 18 August. The union, because neither document uses all eleven.
+  assert.equal(METHODOLOGY_POPULATIONS.length, 11);
 });
 
 test("the two lossy statuses each yield two tags", () => {
@@ -60,6 +62,33 @@ test("career_break_or_transition yields career_returner and mid_career", () => {
     "career_returner",
     "mid_career",
   ]);
+});
+
+test("a founder reaches the one reveal template written for founders", () => {
+  /*
+   * H-029 (RT-10 Founder-Identity Blur) is tagged with the three funding stages
+   * and nothing else. Before the stages were mapped, this card reached no student
+   * at all: the platform emitted `entrepreneur`, the card asked for
+   * `entrepreneur_early`, and an empty intersection is indistinguishable from a
+   * card that does not apply. The failure would have been silent.
+   */
+  const founderBlur = ["entrepreneur_early", "entrepreneur_fundraising", "entrepreneur_scaling"];
+  for (const pathway of ["venture", "freelance"] as Pathway[]) {
+    const statuses: ProfessionalStatus[] = [
+      "undergraduate_or_recent_grad",
+      "early_career",
+      "mid_career_or_senior",
+      "career_break_or_transition",
+    ];
+    for (const status of statuses) {
+      assert.equal(cardAppliesTo(founderBlur, populationTagsFor(status, pathway)), true);
+    }
+  }
+  // And still reaches nobody who is not building something.
+  assert.equal(
+    cardAppliesTo(founderBlur, populationTagsFor("mid_career_or_senior", "employment")),
+    false,
+  );
 });
 
 test("pathway venture and freelance both add entrepreneur", () => {

@@ -15,6 +15,7 @@ import * as intakeStore from "./wing/intake-store";
 import * as profileStore from "./wing/profile-store";
 import * as engine from "./wing/engine";
 import * as voice from "./wing/voice";
+import { compileSafety, safetyTokenEstimate } from "./wing/safety-rules";
 import * as scoring from "./wing/scoring";
 import * as classifier from "./wing/classifier";
 
@@ -154,7 +155,7 @@ function toApiSession(row: any) {
 /**
  * The `buildStudentContext` sections that come from a file the student uploaded.
  *
- * IG-U03, the user-uploaded data handling gate, only applies when Wing is working
+ * IG-U012, the user-uploaded data handling gate, only applies when Wing is working
  * from uploaded data — it must confirm what it found and disclose what it infers.
  * `intake` and `pathway:*` are answers the student typed into a form, so they are
  * deliberately not in this list: they are the student's words already, not a file
@@ -1019,6 +1020,13 @@ export function registerFoundationSessionsRoutes(app: Express) {
         });
         const gateSection = gateContext?.section ?? null;
 
+        // Built once, logged and used. Pure and cheap, but calling it twice invited
+        // the reader to wonder whether the two calls could differ.
+        const safetySection = compileSafety();
+        console.log(
+          `[foundation] safety rules: ${4} (${safetyTokenEstimate(safetySection)} tokens, always on)`,
+        );
+
         const voiceContext = await voicePromise;
         if (voiceContext.section) {
           console.log(
@@ -1050,7 +1058,22 @@ export function registerFoundationSessionsRoutes(app: Express) {
          * designed for." A model told what it must never say before it is told
          * who it is will produce careful, characterless coaching.
          */
+        /*
+         * Safety, then identity, then constraints, then the task, then this turn.
+         *
+         * The safety section is a module constant with no inputs — see
+         * `safety-rules.ts`. Everything else here can legitimately be absent: the
+         * voice section needs a cohort pointed at a published profile, the gate
+         * section needs a published sequence, and both correctly render nothing
+         * otherwise. Safety must not be capable of that, so it is not fetched, not
+         * conditional, and not filtered.
+         *
+         * It goes first because Danielle's hierarchy is safety > methodology >
+         * helpfulness, and because the section says so in its own first line — a
+         * claim that only holds if the rules it outranks come after it.
+         */
         const systemPrompt = [
+          safetySection,
           voiceContext.section,
           gateSection,
           basePrompt,

@@ -2,7 +2,9 @@
 
 **Status:** T1–T4 built. T5–T9 outstanding. See §4a for what shipped and §6a for what Danielle needs to answer.
 **Date:** 13 August 2026 · revised 17 August 2026 after T1–T4
-**Companion to:** `WING_METHODOLOGY_V2_PLAN.md` (full methodology gap analysis)
+**Companion to:** `WING_METHODOLOGY_V2_PLAN.md` (full methodology gap analysis) and
+`WING_DECISIONS.md` (the rulings of record — read that first for anything Danielle has
+settled, and for the three questions still open)
 **Question this answers:** of everything new in the final methodology, what does Tier 1 actually require?
 
 ---
@@ -544,6 +546,7 @@ it is now one deliberate click by a platform admin rather than a hand-written UP
 | T4e | done | IG-U03 and IG-U05 made conditional — each compiled only when its own precondition holds; IG-U05 added to the audit |
 | T4g | done | `PUT /api/admin/cycles/:id/active-sequence` — publish a reviewed build, or roll back to the version before it, from the integrity screen |
 | T4f | done | `/admin/methodology/integrity` — what is in force, the tuning table, the review queue; four platform-admin routes over `gate_audit_findings` |
+| S1 | done | `safety-rules.ts` — the four safety rules Danielle named, compiled first in every prompt, unconditional. Nothing handled distress before this |
 | T5a | done | `voice-source.ts` — the Voice Guide and the personality directive as 54 typed records, with what the documents leave unstated recorded rather than invented |
 | T5b | done | `voice-compiler.ts` + `voice-store.ts` + `voice.ts` — the section compiles at ~760-820 tokens and goes into the prompt ahead of the gates |
 | T5c | done | `voice-doorway.ts` — one of the four doorways from in-session signals only, two independent signals and a margin or nothing |

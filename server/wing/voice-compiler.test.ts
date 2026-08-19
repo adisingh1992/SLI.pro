@@ -94,12 +94,14 @@ test("the context's trait hierarchy is rendered and the others are not", () => {
 
 test("a context with no hierarchy still gets the universal rules", () => {
   /*
-   * Intake is a Tier 1 surface and neither source document assigns it a trait
-   * hierarchy — recorded in UNSTATED rather than invented. The section must still
-   * render: Wing's voice without a context-specific lean is a perfectly good
-   * conversation, and an empty section is not.
+   * Notifications are the remaining case: neither source document says which traits
+   * lead there, and it is recorded as unstated rather than invented. Intake used to be
+   * the example here until Danielle answered it on 18 August — encouraging and curious.
+   *
+   * The section must still render for a context with no hierarchy: Wing's voice without
+   * a context-specific lean is a perfectly good conversation, and an empty section is not.
    */
-  const out = compileVoice(REAL, { context: "intake" });
+  const out = compileVoice(REAL, { context: "notification" });
   assert.equal(out.indexOf("In this part of the programme"), -1);
   assert.ok(out.indexOf("How you sound:") >= 0);
   assert.ok(out.indexOf("Never:") >= 0);
@@ -161,6 +163,25 @@ test("the section stays under 1,400 tokens in every context", () => {
   }
 });
 
+test("intake leads with what Danielle said it leads with", () => {
+  const out = compileVoice(REAL, { context: "intake" });
+  assert.ok(out.indexOf("In this part of the programme") >= 0);
+  assert.ok(out.indexOf("Lead with encouraging and curious") >= 0);
+  // Not coaching, not challenging — nothing to coach yet and they have just arrived.
+  assert.equal(out.indexOf("Lead with teaching and challenging"), -1);
+});
+
+test("a career returner gets their own register, not mid-career", () => {
+  /*
+   * They had been getting mid-career by way of population-tags, which was a fallback
+   * rather than a decision — recorded as a question and answered on 18 August.
+   */
+  const out = compileVoice(REAL, { context: "foundation_session", audience: "career_returner" });
+  assert.ok(out.indexOf("Warm but never pitying") >= 0);
+  assert.ok(out.indexOf("the gap is the story") >= 0);
+  assert.equal(out.indexOf("Peer-level and strategic"), -1);
+});
+
 test("the register renders only for the population it belongs to", () => {
   const exec = compileVoice(REAL, { context: "foundation_session", audience: "executive" });
   assert.ok(exec.indexOf("Concise and high-signal") >= 0);
@@ -184,7 +205,13 @@ test("no audience renders no register rather than a default one", () => {
 });
 
 test("an unknown audience renders no register", () => {
-  const out = compileVoice(REAL, { context: "foundation_session", audience: "career_returner" });
+  /*
+   * `career_returner` was the example here until Danielle gave them a register on 18
+   * August, at which point this test failed — correctly. All six methodology
+   * populations now have one, so the example has to be something that is not a
+   * population at all.
+   */
+  const out = compileVoice(REAL, { context: "foundation_session", audience: "postgraduate" });
   assert.equal(out.indexOf("Pitched for where this person is"), -1);
   assert.ok(out.indexOf("How you sound:") >= 0);
 });
@@ -237,7 +264,7 @@ test("a resolved audience is not the same as a rendered register", () => {
 
   // And with the registers present, it reports the one that actually rendered.
   assert.equal(renderedRegister(REAL, "mid_career"), "mid_career");
-  assert.equal(renderedRegister(REAL, "career_returner"), null);
+  assert.equal(renderedRegister(REAL, "postgraduate"), null);
   assert.equal(renderedRegister(REAL, null), null);
 });
 
@@ -252,7 +279,8 @@ test("what was defined and unrendered is now empty, and still exported", () => {
 test("the source has the component counts the documents give", () => {
   // Voice Guide: Foundation, ongoing engagement, setbacks. IG-V02 adds Module 8
   // and Module 9, which Tier 1 does not have.
-  assert.equal(TRAIT_HIERARCHIES.length, 3);
+  // Foundation, ongoing engagement, setbacks — plus intake, answered 18 August.
+  assert.equal(TRAIT_HIERARCHIES.length, 4);
   // Five tone rules from the guide, twelve qualities from the directive.
   assert.equal(TONE_RULES.length, 17);
   assert.equal(LANGUAGE_PRINCIPLES.length, 5);
@@ -260,11 +288,12 @@ test("the source has the component counts the documents give", () => {
   assert.equal(ANTI_PATTERNS.length, 16);
   assert.equal(CALIBRATION_EXAMPLES.length, 9);
   assert.equal(DOORWAYS.length, 4);
-  // IG-V01's delivery_adaptation names five audiences (T5f).
-  assert.equal(REGISTERS.length, 5);
-  assert.equal(SOURCE.length, 59);
+  // IG-V01's delivery_adaptation names five audiences; the sixth — career returner —
+  // came from Danielle on 18 August, asked because the platform enrols them.
+  assert.equal(REGISTERS.length, 6);
+  assert.equal(SOURCE.length, 61);
   // The registers are filed as tone rules, the closest of the six enum values.
-  assert.equal(SOURCE.filter((c) => c.componentType === "tone_rule").length, 22);
+  assert.equal(SOURCE.filter((c) => c.componentType === "tone_rule").length, 23);
 });
 
 test("every component has a unique key, a short line and the document text", () => {
@@ -279,7 +308,10 @@ test("every component has a unique key, a short line and the document text", () 
 });
 
 test("what the documents leave unstated is recorded with a reason", () => {
-  assert.ok(UNSTATED.length >= 4);
+  // Was five. Intake's lead traits and the career-returner register were both
+  // answered on 18 August; what remains is notifications, the signal-to-doorway
+  // mapping, and speed of engagement.
+  assert.equal(UNSTATED.length, 3);
   for (const u of UNSTATED) {
     assert.ok(u.what.length > 10, u.what);
     assert.ok(u.why.length > 60, u.what);

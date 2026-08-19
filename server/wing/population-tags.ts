@@ -9,6 +9,10 @@
  * — `getSequenceCards` filtered on sequence membership and status, so every card
  * entered the detector catalogue for every student regardless of who they were.
  *
+ * The intake module of 18 August 2026 widened the methodology's vocabulary again:
+ * it splits `entrepreneur` into three funding stages. That is what the second
+ * half of this table now absorbs.
+ *
  * ── WHY THIS IS A MAPPING AND NOT A NEW COLUMN ───────────────────────────
  * An earlier read of this said `executive` and `entrepreneur` could not be
  * produced at all and a new `audience_track` field was needed. Both halves were
@@ -58,9 +62,21 @@ export type ProfessionalStatus =
 export type Pathway = "employment" | "venture" | "freelance";
 
 /**
- * The eight tags the compendium actually uses on cards, verified by parsing:
- * undergraduate 65, early_career 84, mid_career 65, mid_career_pivot 31,
- * mid_career_advancement 31, executive 83, entrepreneur 83, career_returner 26.
+ * Every tag the methodology puts on a card, verified by parsing both documents.
+ *
+ * The compendium's eight: undergraduate 65, early_career 84, mid_career 65,
+ * mid_career_pivot 31, mid_career_advancement 31, executive 83, entrepreneur 83,
+ * career_returner 26.
+ *
+ * The intake module adds three, on 19 of its 29 cards each: entrepreneur_early,
+ * entrepreneur_fundraising, entrepreneur_scaling. It does not use
+ * mid_career_pivot or mid_career_advancement at all, so the two vocabularies
+ * overlap without matching — which is precisely why this list is the union and
+ * not either document's own.
+ *
+ * A tag that is not here reaches nobody. `parse-intake.ts` reports any it finds,
+ * because `cardAppliesTo` intersects sets and an empty intersection looks exactly
+ * like a card that legitimately does not apply.
  */
 export const METHODOLOGY_POPULATIONS = [
   "undergraduate",
@@ -70,6 +86,9 @@ export const METHODOLOGY_POPULATIONS = [
   "mid_career_advancement",
   "executive",
   "entrepreneur",
+  "entrepreneur_early",
+  "entrepreneur_fundraising",
+  "entrepreneur_scaling",
   "career_returner",
 ] as const;
 
@@ -110,10 +129,37 @@ const BY_STATUS: Record<ProfessionalStatus, readonly MethodologyPopulation[]> = 
  * the question a freelancer pitching a client also has to answer. Excluding
  * freelancers would leave them with no card covering it at all. If Danielle
  * would rather freelancers took the employment path, this line is the change.
+ *
+ * ── WHY ALL THREE FUNDING STAGES ─────────────────────────────────────────
+ * The intake module tags cards by stage — early, fundraising, scaling — and the
+ * platform stores no stage. `pathway` says a student is building something; it
+ * does not say whether they are at idea stage or hiring their fiftieth person.
+ * So all three are emitted, and the card's own signal discriminates, exactly as
+ * `mid_career_or_senior` emits both mid_career and executive.
+ *
+ * The alternative was emitting only `entrepreneur`, and it fails concretely:
+ * H-029 (RT-10 Founder-Identity Blur) is tagged with the three sub-tracks and
+ * nothing else, so a founder would never be shown the one reveal template
+ * written for founders — silently, because an empty tag intersection is
+ * indistinguishable from a card that does not apply.
+ *
+ * This tightens the moment intake stores the stage, and her own Q2 asks for it:
+ * "How far along — idea stage, first customers, or scaling?" One table, one
+ * change, nothing else moves.
  */
 const BY_PATHWAY: Partial<Record<Pathway, readonly MethodologyPopulation[]>> = {
-  venture: ["entrepreneur"],
-  freelance: ["entrepreneur"],
+  venture: [
+    "entrepreneur",
+    "entrepreneur_early",
+    "entrepreneur_fundraising",
+    "entrepreneur_scaling",
+  ],
+  freelance: [
+    "entrepreneur",
+    "entrepreneur_early",
+    "entrepreneur_fundraising",
+    "entrepreneur_scaling",
+  ],
 };
 
 /**

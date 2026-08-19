@@ -128,6 +128,11 @@ export const heuristicComponentType = wing.enum("heuristic_component_type", [
  */
 export const heuristicInterventionType = wing.enum("heuristic_intervention_type", [
   "COACH", "CHALLENGE", "REDIRECT", "REFRAME", "AFFIRM", "META", "GATE",
+  // ELICIT and OBSERVE arrived with the intake module on 18 August 2026 — the
+  // questions and the reveals. Both are deliberately not COACH: intake leads with
+  // ENCOURAGING and CURIOUS and does not coach, which is the difference between
+  // this module and the 18-question assessment it replaces. Migration 0022.
+  "ELICIT", "OBSERVE",
 ]);
 
 /**
