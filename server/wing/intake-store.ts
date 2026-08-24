@@ -4,6 +4,7 @@ import { storage } from "../storage";
 import { intakeRecords } from "@shared/wing-schema";
 import * as store from "./session-store";
 import { studentIdForWingUser } from "./bootstrap";
+import type { BaselineRecord } from "./baselines";
 
 /**
  * Intake, backed by the Wing schema.
@@ -48,9 +49,39 @@ type BrandingIntakePayload = {
   marketingOptIn?: boolean;
 };
 
+/**
+ * One answered baseline, with the wave it belongs to.
+ *
+ * ── WHY THESE LIVE IN JSONB AND NOT IN A TABLE YET ───────────────────────
+ * B1 and B2 at intake against B1 and B2 at ninety days is the institutional
+ * reporting number, so these rows have to exist from the first user — Danielle's
+ * "start capturing now, retroactive capture is impossible" applies to them as much as
+ * to the self-descriptions. What they do not yet have is a consumer: the reporting
+ * surface that reads them is not built, and neither is the scheduler that asks for
+ * T1, T2 and T3.
+ *
+ * Writing them here means the data is complete and lossless from day one — score,
+ * band, category, the user's exact words, declines, and the layer tag — and the
+ * migration into a real table when the reporting work lands is a backfill from jsonb
+ * rather than a hole. The reverse order, a table with no writer, is what leaves the
+ * ninety-day delta with nothing to subtract from.
+ *
+ * Entries are appended, never replaced. A reader takes the latest per
+ * (question, wave) — the history of a corrected answer is data, not noise.
+ */
+export type BaselineEntry = BaselineRecord & {
+  /** Beat key, so a renamed question can still be traced. */
+  beat: string;
+  /** T0 is intake. T1, T2 and T3 are the re-measurement waves. */
+  wave: "T0" | "T1" | "T2" | "T3";
+  /** ISO. Set here rather than by the caller so every entry is stamped the same way. */
+  at: string;
+};
+
 type StructuredResponses = {
   questionnaire?: QuestionnairePayload;
   brandingIntake?: BrandingIntakePayload;
+  baselines?: BaselineEntry[];
 };
 
 /**
@@ -249,6 +280,41 @@ export async function markEarlyInsightDelivered(userId: number) {
     .update(intakeRecords)
     .set({ earlyInsightDeliveredAt: new Date(), updatedAt: new Date() })
     .where(eq(intakeRecords.id, record.id));
+}
+
+/* ── Baselines (IG-U014 Layer 1) ───────────────────────────────────────── */
+
+/**
+ * Appends one baseline answer.
+ *
+ * Layer 1 by construction: `BaselineRecord.layer` is the literal 1 and nothing in this
+ * path can change it. The gate is explicit that these are "valid for institutional
+ * reporting… not valid as coaching inputs", so they are deliberately stored apart from
+ * `brandingIntake.responses`, which is what the session prompts read. The score also
+ * lands in `responses` under its `baseline_` field — that copy is what satisfies the
+ * beat and lets the conversation move on; this one is the record.
+ */
+export async function appendBaseline(
+  userId: number,
+  record: BaselineRecord,
+  opts: { beat: string; wave?: BaselineEntry["wave"] },
+) {
+  const entry: BaselineEntry = {
+    ...record,
+    beat: opts.beat,
+    wave: opts.wave ?? "T0",
+    at: new Date().toISOString(),
+  };
+  await patchStructured(userId, (current) => ({
+    ...current,
+    baselines: (current.baselines ?? []).concat([entry]),
+  }));
+}
+
+/** Every baseline recorded for a student, oldest first. */
+export async function getBaselines(userId: number): Promise<BaselineEntry[]> {
+  const row = await readRecord(userId);
+  return (row?.structuredResponses as StructuredResponses | undefined)?.baselines ?? [];
 }
 
 /** employment · venture · freelance — the founder/freelancer branch (A2). */

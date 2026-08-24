@@ -12,6 +12,7 @@ import {
   isDeliveryStyle,
   isSatisfied,
   nextBeat,
+  nextBeatAfter,
   phaseOf,
   progress,
   questionOf,
@@ -182,6 +183,31 @@ test("nextBeat returns the first unsatisfied beat", () => {
     })!.key,
     "where_going",
   );
+});
+
+test("nextBeatAfter looks past the beat that was just asked", () => {
+  /*
+   * The one-call turn hands the model a beat chosen before this message's fields are
+   * extracted, so plain `nextBeat` returns the question the user has just answered and
+   * the prompt sends the model to ask it again. This is the fix, and the assertion
+   * below is the bug: same state, two answers.
+   */
+  assert.equal(nextBeat(null, {})!.key, "why_here");
+  assert.equal(nextBeatAfter(null, {}, "why_here")!.key, "situation");
+
+  // Unknown or absent last-asked falls back to the plain rule rather than guessing.
+  assert.equal(nextBeatAfter(null, {}, null)!.key, "why_here");
+  assert.equal(nextBeatAfter(null, {}, "a_retired_beat")!.key, "why_here");
+
+  /*
+   * A deflected answer is not lost. Nothing was captured, so once the sequence runs
+   * past it the fallback brings it back rather than leaving a hole.
+   */
+  const captured: Record<string, unknown> = {};
+  for (const b of applicableBeats(null)) {
+    if (b.key !== "why_here") captured[b.captures[0]] = "x";
+  }
+  assert.equal(nextBeatAfter(null, captured, "positioning_clarity")!.key, "why_here");
 });
 
 test("nextBeat is null once everything applicable is satisfied", () => {

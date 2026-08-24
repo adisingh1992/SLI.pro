@@ -20,13 +20,13 @@ import {
   insightWindowClosed,
   isComplete,
   isDeliveryStyle,
-  nextBeat,
   progress,
   satisfiedKeys,
   type Beat,
   type DeliveryStyle,
   type PopulationTag,
 } from "./intake-beats";
+import { askedFor, describePlan, isCodeOwnedField, planTurn } from "./baseline-turn";
 
 /**
  * The conversational intake (Feature List A1).
@@ -161,13 +161,24 @@ NEVER
 - Never ask what their personality type is. You infer it from how they write.`;
 
 function renderBeat(beat: Beat): string {
+  /*
+   * The scale note exists because the model's instinct is to be accommodating: offered
+   * a rating question it will happily accept "somewhere in the middle" and move on, and
+   * the code then has nothing to record. It is allowed to take the answer in words —
+   * `readScale` reads "about a two" — but it has to ask for a number.
+   */
+  const scale =
+    beat.answer === "scale_1_5"
+      ? `\n\nThis one is a 1-to-5 rating. Ask for their number. If they answer in words that carry a number ("about a two") that is fine — do not correct them, and do not talk them through the scale a second time.`
+      : "";
+
   return `WHAT YOU ARE TRYING TO LEARN NEXT
 ${beat.intent}
 
 Why it matters, if they ask: ${beat.why}
 
 A natural way in — rephrase it to fit what they just said, do not recite it:
-"${beat.opening}"`;
+"${beat.opening}"${scale}`;
 }
 
 function renderStyle(style: DeliveryStyle | null): string {
@@ -185,7 +196,14 @@ to make it easier to hear. If their positioning is weak you still say so.`;
 }
 
 function renderCaptured(captured: Record<string, unknown>): string {
-  const entries = Object.entries(captured).filter(([, v]) => {
+  const entries = Object.entries(captured).filter(([k, v]) => {
+    /*
+     * Underscore-prefixed keys are Wing's own bookkeeping — `_delivery_style`, and now
+     * `_asked` — and they were being printed in ALREADY KNOWN as though the user had
+     * volunteered them. `_asked` is an object, so it would have arrived in the prompt
+     * as "_asked: [object Object]", which is the kind of thing a model quotes back.
+     */
+    if (k.charAt(0) === "_") return false;
     if (v === null || v === undefined) return false;
     if (typeof v === "string") return v.trim() !== "";
     if (Array.isArray(v)) return v.length > 0;
@@ -261,6 +279,17 @@ function buildSystemPrompt(params: {
   voiceSection: string | null;
   /** Null until a published sequence carries gates scoped to intake. */
   gateSection: string | null;
+  /**
+   * The Phase 3.5 instruction for this turn — a re-ask, a follow-up, or a skip
+   * acknowledgement. Null on every other turn.
+   */
+  baselineGuidance: string | null;
+  /**
+   * True when the baseline guidance IS this turn's question — a follow-up. The next
+   * beat must not also be rendered, or the model asks two questions in one reply,
+   * which the voice guide forbids and which loses the follow-up's answer.
+   */
+  suppressBeat: boolean;
 }): string {
   /*
    * ── WHY THESE THREE COME FIRST, AND WHY THEY ARE HERE AT ALL ───────────
@@ -292,6 +321,8 @@ function buildSystemPrompt(params: {
 
   if (params.withInsight) parts.push(INSIGHT_INSTRUCTION);
 
+  if (params.baselineGuidance) parts.push(params.baselineGuidance);
+
   if (params.wrapUp) {
     parts.push(
       `── THIS TURN: CLOSING ───────────────────────────────────────────────
@@ -299,7 +330,7 @@ You have what you need. Say so briefly, tell them what happens next — a short
 set of optional questions, then their first real session — and stop asking
 things. Do not recap everything they told you.`,
     );
-  } else if (params.beat) {
+  } else if (params.beat && !params.suppressBeat) {
     parts.push(renderBeat(params.beat));
   }
 
@@ -326,6 +357,14 @@ export function sanitiseExtracted(raw: unknown): Record<string, unknown> {
 
   for (const [key, value] of Object.entries(raw as Record<string, unknown>)) {
     if (!KNOWN_FIELDS.has(key)) continue;
+    /*
+     * The baseline fields are read from the user's own words by `readScale` and
+     * `classifyBarrier`, never from the model. It sees the 1-to-5 scale in the beat
+     * opening and will offer `baseline_positioning_clarity: "quite low"` — a string,
+     * in the field that carries the headline institutional metric. Dropped here so
+     * there is exactly one thing that can write them.
+     */
+    if (isCodeOwnedField(key)) continue;
     if (value === null || value === undefined) continue;
 
     const allowed = ENUM_FIELDS[key];
@@ -388,6 +427,9 @@ export async function begin(userId: number): Promise<TurnResult | null> {
 
   await recordAiTurn(state.sessionId, opening, { channel: "in_app" });
 
+  // The opening asks Q1, so the first answer has something to be an answer to.
+  await intakeStore.mergeIntakeResponses(userId, { _asked: askedFor(BEATS[0].key) });
+
   return { reply: opening, state: await getState(userId) as IntakeState, insightDelivered: false };
 }
 
@@ -415,16 +457,44 @@ export async function respond(userId: number, message: string): Promise<TurnResu
   // what the spec means by "question 8-10".
   const exchanges = Math.ceil((before.messages.length + 1) / 2);
 
+  /*
+   * ── PHASE 3.5: WHAT DID WE ASK, AND IS THIS AN ANSWER TO IT? ───────────
+   * The baselines are the one part of the intake the code reads rather than the model.
+   * A 1-to-5 rating is the number that goes to Berkeley at ninety days, and a model
+   * asked to extract it will round, interpret and fill in — so `readScale` reads the
+   * user's own words and `baseline-turn.ts` decides what that means.
+   *
+   * This runs before the prompt is built, because the fields it produces change what
+   * Wing should ask next: with B1's score recorded, the next question is B2. Persisted
+   * before the model call for the same reason the self-description capture is — a model
+   * failure on the next line must not cost an answer the user has already given.
+   */
+  const turn = planTurn({
+    population: before.population,
+    captured: before.captured,
+    text,
+  });
+
+  if (Object.keys(turn.fields).length) {
+    await intakeStore.mergeIntakeResponses(userId, turn.fields);
+  }
+  if (turn.record) {
+    await intakeStore.appendBaseline(userId, turn.record.entry, {
+      beat: turn.record.beat,
+      wave: "T0",
+    });
+  }
+  if (turn.baseline.kind !== "none") {
+    log(`[intake] baseline — ${describePlan(turn.baseline)}`, "intake");
+  }
+
   const wantsInsight =
     insightReady({
       exchanges,
       population: before.population,
-      captured: before.captured,
+      captured: turn.captured,
       alreadyDelivered: before.insightDelivered,
     }) && !insightWindowClosed(exchanges);
-
-  const beat = nextBeat(before.population, before.captured);
-  const wrapUp = !beat && isComplete(before.population, before.captured);
 
   const style = readStyle(before.captured);
 
@@ -468,15 +538,17 @@ export async function respond(userId: number, message: string): Promise<TurnResu
   );
 
   const system = buildSystemPrompt({
-    beat,
-    captured: before.captured,
+    beat: turn.beat,
+    captured: turn.captured,
     style,
     withInsight: wantsInsight,
     firstName: who?.firstName ?? "there",
-    wrapUp,
+    wrapUp: turn.wrapUp,
     safetySection,
     voiceSection: voiceContext.section,
     gateSection: gateContext?.section ?? null,
+    baselineGuidance: turn.guidance,
+    suppressBeat: turn.suppressBeat,
   });
 
   let parsed: {
@@ -555,12 +627,11 @@ export async function respond(userId: number, message: string): Promise<TurnResu
    * Before the reply is recorded, so a model failure on the next line cannot cost a
    * row that can never be recreated.
    *
-   * `beat` is the beat whose answer this message contains: it is computed from the
-   * state as it stood before this turn's extraction, so the field it captures is by
-   * definition still unfilled.
+   * `answeredBeat` is the beat whose answer this message contains — the question Wing
+   * actually put to them last turn, not the one it is about to ask.
    */
   const capture = captureForTurn({
-    askedBeat: beat?.key ?? null,
+    askedBeat: turn.answeredBeat,
     extractedFields: Object.keys(extracted),
     afterInsight: before.insightDelivered,
     reactionAlreadyStored: before.insightDelivered
@@ -587,6 +658,18 @@ export async function respond(userId: number, message: string): Promise<TurnResu
   if (styleFromModel && styleFromModel !== style) {
     await intakeStore.mergeIntakeResponses(userId, { _delivery_style: styleFromModel });
   }
+
+  /*
+   * What this reply just asked for, so the next turn can read its own answer correctly.
+   *
+   * Written before the reply is recorded: if this write failed after the transcript
+   * already carried the question, the next turn would parse a follow-up answer as a
+   * baseline score — the exact failure `_asked` exists to prevent. A recorded reply with
+   * missing bookkeeping is recoverable; the reverse is silent bad data.
+   *
+   * Null on the closing turn, which asks for nothing.
+   */
+  await intakeStore.mergeIntakeResponses(userId, { _asked: turn.nextAsked });
 
   await recordAiTurn(before.sessionId, reply, { channel: "in_app" });
 

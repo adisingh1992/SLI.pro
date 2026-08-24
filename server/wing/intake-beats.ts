@@ -364,6 +364,41 @@ export function nextBeat(
   return applicableBeats(population).find((b) => !isSatisfied(b, captured)) ?? null;
 }
 
+/**
+ * The next beat to ask, given the one Wing asked last turn.
+ *
+ * ── WHY `nextBeat` ALONE IS OFF BY ONE IN A ONE-CALL TURN ────────────────
+ * The conversation makes a single model call per turn: it hands over the user's latest
+ * message and gets back both the extracted fields and the next thing to say. Which
+ * means the beat it puts in the prompt is chosen *before* this message's fields have
+ * been extracted — so `nextBeat` returns the beat the user has just this moment
+ * answered, and the prompt tells the model to go and ask it.
+ *
+ * `lastAsked` closes the gap without a second call. Wing knows what it asked, so it
+ * can look past it. If the answer did not actually land, that beat is still unsatisfied
+ * and comes back around on the following turn — one question later rather than
+ * immediately, which reads better anyway.
+ *
+ * Falls back to `nextBeat` when `lastAsked` is unknown (an intake that predates the
+ * field, or the first turn) or when everything after it is already satisfied.
+ */
+export function nextBeatAfter(
+  population: PopulationTag | null,
+  captured: Record<string, unknown>,
+  lastAsked: string | null,
+): Beat | null {
+  if (lastAsked) {
+    const list = applicableBeats(population);
+    const from = list.findIndex((b) => b.key === lastAsked);
+    if (from >= 0) {
+      for (let i = from + 1; i < list.length; i++) {
+        if (!isSatisfied(list[i], captured)) return list[i];
+      }
+    }
+  }
+  return nextBeat(population, captured);
+}
+
 export function satisfiedKeys(
   population: PopulationTag | null,
   captured: Record<string, unknown>,
