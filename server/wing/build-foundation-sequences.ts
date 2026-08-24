@@ -53,12 +53,12 @@ import {
  *
  * ── WHAT IS IN IT SINCE 18 AUGUST ────────────────────────────────────────
  * Three documents, not one. The compendium's 53 Tier 1 cards, the intake module's
- * 42, and 9 of the research-derived gates — the six universal ones plus H-111,
- * H-210 and H-315. 104 entries.
+ * 41, and 9 of the research-derived gates — the six universal ones plus H-111,
+ * H-210 and H-315. 103 entries.
  *
  * That is more than the activation route's hard limit of 40 would allow if the
  * limit were counted per sequence, and less than it if counted per turn, which is
- * the measurement that describes what a student experiences: 23 coaching cards in
+ * the measurement that describes what a student experiences: 22 coaching cards in
  * intake, 7 or 8 in each Foundation session. This script refuses to build a
  * sequence whose worst turn exceeds the limit, so a set that cannot be activated
  * is never written. See sequence-limits.ts.
@@ -238,11 +238,11 @@ async function main() {
     )
     .sort(sequenceOrder);
 
-  const expected = 53 + 42 + 6 + 3;
-  if (compendiumCards.length !== 53 || intake.cards.length !== 29 || intake.gates.length !== 13) {
+  const expected = 53 + 41 + 6 + 3;
+  if (compendiumCards.length !== 53 || intake.cards.length !== 28 || intake.gates.length !== 13) {
     throw new Error(
       `Source counts moved: ${compendiumCards.length} compendium Tier 1 (expected 53), ` +
-        `${intake.cards.length} intake cards (29), ${intake.gates.length} intake gates (13). ` +
+        `${intake.cards.length} intake cards (28), ${intake.gates.length} intake gates (13). ` +
         "Re-run wing:check-compendium and the parser suites before building.",
     );
   }

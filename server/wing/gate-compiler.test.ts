@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 import {
   DRAFT_PATH_GATES,
   GATE_PRECONDITIONS,
+  RESTATES,
   cardLabel,
   redactCardCodes,
   redactedFrom,
@@ -275,6 +276,174 @@ test("every rule in the real compiled section is unattributed", () => {
       `${g.cardCode} appears in the compiled prompt`,
     );
   }
+});
+
+/* ── The published set, across all three documents ───────────────────────── */
+
+/** The design ceiling for the gate section, per turn. Unchanged since it was set. */
+const GATE_SECTION_CEILING = 3200;
+
+/**
+ * What each session's gate section measures today, worst case.
+ *
+ * A ratchet, exactly like TYPECHECK_BASELINE: the test fails when a figure grows,
+ * and when one shrinks the baseline comes down with the change that shrank it. Set
+ * on 18 August, when the intake module and six new universal gates took every
+ * session past the ceiling.
+ */
+const GATE_SECTION_BASELINE: Readonly<Record<string, number>> = {
+  // 4248 under intake v1.1. v1.7's copy corrections moved it by a single token,
+  // which is the baseline moving with the change that moved it — the case a ratchet
+  // is for. Recorded in WING_DECISIONS.md as the contract here requires.
+  intake: 4249,
+  foundation_1: 3481,
+  foundation_2: 3541,
+  foundation_3: 3460,
+};
+
+function publishedGates(): GateCard[] {
+  const intake = parseIntake(readFileSync(INTAKE_SOURCE, "utf8"));
+  const research = parseResearchGates(readFileSync(RESEARCH_GATES_SOURCE, "utf8"));
+  const scopeOf = (m: string): string | null =>
+    ["intake", "foundation_1", "foundation_2", "foundation_3"].indexOf(m) >= 0 ? m : null;
+
+  const out: GateCard[] = tier1Gates.slice();
+  for (const c of intake.cards) {
+    if (c.cardKind !== "integrity_gate") continue;
+    out.push({
+      cardCode: c.cardCode,
+      name: c.name,
+      coachingMove: c.components.coaching_move ?? null,
+      failurePath: c.components.failure_path ?? null,
+      appliesToSession: "intake",
+    });
+  }
+  for (const g of intake.gates) {
+    out.push({
+      cardCode: g.cardCode,
+      name: `${g.cardCode} ${g.name}`,
+      coachingMove: g.rule,
+      failurePath: null,
+      appliesToSession: "intake",
+    });
+  }
+  for (const g of research.universalGates) {
+    out.push({
+      cardCode: g.cardCode,
+      name: `${g.cardCode} ${g.name}`,
+      coachingMove: g.rule,
+      failurePath: null,
+      appliesToSession: null,
+    });
+  }
+  for (const c of research.moduleGates) {
+    if (!isTier1(c) || c.cardKind !== "integrity_gate") continue;
+    out.push({
+      cardCode: c.cardCode,
+      name: c.name,
+      coachingMove: c.components.coaching_move ?? null,
+      failurePath: c.components.failure_path ?? null,
+      appliesToSession: scopeOf(c.module),
+    });
+  }
+  return out;
+}
+
+const published = publishedGates();
+
+test("the four intake restatements match what her titles say", () => {
+  /*
+   * RESTATES is a constant because the runtime builds gates from database rows,
+   * which carry no such field. This is the check that it says what she wrote.
+   */
+  const intake = parseIntake(readFileSync(INTAKE_SOURCE, "utf8"));
+  const fromDocument: Record<string, string> = {};
+  for (const g of intake.gates) if (g.restates) fromDocument[g.cardCode] = g.restates;
+  assert.deepEqual(fromDocument, RESTATES as Record<string, string>);
+});
+
+test("a universal gate is dropped where its session-specific wording applies", () => {
+  /*
+   * Both wordings in one prompt states the same rule twice in different words, and
+   * costs 403 tokens at intake to do it. The concrete wording wins where it exists;
+   * in a Foundation turn the restatement is not visible and the universal gate
+   * renders normally.
+   */
+  const atIntake = published.filter(
+    (g) => g.appliesToSession === null || g.appliesToSession === "intake",
+  );
+  const rendered = turnPathGates(atIntake).map((g) => g.cardCode);
+  for (const restatement of Object.keys(RESTATES)) {
+    assert.ok(rendered.indexOf(restatement) >= 0, `${restatement} should render at intake`);
+    assert.equal(
+      rendered.indexOf(RESTATES[restatement]),
+      -1,
+      `${RESTATES[restatement]} should be dropped at intake`,
+    );
+  }
+
+  const atFoundation1 = published.filter(
+    (g) => g.appliesToSession === null || g.appliesToSession === "foundation_1",
+  );
+  const f1 = turnPathGates(atFoundation1).map((g) => g.cardCode);
+  for (const key of Object.keys(RESTATES)) {
+    assert.ok(f1.indexOf(RESTATES[key]) >= 0, `${RESTATES[key]} should render in Foundation 1`);
+  }
+});
+
+test("the published gate section is over the ceiling, and no worse than the baseline", () => {
+  /*
+   * The number that would have been discovered at the first real turn after
+   * publishing. The compendium's own set is under 3,200 — the test above still
+   * asserts that — and the 18 August documents add six universal gates and 19
+   * intake gates on top, which takes every session past it.
+   *
+   * Recorded as a ratchet rather than a raised ceiling, because raising it would be
+   * answering a methodology question with a constant. What the numbers say is that
+   * eight rules are 41% of the intake section and the longest run to 250 tokens
+   * each — IG-V02, H-004, IG-U013, H-019 — and a rule a model must hold for a whole
+   * turn wants to be one or two sentences. Shortening those is hers to do: a
+   * compiler that truncated her words would be editing the methodology somewhere
+   * nobody would ever see the edit.
+   *
+   * The quiet-turn figures are the ordinary case and are asserted separately. The
+   * two conditional gates drop, worth ~390 tokens, which brings all three
+   * Foundation sessions back under the ceiling. Intake stays over it either way.
+   */
+  assert.equal(GATE_SECTION_CEILING, 3200);
+
+  for (const session of Object.keys(GATE_SECTION_BASELINE)) {
+    const set = published.filter(
+      (g) => g.appliesToSession === null || g.appliesToSession === session,
+    );
+    const worst = Math.round(compileGates(set).length / 4);
+    assert.ok(worst > 0, `${session} compiled to nothing`);
+    assert.ok(
+      worst <= GATE_SECTION_BASELINE[session],
+      `${session} grew to ~${worst} tokens, above its baseline of ` +
+        `${GATE_SECTION_BASELINE[session]}. Shorten a rule or narrow a scope — do not ` +
+        "raise the baseline without a decision recorded in WING_DECISIONS.md.",
+    );
+  }
+
+  const quiet = { hasUploadedDocument: false, openTasks: 0 };
+  for (const session of ["foundation_1", "foundation_2", "foundation_3"]) {
+    const set = published.filter(
+      (g) => g.appliesToSession === null || g.appliesToSession === session,
+    );
+    const tokens = Math.round(compileGates(set, { conditions: quiet }).length / 4);
+    assert.ok(
+      tokens < GATE_SECTION_CEILING,
+      `${session} is ~${tokens} tokens even on a quiet turn, over the ceiling`,
+    );
+  }
+
+  const intakeSet = published.filter(
+    (g) => g.appliesToSession === null || g.appliesToSession === "intake",
+  );
+  const intakeQuiet = Math.round(compileGates(intakeSet, { conditions: quiet }).length / 4);
+  assert.ok(intakeQuiet > GATE_SECTION_CEILING, "intake is expected to be over the ceiling");
+  assert.ok(intakeQuiet <= 3900, `intake grew to ~${intakeQuiet} on a quiet turn`);
 });
 
 test("cardLabel keeps the human part of a name and drops the identifiers", () => {

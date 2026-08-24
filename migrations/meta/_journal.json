@@ -162,6 +162,20 @@
       "when": 1787026800000,
       "tag": "0022_intake_intervention_types",
       "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "7",
+      "when": 1787113200000,
+      "tag": "0023_self_descriptions",
+      "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "7",
+      "when": 1787199600000,
+      "tag": "0024_self_description_equivalence",
+      "breakpoints": true
     }
   ]
 }

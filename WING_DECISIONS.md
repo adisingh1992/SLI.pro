@@ -6,8 +6,8 @@ answer three months later. Where this document and any other disagree about *wha
 decided*, this one is the record; where it disagrees about *methodology content*, the source
 named in each entry wins.
 
-**Last updated:** 18 August 2026, evening — after her second delivery of the day: the
-intake module (42 cards) and the research-derived gates.
+**Last updated:** 19 August 2026 — after intake v1.7 superseded v1.1, plus the
+self-description capture requirement and the data-migration addendum.
 
 ---
 
@@ -16,12 +16,15 @@ intake module (42 cards) and the research-derived gates.
 Established by Aditya, 18 August, and it matters because these three sources now disagree
 with each other in specific places:
 
-1. **Her documents of 18 August, afternoon** — `Wing_Research_Derived_Gates` and
+1. **Her documents of 19 August** — `Wing_Intake_Heuristic_Cards_v1.7` (supersedes
+   v1.1 outright: "build from v1.7, discard the v1.1 I sent on the 18th"), the change
+   note, `Wing_SelfDescription_Capture_v2` and `Wing_Intake_Data_Migration_v2`.
+2. **Her documents of 18 August, afternoon** — `Wing_Research_Derived_Gates` and
    `Wing_Intake_Heuristic_Cards_v1.1`, plus the email announcing them.
-2. **Her email of 18 August, morning** — the answers to the questions of the 17th.
-3. **Master Module Compendium v3** — the methodology content, except where the above
+3. **Her email of 18 August, morning** — the answers to the questions of the 17th.
+4. **Master Module Compendium v3** — the methodology content, except where the above
    override it.
-4. **Earlier documents**, including the Feature List.
+5. **Earlier documents**, including the Feature List.
 
 Order 1 over 2 is not a formality. It resolved a live collision the same day — see §2b.
 
@@ -90,6 +93,105 @@ Four phases, pending her full design document. Recorded because the current inta
    observation that makes someone feel seen.
 4. **Post-reveal.** *Now* ask for LinkedIn, resume, assessments. The user is invested because
    they have already had value.
+
+---
+
+## 2a. Intake v1.7 supersedes v1.1 (19 August)
+
+**It needed no parser change.** Same bare code lines, same seven-component tables,
+same `IG-INT` prefix, H-019.5 still decimal. 28 cards + 13 gates = 41, nothing
+incomplete, no collisions, no misfiled modules, every population tag resolvable.
+
+**What changed, verified against the document rather than the change note:** RT-14
+(H-033) retired — the only code removed, nothing added. RT-09 (H-028)'s paraphrase
+placeholder gone, COMPETENCE now demanding `[Q5/Q6 exact words]`. RT-06 (H-025) now
+states that collective attribution is **not** minimizing per IG-S09 and must not fire
+the template. The two stale `IG-I0x` references are gone. Population claims 11 → 1.
+Seventeen of the 28 card bodies changed; no gate rule changed at all.
+
+**Two of the stale seeded bodies had functional consequences,** which is why the
+update is not housekeeping. The H-025 we seeded still treats "people tell me I'm good
+at" as minimizing — exactly the culturally normative modesty IG-S09 forbids
+penalising. The H-028 we seeded still carries the paraphrase placeholder, which
+IG-INT10 and IG-INT12 reject at runtime, so career returners would have got silence
+from a card that looks functional. Nothing was live: all 41 are `candidate` and in no
+sequence. Lucky timing, not a safe design.
+
+**A revision needs its own path, because the seeder deliberately refuses to
+overwrite.** `wing:update-intake` parses BOTH versions and replaces a component only
+when what is stored is byte-identical to what v1.1 produced — proof nobody has edited
+it. Anything else is reported and left alone. Component versions are appended, not
+mutated, so an application logged last week still points at the wording that was
+actually used. H-033 is retired by status, never deleted. The run is 25 content
+components across 17 cards, 41 provenance blocks re-cited, one retirement — and the
+two are reported separately, because a reviewer who cannot tell "her wording changed"
+from "the citation now points at v1.7" will read neither.
+
+**Her email adds one hard runtime requirement:** *"Wherever a template says 'exact
+words' — that means the user's literal typed input goes in the slot. Not a summary."*
+That makes the self-description capture a prerequisite for the reveals, not only the
+analytics feature it is described as: a reveal cannot quote what was never stored
+verbatim.
+
+**Three seams she is coordinating with Sneha, and two of them do not exist here at
+all.** Chunked message delivery (H-007, and H-010 asks for three messages) — every
+surface sends exactly one assistant turn per user turn; the only "chunk" in the
+codebase is SSE token streaming, which is one message arriving progressively. The
+reveal pause at Q8 — no pacing, delay or timing primitive anywhere in the
+conversation path. Conditional baseline expansion (3–6 questions) — needs v3.3.
+
+### Self-description capture — built
+
+**Authorship unexplained, and worth tracing.** The schema table, the journal entry, the
+capture module, its store, its test, the wiring into the intake conversation and the
+first draft of this section were written between 14:50 and 15:04 on 19 August, none of
+it in the session that is otherwise building this. It reaches the same conclusions that
+session reached independently and follows the same conventions, so most likely another
+Claude session — unverified. Reviewed line by line before being built on, and the review
+found one real defect (the unguarded `CREATE TYPE`) and one gap (no `equivalence`).
+Nothing here is committed yet; check with the team before it is.
+
+`wing.self_descriptions`, migration 0023. Her five fields, one row per utterance,
+append-only: a profile field holds the latest answer and overwrites, and the feature
+that reads this needs "what did they say in week one, and has it moved". Proven
+against Postgres 16 — re-runnable across three consecutive applications after the
+`CREATE TYPE` was guarded (it was the one statement in the file that could not
+repeat, found by running it rather than reading it), the enum refuses anything
+outside her three values, a second answer to the same question appends rather than
+replaces, and a NULL `source_question` stores.
+
+**Four of her six capture points can be honestly claimed today, not six.** Q2 maps to
+the `situation` beat and Q9's reaction to the first message after the early insight;
+Q6 and Q7 map closely onto `proud_of` and `self_perception`. Two do not: **Q5** is the
+party question — what they *say* they do — while `what_you_do` asks what they
+actually do day to day, and her Q5's entire value is the gap between the two, so
+mapping one onto the other would destroy the measurement it exists for. **Q5.5** has
+no beat at all. For those, `source_question` is NULL and `asked_as` records what was
+actually asked. A row claiming to be Q5 while answering a different question would not
+fail loudly — it would quietly make the convergence comparison meaningless, on data
+that cannot be recaptured.
+
+**A near-miss is stored as one.** `source_question` carries her identifier, `asked_as`
+records what was actually asked, and **`equivalence`** says which of the two it is:
+`exact` for Q2 and the reveal reaction, `approximate` for Q6 and Q7. Without it a row
+reading "Q6" asks a reader to trust a distinction they cannot see, and the feature that
+consumes this compares a user's answers to the *same* question over time — it needs to
+exclude the near-misses, or at least know it is including them. Both columns are NULL
+together, enforced by a CHECK, because an equivalence is a property of a pairing and
+cannot exist without one. Once her question set is live every row is `exact` and the
+column stops mattering.
+
+**A capture needs evidence, not just a message.** "What is this?" is a turn too.
+A row is written only when the turn's extraction actually filled a field, which is
+the evidence that the user said something about themselves. Provenance follows her
+definitions exactly: filling the beat we asked is `elicited`, filling some other
+beat's field is `spontaneous`, and `coached` is unreachable from intake — asserted,
+because intake being the uncoached reference point is the whole reason the table
+exists.
+
+Contract check 22 pins the rule that the table holds the user's words and nobody
+else's: exactly one caller, passing `text` and never `reply`. Both are strings, so no
+type can express it, and swapping them is a one-word change that looks like a tidy-up.
 
 ---
 
@@ -287,6 +389,24 @@ approximate.**
   second mid-cycle override, same cards live under the new numbers.
 - **A register is never guessed.** An unresolved population renders no register rather than a
   default one.
+- **Both wordings of one rule never compile together.** IG-INT10 to IG-INT13 are her
+  intake wordings of IG-U006, IG-U007, IG-U009 and IG-U010, and say so in their own
+  titles. Where a session-specific wording applies it wins and the universal twin is
+  dropped for that turn — the concrete rule is the better one, and stating the same rule
+  twice in different words is how a model learns it is negotiable. Worth 403 tokens at
+  intake. In a Foundation turn the restatement is not visible and the universal gate
+  renders normally. The mapping is a constant because the runtime builds gates from
+  database rows, which carry no such field; a test compares it against her titles.
+- **The gate-section ceiling is a ratchet now, not a raised number.** Publishing the
+  104-card sequence takes every session past the 3,200-token design ceiling: intake
+  4,248 worst case and 3,862 on a quiet turn, the three Foundation sessions 3,460–3,541
+  worst case but 3,074–3,154 quiet, which is under. The ceiling stays at 3,200 and the
+  measured figures are baselined, so the test fails when one grows. Raising the ceiling
+  would be answering a methodology question with a constant: eight rules are 41% of the
+  intake section and the longest run to 250 tokens each — IG-V02, H-004, IG-U013, H-019
+  — and a rule a model must hold for a whole turn wants to be one or two sentences.
+  Shortening them is hers; a compiler that truncated her words would be editing the
+  methodology somewhere nobody would ever see the edit.
 - **No card code and no card name reaches a prompt, on any path.** The gate path had
   redacted citations since it was written. The coaching path had not, and it was leaking
   two things: every one of the 46 Tier 1 coaching card names begins with its code
@@ -395,5 +515,59 @@ recorded, and 0022 is the only thing `db:migrate` would apply. Proven
 against Postgres 16 rather than assumed: the insert is **rejected** before the
 migration and accepted after, the statements are re-runnable, `H-019.5` stores as a
 row distinct from `H-019`, and the unique constraint still catches a real duplicate.
+
+**The self-description capture needs 0024, and 0023 cannot be made to do it.** The
+0023 that ran on stage is not the 0023 in the folder: an earlier version created the
+table, the file was edited afterwards to add the `equivalence` enum and column, and the
+edit never ran. 0023 was already recorded as applied, so `db:migrate` reports `done`
+without opening it. **An applied migration is immutable in effect — the only thing that
+changes a database is the next migration.** 0023 is also untracked, so git cannot say
+what the applied version contained, and nothing that file declares can be assumed
+present on stage.
+
+That second point was learned twice, both times by a failure. The first attempt at the
+retrofit assumed the table had the column; it did not, and the read failed with
+`column "equivalence" does not exist`. The second assumed the enum existed because the
+0023 on disk creates it; it did not, and the migrator failed with `type
+"wing.self_description_equivalence" does not exist`. Each verification had been real —
+and had been run against a state reconstructed from the file rather than from the
+database.
+
+0024 therefore declares everything rather than guessing which part is missing: the
+enum, the column, the backfill, the CHECK, both foreign keys and both indexes, each one
+guarded so it is a no-op where it already landed. Verified against Postgres 16 from
+three starting states — the stage state (table in the earlier shape, no enum, rows
+present), a fresh install, and a half-applied state with the enum but no column. All
+three converge to the same shape: enum present, column present, four constraints, three
+indexes, identical to a fresh 0023. Three passes over the stage state change nothing
+after the first. The backfill sends `Q2` and `reveal_reaction` to `exact`, `Q6` and `Q7`
+to `approximate`, and leaves a row filed under none of her questions NULL; five rows in,
+five rows out. Both halves of the CHECK refuse — an equivalence with no question, and a
+question with no equivalence.
+
+**`wing:check-migrations` was wrong about all of this, and it is the check that
+existed to prevent it.** It decided "pending" by asking whether a file's sha256 was
+recorded. Drizzle does not: it reads the single newest `created_at` in
+`drizzle.__drizzle_migrations` and applies every journal entry whose `when` exceeds it —
+`Number(lastDbMigration.created_at) < migration.folderMillis`, one number, compared with
+`<`. The hash is stored and never consulted. So editing 0023 changed its hash, the
+script called it pending, and it offered to baseline it — which would have inserted a
+second row for a migration that had already run, under the hash of a version that never
+did. It also read 0023 as "5 unguarded CREATEs" because it compared five CREATEs against
+three `IF NOT EXISTS` without crediting the two `duplicate_object` blocks, an arithmetic
+bug the contract suite had already been fixed for.
+
+Both rules now live in `server/wing/migration-rules.ts` as pure functions with
+`migration-rules.test.ts` on them — 24 suites — because a check that is wrong in the
+direction of "you have not run this yet" is worse than no check. The script gained a
+section for what actually happened here: **recorded, but the file has changed since it
+ran.** That is the honest description of 0023, and the report now says so instead of
+inviting a baseline.
+
+`wing:check-intake` now reports the table's real shape from `information_schema` before
+it reads a row, and names any column the writer needs and cannot find. The writer
+swallows its own errors so a failed capture can never break someone's intake, which
+means a missing column produces no error anywhere — only an empty table. Reading the
+shape is the only way to see it, and guessing at it is what cost the two failures above.
 
 See `claude/WING_TIER1_SCOPE.md` for the build plan and what has shipped against it.

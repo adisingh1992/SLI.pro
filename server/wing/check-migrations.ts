@@ -3,6 +3,7 @@ import { readFileSync, readdirSync } from "fs";
 import { join } from "path";
 import { createHash } from "crypto";
 import { initScript, type ScriptDb } from "../script-init";
+import { replaySafe, willApply } from "./migration-rules";
 
 /**
  * What the deployment pipeline's migration step will actually do.
@@ -94,46 +95,86 @@ async function main() {
     return;
   }
 
+  /*
+   * ── HOW DRIZZLE ACTUALLY DECIDES, WHICH IS NOT THE OBVIOUS WAY ──────────
+   * It reads the single most recent `created_at` and applies every journal entry
+   * whose `when` is greater than that one number:
+   *
+   *     if (!lastDbMigration || Number(lastDbMigration.created_at) < migration.folderMillis)
+   *
+   * The hash is stored and never consulted. So "pending" cannot be computed by
+   * asking whether a file's hash is recorded — which is what this script used to
+   * do. Editing an applied migration changes its hash, and the old logic then
+   * reported it as pending and offered to baseline it. Both were wrong, and this is
+   * the one confusion the script exists to prevent: 0023 was applied, was edited
+   * afterwards, and read as "the next db:migrate would apply 0023" while drizzle
+   * had no intention of opening it.
+   */
   const applied = await pool.query(`
     select hash, created_at from drizzle.__drizzle_migrations order by created_at
   `);
-  const appliedHashes = new Set(applied.rows.map((r: any) => r.hash));
+  const appliedHashes = new Set((applied.rows as Array<{ hash: string }>).map((r) => r.hash));
+  const stamps = (applied.rows as Array<{ created_at: string }>).map((r) => Number(r.created_at));
+  const lastCreatedAt = stamps.length ? stamps.reduce((a, b) => (b > a ? b : a), 0) : null;
+
   console.log(`  ${applied.rows.length} migration(s) recorded`);
 
   /* ── 3 · What the next run would do ─────────────────────────────────── */
   console.log("\n\x1b[1mThe next db:migrate would\x1b[0m");
 
   let pending = 0;
-  let risky = 0;
+  const risky: string[] = [];
+  const diverged: string[] = [];
 
   for (const entry of journal.entries) {
     if (!files.has(entry.tag)) continue;
     const sql = readFileSync(join(dir, `${entry.tag}.sql`), "utf8");
 
-    if (appliedHashes.has(hashOf(sql))) continue;
+    if (!willApply(lastCreatedAt, entry.when)) {
+      /*
+       * Recorded, so drizzle will never open this file again. If it no longer
+       * hashes to what was recorded, the file and the database have diverged and
+       * nothing in the repo closes the gap — reported below rather than here,
+       * because it is not something the next run will do.
+       */
+      if (!appliedHashes.has(hashOf(sql))) diverged.push(entry.tag);
+      continue;
+    }
 
     pending++;
-    // Unguarded CREATEs are safe once. On a schema that already has them, they
-    // are the thing that fails.
-    const creates = (sql.match(/^\s*create (table|type|index|unique)/gim) ?? []).length;
-    const guards = (sql.match(/if not exists/gi) ?? []).length;
-    const safe = creates === 0 || guards >= creates;
-    if (!safe) risky++;
+    const verdict = replaySafe(sql);
+    if (!verdict.safe) risky.push(entry.tag);
 
     console.log(
-      `  ${safe ? " " : "\x1b[31m!\x1b[0m"} apply ${entry.tag}` +
-        (safe ? "" : `  — ${creates} unguarded CREATE(s), fails if already present`),
+      `  ${verdict.safe ? " " : "\x1b[31m!\x1b[0m"} apply ${entry.tag}` +
+        (verdict.safe ? "" : `  — ${verdict.why}, fails if already present`),
     );
   }
 
   if (pending === 0) ok("nothing — the database is up to date");
 
-  if (risky > 0) {
+  /* ── 4 · Files that no longer match what ran ─────────────────────────── */
+  if (diverged.length) {
+    console.log("\n\x1b[1mRecorded, but the file has changed since it ran\x1b[0m");
+    for (const tag of diverged) warn(tag);
+    console.log(
+      `\n  These are already recorded, so db:migrate will not open them again — it\n` +
+        `  compares one timestamp, not hashes, and reports \`done\` without reading a\n` +
+        `  file it has already run. **An applied migration is immutable in effect.**\n` +
+        `  Whatever the edit was meant to do, only a LATER migration can do it.\n` +
+        `\n  This is not automatically a problem: an edit that only touches comments\n` +
+        `  diverges too. It is a problem when the edit added a column, a type or a\n` +
+        `  constraint, because the database does not have it and nothing here says so.\n` +
+        `  Compare the file against the live shape before assuming either way.\n`,
+    );
+  }
+
+  if (risky.length) {
     console.log(
       `\n\x1b[1mReconciling\x1b[0m\n` +
-        `  ${risky} pending migration(s) are not safe to replay. If their objects\n` +
-        `  already exist (because db:wing-ddl built the schema), record them as\n` +
-        `  applied instead of running them:\n\n` +
+        `  ${risky.length} pending migration(s) are not safe to replay: ${risky.join(", ")}.\n` +
+        `  If their objects already exist (because db:wing-ddl built the schema),\n` +
+        `  record them as applied instead of running them:\n\n` +
         `    npm run wing:check-migrations -- --print-baseline\n\n` +
         `  That prints the INSERT statements. Read them before running them —\n` +
         `  marking a migration applied that genuinely has not been is how a\n` +
@@ -141,20 +182,29 @@ async function main() {
     );
   }
 
-  /* ── 4 · The baseline, on request ───────────────────────────────────── */
+  /* ── 5 · The baseline, on request ───────────────────────────────────── */
   if (process.argv.includes("--print-baseline")) {
     console.log("\x1b[1m-- Baseline inserts\x1b[0m");
     console.log("-- Marks migrations as applied WITHOUT running them.");
     console.log("-- Only correct if every object they create already exists.\n");
+    let printed = 0;
     for (const entry of journal.entries) {
       if (!files.has(entry.tag)) continue;
+      /*
+       * Only what drizzle would actually run. A recorded-but-diverged migration
+       * used to land here, and baselining one is worse than useless: it inserts a
+       * second row for a migration that already ran, under the hash of a version
+       * that never did, which is a lie a future reader has no way to catch.
+       */
+      if (!willApply(lastCreatedAt, entry.when)) continue;
       const sql = readFileSync(join(dir, `${entry.tag}.sql`), "utf8");
-      if (appliedHashes.has(hashOf(sql))) continue;
       console.log(
         `insert into drizzle.__drizzle_migrations (hash, created_at) ` +
           `values ('${hashOf(sql)}', ${entry.when});  -- ${entry.tag}`,
       );
+      printed++;
     }
+    if (!printed) console.log("-- nothing pending; no inserts to make.");
     console.log("");
   }
 

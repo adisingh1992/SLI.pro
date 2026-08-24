@@ -167,8 +167,15 @@ export function provenance(opts: {
  * only executes against production is a mapping nobody has checked.
  */
 
-/** A parsed card, ready to insert. */
-export function intakeCardToSeed(card: ParsedCard): SeedCard {
+/**
+ * A parsed card, ready to insert.
+ *
+ * `source` is a parameter and not the constant because `update-intake.ts` maps the
+ * PREVIOUS version too, to prove a stored row is untouched before replacing it. If
+ * this hardcoded the current path, the prior side would describe itself with the
+ * new document's name and every provenance block would look hand-edited.
+ */
+export function intakeCardToSeed(card: ParsedCard, source: string = INTAKE_SOURCE): SeedCard {
   const absent = COMPONENT_KEYS.filter((k) => !card.components[k]);
   return {
     cardCode: card.cardCode,
@@ -181,7 +188,7 @@ export function intakeCardToSeed(card: ParsedCard): SeedCard {
     cardKind: card.cardKind,
     interventionType: card.interventionType,
     notes: provenance({
-      source: INTAKE_SOURCE,
+      source,
       line: card.line,
       module: card.module,
       cardKind: card.cardKind,
@@ -195,7 +202,10 @@ export function intakeCardToSeed(card: ParsedCard): SeedCard {
 }
 
 /** An intake integrity gate: a rule, and six components the document omits. */
-export function intakeGateToSeed(gate: ParsedIntakeGate): SeedCard {
+export function intakeGateToSeed(
+  gate: ParsedIntakeGate,
+  source: string = INTAKE_SOURCE,
+): SeedCard {
   const extra: string[] = [`gate_type: ${gate.gateType}`];
   if (gate.restates) {
     extra.push(
@@ -217,7 +227,7 @@ export function intakeGateToSeed(gate: ParsedIntakeGate): SeedCard {
     cardKind: "integrity_gate",
     interventionType: null,
     notes: provenance({
-      source: INTAKE_SOURCE,
+      source,
       line: gate.line,
       module: moduleFromCode(gate.cardCode),
       cardKind: "integrity_gate",

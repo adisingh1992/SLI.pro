@@ -39,6 +39,9 @@
  * two: it reads her tables and fails if the coverage claim drifts.
  */
 
+import type { Answers } from "./audience-track";
+import { revealFacts, type RevealFacts } from "./reveal-facts";
+
 export const IDENTITY_FRAMES = ["external", "internal", "mixed", "insufficient_signal"] as const;
 export type IdentityFrame = (typeof IDENTITY_FRAMES)[number];
 
@@ -62,11 +65,28 @@ export type FrameDirection = "external" | "internal";
 export type FrameDetector = {
   key: string;
   points: FrameDirection;
-  /** Her table row, verbatim, so the test can match it against the document. */
+  /**
+   * Her table row, verbatim, so the test can match it against the document.
+   *
+   * The Research-Derived Gates wording, not v3.3's. v3.3 restates the same ten rows
+   * more briefly — "Gap = others' misperception" for "Gap described as others'
+   * misperception" — and the research document is the one a parser reads, so it is the
+   * one these have to match. Transcribing v3.3's shorter form broke that match on five
+   * of the ten, which is the whole reason the assertion exists.
+   */
   row: string;
   /** The threshold, and where it comes from. */
   threshold: string;
-  test: (answers: IntakeAnswers) => boolean;
+  /**
+   * Reads classified facts, never raw text.
+   *
+   * Eight of these ten rows are classifications rather than keyword hits — "self-
+   * description leads with company/title" is the Q5 classification H-015 defines, and
+   * no regex produces it. `reveal-facts.ts` does that classification once, for the
+   * reveal templates and for this table, so the two cannot disagree about the same
+   * answer.
+   */
+  test: (facts: RevealFacts) => boolean;
 };
 
 /** Every answer, in question order. Nothing here depends on which question. */
@@ -112,6 +132,43 @@ const SELF_AUTHORED =
   /\bI (?:believe|decided|know|want to)\b|\bI've decided\b|\bmy framework\b/gi;
 
 export const DETECTORS: readonly FrameDetector[] = [
+  /* ── Q5 · self-description ─────────────────────────────────────────────── */
+  {
+    key: "q5_leads_with_title_or_company",
+    points: "external",
+    row: "Self-description leads with company/title",
+    threshold: "Hers: the Q5 classification, no count. H-015 calls Q5 the primary detection point.",
+    test: (f) => f.q5Style === "title_led" || f.q5Style === "company_led",
+  },
+  {
+    key: "q5_leads_with_function_or_impact",
+    points: "internal",
+    row: "Self-description leads with function/impact",
+    threshold: "Hers: the Q5 classification, no count.",
+    test: (f) => f.q5Style === "function_led" || f.q5Style === "impact_led",
+  },
+
+  /* ── Q4 · the goal ─────────────────────────────────────────────────────── */
+  {
+    key: "q4_goal_meets_expectations",
+    points: "external",
+    row: "Goal framed as meeting expectations",
+    threshold:
+      'Hers: no count. Fires on obligation language in Q4 — H-014 lists exactly these ' +
+      'signals — or on a goal named by an external marker.',
+    test: (f) => f.shouldInQ4 || f.q4ExternalMarkers,
+  },
+  {
+    key: "q4_goal_self_authored",
+    points: "internal",
+    row: "Goal framed as self-authored aspiration",
+    threshold:
+      "Hers: no count. Detected positively rather than as the absence of the external " +
+      "twin, so a blank Q4 produces neither signal.",
+    test: (f) => f.q4SelfAuthored,
+  },
+
+  /* ── Across intake · language ──────────────────────────────────────────── */
   {
     key: "obligation_language",
     points: "external",
@@ -119,9 +176,7 @@ export const DETECTORS: readonly FrameDetector[] = [
     threshold:
       'Hers, from H-030: "3+ instances or 1 instance in Q4 (the goal question, where ' +
       'obligation language is most diagnostic)."',
-    test: (a) =>
-      countMatches(allText(a), OBLIGATION) >= 3 ||
-      countMatches(a.q4 ?? "", OBLIGATION) >= 1,
+    test: (f) => f.shouldCount >= 3 || f.shouldInQ4,
   },
   {
     key: "self_authored_language",
@@ -130,7 +185,41 @@ export const DETECTORS: readonly FrameDetector[] = [
     threshold:
       "Ours: the same 3+ count as the external twin, because her table gives no number " +
       "for this row and a lower one would make internal easier to reach than external.",
-    test: (a) => countMatches(allText(a), SELF_AUTHORED) >= 3,
+    test: (f) => f.selfAuthoredCount >= 3,
+  },
+
+  /* ── Q6 · the hidden strength ──────────────────────────────────────────── */
+  {
+    key: "q6_praised_by_others",
+    points: "external",
+    row: "Hidden strength described as what others praise them for",
+    threshold: "Hers: no count.",
+    test: (f) => f.q6SourceIsOthers,
+  },
+  {
+    key: "q6_known_about_self",
+    points: "internal",
+    row: "Hidden strength described as what they know about themselves",
+    threshold:
+      "Hers: no count. Positive detection again — silence is not self-authorship, and " +
+      "reading it as such would invert the asymmetric-error rule.",
+    test: (f) => f.q6SelfKnown && !f.q6SourceIsOthers,
+  },
+
+  /* ── Q7 · where the gap sits ───────────────────────────────────────────── */
+  {
+    key: "q7_others_misperception",
+    points: "external",
+    row: "Gap described as others' misperception",
+    threshold: "Hers: no count. H-018 calls Q7 a secondary detection point.",
+    test: (f) => f.q7Locus === "others_perception",
+  },
+  {
+    key: "q7_own_communication",
+    points: "internal",
+    row: "Gap described as own communication failure",
+    threshold: "Hers: no count.",
+    test: (f) => f.q7Locus === "own_communication",
   },
 ];
 
@@ -178,22 +267,45 @@ export function resolveIdentityFrame(evidence: {
   return "insufficient_signal";
 }
 
-/** Which detectors fire on these answers, counted by direction. */
-export function readFrameSignals(answers: IntakeAnswers): {
-  external: number;
-  internal: number;
-  fired: string[];
-} {
+export type FrameSignals = { external: number; internal: number; fired: string[] };
+
+/** Which detectors fire on already-classified facts. */
+export function frameFromFacts(facts: RevealFacts): FrameSignals {
   const fired: string[] = [];
   let external = 0;
   let internal = 0;
   for (const d of DETECTORS) {
-    if (!d.test(answers)) continue;
+    if (!d.test(facts)) continue;
     fired.push(d.key);
     if (d.points === "external") external++;
     else internal++;
   }
   return { external, internal, fired };
+}
+
+/**
+ * The lowercase-key spelling the intake conversation already passes.
+ *
+ * Kept so existing callers do not change, and converted rather than duplicated —
+ * `Answers` is the shared spelling that `audience-track` and `reveal-facts` use, and
+ * two vocabularies for the same eight questions is how they drift.
+ */
+export function toAnswers(a: IntakeAnswers): Answers {
+  return {
+    Q1: a.q1,
+    Q2: a.q2,
+    Q3: a.q3,
+    Q4: a.q4,
+    Q5: a.q5,
+    "Q5.5": a.q55,
+    Q6: a.q6,
+    Q7: a.q7,
+  };
+}
+
+/** Which detectors fire on these answers, counted by direction. */
+export function readFrameSignals(answers: IntakeAnswers): FrameSignals {
+  return frameFromFacts(revealFacts(toAnswers(answers), null));
 }
 
 /**

@@ -1333,6 +1333,78 @@ console.log("\nBoth seeders map components to the same columns");
   }
 }
 
+/* ── 22 · The self-description table holds the user's words and nobody else's ──
+ *
+ * Danielle, 19 August: "These records are the user's words only. Wing's responses
+ * are in the conversation transcript. Storing Wing's coaching language in the same
+ * table as the user's self-descriptions would contaminate the baseline."
+ *
+ * That is not a rule a type can express — both are strings — and it is exactly the
+ * kind of rule that survives review and then dies in a refactor, because passing
+ * `reply` instead of `text` is a one-word change that looks like a tidy-up.
+ *
+ * The baseline it would contaminate cannot be rebuilt: intake is the only time Wing
+ * sees a user describe themselves before Wing has taught them any language for it.
+ * So the call is pinned by shape — one caller, the user's message, nothing else.
+ */
+console.log("\nSelf-description capture stores the user's words only");
+{
+  const before22 = failures;
+
+  const decomment = (src: string) =>
+    src.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
+
+  // Its own local walk: each check in this file is a scope of its own, so a later
+  // one cannot quietly depend on an earlier one's helpers.
+  const walk = (dir: string): string[] =>
+    readdirSync(dir, { withFileTypes: true }).flatMap((e) => {
+      const p = join(dir, e.name);
+      if (e.isDirectory()) return walk(p);
+      return e.isFile() && p.endsWith(".ts") ? [p] : [];
+    });
+
+  const callers: string[] = [];
+  for (const file of walk(SERVER)) {
+    if (!file.endsWith(".ts") || file.endsWith(".test.ts")) continue;
+    if (file.indexOf("self-description-store.ts") >= 0) continue;
+    const src = decomment(readFileSync(file, "utf8"));
+    if (src.indexOf("captureSelfDescription") >= 0) callers.push(file);
+  }
+
+  if (callers.length !== 1) {
+    fail(
+      `expected exactly one caller of captureSelfDescription, found ${callers.length}: ` +
+        callers.join(", ") +
+        ". Every new caller has to be read against the user's-words-only rule.",
+    );
+  } else {
+    const src = decomment(readFileSync(callers[0], "utf8"));
+    const call = /captureSelfDescription\(\{([\s\S]*?)\}\)/.exec(src);
+    if (!call) {
+      fail(`${callers[0]} names captureSelfDescription but the call could not be read`);
+    } else {
+      const body = call[1];
+      const userText = /userText:\s*([A-Za-z_$][\w$.]*)/.exec(body);
+      if (!userText) {
+        fail("the capture call does not pass userText as a plain variable");
+      } else if (userText[1] !== "text") {
+        fail(
+          `the capture call passes userText: ${userText[1]}. The only correct value is ` +
+            "`text`, the user's message on this turn. Wing's reply must never reach " +
+            "this table.",
+        );
+      }
+      if (/userText:\s*reply\b/.test(body) || /verbatim[^:]*:\s*reply\b/.test(body)) {
+        fail("the capture call passes Wing's reply as the user's words");
+      }
+    }
+  }
+
+  if (failures === before22) {
+    console.log(`  ok — one caller, passing the user's own message`);
+  }
+}
+
 /* ── Result ──────────────────────────────────────────────────────────── */
 if (failures) {
   console.error(`\n${failures} contract violation(s)\n`);

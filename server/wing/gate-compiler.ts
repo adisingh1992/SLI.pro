@@ -54,6 +54,43 @@ export type GateCard = {
 export const DRAFT_PATH_GATES: readonly string[] = ["IG-V04", "IG-V05", "IG-V07"];
 
 /**
+ * Session-specific rewordings of a universal gate, and the gate they reword.
+ *
+ * ── WHY BOTH WORDINGS MUST NOT COMPILE TOGETHER ──────────────────────────
+ * Four of the thirteen intake gates are her intake wording of a platform-wide
+ * rule, and they say so in their own titles: "IG-INT10 Barnum falsifiability
+ * (IG-U006 applied)". Rendering both puts the same rule in one prompt twice, in
+ * different words — which is how a model learns a rule is negotiable, and costs
+ * 403 tokens at intake for the privilege.
+ *
+ * The session-specific wording wins where it applies, because it is the more
+ * concrete of the two: IG-INT10 says every reveal must fail the substitution
+ * test, IG-U006 says every observation in any module must. In a Foundation turn
+ * IG-INT10 is not visible at all, so the universal gate renders normally.
+ *
+ * Kept here rather than read from the document because the runtime builds gates
+ * from database rows, which carry no such field. `parse-intake.ts` extracts the
+ * mapping from her titles and a test compares the two, so this cannot drift from
+ * what she wrote.
+ */
+export const RESTATES: Readonly<Record<string, string>> = {
+  "IG-INT10": "IG-U006",
+  "IG-INT11": "IG-U007",
+  "IG-INT12": "IG-U010",
+  "IG-INT13": "IG-U009",
+};
+
+/** The universal gates a restatement in this set makes redundant. */
+function restatedIn(gates: readonly GateCard[]): string[] {
+  const out: string[] = [];
+  for (const g of gates) {
+    const twin = RESTATES[g.cardCode];
+    if (twin && out.indexOf(twin) < 0) out.push(twin);
+  }
+  return out;
+}
+
+/**
  * Gates whose every stated surface is a module Tier 1 does not have.
  *
  * H-005 (sensitive context containment) detects "Wing drawing on Module 9 power
@@ -145,10 +182,12 @@ export function turnPathGates(
   gates: readonly GateCard[],
   conditions: GateConditions = {},
 ): GateCard[] {
+  const redundant = restatedIn(gates);
   return gates.filter(
     (g) =>
       DRAFT_PATH_GATES.indexOf(g.cardCode) < 0 &&
       NO_TIER1_SURFACE.indexOf(g.cardCode) < 0 &&
+      redundant.indexOf(g.cardCode) < 0 &&
       preconditionMet(g.cardCode, conditions),
   );
 }
@@ -164,6 +203,12 @@ export function excludedGates(
       out.push({ cardCode: g.cardCode, reason: "fires on a content draft, not a turn" });
     } else if (NO_TIER1_SURFACE.indexOf(g.cardCode) >= 0) {
       out.push({ cardCode: g.cardCode, reason: "every stated surface is a Tier 2 module" });
+    } else if (restatedIn(gates).indexOf(g.cardCode) >= 0) {
+      const by = Object.keys(RESTATES).filter((k) => RESTATES[k] === g.cardCode);
+      out.push({
+        cardCode: g.cardCode,
+        reason: `restated for this session by ${by.join(", ")}, which is the more concrete wording`,
+      });
     } else if (!preconditionMet(g.cardCode, conditions)) {
       out.push({ cardCode: g.cardCode, reason: GATE_PRECONDITIONS[g.cardCode].reason });
     }

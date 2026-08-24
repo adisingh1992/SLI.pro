@@ -13,7 +13,7 @@ import { assertInterventionTypes } from "./seed-preflight";
  *       npm run wing:seed-intake                insert
  *
  * ── WHAT LANDS ───────────────────────────────────────────────────────────
- * All 42, because all 42 are Tier 1: A1 conversational intake, which has been an
+ * All 41, because all 41 are Tier 1: A1 conversational intake, which has been an
  * open Tier 1 gap since the gap analysis and had no cards until 18 August. Every
  * one lands as `candidate` and in NO sequence, so none of it reaches a student —
  * `getSequenceCards` can only return what a sequence contains. Composing a
@@ -47,9 +47,9 @@ async function main() {
 
   const parsed = parseIntake(readFileSync(INTAKE_SOURCE, "utf8"));
 
-  if (parsed.cards.length !== 29 || parsed.gates.length !== 13) {
+  if (parsed.cards.length !== 28 || parsed.gates.length !== 13) {
     throw new Error(
-      `Expected 29 cards and 13 gates, parsed ${parsed.cards.length} and ` +
+      `Expected 28 cards and 13 gates, parsed ${parsed.cards.length} and ` +
         `${parsed.gates.length}. The source document has changed — review before seeding.`,
     );
   }
@@ -68,7 +68,15 @@ async function main() {
     );
   }
 
-  const seeds = parsed.cards.map(intakeCardToSeed).concat(parsed.gates.map(intakeGateToSeed));
+  /*
+   * Arrows, not `.map(intakeCardToSeed)`. Those functions take an optional second
+   * argument — the source document they should cite — and `.map` would hand it the
+   * array index, so every provenance block would cite document "0". The typechecker
+   * caught it; the arrow is what keeps it caught.
+   */
+  const seeds = parsed.cards
+    .map((c) => intakeCardToSeed(c))
+    .concat(parsed.gates.map((g) => intakeGateToSeed(g)));
 
 
   /*

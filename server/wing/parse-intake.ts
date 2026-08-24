@@ -1,6 +1,13 @@
 /**
  * Parses the Intake Module card document into the same records as the compendium.
  *
+ * ── VERSION ──────────────────────────────────────────────────────────────
+ * v1.7 (19 August) supersedes v1.1 (18 August), and needed no change here: same
+ * bare code lines, same seven-component tables, same IG-INT prefix, H-019.5 still
+ * decimal. What changed is content — RT-14 retired, RT-09's placeholder defect
+ * fixed, RT-06's cultural-competence check added, and copy corrections across 17
+ * of the 28 card bodies. See wing-intake-change-note-v1.7.md.
+ *
  * ── WHY A SECOND PARSER ──────────────────────────────────────────────────
  * `parse-compendium.ts` finds a card by its markdown heading — `## H-102 Role
  * sprawl detection`. This document has no card headings. Its cards open with a
@@ -47,7 +54,24 @@ import {
 import { METHODOLOGY_POPULATIONS } from "./population-tags";
 
 /** The document this parser reads. Committed exactly as delivered. */
-export const INTAKE_SOURCE = "methodology/wing-intake-heuristic-cards-v1.1.md";
+export const INTAKE_SOURCE = "methodology/wing-intake-heuristic-cards-v1.7.md";
+
+/**
+ * The version v1.7 supersedes, kept for one reason only.
+ *
+ * "Build from v1.7, discard the v1.1 I sent on the 18th" — Danielle, 19 August.
+ * Discarded as a source: nothing parses it into a card any more.
+ *
+ * It stays in the repo because `update-intake.ts` needs it. Seventeen of the 28
+ * card bodies changed between the two versions, and the safe way to replace a
+ * seeded card is to check first that the row still says what v1.1 said. A row
+ * that matches neither version has been edited by hand in the admin editor, and
+ * overwriting that would destroy the methodology owner's own work — silently,
+ * because a seed prints what it wrote and not what it replaced.
+ *
+ * Delete this the release after the update has run everywhere.
+ */
+export const PRIOR_INTAKE_SOURCE = "methodology/wing-intake-heuristic-cards-v1.1.md";
 
 /**
  * An intake integrity gate — IG-INT01 to IG-INT13.

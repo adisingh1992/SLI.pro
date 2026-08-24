@@ -45,9 +45,11 @@ console.log("\nseed-mappings\n");
 const intake = parseIntake(readFileSync(INTAKE_SOURCE, "utf8"));
 const research = parseResearchGates(readFileSync(RESEARCH_GATES_SOURCE, "utf8"));
 
+// Arrows: both take an optional source-document argument, and `.map` would pass
+// the array index into it.
 const intakeSeeds: SeedCard[] = intake.cards
-  .map(intakeCardToSeed)
-  .concat(intake.gates.map(intakeGateToSeed));
+  .map((c) => intakeCardToSeed(c))
+  .concat(intake.gates.map((g) => intakeGateToSeed(g)));
 const gateSeeds: SeedCard[] = research.universalGates
   .map(universalGateToSeed)
   .concat(research.moduleGates.filter(isTier1).map(moduleGateToSeed));
@@ -57,13 +59,15 @@ function componentsOf(seed: SeedCard): string[] {
   return seedRows(seed).components.map((c) => c.componentType);
 }
 
-test("51 elements and 319 component rows", () => {
-  // 42 intake + 6 universal gates + H-111, H-210, H-315. H-616 and H-923 defer
+test("50 elements and 311 component rows", () => {
+  // 41 intake + 6 universal gates + H-111, H-210, H-315. H-616 and H-923 defer
   // with Modules 6 and 9.
-  assert.equal(intakeSeeds.length, 42);
+  //
+  // 51 and 319 under v1.1. RT-14's retirement removes one card and its eight rows.
+  assert.equal(intakeSeeds.length, 41);
   assert.equal(gateSeeds.length, 9);
-  assert.equal(all.length, 51);
-  assert.equal(all.reduce((n, s) => n + seedRows(s).components.length, 0), 319);
+  assert.equal(all.length, 50);
+  assert.equal(all.reduce((n, s) => n + seedRows(s).components.length, 0), 311);
 });
 
 test("every element lands as a candidate, in no sequence", () => {

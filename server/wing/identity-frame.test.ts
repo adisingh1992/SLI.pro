@@ -93,24 +93,26 @@ test("the same weight of evidence never reaches internal more easily", () => {
 });
 
 test("obligation language fires on three instances, or on one in Q4", () => {
-  // Her threshold verbatim: "3+ instances or 1 instance in Q4 (the goal question,
-  // where obligation language is most diagnostic)."
-  const spread: IntakeAnswers = {
-    q1: "I should be doing more with my profile.",
-    q5: "I need to sound more senior than I am.",
-    q7: "People expect me to be further along.",
-  };
-  assert.deepEqual(readFrameSignals(spread).fired, ["obligation_language"]);
+  /*
+   * Asserts the detector rather than the whole `fired` array: a single "I should" in Q4
+   * now also trips `q4_goal_meets_expectations`, because her table has a Q4 row as well
+   * as an across-intake row and H-014 lists obligation language under both.
+   */
+  const threeAnywhere = readFrameSignals({
+    q1: "I should get on with it",
+    q5: "People expect me to be further along",
+    q6: "I need to be better at this",
+  });
+  assert.ok(threeAnywhere.fired.includes("obligation_language"));
 
-  const justQ4: IntakeAnswers = { q4: "I should be a director by then." };
-  assert.deepEqual(readFrameSignals(justQ4).fired, ["obligation_language"]);
+  const oneInQ4 = readFrameSignals({ q4: "I should be a director by now" });
+  assert.ok(oneInQ4.fired.includes("obligation_language"), "one instance in Q4 is enough");
 
-  // Two instances, neither in Q4 — under her threshold, so nothing fires.
-  const thin: IntakeAnswers = {
-    q1: "I should post more.",
-    q7: "I need to be seen differently.",
-  };
-  assert.deepEqual(readFrameSignals(thin).fired, []);
+  const oneElsewhere = readFrameSignals({ q1: "I should get on with it" });
+  assert.ok(
+    !oneElsewhere.fired.includes("obligation_language"),
+    "one instance outside Q4 must not be enough",
+  );
 });
 
 test("self-authored language needs three instances, same as its external twin", () => {
@@ -128,29 +130,59 @@ test("self-authored language needs three instances, same as its external twin", 
   assert.deepEqual(readFrameSignals(two).fired, []);
 });
 
-test("two detectors alone cannot reach a frame, which is a limit and not a bug", () => {
-  const both: IntakeAnswers = {
-    q1: "I decided it was time, though I should have done it sooner.",
-    q4: "I need to be a director, and I know that is what I want.",
-    q6: "I believe my strength is operations.",
-    q7: "People expect me to lead, and I am supposed to look the part.",
-  };
-  const signals = readFrameSignals(both);
-  assert.equal(signals.external, 1);
-  assert.equal(signals.internal, 1);
+test("the ten detectors reach a frame from answers alone", () => {
   /*
-   * One detector each, so the frame is insufficient_signal, not mixed — and that
-   * is correct. Two detectors cannot produce two consistent signals in one
-   * direction on their own; the remaining 32 signals are classifications the
-   * intake engine has to supply. Recorded here so the limit is visible rather
-   * than mistaken for a resolver bug.
+   * This test used to record the opposite: with two detectors, one external and one
+   * internal signal could not produce two consistent signals in either direction, so
+   * every real intake resolved to insufficient_signal and the frame was effectively
+   * unreachable. Her table's other eight rows are classifications — "self-description
+   * leads with company/title" is the Q5 classification H-015 defines — and they are
+   * now supplied by `reveal-facts`.
    */
-  assert.equal(resolveIdentityFrame(signals), "insufficient_signal");
-  // With the classifier's contribution added, the same answers read mixed.
-  assert.equal(
-    resolveIdentityFrame({ external: signals.external + 1, internal: signals.internal + 1 }),
-    "mixed",
-  );
+  const external: IntakeAnswers = {
+    q4: "I should be further along, and the title matters",
+    q5: "I'm an analyst at Deloitte",
+    q6: "People tell me I'm good at untangling things",
+    q7: "People don't see me correctly",
+  };
+  const e = readFrameSignals(external);
+  assert.ok(e.external >= SIGNAL_THRESHOLD, `only ${e.external} external signals`);
+  assert.equal(e.internal, 0);
+  assert.equal(resolveIdentityFrame(e), "external");
+
+  const internal: IntakeAnswers = {
+    q4: "I've decided this is what I actually want",
+    q5: "I help teams figure out what to build next",
+    q6: "I know I'm good at spotting where a process breaks",
+    q7: "I haven't explained it well enough",
+  };
+  const i = readFrameSignals(internal);
+  assert.ok(i.internal >= SIGNAL_THRESHOLD, `only ${i.internal} internal signals`);
+  assert.equal(i.external, 0);
+  assert.equal(resolveIdentityFrame(i), "internal");
+
+  // Both directions at strength is still mixed, not a coin toss.
+  assert.equal(resolveIdentityFrame({ external: 2, internal: 2 }), "mixed");
+});
+
+test("a spelled-out contraction reads the same as a contracted one", () => {
+  /*
+   * Four rules in this codebase have silently matched nothing because a user wrote
+   * "have not" where the pattern said `haven'?t`. `reveal-facts` normalises the input
+   * for exactly that reason, and this asserts the normalisation reaches these detectors.
+   */
+  const long = readFrameSignals({
+    q4: "I have decided this is what I actually want",
+    q6: "I know I am good at spotting where a process breaks",
+    q7: "I have not explained it well enough",
+  });
+  const short = readFrameSignals({
+    q4: "I've decided this is what I actually want",
+    q6: "I know I'm good at spotting where a process breaks",
+    q7: "I haven't explained it well enough",
+  });
+  assert.deepEqual(long.fired, short.fired);
+  assert.ok(long.internal >= 3, `spelled-out form produced only ${long.internal} signals`);
 });
 
 test("the variable is never user-facing", () => {
@@ -159,7 +191,7 @@ test("the variable is never user-facing", () => {
   assert.equal(isUserFacing(), false);
 });
 
-test("both detectors implement a row that is actually in her tables", () => {
+test("every detector implements a row that is actually in her tables", () => {
   const research = parseResearchGates(readFileSync(RESEARCH_GATES_SOURCE, "utf8"));
   const rows = research.identitySignalTables.reduce(
     (all, t) => all.concat(t.rows),
@@ -174,24 +206,30 @@ test("both detectors implement a row that is actually in her tables", () => {
   }
 });
 
-test("32 of her 34 signals still need the intake classifier", () => {
+test("ten of her 34 signals are implemented; the rest are not intake signals", () => {
   /*
-   * The coverage claim, checked rather than asserted in a comment. Two signals are
-   * detectable from raw text; the rest are classifications — "self-description
-   * leads with company/title" is the Q5 classification H-015 defines, and no regex
-   * produces it.
+   * The coverage claim, checked rather than asserted in a comment.
    *
-   * If this number falls, someone added a detector, and the question to ask is
-   * whether the methodology said to or whether we inferred it. That was the
-   * doorway mistake and it cost a release to find.
+   * Ten of the 34 rows are the intake table — the ones v3.3 restates under "Identity
+   * Reference Frame Detection" — and all ten are now implemented. The remaining 24 are
+   * Foundation and module signals: choosing a function without permission, responding
+   * to the ice bucket, how pre-gap evidence is described. None of them is detectable
+   * during intake, because the sessions that produce them have not happened.
+   *
+   * If this number falls, someone added a detector, and the question to ask is whether
+   * the methodology said to or whether we inferred it. That was the doorway mistake and
+   * it cost a release to find.
    */
   const research = parseResearchGates(readFileSync(RESEARCH_GATES_SOURCE, "utf8"));
   const implemented = new Set(DETECTORS.map((d) => d.row));
   const uncovered = research.identitySignalTables
     .reduce((all, t) => all.concat(t.rows), [] as (typeof research.identitySignalTables)[number]["rows"])
     .filter((r) => !implemented.has(r.signal));
-  assert.equal(uncovered.length, 32);
-  assert.equal(DETECTORS.length, 2);
+  assert.equal(DETECTORS.length, 10);
+  assert.equal(uncovered.length, 24);
+  // Five external, five internal — her table pairs every row.
+  assert.equal(DETECTORS.filter((d) => d.points === "external").length, 5);
+  assert.equal(DETECTORS.filter((d) => d.points === "internal").length, 5);
 });
 
 test("the cards that detect and the reveals that adapt are the ones the document names", () => {
@@ -211,12 +249,19 @@ test("the cards that detect and the reveals that adapt are the ones the document
       ].join(" "),
     ),
   );
+  /*
+   * H-033 was in this list under v1.1 — RT-14 named the variable in order to say it
+   * was irrelevant for undergraduates. The template is retired in v1.7, so the
+   * exemption retires with it and undergraduates now reach cross-track templates
+   * whose delivery IS frame-aware. That is a real change in behaviour for
+   * undergraduates, not bookkeeping.
+   */
   assert.deepEqual(
     mentions.map((c) => c.cardCode),
-    ["H-011", "H-014", "H-015", "H-018", "H-020", "H-027", "H-030", "H-033", "H-034"],
+    ["H-011", "H-014", "H-015", "H-018", "H-020", "H-027", "H-030", "H-034"],
   );
 
-  const named = DETECTION_CARDS.concat(FRAME_AWARE_REVEALS).concat(["H-033"]).sort();
+  const named = DETECTION_CARDS.concat(FRAME_AWARE_REVEALS).sort();
   assert.deepEqual(mentions.map((c) => c.cardCode).slice().sort(), named);
   assert.deepEqual(FRAME_AWARE_REVEALS.slice(), ["H-020", "H-027", "H-034"]);
 });

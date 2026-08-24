@@ -47,8 +47,40 @@ export type PopulationTag =
   | "mid_career_or_senior"
   | "career_break_or_transition";
 
+/** Her phases. Phase 3 is the reveal, which is not a beat — it is an observation. */
+export type Phase = 1 | 2 | 3.5 | 4;
+
+/**
+ * How the answer arrives. The baselines are numbers on a 1–5 scale with
+ * conditional follow-ups; every question before them is free text.
+ */
+export type AnswerKind = "text" | "scale_1_5";
+
+/**
+ * A follow-up that fires on the shape of the answer rather than on its content.
+ *
+ * `low` is 1–2 and `high` is 4–5 on a scale; a 3 gets nothing, deliberately — "most
+ * users get one follow-up across three questions" is the pacing target. `fear` fires
+ * on a barrier category rather than a number.
+ */
+export type FollowUp = {
+  on: "low" | "high" | "fear";
+  ask: string;
+  why: string;
+};
+
 export type Beat = {
   key: string;
+  /**
+   * Which of the methodology's questions this beat implements — "Q1".."Q7", "B1".."B3".
+   *
+   * Single-sourced here rather than restated per consumer. `self-description.ts` reads
+   * it to decide what to file a captured self-description under, and a beat whose
+   * wording no longer matches its question is a bug this field makes visible.
+   */
+  question: string;
+  phase: Phase;
+  answer: AnswerKind;
   /** Structured field names this beat is trying to fill. */
   captures: string[];
   /** What Wing is trying to learn. Goes into the prompt. */
@@ -63,8 +95,17 @@ export type Beat = {
    * all of them is what made the form feel like an interrogation.
    */
   required: boolean;
-  /** Restricts the beat to certain populations. Absent means everyone. */
+  /**
+   * Restricts the beat to certain populations. Absent means everyone.
+   *
+   * Nothing uses this any more, and that is a finding rather than an oversight: every
+   * one of her nine questions is universal, and all the audience variation lives in
+   * delivery rather than in whether the question fires at all. Kept because the
+   * mechanism is sound and a later module may need it.
+   */
   appliesTo?: PopulationTag[];
+  /** Conditional follow-ups, fired on the shape of the answer. */
+  followUps?: FollowUp[];
   /**
    * True if this beat contributes material the early insight can be built
    * from. The insight is only allowed to fire once enough of these are in.
@@ -75,136 +116,186 @@ export type Beat = {
 /* ── The sequence ───────────────────────────────────────────────────────── */
 
 export const BEATS: Beat[] = [
-  {
-    key: "situation",
-    captures: ["professional_status"],
-    intent:
-      "Where they are in their career: still studying or recently graduated, a few years in, well established, or between things.",
-    why:
-      "It decides which version of every later session they get. Wrong here and the whole arc is pitched at the wrong person.",
-    opening: "Before we start — where are you right now? Studying, working, somewhere in between?",
-    required: true,
-  },
-  {
-    key: "what_you_do",
-    captures: ["current_title", "major", "field_of_study", "current_company"],
-    intent:
-      "What they actually do day to day — course and subject if studying, role if working. One line is enough.",
-    why: "It is the ground everything else is said against.",
-    opening: "And what are you working on — course, job, whichever applies?",
-    required: true,
-  },
+  /* ── Phase 1 · Context (Q1–Q4) ─────────────────────────────────────────
+   * "Low-stakes, easy to answer. Wing's tone is welcoming and conversational."
+   */
   {
     key: "why_here",
-    captures: ["immediate_priorities", "goals"],
+    question: "Q1",
+    phase: 1,
+    answer: "text",
+    captures: ["immediate_priorities", "goals", "motivation_category"],
     intent:
-      "What brought them here now. Not their five-year plan — the thing that made them sign up this week.",
-    why:
-      "The stated reason is the first thing worth testing later, and it is usually not the real reason.",
-    opening: "What made you sign up? Something specific, or just a sense that you should be doing more?",
+      "What brought them here, in their words. Motivation, urgency, and whether they came on their own initiative or were sent.",
+    why: "The first data point is their unprompted language, before any question of ours has shaped it.",
+    opening: "Before we get into the good stuff — what brought you to Wing today?",
     required: true,
     insightMaterial: true,
+  },
+  {
+    key: "situation",
+    question: "Q2",
+    phase: 1,
+    answer: "text",
+    captures: ["professional_status", "current_situation_category"],
+    intent:
+      "Where they are right now. The primary audience-track signal, and deliberately open rather than a set of options.",
+    why: "Track assignment needs two signals; this is the first one, and forcing a dropdown in conversation loses the language the second signal is read from.",
+    opening:
+      "What's your situation right now? Are you a student, working full-time, in some kind of transition, building something — what's the deal?",
+    required: true,
+  },
+  {
+    key: "institution",
+    question: "Q3",
+    phase: 1,
+    answer: "text",
+    captures: ["university_name", "academic_programs", "user_source", "enrollment_status"],
+    intent: "Institutional or independent, and which programme. A routing question, not a judgment.",
+    why: "Configuration, active modules and reporting all hang off this. Institutional context is a separate dimension from audience track — a Haas MBA is early career, not undergraduate.",
+    opening: "Are you connected to a university or program, or are you using Wing on your own?",
+    required: true,
   },
   {
     key: "where_going",
-    captures: ["career_focus", "target_functions"],
-    intent: "Where they want to end up, in their own words. Vagueness here is informative, not a problem.",
-    why: "The gap between where they are and where they say they want to be is the positioning problem.",
-    opening: "Where do you want this to go? Rough is fine.",
+    question: "Q4",
+    phase: 1,
+    answer: "text",
+    captures: ["career_focus", "target_functions", "goal_category", "urgency_level"],
+    intent:
+      "A concrete future state three months out. Goals, urgency, and whether the framing is aspiration or evidence.",
+    why: "The three-month frame is load-bearing: close enough to feel real, far enough to allow meaningful change. 'What are you hoping to get out of this' invites the generic answer this question exists to avoid.",
+    opening: "If Wing works the way it should, what's different for you in three months?",
+    required: true,
+    insightMaterial: true,
+  },
+
+  /* ── Phase 2 · Lightly revealing (Q5–Q7 + Q5.5) ────────────────────────
+   * The tonal shift. Wing notices without coaching. PEACE-model ordering:
+   * the full account first, the observation only after they have spoken.
+   */
+  {
+    key: "party_answer",
+    question: "Q5",
+    phase: 2,
+    answer: "text",
+    captures: ["self_presentation_style", "function_language_detected"],
+    intent:
+      "Their self-presentation instinct — title-led, company-led, function-led, impact-led, deflection, or breadth.",
+    why: "The richest single question in the intake, and the primary identity-reference-frame detection point. The gap between this and Q6 is where most reveal templates fire.",
+    opening: "When someone at a party asks what you do, what do you actually say?",
     required: true,
     insightMaterial: true,
   },
   {
-    key: "visibility_now",
-    captures: ["activity_level", "content_activity"],
-    intent:
-      "How present they currently are professionally — posting, commenting, going to things, or none of it.",
-    why: "The starting point for everything Wing does afterwards.",
-    opening: "How visible are you professionally at the moment — posting, commenting, events, any of that?",
+    key: "topic_signal",
+    question: "Q5.5",
+    phase: 2,
+    answer: "text",
+    captures: ["topic_area_mapped", "industry_hint", "credibility_signal"],
+    intent: "One topic they own well enough to talk about unprepared.",
+    why: "One, not three: asking for three produces the same scatter pattern Foundation 1 diagnoses. Feeds Radar search terms, Module 6 content territory, and Module 11 topic targeting.",
+    opening: "What's one topic you could talk about for an hour without looking anything up?",
     required: true,
-    insightMaterial: true,
   },
   {
-    key: "visibility_feeling",
-    captures: ["visibility_concerns", "fears"],
-    intent:
-      "What actually stops them. Not 'no time' at face value — what sits underneath it. Worry about judgement, not knowing what to say, feeling unqualified.",
-    why:
-      "This is the beat the early insight usually turns on. A stated goal paired with an unstated fear is the most common shape.",
-    opening: "What stops you? And I mean the real reason, not the diary.",
+    key: "proud_of",
+    question: "Q6",
+    phase: 2,
+    answer: "text",
+    captures: ["notable_work", "hidden_strength_category", "strength_type"],
+    intent: "A capability their documented record does not show.",
+    why: "Consistently the most emotionally authentic answer in the intake, and half of the Q5/Q6 gap the reveal is built from. Required, unlike its predecessor — a reveal cannot be grounded without it, so an unanswered Q6 routes to IG-INT06 deferral rather than a weak reveal.",
+    opening: "What's one thing you're good at that your resume doesn't show?",
     required: true,
     insightMaterial: true,
   },
   {
     key: "self_perception",
-    captures: ["self_description", "perceived_strengths"],
-    intent:
-      "How they think others see them professionally, and whether that matches how they see themselves.",
-    why: "The mismatch between the two is exactly what Wing exists to show people.",
+    question: "Q7",
+    phase: 2,
+    answer: "text",
+    captures: ["self_description", "perceived_strengths", "perception_gap_type"],
+    intent: "The one thing they would change about how they are seen professionally.",
+    why: "The delta between current and desired positioning. Note this asks what they would CHANGE — the previous beat asked what the perception IS, and the gap is the entire diagnostic value.",
     opening:
-      "If someone you'd worked with described you to a stranger, what do you think they'd say?",
+      "If you could change one thing about how people perceive you professionally, what would it be?",
     required: true,
     insightMaterial: true,
   },
+
+  /* ── Phase 3.5 · Baseline calibration (B1–B3) ──────────────────────────
+   * After the reveal, deliberately. "Before the reveal, it's performative.
+   * After the upload, it's too late." Per IG-U014 these are Layer 1 —
+   * institutional reporting only, never a coaching input.
+   */
   {
-    key: "pathway",
-    captures: ["pathway"],
-    intent:
-      "Whether they are aiming at employment, starting something of their own, or working for themselves. Ask it plainly; most people know.",
-    why:
-      "It changes who the audience is. Positioning for a hiring manager, an investor and a prospective client are three different jobs, and the sessions speak differently for each.",
-    opening: "Are you aiming at a job, something of your own, or working for yourself?",
-    required: true,
+    key: "positioning_clarity",
+    question: "B1",
+    phase: 3.5,
+    answer: "scale_1_5",
+    captures: ["baseline_positioning_clarity"],
+    intent: "How clearly they can describe what makes them distinctive, 1 to 5.",
+    why: "The headline institutional metric, re-asked at T1, 30 days and 90 days. The 90-day number is the budget defence.",
+    opening:
+      "If you had to rate how clearly you can describe what makes you professionally distinctive — 1 is 'I freeze up every time someone asks' and 5 is 'I nail it in thirty seconds' — what's your number?",
+    required: false,
+    followUps: [
+      {
+        on: "low",
+        ask: "What trips you up — is it that you don't know, or that you know but can't get it out?",
+        why: "Separates a Foundation 1 problem from a Foundation 3 problem.",
+      },
+      {
+        on: "high",
+        ask: "Interesting — what makes you confident it's working?",
+        why: "Catches over-calibrated users whose open answers reveal vague positioning. Per IG-U014 the behavioural evidence governs when the two disagree.",
+      },
+    ],
+  },
+  {
+    key: "visibility_now",
+    question: "B2",
+    phase: 3.5,
+    answer: "scale_1_5",
+    captures: ["activity_level", "content_activity", "baseline_content_comfort"],
+    intent: "Comfort with posting professionally, 1 to 5.",
+    why: "Was a free-text beat in the question flow. It is a baseline, so it belongs after the reveal on her scale.",
+    opening:
+      "Same thing for posting on LinkedIn. 1 is 'I'd rather do anything else,' 5 is 'I'm already active and it's natural.' Where are you?",
+    required: false,
+    followUps: [
+      {
+        on: "low",
+        ask: "Is that a 'never done it' situation, or a 'tried it and hated it' situation?",
+        why: "Inexperience and aversion are different Module 6 entry points.",
+      },
+      {
+        on: "high",
+        ask: "What do you usually post about?",
+        why: "Captures a content signal for topic architecture and the Module 6 opening.",
+      },
+    ],
+  },
+  {
+    key: "visibility_feeling",
+    question: "B3",
+    phase: 3.5,
+    answer: "text",
+    captures: ["visibility_concerns", "fears", "baseline_barrier_category"],
+    intent: "The real barrier to being visible, in their words, plus a barrier category.",
+    why: "Nearly her wording already. The verbatim matters as much as the category — H-602's intervention paths branch on which barrier it is.",
+    opening:
+      "Last one. When it comes to posting or being visible professionally — what's the main thing in your way? Not the logistics — the real thing.",
+    required: false,
     insightMaterial: false,
-  },
-  {
-    key: "proud_of",
-    captures: ["notable_work", "student_experience", "professional_experience"],
-    intent:
-      "Something they have done that they are quietly pleased with. Deliberately not 'your biggest achievement'.",
-    why:
-      "It surfaces the evidence they undersell, which is the raw material for Session 2 — and asking small gets a truer answer than asking big.",
-    opening:
-      "Something you've done that you're quietly pleased with — even if it wouldn't make a CV?",
-    required: false,
-    insightMaterial: true,
-  },
-
-  /* ── The early insight fires around here. Specifics follow. ──────────── */
-
-  {
-    key: "where_studying",
-    captures: ["university_name", "graduation_year", "enrollment_status", "academic_programs"],
-    intent: "Institution, subject and roughly when they finish.",
-    why: "Cohort reporting for the partner institution, and it dates their experience.",
-    opening: "Quick practical one — where are you studying, and when do you finish?",
-    required: false,
-    appliesTo: ["undergraduate_or_recent_grad", "early_career"],
-  },
-  {
-    key: "experience_length",
-    captures: ["years_experience", "leadership_level", "professional_path"],
-    intent: "Roughly how long they have been working, and whether they lead people.",
-    why: "It sets the credibility bar Session 2 holds them to.",
-    opening: "How long have you been at this, roughly? And are you leading anyone?",
-    required: false,
-    appliesTo: ["early_career", "mid_career_or_senior", "career_break_or_transition"],
-  },
-  {
-    key: "industry",
-    captures: ["primary_industry", "target_industries"],
-    intent: "The industry they are in or aiming at.",
-    why: "Positioning that ignores the industry's own language does not land in it.",
-    opening: "Which industry — now, or the one you're aiming at?",
-    required: false,
-  },
-  {
-    key: "timeline",
-    captures: ["timeline"],
-    intent: "How urgent this is. Graduating in eight weeks is a different conversation from idle curiosity.",
-    why: "It sets the pace of everything that follows.",
-    opening: "Is there a deadline on any of this, or is it more open-ended?",
-    required: false,
+    followUps: [
+      {
+        on: "fear",
+        ask: "Fear of whose judgment specifically — people you know, or strangers?",
+        why: "Maps to different H-602 intervention paths.",
+      },
+    ],
   },
 ];
 
@@ -233,6 +324,36 @@ export function isSatisfied(beat: Beat, captured: Record<string, unknown>): bool
     if (Array.isArray(v)) return v.length > 0;
     return true;
   });
+}
+
+/** Beats in one phase, in order. */
+export function beatsInPhase(phase: Phase): Beat[] {
+  return BEATS.filter((b) => b.phase === phase);
+}
+
+/**
+ * The phase a beat belongs to, by key. Null for an unknown key rather than a throw —
+ * callers are reading historical session state, where a retired beat can still appear.
+ */
+export function phaseOf(key: string): Phase | null {
+  return BEATS.find((b) => b.key === key)?.phase ?? null;
+}
+
+/** The question a beat implements, or null for an unknown key. */
+export function questionOf(key: string): string | null {
+  return BEATS.find((b) => b.key === key)?.question ?? null;
+}
+
+/**
+ * Which follow-up a scale answer earns, if any. Pure, so the banding is testable.
+ *
+ * 1–2 is low, 4–5 is high, 3 is nothing.
+ */
+export function followUpFor(beat: Beat, score: number): FollowUp | null {
+  if (beat.answer !== "scale_1_5") return null;
+  const band = score <= 2 ? "low" : score >= 4 ? "high" : null;
+  if (!band) return null;
+  return beat.followUps?.find((f) => f.on === band) ?? null;
 }
 
 /** The next beat to pursue, or null when the conversation is done. */
@@ -332,10 +453,35 @@ export function hasTension(captured: Record<string, unknown>): boolean {
     return v !== null && v !== undefined;
   };
 
+  /*
+   * ── REWRITTEN FOR THE v1.8 QUESTION SET ────────────────────────────────
+   * The old pairing was a stated goal against a stated worry, and both halves of it
+   * came from beats that are now baselines — `fears`, `visibility_concerns` and
+   * `activity_level` are all captured in Phase 3.5, AFTER the reveal fires. Left
+   * alone, this predicate would have gone quietly false for every user, because it
+   * was waiting on answers that do not exist yet at Q8.
+   *
+   * So the second side is now the Phase 2 self-description, which is what her reveal
+   * templates actually compare a goal against: RT-05 sets Q4's goal against Q6's
+   * evidence, RT-01 sets Q5's presentation against Q6's strength, RT-08 reads the
+   * Q5/Q6/Q7 triangle.
+   *
+   * This stays a coarse gate. Real tension is a cross-answer comparison per template
+   * and belongs to reveal selection (H-019.5), which supersedes this function. Until
+   * that exists, this is what stops the model claiming an insight it has no grounds
+   * for — which is the job the predicate was written to do.
+   */
   const wants = ["goals", "immediate_priorities", "career_focus", "target_functions"].some(nonEmpty);
-  const holdsBack = ["fears", "visibility_concerns", "self_description", "activity_level"].some(nonEmpty);
+  const describesSelf = [
+    "self_presentation_style",
+    "hidden_strength_category",
+    "notable_work",
+    "perception_gap_type",
+    "self_description",
+    "perceived_strengths",
+  ].some(nonEmpty);
 
-  return wants && holdsBack;
+  return wants && describesSelf;
 }
 
 /**

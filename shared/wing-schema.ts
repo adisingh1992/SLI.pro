@@ -533,6 +533,83 @@ export const heuristics = wing.table("heuristics", {
 
 /** Build now · The seven components as rows, not columns. A refinement
  *  inserts a new row and flips the prior row's is_current to false. */
+/**
+ * How a self-description came to be said. Her three values, and only hers.
+ *
+ * `coached` is reserved: it cannot occur during intake, which is the whole point
+ * of intake as a baseline, but downstream modules will need it and a value added
+ * later is a migration on a table with rows in it.
+ */
+export const selfDescriptionProvenance = wing.enum("self_description_provenance", [
+  "spontaneous", "elicited", "coached",
+]);
+
+/**
+ * Whether the prompt that produced a description IS the question it is filed under.
+ *
+ * Today's intake asks thirteen beats of its own, and two of them are near-misses for
+ * two of Danielle's questions rather than the same question:
+ *
+ *   Q6 asks for a capability a resume does not show. Our `proud_of` asks for
+ *   something they did and are quietly pleased with. Related, not identical.
+ *   Q7 asks what they would change about how they are perceived. Our
+ *   `self_perception` asks how they think they are seen.
+ *
+ * Filing those as Q6 and Q7 with no qualifier would overclaim; filing them as
+ * nothing would throw away the only pre-coaching self-descriptions we can capture
+ * before her question set is built. So they are filed under her identifier and
+ * marked `approximate`, and a downstream reader that needs clean data filters on
+ * `exact`. Once her questions are live every row is exact and this column stops
+ * mattering.
+ */
+export const selfDescriptionEquivalence = wing.enum("self_description_equivalence", [
+  "exact", "approximate",
+]);
+
+/**
+ * Build now · The user's own words about themselves, one row per utterance.
+ *
+ * Intake is the only time Wing sees a user describe themselves before Wing has
+ * taught them any language for it, and that reference point cannot be
+ * reconstructed afterwards — so capture starts before the feature that reads it
+ * exists. Wing's own output never goes in here; storing it beside the user's words
+ * would contaminate the baseline. See migration 0023 for the reasoning in full.
+ */
+export const selfDescriptions = wing.table("self_descriptions", {
+  id: id(),
+  studentId: fk("student_id").notNull().references(() => students.id),
+  sessionId: fk("session_id").notNull().references(() => sessions.id),
+  /** Her `timestamp` field: when the response was given. */
+  capturedAt: tsNow("captured_at"),
+  /** "intake" for now. Text, because other modules will feed this later. */
+  sourceModule: text("source_module").notNull(),
+  /**
+   * Her question identifier — Q2, Q6, Q7, reveal_reaction — or NULL.
+   *
+   * NULL is a statement, not a gap: today's intake asks thirteen beats that are
+   * not her question set, and a row claiming to be "Q5" while answering something
+   * else would corrupt the convergence comparison this table exists to support.
+   */
+  sourceQuestion: text("source_question"),
+  /** What was actually asked: the beat key today, the card code after the rebuild. */
+  askedAs: text("asked_as").notNull(),
+  /**
+   * Whether `asked_as` IS `source_question`. See the enum.
+   *
+   * Nullable, and null exactly when `source_question` is: an equivalence is a
+   * property of a PAIRING, so it cannot exist when there is nothing to pair with.
+   * A row whose prompt matches none of her questions carries `asked_as` alone.
+   */
+  equivalence: selfDescriptionEquivalence("equivalence"),
+  /** The user's exact words, unmodified. Never Wing's. */
+  verbatimText: text("verbatim_text").notNull(),
+  provenance: selfDescriptionProvenance("provenance").notNull(),
+}, (t) => ({
+  studentIdx: index("self_descriptions_student_idx").on(t.studentId, t.capturedAt),
+  questionIdx: index("self_descriptions_question_idx")
+    .on(t.studentId, t.sourceQuestion, t.capturedAt),
+}));
+
 export const heuristicComponents = wing.table("heuristic_components", {
   id: id(),
   heuristicId: fk("heuristic_id").notNull().references(() => heuristics.id),

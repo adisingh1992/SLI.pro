@@ -9,6 +9,8 @@ import * as intakeStore from "./intake-store";
 import * as engine from "./engine";
 import * as voice from "./voice";
 import { compileSafety, safetyTokenEstimate } from "./safety-rules";
+import { captureForTurn } from "./self-description";
+import * as selfDescriptionStore from "./self-description-store";
 import { recordAiTurn, recordHumanTurn } from "./provenance";
 import {
   BEATS,
@@ -541,6 +543,44 @@ export async function respond(userId: number, message: string): Promise<TurnResu
     if (typeof extracted.pathway === "string") {
       await intakeStore.setPathway(userId, extracted.pathway as any);
     }
+  }
+
+  /*
+   * ── THE SELF-DESCRIPTION CAPTURE ───────────────────────────────────────
+   * Danielle, 19 August: "Start capturing now, regardless of intake build order...
+   * retroactive capture is impossible."
+   *
+   * After the extraction, because whether the turn captured a field is the evidence
+   * that the user said something about themselves rather than asking what this is.
+   * Before the reply is recorded, so a model failure on the next line cannot cost a
+   * row that can never be recreated.
+   *
+   * `beat` is the beat whose answer this message contains: it is computed from the
+   * state as it stood before this turn's extraction, so the field it captures is by
+   * definition still unfilled.
+   */
+  const capture = captureForTurn({
+    askedBeat: beat?.key ?? null,
+    extractedFields: Object.keys(extracted),
+    afterInsight: before.insightDelivered,
+    reactionAlreadyStored: before.insightDelivered
+      ? await selfDescriptionStore.hasRevealReaction(studentId)
+      : false,
+  });
+  if (capture) {
+    await selfDescriptionStore.captureSelfDescription({
+      studentId,
+      sessionId: before.sessionId,
+      capture,
+      // The user's words. Never `reply`.
+      userText: text,
+    });
+    log(
+      `[intake] captured self-description: ${capture.askedAs}` +
+        `${capture.sourceQuestion ? ` (${capture.sourceQuestion}, ${capture.equivalence})` : " (no equivalent question)"}` +
+        `, ${capture.provenance}`,
+      "intake",
+    );
   }
 
   const styleFromModel = isDeliveryStyle(parsed.deliveryStyle) ? parsed.deliveryStyle : null;

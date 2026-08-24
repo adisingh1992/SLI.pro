@@ -21,9 +21,9 @@ import { RESEARCH_GATES_SOURCE, parseResearchGates } from "./parse-research-gate
  * `card_kind` took gates out of the catalogue, so the premise moved and the number
  * stopped describing anything a student experiences.
  *
- * The Tier 1 set after the 18 August documents is the case that forced it: 104
- * entries, 46 coaching cards, and no single turn seeing more than 23. The old
- * check refuses it at 46. The peak passes it at 23, which is the number the
+ * The Tier 1 set after the 18-19 August documents is the case that forced it: 103
+ * entries, 45 coaching cards, and no single turn seeing more than 22. The old
+ * check refuses it at 45. The peak passes it at 22, which is the number the
  * detector is actually asked to choose between.
  *
  * The unscoped case is asserted just as hard, because that is the loophole this
@@ -141,20 +141,21 @@ test("the real Tier 1 set passes per turn and would have failed per sequence", (
     entries.push(card(g.cardKind, scopeOf(g.module)));
   }
 
-  assert.equal(entries.length, 104);
+  // 104 and 46 under intake v1.1; RT-14's retirement takes one coaching card out.
+  assert.equal(entries.length, 103);
   const coaching = entries.filter((e) => e.cardKind === "coaching_card").length;
-  assert.equal(coaching, 46);
+  assert.equal(coaching, 45);
 
   const loads = detectorLoadBySession(entries);
   assert.deepEqual(loads.slice().sort((a, b) => a.count - b.count), [
     { session: "foundation_2", count: 7 },
     { session: "foundation_1", count: 8 },
     { session: "foundation_3", count: 8 },
-    { session: "intake", count: 23 },
+    { session: "intake", count: 22 },
   ]);
 
   const peak = peakDetectorLoad(entries);
-  assert.deepEqual(peak, { session: "intake", count: 23 });
+  assert.deepEqual(peak, { session: "intake", count: 22 });
   assert.ok(peak.count <= SEQUENCE_HARD_LIMIT, "the real set must be activatable");
   assert.ok(coaching > SEQUENCE_HARD_LIMIT, "and the old measurement must have refused it");
 });

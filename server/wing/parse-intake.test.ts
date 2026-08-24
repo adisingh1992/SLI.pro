@@ -41,25 +41,34 @@ console.log("\nparse-intake\n");
 
 const result = parseIntake(readFileSync(INTAKE_SOURCE, "utf8"));
 
-test("42 elements: 29 cards and 13 integrity gates", () => {
+test("41 elements: 28 cards and 13 integrity gates", () => {
   /*
-   * Her header says "Total new cards: 42" and breaks it down as 28 heuristic
-   * cards + H-019.5 + 13 intake integrity gates. 28 + 1 = 29 cards here, which
-   * is the same 42 counted the same way.
+   * v1.7's header: "Total new cards: 41 ... H-010 through H-037 (27 heuristic
+   * cards) + H-019.5 (1 selection logic card) + IG-INT01 through IG-INT13 (13
+   * intake integrity gates). H-033 (RT-14) retired." 27 + 1 = 28 cards here,
+   * which is the same 41 counted the same way.
+   *
+   * It was 42 in v1.1. RT-14 was retired on 19 August because its only quoted
+   * element was a topic noun — substitute any undergraduate who names any topic
+   * and the observation still reads as true, which is the Barnum failure IG-U006
+   * exists to catch. Undergraduates now route to cross-track templates or the
+   * reveal defers, and a deferred reveal is the correct outcome.
    *
    * The compendium parser finds ZERO of them, which is why this file exists.
    */
-  assert.equal(result.cards.length, 29);
+  assert.equal(result.cards.length, 28);
   assert.equal(result.gates.length, 13);
-  assert.equal(result.cards.length + result.gates.length, 42);
+  assert.equal(result.cards.length + result.gates.length, 41);
 });
 
 test("the codes are exactly the range the document declares", () => {
   const expectedCards: string[] = [];
   for (let n = 10; n <= 19; n++) expectedCards.push(`H-0${n}`);
   expectedCards.push("H-019.5");
-  for (let n = 20; n <= 37; n++) expectedCards.push(`H-0${n}`);
+  // 33 is absent: RT-14 retired in v1.7.
+  for (let n = 20; n <= 37; n++) if (n !== 33) expectedCards.push(`H-0${n}`);
   assert.deepEqual(result.cards.map((c) => c.cardCode), expectedCards);
+  assert.equal(result.cards.some((c) => c.cardCode === "H-033"), false);
 
   const expectedGates: string[] = [];
   for (let n = 1; n <= 13; n++) expectedGates.push(`IG-INT${n < 10 ? "0" : ""}${n}`);
@@ -84,7 +93,7 @@ test("H-019.5 is a card of its own and does not collide with H-019", () => {
 });
 
 test("every card carries all seven components", () => {
-  // 29 cards x 7 rows = 203, which is exactly how many component rows the
+  // 28 cards x 7 rows = 196, which is exactly how many component rows the
   // document contains. Nothing is half-parsed.
   assert.deepEqual(result.incomplete, []);
   for (const c of result.cards) {
@@ -183,7 +192,8 @@ test("every intervention type the document declares exists in the enum", () => {
    * the 29 intake cards would become indistinguishable from Foundation coaching,
    * and "intake does not coach" is the point of the redesign.
    */
-  assert.deepEqual(result.interventionTypes, { META: 6, ELICIT: 8, OBSERVE: 15 });
+  // OBSERVE fell from 15 to 14 with RT-14's retirement.
+  assert.deepEqual(result.interventionTypes, { META: 6, ELICIT: 8, OBSERVE: 14 });
 
   const schema = readFileSync("shared/wing-schema.ts", "utf8");
   const block = /wing\.enum\("heuristic_intervention_type",\s*\[([\s\S]*?)\]\)/.exec(schema);
@@ -205,7 +215,7 @@ test("the intake module is Tier 1", () => {
   for (const c of result.cards) assert.ok(isTier1(c), `${c.cardCode} is not Tier 1`);
 });
 
-test("23 cards fire on the student's turn and 6 are delivery rules", () => {
+test("22 cards fire on the student's turn and 6 are delivery rules", () => {
   /*
    * The six are META: the self-introduction, the between-question reaction
    * pattern, the reveal-selection logic, the baseline delivery, the upload
@@ -215,14 +225,14 @@ test("23 cards fire on the student's turn and 6 are delivery rules", () => {
    */
   const kinds: Record<string, number> = {};
   for (const c of result.cards) kinds[c.cardKind] = (kinds[c.cardKind] ?? 0) + 1;
-  assert.deepEqual(kinds, { coaching_card: 23, integrity_gate: 6 });
+  assert.deepEqual(kinds, { coaching_card: 22, integrity_gate: 6 });
   assert.deepEqual(
     result.cards.filter((c) => c.cardKind === "integrity_gate").map((c) => c.cardCode),
     ["H-010", "H-019", "H-019.5", "H-035", "H-036", "H-037"],
   );
 });
 
-test("fourteen cards state no sequence weight, and the document is uneven about it", () => {
+test("thirteen cards state no sequence weight, and the document is uneven about it", () => {
   /*
    * Reported, not defaulted. The unweighted fourteen are mostly reveal templates,
    * and the document does give a weight to four of them — 2.0 for RT-01 and
@@ -233,7 +243,7 @@ test("fourteen cards state no sequence weight, and the document is uneven about 
    */
   assert.deepEqual(result.missingWeight, [
     "H-021", "H-023", "H-024", "H-025", "H-026", "H-028", "H-029",
-    "H-030", "H-031", "H-032", "H-033", "H-034", "H-035", "H-036",
+    "H-030", "H-031", "H-032", "H-034", "H-035", "H-036",
   ]);
   assert.equal(result.cards.find((c) => c.cardCode === "H-019.5")!.weight, 2);
 });
