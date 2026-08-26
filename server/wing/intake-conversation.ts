@@ -6,12 +6,15 @@ import { parseJsonResponse } from "../json-response";
 import * as orchestrator from "../orchestrator";
 import * as sessionStore from "./session-store";
 import * as intakeStore from "./intake-store";
+import { planChunks, type Chunk } from "./chunking";
 import * as engine from "./engine";
 import * as voice from "./voice";
 import { compileSafety, safetyTokenEstimate } from "./safety-rules";
 import { captureForTurn } from "./self-description";
 import * as selfDescriptionStore from "./self-description-store";
 import { recordAiTurn, recordHumanTurn } from "./provenance";
+import { openHold, recordReturn, reportsCrisis } from "./safety-hold-store";
+import { statedInSchool, statedUnder18 } from "./minor-protection";
 import {
   BEATS,
   DELIVERY_STYLES,
@@ -255,8 +258,18 @@ Reply with ONLY a JSON object, no prose around it:
   "reply": string,             // what you say. Plain text, no markdown.
   "extracted": object,         // fields you learned FROM THEIR LAST MESSAGE ONLY
   "deliveryStyle": string,     // one of: affirming, normalising, evidential, permitting
-  "deliveredInsight": boolean  // true only if your reply contains the early insight
+  "deliveredInsight": boolean, // true only if your reply contains the early insight
+  "safetyHold": boolean        // see below. Almost always false.
 }
+
+RULES FOR "safetyHold"
+- Set it TRUE when you stopped coaching because what they wrote suggests distress
+  beyond career frustration: hopelessness, identity collapse, isolation, or any sign
+  of self-harm. That is the crisis rule you were given above.
+- The test is the same one that rule gives you: scope, not intensity. "I'm frustrated
+  with my career" is false. "I don't see the point of anything anymore" is true.
+- It describes what YOU just did. If your reply is a coaching move, it is false.
+- Reading it too cautiously is acceptable. Missing it is not.
 
 RULES FOR "extracted"
 - Only what this last message told you. Do not restate earlier fields.
@@ -393,7 +406,30 @@ export function sanitiseExtracted(raw: unknown): Record<string, unknown> {
 /* ── The turn ───────────────────────────────────────────────────────────── */
 
 export type TurnResult = {
+  /**
+   * The whole reply as one string.
+   *
+   * Kept alongside `messages` rather than replaced by it: every existing caller reads
+   * this, and a delivery layer is not a reason to change what a reply IS. It is also the
+   * text the audit runs against, and auditing four fragments separately would let a rule
+   * hold in each chunk and be broken by the pair.
+   */
   reply: string;
+  /**
+   * The same reply as the messages the student actually receives, in order, each with the
+   * pause that precedes it.
+   *
+   * Named `delivery` and not `messages` on purpose: `GET /api/intake` already returns
+   * `messages` meaning the whole transcript, and one key with two meanings across two
+   * endpoints of the same resource is a bug waiting for whoever wires the client.
+   *
+   * H-007, and v3.3 is firmer than the card: chunked delivery "governs the intake surface
+   * throughout and is a design requirement, not a preference". One chunk is the normal
+   * case — the splitter deliberately refuses to chop a short reply into fragments.
+   */
+  delivery: Chunk[];
+  /** The beat after the last message. Non-zero only on a reveal, where the pause is the product. */
+  pauseAfterMs: number;
   state: IntakeState;
   insightDelivered: boolean;
 };
@@ -403,7 +439,21 @@ export async function begin(userId: number): Promise<TurnResult | null> {
   const state = await getState(userId);
   if (!state) return null;
   if (state.messages.length) {
-    return { reply: state.messages[state.messages.length - 1]?.content ?? "", state, insightDelivered: state.insightDelivered };
+    /*
+     * Already begun, so nothing is re-sent: the client has the transcript. `reply` is the
+     * last thing Wing said, which after chunking is the last CHUNK rather than a whole
+     * reply — correct, because that is the message the student is looking at. `messages`
+     * is empty on purpose: replaying a chunk sequence here would re-animate typing pauses
+     * for text already on screen.
+     */
+    const last = state.messages[state.messages.length - 1]?.content ?? "";
+    return {
+      reply: last,
+      delivery: [],
+      pauseAfterMs: 0,
+      state,
+      insightDelivered: state.insightDelivered,
+    };
   }
 
   const [who] = await db
@@ -425,12 +475,27 @@ export async function begin(userId: number): Promise<TurnResult | null> {
     `skip anything you'd rather not get into.\n\n` +
     `${BEATS[0].opening}`;
 
-  await recordAiTurn(state.sessionId, opening, { channel: "in_app" });
+  /*
+   * The opening is the clearest case H-007 describes: a greeting, a framing paragraph and
+   * then Q1. Delivered as one wall of text it buries the question the student is supposed
+   * to answer, and the card's success criterion is exactly that they respond to the final
+   * prompt message rather than to the framing.
+   */
+  const plan = planChunks(opening, { kind: "reply" });
+  for (const chunk of plan.chunks) {
+    await recordAiTurn(state.sessionId, chunk.text, { channel: "in_app" });
+  }
 
   // The opening asks Q1, so the first answer has something to be an answer to.
   await intakeStore.mergeIntakeResponses(userId, { _asked: askedFor(BEATS[0].key) });
 
-  return { reply: opening, state: await getState(userId) as IntakeState, insightDelivered: false };
+  return {
+    reply: opening,
+    delivery: plan.chunks,
+    pauseAfterMs: plan.pauseAfterMs,
+    state: (await getState(userId)) as IntakeState,
+    insightDelivered: false,
+  };
 }
 
 /**
@@ -447,15 +512,67 @@ export async function respond(userId: number, message: string): Promise<TurnResu
   // is still in the transcript — the same rule as the life log.
   await recordHumanTurn(before.sessionId, text, { channel: "in_app" });
 
+  /*
+   * The person wrote to Wing of their own accord, which is the only thing that lifts a
+   * safety hold. Recorded here rather than after the reply, because it is true the moment
+   * they typed it and a model failure must not cost them the return.
+   *
+   * Recording is not lifting. `activeHold` still refuses to release inside the seven-day
+   * minimum, so on day two this changes nothing — which is the point. And it never
+   * suppresses the reply itself: `mayRespondToUser()` is unconditional, and someone in
+   * distress who opens the app and types is the person the hold exists for.
+   */
+  /*
+   * ── IG-S06, THE HALF THAT CANNOT BE ASKED FOR ──────────────────────────
+   * Wing never asks anyone's age — IG-INT03 forbids demographic collection at intake, so
+   * detection is passive by construction and reads only what someone volunteers.
+   *
+   * Persisted under an underscore key, which `renderCaptured` already filters, so it
+   * never reaches the model as something the student told Wing about themselves. It is
+   * Wing's own bookkeeping and the model has the conversational half of the rule already.
+   *
+   * Sticky: once someone has said they are sixteen, a later turn that does not mention it
+   * must not clear the footing. Only ever set to true.
+   */
+  const minorSignal = statedUnder18(text) || statedInSchool(text);
+  if (minorSignal && before.captured._minor_stated !== true) {
+    try {
+      await intakeStore.mergeIntakeResponses(userId, { _minor_stated: true });
+      log(`minor protection engaged for user ${userId} (stated, IG-S06)`, "intake");
+    } catch (err) {
+      log(`could not record IG-S06 signal for user ${userId}: ${(err as Error).message}`, "intake");
+    }
+  }
+
+  try {
+    await recordReturn(db as never, await sessionStore.studentIdFor(userId), new Date());
+  } catch (err) {
+    // Never break someone's turn over bookkeeping. A missed return costs a held
+    // channel for one more turn; a thrown error costs them the conversation.
+    log(`could not record safety-hold return for user ${userId}: ${(err as Error).message}`, "intake");
+  }
+
   const [who] = await db
     .select({ firstName: users.firstName })
     .from(users)
     .where(eq(users.id, userId))
     .limit(1);
 
-  // Exchanges, not turns: one exchange is a question and an answer, which is
-  // what the spec means by "question 8-10".
-  const exchanges = Math.ceil((before.messages.length + 1) / 2);
+  /*
+   * Exchanges, not turns: one exchange is a question and an answer, which is what the
+   * spec means by "question 8-10".
+   *
+   * Counted from the USER's turns rather than from the transcript length, and that is not
+   * a simplification. Chunked delivery records each message the student received as its
+   * own AI turn, because the transcript has to say what they actually saw — so a
+   * four-message reveal adds four assistant rows for one exchange. Halving the total would
+   * read that as two and a half exchanges and walk the intake off the end of the spec's
+   * question numbering. Counting answers is chunk-proof and is what an exchange means.
+   *
+   * Identical to the old arithmetic on an unchunked transcript: alternating turns give
+   * `ceil((2k + 1) / 2) = k + 1`, and k user turns plus this one is the same k + 1.
+   */
+  const exchanges = before.messages.filter((m) => m.role === "user").length + 1;
 
   /*
    * ── PHASE 3.5: WHAT DID WE ASK, AND IS THIS AN ANSWER TO IT? ───────────
@@ -556,6 +673,25 @@ export async function respond(userId: number, message: string): Promise<TurnResu
     extracted?: unknown;
     deliveryStyle?: unknown;
     deliveredInsight?: unknown;
+    /**
+     * The model's own answer to "did I just apply the crisis rule".
+     *
+     * ── WHY THE MODEL AND NOT A DETECTOR ───────────────────────────────────
+     * IG-S01's own wording rules out a phrase list: "The line is scope, not intensity."
+     * A regex on hopelessness vocabulary would fire on "this job market is hopeless" and
+     * miss "I don't see the point of anything anymore", which is her worked example of
+     * the thing it must catch. Writing one would be inventing a crisis classifier she did
+     * not specify, on the surface where being wrong costs the most.
+     *
+     * The model is already required to make this judgement — the rule is unconditional in
+     * every prompt and tells it to stop coaching. Asking it to report what it did adds no
+     * new judgement; it only writes down one that was already made and was, until now,
+     * thrown away.
+     *
+     * It is a floor, not a ceiling. A hold opened here can only be too cautious, which her
+     * rule explicitly permits: "Reading it too cautiously is acceptable. Missing it is not."
+     */
+    safetyHold?: unknown;
   };
 
   try {
@@ -671,20 +807,103 @@ export async function respond(userId: number, message: string): Promise<TurnResu
    */
   await intakeStore.mergeIntakeResponses(userId, { _asked: turn.nextAsked });
 
-  await recordAiTurn(before.sessionId, reply, { channel: "in_app" });
+  /*
+   * ── DELIVERY ───────────────────────────────────────────────────────────
+   * H-007. The model is told to write one reply; a model told to send three messages
+   * sends one message with two blank lines in it, so the split is a decision the code
+   * makes about text the model produced.
+   *
+   * `kind` matters. A reveal gets the longer beat before its deepening question, and the
+   * gate that decides whether a reveal happened is the same conjunction used below: the
+   * gate opened AND the model says it wrote one. Passing "reveal" on a turn where it
+   * declined would spend the four-second pause on an ordinary answer, and the pause only
+   * reads as a pause because it is longer than any typing gap.
+   */
+  /*
+   * Marked delivered only when BOTH the gate opened and the model says it actually wrote
+   * one. The model is allowed to decline — the prompt tells it to, if it cannot point at
+   * two things that pull against each other — and marking it delivered anyway would burn
+   * the one chance at that moment on a turn where it never happened.
+   */
+  const revealed = wantsInsight && parsed.deliveredInsight === true;
+  const plan = planChunks(reply, { kind: revealed ? "reveal" : "reply" });
 
   /*
-   * The insight is marked delivered only when BOTH the gate opened and the
-   * model says it actually wrote one. The model is allowed to decline — the
-   * prompt tells it to, if it cannot point at two things that pull against
-   * each other — and marking it delivered anyway would burn the one chance at
-   * that moment on a turn where it never happened.
+   * ── THE SAFETY HOLD ────────────────────────────────────────────────────
+   * The model reports that it applied the crisis rule; this is what makes that report
+   * mean something. Until now the judgement was made on every turn and discarded, so
+   * IG-S01 changed what Wing said and nothing else — no record, and every scheduled
+   * channel kept sending.
+   *
+   * Written before the reply is recorded, on the same rule as `_asked`: a hold that
+   * failed to save after the transcript already carried the crisis turn is the one
+   * ordering that loses. `openHold` is idempotent within an open hold, so a second
+   * crisis turn does not restart the seven-day minimum — which would make the minimum a
+   * function of how much someone talks.
+   *
+   * `reportsCrisis` rather than a truthy check: the value comes from a JSON parse of
+   * model output, and `if (parsed.safetyHold)` opens a hold on the string "false".
    */
-  const delivered = wantsInsight && parsed.deliveredInsight === true;
-  if (delivered) await intakeStore.markEarlyInsightDelivered(userId);
+  if (reportsCrisis(parsed.safetyHold)) {
+    try {
+      await openHold(
+        db as never,
+        studentId,
+        "IG-S01 applied during intake; recorded from the turn's own report",
+      );
+      log(`safety hold opened for student ${studentId} (IG-S01, intake)`, "intake");
+    } catch (err) {
+      /*
+       * Loud, and it does not stop the reply. The reply is the caring message the rule
+       * asks for and the student must get it. What is lost is the outbound suppression,
+       * and `maySend` fails closed on an unreadable table — so the failure mode of a
+       * failed write is a student who keeps receiving scheduled messages, which is
+       * exactly why this logs at the level someone reads.
+       */
+      log(
+        `FAILED to open safety hold for student ${studentId}: ${(err as Error).message} — ` +
+          "outbound contact is NOT suppressed for this student",
+        "intake",
+      );
+    }
+  }
+
+  /*
+   * Each chunk is its own AI turn, because the transcript is the record of what the
+   * student saw. One row holding all four would make the audit and any later read of the
+   * conversation disagree with the conversation.
+   *
+   * Sequentially, not in parallel: `recordAiTurn` appends, and four concurrent appends
+   * have no defined order. Out-of-order chunks in the transcript would be invisible until
+   * someone read a reveal back and found the deepening question before the observation.
+   */
+  for (const chunk of plan.chunks) {
+    await recordAiTurn(before.sessionId, chunk.text, { channel: "in_app" });
+  }
+
+  /*
+   * Wing wrote more than four chunks' worth. Not an error and not something to truncate —
+   * her own note calls this a voice problem rather than a delivery one — but it is the
+   * signal that the intake voice is drifting long, and nothing else would ever say so.
+   */
+  if (plan.tooLong) {
+    log(
+      `intake reply for user ${userId} exceeded ${plan.chunks.length} chunks; ` +
+        "the last one absorbed the remainder",
+      "intake",
+    );
+  }
+
+  if (revealed) await intakeStore.markEarlyInsightDelivered(userId);
 
   const after = await getState(userId);
-  return { reply, state: after as IntakeState, insightDelivered: delivered };
+  return {
+    reply,
+    delivery: plan.chunks,
+    pauseAfterMs: plan.pauseAfterMs,
+    state: after as IntakeState,
+    insightDelivered: revealed,
+  };
 }
 
 function readStyle(captured: Record<string, unknown>): DeliveryStyle | null {

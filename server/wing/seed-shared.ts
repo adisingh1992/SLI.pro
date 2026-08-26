@@ -14,7 +14,8 @@
  */
 
 import { COMPONENT_KEYS, moduleFromCode, type ComponentKey, type ParsedCard } from "./parse-compendium";
-import { INTAKE_SOURCE, type ParsedIntakeGate } from "./parse-intake";
+import { INTAKE_SOURCE, type IntakeParseResult, type ParsedIntakeGate } from "./parse-intake";
+import { newCards, patchDocument } from "./methodology-patches";
 import {
   RESEARCH_GATES_SOURCE,
   UNIVERSAL_GATE_GAPS,
@@ -37,6 +38,116 @@ export const COMPONENT_COLUMN: Partial<Record<ComponentKey, string>> = {
   success_criteria: "success_criteria",
   failure_path: "failure_path",
 };
+
+/** One released version's value for a component. */
+export type AcceptedValue = { source: string; content: string };
+
+/**
+ * **The whole safety property of this script**, as a pure function so it can be tested.
+ *
+ * A component is replaced only when what is stored is exactly what some released version
+ * of the document produced. Anything else has been edited in the admin editor since
+ * seeding, and overwriting it would destroy the methodology owner's own work silently,
+ * because a seed prints what it wrote and not what it replaced.
+ *
+ * Two subtleties, both of which were bugs waiting to happen:
+ *
+ * - **Any version, not the newest.** The seed run that should have written these rows
+ *   threw at card 2 of 42, so the database may hold rows from one version or two. Testing
+ *   against a single prior would report every row from the other version as hand-edited.
+ * - **`undefined` is untouched only when no version had the component.** A component that
+ *   no released version carried cannot have been edited. But a component that a version
+ *   DID carry and which is now absent has been deleted by someone, and that is an edit —
+ *   returning untouched there would re-add a row a human removed on purpose.
+ */
+export function replaceable(
+  held: string | undefined,
+  accepted: readonly AcceptedValue[],
+): { untouched: boolean; matched: string | null } {
+  const match = accepted.find((a) => a.content === held);
+  if (match) return { untouched: true, matched: match.source };
+  if (held === undefined && !accepted.length) return { untouched: true, matched: null };
+  return { untouched: false, matched: null };
+}
+
+/**
+ * Every element of a parse, mapped to the rows a seed would write.
+ *
+ * `source` matters. The prior side has to reproduce what was ACTUALLY seeded, which cited
+ * its own version in the provenance block — so mapping it with the current constant would
+ * make all 41 notes rows differ from what is stored, and every one of them would be
+ * reported as edited by hand.
+ *
+ * ── WHY `patches` IS REQUIRED AND NOT DEFAULTED ──────────────────────────
+ * Her approved corrections belong on the CURRENT side and must never touch a prior one,
+ * and the reason is the same asymmetry as `source`: the prior side reproduces what a past
+ * seed actually wrote, and no past seed applied a patch that did not exist yet. Patch both
+ * sides and every patched component matches the stored row, so the correction is reported
+ * as already applied and never written. Patch neither and her wording never ships.
+ *
+ * Either default would be wrong for half the call sites, and both failures are silent. So
+ * there is no default: a caller has to say which side it is building.
+ */
+export function seedsOf(
+  parsed: IntakeParseResult,
+  source: string,
+  patches: "apply-approved-corrections" | "as-delivered",
+): Map<string, SeedCard> {
+  const out = new Map<string, SeedCard>();
+  for (const c of parsed.cards) out.set(c.cardCode, intakeCardToSeed(c, source));
+  for (const g of parsed.gates) out.set(g.cardCode, intakeGateToSeed(g, source));
+  if (patches === "as-delivered") return out;
+
+  /*
+   * `patchDocument` also drops superseded cards and adds cards no document carries, so the
+   * whole map goes through it rather than only the components of what is already here.
+   */
+  const { cards, report } = patchDocument(
+    source,
+    Array.from(out.values()).map((c) => ({ cardCode: c.cardCode, components: c.components, seed: c })),
+  );
+
+  const patched = new Map<string, SeedCard>();
+  for (const c of cards) {
+    if ("seed" in c && c.seed) {
+      patched.set(c.cardCode, { ...c.seed, components: c.components });
+      continue;
+    }
+    /*
+     * A card that came from the patch table and not from the document. It has a body and
+     * nothing else, so the fields a parsed card supplies are absent rather than invented:
+     * `newCards()` carries the name and module, and the rest is what a reviewer sees as
+     * blank in the admin editor, which is the correct signal.
+     */
+    const entry = newCards().find((n) => n.code === c.cardCode);
+    patched.set(c.cardCode, {
+      cardCode: c.cardCode,
+      name: entry?.name ?? c.cardCode,
+      description: "",
+      populationTags: [],
+      components: c.components,
+      moduleMapping: null,
+      cardKind: "coaching_card",
+      interventionType: c.components.intervention_type ?? null,
+      notes: entry ? `Supplied by Danielle by email, not present in ${source}. ${entry.why}` : "",
+    });
+  }
+
+  /*
+   * An entry that matched nothing is not a warning to be swallowed. A caller building the
+   * current side has asked for her corrections, and getting none of them back while being
+   * told nothing is the failure mode the patch layer was written to refuse.
+   */
+  if (report.inert.length) {
+    throw new Error(
+      `Approved corrections for ${source} matched nothing:\n  ${report.inert.join("\n  ")}\n` +
+        "Either she has reissued the document with the change made, in which case delete " +
+        "the entry from methodology-patches.ts, or the wording moved and the patch needs " +
+        "rewriting. Do not seed past this.",
+    );
+  }
+  return patched;
+}
 
 /** Everything an insert needs, with no drizzle types so this file stays pure. */
 export type SeedCard = {

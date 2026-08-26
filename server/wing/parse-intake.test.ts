@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { INTAKE_SOURCE, parseIntake } from "./parse-intake";
+import { TEMPLATES } from "./reveal-select";
 import {
   COMPONENT_KEYS,
   TIER1_MODULES,
@@ -249,6 +250,72 @@ test("thirteen cards state no sequence weight, and the document is uneven about 
 });
 
 console.log("");
+test("no card names a reveal template that is not in the selectable set", () => {
+  /*
+   * ── THE THIRD INSTANCE OF ONE BUG CLASS, AND THE FIRST ON A LIVE SURFACE ─
+   * Today has produced three stale references to codes that moved: `gate-compiler.ts`'s
+   * precondition table, `gate-audit.ts`'s rule table, and this one. The first two were
+   * keys, caught by behaviour going wrong. This one is PROSE, and prose reaches a model.
+   *
+   * `delivery_adaptation` is compiled into the prompt. H-019.5 offers "RT-14 Clean Slate =
+   * undergraduate only" as a live track-specific template, and RT-14 was retired in v1.7 —
+   * in the same card whose description and detection_method v1.8 corrected for exactly
+   * that retirement. It is a missed spot in a pass over that card.
+   *
+   * Selection itself is code, not the model: `selectReveal` scores the 14 objects in
+   * `TEMPLATES` and RT-14 is not among them, so nothing can select it. The cost is
+   * narrower and still real — the model is told a retired template is the undergraduate
+   * option, and it is Berkeley undergraduates the sentence names.
+   *
+   * ── WHY THIS IS BASELINED RATHER THAN RED ────────────────────────────────
+   * The fix is a line in HER document and it is in the 26 August email. A suite that stays
+   * red until she replies trains people to ignore it. So the known instance is listed, and
+   * anything NEW fails — the same ratchet the typecheck and the token ceiling use.
+   *
+   * When she reissues, this list empties and the entry must be deleted.
+   */
+  const live = new Set(TEMPLATES.map((t) => t.code));
+
+  /** Known, reported to Danielle on 26 August. Delete when she reissues. */
+  const BASELINE = new Set(["H-019.5 delivery_adaptation RT-14"]);
+
+  const found: string[] = [];
+  for (const card of result.cards) {
+    for (const key of Object.keys(card.components) as Array<keyof typeof card.components>) {
+      const text = card.components[key] ?? "";
+      for (const ref of text.match(/\bRT-\d{1,2}\b/g) ?? []) {
+        if (live.has(ref)) continue;
+        const entry = `${card.cardCode} ${key} ${ref}`;
+        if (!BASELINE.has(entry)) found.push(entry);
+      }
+    }
+  }
+
+  assert.deepEqual(
+    found,
+    [],
+    `A card names a reveal template that is not selectable: ${found.join(", ")}. ` +
+      "Component text is compiled into the prompt, so this tells the model a template " +
+      "exists that selectReveal will never choose.",
+  );
+
+  // And the baseline must stay honest: an entry that has been fixed has to be removed.
+  const stillThere: string[] = [];
+  for (const card of result.cards) {
+    for (const key of Object.keys(card.components) as Array<keyof typeof card.components>) {
+      for (const ref of (card.components[key] ?? "").match(/\bRT-\d{1,2}\b/g) ?? []) {
+        if (!live.has(ref)) stillThere.push(`${card.cardCode} ${key} ${ref}`);
+      }
+    }
+  }
+  for (const entry of Array.from(BASELINE)) {
+    assert.ok(
+      stillThere.indexOf(entry) >= 0,
+      `${entry} is baselined but no longer present — she has reissued. Delete the entry.`,
+    );
+  }
+});
+
 if (failures) {
   console.log(`${failures} failure(s)\n`);
   process.exit(1);

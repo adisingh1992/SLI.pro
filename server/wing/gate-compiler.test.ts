@@ -141,8 +141,8 @@ test("an unlisted gate is INCLUDED by default", () => {
 
 test("a precondition gate is dropped when its condition is absent", () => {
   const gates = [
-    gate({ cardCode: "IG-U012", coachingMove: "Confirm what you found in the file." }),
-    gate({ cardCode: "IG-U014", coachingMove: "Lead with curiosity, not disappointment." }),
+    gate({ cardCode: "IG-U018", coachingMove: "Confirm what you found in the file." }),
+    gate({ cardCode: "IG-U020", coachingMove: "Lead with curiosity, not disappointment." }),
     gate({ cardCode: "H-001" }),
   ];
   const none = { hasUploadedDocument: false, openTasks: 0 };
@@ -153,11 +153,11 @@ test("a precondition gate is dropped when its condition is absent", () => {
 
 test("a precondition gate is kept when its condition holds", () => {
   const gates = [
-    gate({ cardCode: "IG-U012", coachingMove: "Confirm what you found in the file." }),
-    gate({ cardCode: "IG-U014", coachingMove: "Lead with curiosity, not disappointment." }),
+    gate({ cardCode: "IG-U018", coachingMove: "Confirm what you found in the file." }),
+    gate({ cardCode: "IG-U020", coachingMove: "Lead with curiosity, not disappointment." }),
   ];
   const both = { hasUploadedDocument: true, openTasks: 2 };
-  assert.deepEqual(turnPathGates(gates, both).map((g) => g.cardCode), ["IG-U012", "IG-U014"]);
+  assert.deepEqual(turnPathGates(gates, both).map((g) => g.cardCode), ["IG-U018", "IG-U020"]);
   assert.ok(compileGates(gates, { conditions: both }).indexOf("Confirm what you found") >= 0);
 });
 
@@ -167,22 +167,22 @@ test("an unsupplied condition counts as satisfied", () => {
    * knowing whether the student uploaded anything must never be the reason a rule
    * about handling their data goes missing.
    */
-  const gates = [gate({ cardCode: "IG-U012" }), gate({ cardCode: "IG-U014" })];
+  const gates = [gate({ cardCode: "IG-U018" }), gate({ cardCode: "IG-U020" })];
   assert.equal(turnPathGates(gates).length, 2);
   assert.equal(turnPathGates(gates, {}).length, 2);
   assert.equal(turnPathGates(gates, { openTasks: 0 }).length, 1);
 });
 
 test("an unmet precondition is reported with the reason", () => {
-  const gates = [gate({ cardCode: "IG-U014" })];
+  const gates = [gate({ cardCode: "IG-U020" })];
   assert.deepEqual(excludedGates(gates, { openTasks: 0 }), [
-    { cardCode: "IG-U014", reason: "the student has no unanswered tasks to follow up on" },
+    { cardCode: "IG-U020", reason: "the student has no unanswered tasks to follow up on" },
   ]);
 });
 
 test("every precondition quotes the detection method it came from", () => {
   const codes = Object.keys(GATE_PRECONDITIONS);
-  assert.deepEqual(codes.sort(), ["IG-U012", "IG-U014"]);
+  assert.deepEqual(codes.sort(), ["IG-U018", "IG-U020"]);
   for (const code of codes) {
     assert.ok(GATE_PRECONDITIONS[code].source.indexOf("Fires") >= 0, code);
     assert.ok(GATE_PRECONDITIONS[code].reason.length > 20, code);
@@ -221,8 +221,8 @@ test("two of the 20 are conditional, so a quiet turn compiles 18", () => {
   const quiet = { hasUploadedDocument: false, openTasks: 0 };
   assert.equal(turnPathGates(tier1Gates, quiet).length, 18);
   const reasons = excludedGates(tier1Gates, quiet).map((e) => e.cardCode);
-  assert.ok(reasons.indexOf("IG-U012") >= 0);
-  assert.ok(reasons.indexOf("IG-U014") >= 0);
+  assert.ok(reasons.indexOf("IG-U018") >= 0);
+  assert.ok(reasons.indexOf("IG-U020") >= 0);
 });
 
 test("the compiled section stays under 3,200 tokens for every session", () => {
@@ -257,12 +257,74 @@ test("a citation inside rule text is redacted, not passed through", () => {
   assert.equal(redactCardCodes("no codes here").indexOf("another of these rules"), -1);
 });
 
+test("every precondition key names a gate that exists, and quotes ITS OWN detection method", () => {
+  /*
+   * ── THE TEST THAT SHOULD HAVE EXISTED ONE RENUMBER AGO ─────────────────
+   * `GATE_PRECONDITIONS` was keyed on IG-U012 and IG-U014. The Module 11 trio moved to
+   * IG-U018–IG-U020 on 25 August, the third move in eight days, and both keys stopped
+   * matching any gate. A key that matches nothing does not error — the precondition simply
+   * stops applying, so two gates that should compile only when the student uploaded
+   * something or has an outstanding task compiled on EVERY turn. `gate-compiler.ts`'s own
+   * comment names the cost: handed a page of task-follow-up guidance with no tasks to
+   * follow up on, the likeliest effect is that Wing asks about tasks nobody assigned.
+   *
+   * Nothing caught it. `gate-allocation.ts` verifies that the blocks tile and that no two
+   * owners claim a number; a dangling REFERENCE is a different failure and is invisible to
+   * that check. What eventually caught it was the arithmetic two tests up — 20 gates
+   * compiled where 18 should have — which is a symptom three steps from the cause.
+   *
+   * So the key is checked against the CORPUS rather than against another list of codes.
+   * Matching on the quoted `source` is what makes it a real check rather than a spelling
+   * test: a renumber that moved a precondition onto the wrong gate would satisfy "this code
+   * exists" and still fail here, because that gate's own detection method does not contain
+   * the sentence being quoted.
+   *
+   * Deliberately NOT solved by translating old codes to new ones. A superseded number can
+   * be reissued — the trio wore IG-U006–IG-U008 for one morning on 18 August and those are
+   * her research-derived gates now, IG-U006 being live and seeded — so a history-walking
+   * resolver would eventually answer a question about one gate with another gate's rule.
+   */
+  const normalise = (t: string) =>
+    t.replace(/\s+/g, " ").replace(/["'\u2018\u2019\u201c\u201d]/g, "").toLowerCase();
+
+  for (const code of Object.keys(GATE_PRECONDITIONS)) {
+    /*
+     * The PARSED card, not the compiled `GateCard`. A GateCard carries only what reaches a
+     * prompt — coaching move and failure path — and the sentence a precondition derives
+     * from lives in `detection_method`, which deliberately never reaches a prompt at all.
+     */
+    const card = parsed.cards.find((c) => c.cardCode === code);
+    assert.ok(
+      card,
+      `GATE_PRECONDITIONS is keyed on ${code}, which is not in the compendium. A key that ` +
+        "matches no gate fails OPEN: the precondition stops applying and the rule compiles " +
+        "on every turn. Check whether it has been renumbered.",
+    );
+    assert.ok(
+      tier1Gates.some((g) => g.cardCode === code),
+      `${code} is in the compendium but is not a Tier 1 gate, so a precondition on it ` +
+        "governs nothing that ships.",
+    );
+
+    const quoted = normalise(GATE_PRECONDITIONS[code].source);
+    const own = normalise(
+      `${card!.components.detection_method ?? ""} ${card!.components.signal ?? ""}`,
+    );
+    assert.ok(
+      own.indexOf(quoted) >= 0,
+      `${code}'s precondition quotes ${GATE_PRECONDITIONS[code].source} but that gate's ` +
+        "own detection method and signal do not contain it — the precondition may have " +
+        "landed on the wrong gate.",
+    );
+  }
+});
+
 test("the two real gates that cite others are reported", () => {
   // Reported rather than silently rewritten, so the source can be tidied. If
   // Danielle removes the asides this drops to an empty list and the test says so.
   assert.deepEqual(redactedFrom(tier1Gates), [
     { cardCode: "H-109", cited: ["H-103"] },
-    { cardCode: "IG-U013", cited: ["H-001", "H-807"] },
+    { cardCode: "IG-U019", cited: ["H-001", "H-807"] },
   ]);
 });
 
@@ -401,7 +463,7 @@ test("the published gate section is over the ceiling, and no worse than the base
    * Recorded as a ratchet rather than a raised ceiling, because raising it would be
    * answering a methodology question with a constant. What the numbers say is that
    * eight rules are 41% of the intake section and the longest run to 250 tokens
-   * each — IG-V02, H-004, IG-U013, H-019 — and a rule a model must hold for a whole
+   * each — IG-V02, H-004, IG-U019, H-019 — and a rule a model must hold for a whole
    * turn wants to be one or two sentences. Shortening those is hers to do: a
    * compiler that truncated her words would be editing the methodology somewhere
    * nobody would ever see the edit.
@@ -465,7 +527,7 @@ test("cardLabel keeps the human part of a name and drops the identifiers", () =>
   );
   assert.equal(cardLabel("H-019.5 Reveal template selection"), "Reveal template selection");
   assert.equal(
-    cardLabel("IG-U012 User-Uploaded Data Handling Gate"),
+    cardLabel("IG-U018 User-Uploaded Data Handling Gate"),
     "User-Uploaded Data Handling Gate",
   );
   // Nothing to strip, nothing lost.

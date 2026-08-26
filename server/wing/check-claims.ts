@@ -44,13 +44,20 @@ const BASELINE: Record<string, number> = {
   "wing-intake-design-v3.3.md": 4,
   "wing-intake-heuristic-cards-v1.8.md": 43,
   "wing-master-module-compendium-v2.md": 124,
+  "TRANSCRIBED.md": 0,
+  /*
+   * H-111's failure_path, in the card she sent on 24 August: "Most people operate in more
+   * than one function." An unsourced population claim in fresh material, which is the
+   * linter finding something rather than reporting history. Baselined at 1 so it cannot
+   * grow, and it goes on the correction list.
+   */
+  "wing-missing-references-aug24.md": 1,
   "wing-module13-heuristic-cards-v1.2.md": 14,
   "wing-platform-updates-aug19.md": 0,
   "wing-research-derived-gates.md": 5,
   "wing-reveal-cycle-v4-amendments.md": 0,
   "wing-reveal-cycle-v4-canonical.md": 5,
   "wing-self-description-capture-v2.md": 0,
-  "wing-selfdescription-capture-v2.md": 0,
 };
 
 /**

@@ -141,7 +141,7 @@ export const AUDIT_RULES: readonly AuditRule[] = [
     ],
   },
   {
-    cardCode: "IG-U013",
+    cardCode: "IG-U019",
     mode: "violation",
     what: "Behavioural characterisation stated without the disclosure the rule requires",
     source: '"you tend to avoid conflict," "your networking style is transactional"',
@@ -152,7 +152,7 @@ export const AUDIT_RULES: readonly AuditRule[] = [
     ],
   },
   {
-    cardCode: "IG-U014",
+    cardCode: "IG-U020",
     mode: "violation",
     what: "Between-session task follow-up framed as accountability rather than curiosity",
     source:
@@ -257,7 +257,7 @@ export const NOT_AUDITABLE: ReadonlyArray<{ cardCode: string; reason: string }> 
     reason: "A delivery pattern about message chunking, not a property of the text.",
   },
   {
-    cardCode: "IG-U012",
+    cardCode: "IG-U018",
     reason:
       "Its requirements are things Wing must DO — confirm what it found in the " +
       "file, disclose each inference it draws from a field. An absence has no " +

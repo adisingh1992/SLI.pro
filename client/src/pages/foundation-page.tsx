@@ -7,7 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import { Loader2, Lock, Play, CheckCircle, MessageSquare, ArrowLeft } from "lucide-react";
+import { Loader2, Play, MessageSquare, ArrowLeft } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 /** Wing session shape. `sessionNumber` is derived from session_type by the API. */
@@ -60,12 +60,25 @@ export default function FoundationPage() {
   });
 
   const getStatusBadge = (status: FoundationSession['status']) => {
+    /*
+     * IG-UX03 and IG-UX01. Three of these five said the wrong thing to a student.
+     *
+     * "Completed" with a tick is the exact pairing her card calls out. "Built" is her own
+     * replacement word — the session produced something, and that is what the badge now
+     * says. `ended_early` also wore a tick, which was wrong twice over: nothing was
+     * finished and the icon said it was.
+     *
+     * `locked` presents as available, because IG-UX01 is settled: "Every module enterable
+     * at any time; depth adapts, access does not." The status still exists in the
+     * database and the admin surfaces still report it — the student-facing badge is what
+     * stops rendering it as a gate.
+     */
     const variants = {
-      locked: { variant: "secondary" as const, icon: Lock, text: "Locked" },
+      locked: { variant: "default" as const, icon: Play, text: "Available" },
       available: { variant: "default" as const, icon: Play, text: "Available" },
-      in_progress: { variant: "outline" as const, icon: MessageSquare, text: "In Progress" },
-      completed: { variant: "destructive" as const, icon: CheckCircle, text: "Completed" },
-      ended_early: { variant: "outline" as const, icon: CheckCircle, text: "Ended Early" }
+      in_progress: { variant: "outline" as const, icon: MessageSquare, text: "In progress" },
+      completed: { variant: "secondary" as const, icon: MessageSquare, text: "Built" },
+      ended_early: { variant: "outline" as const, icon: MessageSquare, text: "Ended early" }
     };
     
     const config = variants[status];
@@ -91,9 +104,20 @@ export default function FoundationPage() {
   const getActionButton = (session: FoundationSession) => {
     if (session.status === 'locked') {
       return (
+        /*
+         * IG-UX03 on the copy, and IG-UX01 only partly. "Complete Previous Session" is a
+         * task instruction; "Start with Session N" says the same thing as a direction.
+         *
+         * The button stays disabled, and that is a deliberate stop rather than an
+         * oversight. IG-UX01 is settled and its success criterion is that "the user never
+         * encounters a locked state" — but Foundation 2 genuinely reads Foundation 1's
+         * output, and her own answer for that case is to communicate inside the module,
+         * not on the navigation. That needs the start endpoint to accept an out-of-order
+         * session, which is API work. An enabled button in front of an API that refuses
+         * would be worse than the padlock. Listed as one of the six screens.
+         */
         <Button disabled variant="outline" className="w-full">
-          <Lock className="h-4 w-4 mr-2" />
-          Complete Previous Session
+          Start with Session {session.sessionNumber - 1}
         </Button>
       );
     }
@@ -138,7 +162,6 @@ export default function FoundationPage() {
           className="w-full"
           data-testid={`button-review-session-${session.sessionNumber}`}
         >
-          <CheckCircle className="h-4 w-4 mr-2" />
           Review Session
         </Button>
       );
@@ -229,7 +252,7 @@ export default function FoundationPage() {
       case 2:
         return "Credibility foundation established. Your measurable expertise provides the foundation for stronger professional positioning. Continue to Session 3 to develop the stories that prove your unique value.";
       case 3:
-        return "Foundation complete. Your professional positioning framework is ready. You can now book a session with a positioning coach or explore enhancement modules to deepen specific areas.";
+        return "Your positioning framework is built. You can now book a session with a positioning coach or explore enhancement modules to deepen specific areas.";
       default:
         return "";
     }
@@ -259,7 +282,7 @@ export default function FoundationPage() {
               <div className="w-32"></div> {/* Spacer for balance */}
             </div>
             <p className="text-lg text-muted-foreground max-w-3xl mx-auto text-center">
-              Complete three sequential coaching conversations to identify your primary business function and develop your professional foundation.
+              Three coaching conversations that identify your primary business function and build your professional foundation.
             </p>
           </div>
         </div>
@@ -296,7 +319,6 @@ export default function FoundationPage() {
                     {/* Post-session transition message */}
                     {showPostMessage && (
                       <div className="mx-4 mt-4 mb-0 bg-green-50/80 dark:bg-green-900/20 border border-green-200/50 dark:border-green-800/50 rounded-lg p-3 text-center">
-                        <CheckCircle className="h-4 w-4 text-green-600 mx-auto mb-1" />
                         <p className="text-xs font-medium text-green-800 dark:text-green-200">
                           {getPostSessionMessage(completedPrevious.sessionNumber)}
                         </p>
@@ -306,9 +328,8 @@ export default function FoundationPage() {
                     {/* Session completion message */}
                     {showCompletionMessage && (
                       <div className="mx-4 mt-4 mb-0 bg-green-50/80 dark:bg-green-900/20 border border-green-200/50 dark:border-green-800/50 rounded-lg p-3 text-center">
-                        <CheckCircle className="h-4 w-4 text-green-600 mx-auto mb-1" />
                         <p className="text-xs font-medium text-green-800 dark:text-green-200">
-                          Session completed successfully! Your insights have been captured and saved.
+                          Your insights have been captured and saved.
                         </p>
                       </div>
                     )}
@@ -337,15 +358,16 @@ export default function FoundationPage() {
                         {/* Session Progress */}
                         {session.status === 'in_progress' && session.progress !== undefined && (
                           <div className="bg-background/50 rounded-lg p-3 border">
+                            {/*
+                              IG-UX03. Was a percentage and a Progress bar. Her card names
+                              these directly: "Progress bars and checkmarks turn the
+                              experience into a to-do list. Milestone language turns it
+                              into a portfolio." The number said how far through a task the
+                              student was, which is the framing the gate exists to remove.
+                            */}
                             <div className="flex items-center justify-between mb-2">
-                              <span className="text-sm font-medium">Session Progress</span>
-                              <span className="text-sm text-muted-foreground font-mono">{session.progress}%</span>
+                              <span className="text-sm font-medium">In progress</span>
                             </div>
-                            <Progress 
-                              value={session.progress} 
-                              className="h-2" 
-                              data-testid={`progress-session-${session.sessionNumber}`}
-                            />
                           </div>
                         )}
 
@@ -361,7 +383,7 @@ export default function FoundationPage() {
                           )}
                           {session.completedAt && (
                             <div className="flex items-center justify-between text-xs">
-                              <span className="text-muted-foreground">Completed:</span>
+                              <span className="text-muted-foreground">Recorded:</span>
                               <span className="font-mono text-foreground">
                                 {new Date(session.completedAt).toLocaleDateString()} {new Date(session.completedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                               </span>
@@ -384,7 +406,7 @@ export default function FoundationPage() {
           {/* Help Text */}
           <div className="mt-10 text-center max-w-2xl mx-auto">
               <p className="text-sm text-muted-foreground leading-relaxed">
-                Sessions must be completed in order. Each session builds upon the previous one to help you develop your professional foundation.
+                Each session builds on the one before it, so they run in order.
               </p>
           </div>
         </div>

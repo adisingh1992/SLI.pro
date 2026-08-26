@@ -176,6 +176,20 @@
       "when": 1787199600000,
       "tag": "0024_self_description_equivalence",
       "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "7",
+      "when": 1787286000000,
+      "tag": "0025_safety_holds",
+      "breakpoints": true
+    },
+    {
+      "idx": 26,
+      "version": "7",
+      "when": 1787289600000,
+      "tag": "0026_prompt_log",
+      "breakpoints": true
     }
   ]
 }

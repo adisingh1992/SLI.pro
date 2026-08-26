@@ -1,4 +1,4 @@
-import { Lock, Play, MessageSquare, CheckCircle, CircleDashed } from "lucide-react";
+import { Play, MessageSquare, CircleDashed } from "lucide-react";
 
 /*
  * Mirrors the session_status enum, INCLUDING ended_early.
@@ -25,14 +25,22 @@ interface SessionCardProps {
 }
 
 const statusConfig: Record<SessionStatus, {
-  icon: typeof Lock;
+  icon: typeof Play;
   label: string;
   labelClass: string;
 }> = {
+  /*
+   * IG-UX01, which is settled: "Every module enterable at any time; depth adapts, access
+   * does not." Feature List A2 is dead. A padlock and the word "Locked" are the state her
+   * success criterion says a user never encounters, so the card presents it as available.
+   *
+   * The status still exists in the database and the admin surfaces still report it. This
+   * is the student-facing card declining to render it as a gate.
+   */
   locked: {
-    icon: Lock,
-    label: "Locked",
-    labelClass: "text-gray-400",
+    icon: Play,
+    label: "Available",
+    labelClass: "text-[var(--dashboard-aqua)]",
   },
   available: {
     icon: Play,
@@ -41,12 +49,21 @@ const statusConfig: Record<SessionStatus, {
   },
   in_progress: {
     icon: MessageSquare,
-    label: "In Progress",
+    label: "In progress",
     labelClass: "text-amber-500",
   },
+  /*
+   * IG-UX03. Was a tick and the word "Completed" — the exact pairing her card names:
+   * "progress bars and checkmarks turn the experience into a to-do list. Milestone
+   * language turns it into a portfolio." "Built" is her own replacement, and the icon goes
+   * with it, because the tick was doing the same work as the word.
+   *
+   * The comment below on `ended_early` was already reasoning this way about "Paused". This
+   * is the same argument applied one entry up.
+   */
   completed: {
-    icon: CheckCircle,
-    label: "Completed",
+    icon: MessageSquare,
+    label: "Built",
     labelClass: "text-emerald-500",
   },
   // "Paused", not "Abandoned" or "Incomplete". Stopping early is a legitimate

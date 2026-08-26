@@ -68,30 +68,65 @@ console.log("\nIG-INT12 — no inference rests on a single self-assessment");
   if (failures === before) ok("every template quoting Q6 or Q7 rests on two or more answers");
 }
 
-console.log("\nRT-06 is held out until the corrected copy arrives");
+console.log("\nRT-06, enabled 25 August with her corrected trigger");
 {
   const before = failures;
   const rt06 = TEMPLATES.find((t) => t.code === "RT-06")!;
-  if (rt06.enabled) {
-    fail("RT-06 is enabled, but its card still infers from Q6 alone and fails v3.3's IG-INT12");
-  }
-  // Its trigger would fire on this, and it still must not be selected.
-  const answers: Answers = {
+  if (!rt06.enabled) fail("RT-06 is live now — her correction supplied both halves");
+  if (rt06.disabledBecause) fail("the refusal reason should be gone, not left lying around");
+
+  // Fires on self-deprecation in Q6 against a Q5 that presents confidently.
+  const fires: Answers = {
     Q2: "Working full-time, two years in",
     Q4: "I want a promotion",
     Q5: "I'm an analyst at Deloitte",
     Q6: "I guess I'm pretty good at untangling messy briefs",
   };
-  const s = run(answers);
-  if (s.outcome === "fire" && s.template.code === "RT-06") {
-    fail("a disabled template was selected");
+  const s1 = run(fires);
+  const e1 = s1.considered.find((c) => c.template.code === "RT-06")!;
+  if (!e1.eligible) fail(`RT-06 should be eligible here: ${e1.refusedBecause}`);
+
+  /*
+   * ── THE ONE HER CORRECTION IS ABOUT ────────────────────────────────────
+   * "Collective attribution ('my team built,' 'we shipped') is cultural, not minimizing
+   * — per IG-S09. RT-06 now fires only on self-deprecation."
+   *
+   * Firing here is the exact thing IG-S09 forbids: reading culturally normative modesty
+   * as a deficiency, and then telling the user their own words undersell them. This is
+   * the assertion that keeps the exclusion in place.
+   */
+  const collective: Answers = {
+    Q2: "Working full-time, two years in",
+    Q4: "I want a promotion",
+    Q5: "I'm an analyst at Deloitte",
+    Q6: "My team built the reporting pipeline and we shipped it in a quarter",
+  };
+  const e2 = run(collective).considered.find((c) => c.template.code === "RT-06")!;
+  if (e2.eligible) {
+    fail("collective attribution fired RT-06 — IG-S09 says that is culture, not minimizing");
   }
-  const e = s.considered.find((c) => c.template.code === "RT-06")!;
-  if (e.eligible) fail("RT-06 assessed as eligible while disabled");
-  if (!e.refusedBecause?.includes("IG-INT12")) {
-    fail("RT-06's refusal does not say why, so someone will re-enable it");
+
+  /*
+   * Ours, from her word "gap". Her copy asserts the two answers tell "two different
+   * stories". A Q5 that is itself a deflection means there is no contrast to draw, and
+   * asserting one would be Wing inventing the finding. RT-12 covers that case.
+   */
+  const bothVague: Answers = {
+    Q2: "Working full-time, two years in",
+    Q4: "I want a promotion",
+    Q5: "Honestly it's hard to explain, bit of everything",
+    Q6: "I guess I'm pretty good at untangling messy briefs",
+  };
+  const e3 = run(bothVague).considered.find((c) => c.template.code === "RT-06")!;
+  if (e3.eligible) {
+    fail("a deflecting Q5 leaves no gap between presentation and capability");
   }
-  if (failures === before) ok("disabled, ineligible, and the reason travels with the refusal");
+
+  // And it still needs both answers, per IG-INT12 — the reason it was held out at all.
+  if (rt06.restsOn.indexOf("Q5") < 0 || rt06.restsOn.indexOf("Q6") < 0) {
+    fail("RT-06 rests on Q5 and Q6, which is what took it off the disabled list");
+  }
+  if (failures === before) ok("fires on self-deprecation, never on collective attribution");
 }
 
 console.log("\nIG-U006 — a firing trigger with nothing to quote is still refused");
@@ -269,6 +304,14 @@ console.log("\nEvery enabled template is reachable by some real answer set");
     "RT-01": {
       Q5: "I'm an analyst at Deloitte",
       Q6: "I'm the one who rewrites the messy briefs so operations can use them",
+    },
+    /*
+     * Self-deprecation in Q6 against a Q5 that presents by title. Her corrected trigger:
+     * the gap between how they present and what they are actually good at.
+     */
+    "RT-06": {
+      Q5: "I'm an analyst at Deloitte",
+      Q6: "I guess I'm pretty good at untangling messy briefs",
     },
     "RT-05": {
       Q4: "Honestly the salary and the title matter to me",

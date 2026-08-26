@@ -199,18 +199,36 @@ export const TEMPLATES: readonly RevealTemplate[] = [
     band: 4,
     tracks: ["undergraduate", "early_career", "career_returner"],
     /*
-     * Two statements, not one. The methodology author's 24 August ruling: "RT-06 needs
-     * to cross-reference Q5 and Q6 — the underselling pattern is in the gap between
-     * how they present (Q5) and what they're actually good at (Q6), not in Q6 alone."
+     * Two statements, not one. Her 24 August ruling: "RT-06 needs to cross-reference Q5
+     * and Q6 — the underselling pattern is in the gap between how they present (Q5) and
+     * what they're actually good at (Q6), not in Q6 alone."
      */
     restsOn: ["Q5", "Q6"],
     quotes: ["Q5", "Q6"],
-    enabled: false,
-    disabledBecause:
-      "v3.3's IG-INT12 forbids resting an inference on one self-assessment, and the " +
-      "card as written infers from Q6 alone. The author is sending the corrected copy; " +
-      "until it lands the template is ineligible rather than fired against a gate it fails.",
-    trigger: (f) => f.q6Minimizers.length > 0 && nonEmpty(f, "Q5"),
+    /*
+     * ── ENABLED 25 AUGUST, WITH HER CORRECTED COPY ─────────────────────────
+     * It sat ineligible because the card inferred from Q6 alone, which IG-INT12 forbids.
+     * Her correction supplies both halves — the cross-reference and a narrower trigger:
+     *
+     *   "Collective attribution ('my team built,' 'we shipped') is cultural, not
+     *   minimizing — per IG-S09. RT-06 now fires only on self-deprecation: hedging,
+     *   diminishing, qualifying one's own capability."
+     *
+     * The collective-attribution exclusion was already in the fact extractor: Q6 has the
+     * collective clause stripped before minimizers are matched, so "my team built the
+     * thing" cannot produce a hit. That was built against IG-S09 rather than against this
+     * template, and it turns out to be the thing her correction needed.
+     *
+     * ── WHY Q5 MUST NOT ITSELF BE A DEFLECTION ────────────────────────────
+     * Ours, and it follows from her word "gap". Her copy asserts the two answers are
+     * "telling two different stories". If Q5 is also a deflection — "hard to explain",
+     * "bit of everything" — there is no gap between presentation and capability, there is
+     * uniform low confidence, and the assertion would be Wing inventing a contrast.
+     * RT-12 is the template for that case and it already requires deflection.
+     */
+    enabled: true,
+    trigger: (f) =>
+      f.q6Minimizers.length > 0 && nonEmpty(f, "Q5") && f.q5Style !== "deflection",
   },
   {
     code: "RT-12",

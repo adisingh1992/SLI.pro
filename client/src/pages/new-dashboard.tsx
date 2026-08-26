@@ -830,7 +830,7 @@ export default function NewDashboardPage() {
                 latestFreshnessReport ? "View Report" : "Generate Report"
               }
               onClick={() => navigate("/freshness-report")}
-              statusLabel={latestFreshnessReport ? "Completed" : "Available"}
+              statusLabel={latestFreshnessReport ? "Built" : "Available"}
               statusType={latestFreshnessReport ? "completed" : "available"}
             />
 
@@ -902,7 +902,7 @@ export default function NewDashboardPage() {
               )}
               statusLabel={
                 latestLinkedinOptimization
-                  ? "Completed"
+                  ? "Built"
                   : canGenerateLinkedIn
                     ? "Available"
                     : undefined
@@ -918,7 +918,7 @@ export default function NewDashboardPage() {
               buttonLabel="Generate Content"
               onClick={() => navigate("/linkedin-content-drafts")}
               disabled={!canGenerateLinkedIn}
-              disabledMessage="Complete your Brand Intelligence Report, SLI selection, and document uploads first."
+              disabledMessage="Sharper once your Brand Intelligence Report, SLI selection and document uploads are in."
               statusLabel={canGenerateLinkedIn ? "Available" : undefined}
               statusType="available"
             />
@@ -941,7 +941,7 @@ export default function NewDashboardPage() {
                 disabledMessage="Your coach hasn't assigned any homework questions yet. Check back later for personalized development questions."
                 statusLabel={
                   homeworkData && homeworkData.length > 0
-                    ? `${homeworkData.filter((hw) => hw.answerText).length}/${homeworkData.length} Complete`
+                    ? `${homeworkData.filter((hw) => hw.answerText).length} captured`
                     : undefined
                 }
                 statusType={
@@ -967,7 +967,7 @@ function getLinkedInRequirementsMessage(
   hasFreshnessReport: boolean,
 ): string {
   if (!hasDocuments && !hasSli && !hasFreshnessReport) {
-    return "Complete prerequisites to unlock LinkedIn optimization.";
+    return "Sharper once your positioning work is in. You can open it any time.";
   }
   if (!hasDocuments) {
     return "Upload your resume and LinkedIn profile first.";

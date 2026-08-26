@@ -5,6 +5,8 @@ import {
   auditCoverage,
   auditReply,
 } from "./gate-audit";
+import { CORRECTIONS } from "./parse-compendium";
+import { RETIRED } from "./gate-allocation";
 
 /**
  * Tests for the gate audit (methodology v2, T4b).
@@ -88,6 +90,58 @@ test("H-209 catches aspiration treated as evidence", () => {
   );
 });
 
+test("no audit rule is keyed on a code that has been renumbered", () => {
+  /*
+   * ── THE SECOND FILE THIS BUG WAS IN ────────────────────────────────────
+   * `AUDIT_RULES` was keyed on IG-U012, IG-U013 and IG-U014 — the Module 11 trio's
+   * numbers before her allocation rule of 25 August moved them to IG-U018–IG-U020. Every
+   * one of those references went stale the moment `wing:apply-corrections` renamed the
+   * rows, and none of them errored.
+   *
+   * Two different failures come out of that, and the second is the worse one:
+   *
+   * 1. `auditCoverage` compares the live card codes against this table, so IG-U019 and
+   *    IG-U020 would report as UNCHECKED — two gates with working deterministic detectors
+   *    presented as having none. This module's own header says the failure mode worth
+   *    defending against is a gate that looks covered and is not; this is that, inverted,
+   *    and inverted is still wrong.
+   * 2. The patterns still match, so a real violation is still detected — and then filed
+   *    against a card code that no longer exists. Her platform-wide document reassigns
+   *    IG-U012–IG-U017, so once those gates seed, a finding about behavioural disclosure
+   *    would be labelled with Role-Aware Summarization's number. A mislabelled safety
+   *    finding is worse than a missing one.
+   *
+   * `CORRECTIONS` is the authoritative record of every rename, so the check needs no
+   * document parsing: a code that appears as a rename's source, at any point in its
+   * chain, must not be a key here. That covers H-308 → H-007 as well, which this table
+   * has already had to follow once.
+   */
+  const renamed = new Map<string, string>();
+  for (const c of CORRECTIONS) {
+    if (c.kind !== "recode") continue;
+    renamed.set(c.from, c.to);
+    for (const old of c.supersededFrom ?? []) renamed.set(old, c.to);
+  }
+
+  const keys = AUDIT_RULES.map((r) => r.cardCode).concat(
+    NOT_AUDITABLE.map((n) => n.cardCode),
+  );
+  for (const code of keys) {
+    assert.equal(
+      renamed.get(code),
+      undefined,
+      `${code} was renumbered to ${renamed.get(code)}. A stale key here makes ` +
+        "auditCoverage report the gate as unchecked, and files any finding against a " +
+        "code that no longer exists.",
+    );
+    assert.equal(
+      RETIRED.indexOf(code) >= 0,
+      false,
+      `${code} is a retired code and belongs to no card.`,
+    );
+  }
+});
+
 test("IG-U005 catches internal methodology vocabulary", () => {
   assert.ok(codes("This heuristic fires when you hedge.").indexOf("IG-U005") >= 0);
   assert.ok(codes("The coaching move here is to hold the silence.").indexOf("IG-U005") >= 0);
@@ -105,22 +159,22 @@ test("IG-V03 catches prescriptive framing", () => {
   assert.ok(codes("You need to rewrite that headline.").indexOf("IG-V03") >= 0);
 });
 
-test("IG-U013 catches an undisclosed behavioural characterisation", () => {
-  // IG-U04, then IG-U007 for one morning. The Module 11 trio was renumbered twice on
+test("IG-U019 catches an undisclosed behavioural characterisation", () => {
+  // IG-U04, then IG-U007, then IG-U013. The Module 11 trio was renumbered three times on
   // 18 August; the second move made room for her research-derived gates.
-  assert.ok(codes("You tend to avoid conflict in those meetings.").indexOf("IG-U013") >= 0);
-  assert.ok(codes("Your networking style is transactional.").indexOf("IG-U013") >= 0);
+  assert.ok(codes("You tend to avoid conflict in those meetings.").indexOf("IG-U019") >= 0);
+  assert.ok(codes("Your networking style is transactional.").indexOf("IG-U019") >= 0);
 });
 
-test("IG-U014 catches accountability framing in a task follow-up", () => {
-  // IG-U05, then IG-U008, now IG-U014. Same two rulings of 18 August.
-  assert.ok(codes("You didn't do the tasks I assigned last week.").indexOf("IG-U014") >= 0);
-  assert.ok(codes("You still haven't sent those messages.").indexOf("IG-U014") >= 0);
-  assert.ok(codes("You've completed 1 of 3 tasks so far.").indexOf("IG-U014") >= 0);
-  assert.ok(codes("I'm disappointed — this was what you said you'd do.").indexOf("IG-U014") >= 0);
+test("IG-U020 catches accountability framing in a task follow-up", () => {
+  // IG-U05, then IG-U008, then IG-U014, now IG-U020. Her allocation rule of 25 August.
+  assert.ok(codes("You didn't do the tasks I assigned last week.").indexOf("IG-U020") >= 0);
+  assert.ok(codes("You still haven't sent those messages.").indexOf("IG-U020") >= 0);
+  assert.ok(codes("You've completed 1 of 3 tasks so far.").indexOf("IG-U020") >= 0);
+  assert.ok(codes("I'm disappointed — this was what you said you'd do.").indexOf("IG-U020") >= 0);
 });
 
-test("IG-U014 does not fire on the follow-up the gate asks for", () => {
+test("IG-U020 does not fire on the follow-up the gate asks for", () => {
   /*
    * The gate's own wording: "How did those tasks go?" not "You didn't do the
    * tasks I assigned." Both halves are in its text, so a rule derived from it
@@ -218,7 +272,7 @@ test("coverage separates what was checked from what was not", () => {
 test("the unauditable gates are named with a reason", () => {
   assert.deepEqual(
     NOT_AUDITABLE.map((g) => g.cardCode).sort(),
-    ["H-007", "H-110", "H-310", "IG-U003", "IG-U012", "IG-V02"],
+    ["H-007", "H-110", "H-310", "IG-U003", "IG-U018", "IG-V02"],
   );
   for (const g of NOT_AUDITABLE) assert.ok(g.reason.length > 30, g.cardCode);
 });

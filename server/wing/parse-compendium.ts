@@ -425,6 +425,23 @@ export type Correction =
        * `apply-card-corrections` does: a row renamed once no longer answers to
        * `from`, so without this the script would print "not seeded, nothing to
        * rename" and the rename would silently not happen. Most recent first.
+       *
+       * ── DO NOT WALK THIS BACKWARDS ──────────────────────────────────────
+       * It is safe to ask "which codes has THIS card worn". It is not safe to ask "given
+       * this old code, which card is it now", and the difference has already cost a bug.
+       *
+       * **A superseded code is not free; it can be reissued to a different card.** The
+       * Module 11 trio wore IG-U006–IG-U008 for one morning on 18 August, and those numbers
+       * are her research-derived gates now — IG-U006 is Barnum falsifiability, live and
+       * seeded. IG-U012–IG-U014 are the same story: her platform-wide document reassigns
+       * them to Evidence Grade, Role-Aware Summarization and Evidence Over Self-Rating. A
+       * resolver walking this list backwards would confidently answer that IG-U006 is the
+       * upload-handling gate.
+       *
+       * So code elsewhere that must survive a renumber should be checked against the parsed
+       * corpus, not translated by a lookup. `gate-compiler.test.ts` does exactly that: it
+       * matches each precondition key against the gate's own detection method, which fails
+       * both when a code goes stale and when a precondition lands on the wrong gate.
        */
       supersededFrom?: readonly string[];
       why: string;
@@ -445,14 +462,24 @@ export const CORRECTIONS: readonly Correction[] = [
   {
     kind: "recode",
     from: "IG-U03",
-    to: "IG-U012",
-    supersededFrom: ["IG-U006"],
+    to: "IG-U018",
+    /*
+     * Third move, and the last: her allocation rule of 25 August ends the collisions by
+     * naming who owns which block. Most recent code first, because the rows in the
+     * database answer to IG-U012 today.
+     */
+    supersededFrom: ["IG-U012", "IG-U006"],
     why:
       'Danielle, 18 August, morning: "Renumber the Module 11 universal gates to ' +
       'IG-U006–IG-U008 so no two IDs are one character apart." Applied that morning, then ' +
       "superseded the same afternoon: Wing_Research_Derived_Gates takes IG-U006 through " +
       "IG-U011 for six new universal gates, IG-U006 being Barnum Falsifiability. The later " +
-      "document governs, so the trio moves again — to the first three free codes above her " +
+      "document governs, so the trio moves again. Moved a THIRD and final time on 25 August, " +
+      "when she published an allocation rule to stop this recurring: IG-U006 to IG-U011 " +
+      "reserved for universal research-derived gates, IG-U012 to IG-U017 for platform-wide " +
+      "gates, IG-U018 to IG-U020 for Module 11, future universal gates from IG-U021. " +
+      '"I own all numbering." The trio lands in its own block. Previously — to the first ' +
+      "three free codes above her " +
       "block, which keeps her numbering intact and ours contiguous. IG-U03/04/05 are the " +
       "Module 11 trio: they arrive in Part 4 of the Module 11 section, while IG-U003/004/005 " +
       "were delivered with Module 10, whose own header lists them. Mapped in order.",
@@ -460,15 +487,25 @@ export const CORRECTIONS: readonly Correction[] = [
   {
     kind: "recode",
     from: "IG-U04",
-    to: "IG-U013",
-    supersededFrom: ["IG-U007"],
+    to: "IG-U019",
+    /*
+     * Third move, and the last: her allocation rule of 25 August ends the collisions by
+     * naming who owns which block. Most recent code first, because the rows in the
+     * database answer to IG-U013 today.
+     */
+    supersededFrom: ["IG-U013", "IG-U007"],
     why: "Second of the Module 11 trio. Same two rulings.",
   },
   {
     kind: "recode",
     from: "IG-U05",
-    to: "IG-U014",
-    supersededFrom: ["IG-U008"],
+    to: "IG-U020",
+    /*
+     * Third move, and the last: her allocation rule of 25 August ends the collisions by
+     * naming who owns which block. Most recent code first, because the rows in the
+     * database answer to IG-U014 today.
+     */
+    supersededFrom: ["IG-U014", "IG-U008"],
     why: "Third of the Module 11 trio. Same two rulings.",
   },
   {

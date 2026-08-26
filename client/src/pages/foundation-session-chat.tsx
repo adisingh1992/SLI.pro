@@ -15,7 +15,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Loader2, Send, ArrowLeft, Lock, CheckCircle, MessageSquare, AlertCircle, LogOut, Compass, Sparkles } from "lucide-react";
+import { Loader2, Send, ArrowLeft, Lock, MessageSquare, AlertCircle, LogOut, Compass, Sparkles } from "lucide-react";
 import VoiceMicButton from "@/components/VoiceMicButton";
 import { useVoiceRecording } from "@/hooks/use-voice-recording";
 import { useToast } from "@/hooks/use-toast";
@@ -157,6 +157,18 @@ const NEXT_STEP: Record<number, { title: string; does: string; duration: string;
 type PendingTurn = {
   userText: string;
   assistantText: string;
+  /**
+   * Messages Wing has finished saying, in order. H-007.
+   *
+   * The server emits a `break` when the splitter closes a message, and everything
+   * streamed up to that point moves here as its own bubble. `assistantText` then keeps
+   * only what is still arriving — so a reply becomes several messages without the tokens
+   * ever stopping, and the question lands as its own, which is the card's success
+   * criterion.
+   */
+  assistantParts: string[];
+  /** Milliseconds to hold before the next bubble starts filling. Zero when not pausing. */
+  pauseMs: number;
   /** Confirmed by the server on `turn_complete`. Null until then. */
   humanTurnId: number | null;
   assistantTurnId: number | null;
@@ -263,7 +275,7 @@ export default function FoundationSessionChatPage() {
       }
 
       toast({
-        title: data?.methodologyComplete ? "Session Completed!" : "Session Ended",
+        title: data?.methodologyComplete ? "Here's what you built" : "Session ended",
         description,
         duration: 5000,
       });
@@ -348,6 +360,8 @@ export default function FoundationSessionChatPage() {
     setPending({
       userText: text,
       assistantText: '',
+      assistantParts: [],
+      pauseMs: 0,
       humanTurnId: null,
       assistantTurnId: null,
       phase: 'sending',
@@ -428,6 +442,36 @@ export default function FoundationSessionChatPage() {
               phase: 'streaming',
               assistantText: p.assistantText + event.content,
             }));
+          } else if (event.type === 'break') {
+            /*
+             * H-007. The server's splitter has closed a message: everything streamed so
+             * far becomes its own bubble and the next tokens start a new one.
+             *
+             * The await holds this loop, so frames arriving during the pause queue in the
+             * reader and render after it. Nothing is dropped — they are still in the
+             * buffer — and holding is what makes the gap read as a pause rather than as
+             * text sliding under a stalled bubble.
+             *
+             * Correctness never depends on the timing. `assistantContent` is assembled
+             * server-side and the turn is saved from that, so a client that skips every
+             * pause, or a tab that is backgrounded through all of them, still ends with
+             * exactly what Wing said.
+             */
+            const pauseMs = typeof event.pauseMs === 'number' ? event.pauseMs : 0;
+            updatePending((p) => {
+              const closed = p.assistantText.trim();
+              if (!closed) return p;
+              return {
+                ...p,
+                assistantParts: [...p.assistantParts, closed],
+                assistantText: '',
+                pauseMs,
+              };
+            });
+            if (pauseMs > 0) {
+              await new Promise((r) => setTimeout(r, pauseMs));
+              updatePending((p) => ({ ...p, pauseMs: 0 }));
+            }
           } else if (event.type === 'turn_complete') {
             sawTurnComplete = true;
             /*
@@ -450,13 +494,13 @@ export default function FoundationSessionChatPage() {
           } else if (event.type === 'session_completed') {
             const c = event.content ?? {};
             toast({
-              title: 'Session complete',
+              title: "Here's what you built",
               description:
                 sessionNumber === 1
                   ? `Your primary function: ${c.primaryFunction ?? 'identified'}.`
                   : sessionNumber === 2
                     ? `Tier ${c.credibilityTier} evidence${c.brandClaim ? ` — ${c.brandClaim}` : ''}.`
-                    : `Foundation Session ${sessionNumber} is done.`,
+                    : `Foundation Session ${sessionNumber} is saved. You can reread it any time.`,
               duration: 6000,
             });
             queryClient.invalidateQueries({
@@ -474,7 +518,7 @@ export default function FoundationSessionChatPage() {
       // Asked of this turn's own flag, and thrown here, where the catch below
       // can actually see it.
       if (!sawTurnComplete) {
-        throw new Error('The connection closed before Wing finished');
+        throw new Error('The connection closed while Wing was still speaking');
       }
 
       queryClient.invalidateQueries({ queryKey: ['/api/foundation-sessions'] });
@@ -762,14 +806,29 @@ export default function FoundationSessionChatPage() {
             )}
 
             {pending &&
-              !messages.some((m) => m.id === pending.assistantTurnId) &&
-              (pending.assistantText ? (
-                <Turn role="assistant" testId="message-pending-assistant">
-                  <Prose content={pending.assistantText} />
-                </Turn>
-              ) : (
-                <Thinking />
-              ))}
+              !messages.some((m) => m.id === pending.assistantTurnId) && (
+                <>
+                  {/* Messages Wing has finished saying, one bubble each. */}
+                  {pending.assistantParts.map((part, i) => (
+                    <Turn role="assistant" key={`part-${i}`} testId={`message-pending-assistant-${i}`}>
+                      <Prose content={part} />
+                    </Turn>
+                  ))}
+
+                  {/*
+                    The one still arriving. During a pause it is empty and the typing
+                    indicator stands in — without it the gap reads as the app hanging,
+                    which is the opposite of what the pause is for.
+                  */}
+                  {pending.assistantText ? (
+                    <Turn role="assistant" testId="message-pending-assistant">
+                      <Prose content={pending.assistantText} />
+                    </Turn>
+                  ) : (
+                    <Thinking />
+                  )}
+                </>
+              )}
 
             {/*
               The end of a finished session, in the transcript rather than in
@@ -778,9 +837,15 @@ export default function FoundationSessionChatPage() {
             */}
             {session.status === 'completed' && !allowContinue && (
               <div className="space-y-4 pt-2">
+                {/*
+                  IG-UX03. Was a tick beside "this one's done" — a checkmark and
+                  completion language in the same four words, which is the card's two
+                  visual and verbal signals at once. Her replacement is creation language:
+                  the session produced something and it is kept, rather than a task being
+                  crossed off.
+                */}
                 <div className="flex items-start gap-2 text-[14px] text-ink-soft">
-                  <CheckCircle className="mt-0.5 h-4 w-4 shrink-0 text-good" />
-                  <p>This one's done — the conversation above stays here if you want to reread it.</p>
+                  <p>Everything from this session is saved — the conversation above stays here if you want to reread it.</p>
                 </div>
 
                 {NEXT_STEP[sessionNumber] ? (
@@ -806,12 +871,12 @@ export default function FoundationSessionChatPage() {
                   </OutcomeCard>
                 ) : (
                   <OutcomeCard
-                    eyebrow="Finished"
+                    eyebrow="Built"
                     title="That's all three."
                     action={<Button onClick={() => navigate('/')}>Back to dashboard</Button>}
                   >
-                    Your positioning work is done. The optional modules and the rest of the
-                    tools are on your dashboard whenever you want them.
+                    Your positioning foundation is built. The optional modules and the rest
+                    of the tools are on your dashboard whenever you want them.
                   </OutcomeCard>
                 )}
 
@@ -1037,9 +1102,9 @@ export default function FoundationSessionChatPage() {
           <DialogHeader>
             <DialogTitle>End this session early?</DialogTitle>
             <DialogDescription className="pt-2 leading-relaxed">
-              This foundation session is most effective when completed in full. Exiting now may impact the quality of your positioning results.
+              This session works best in one sitting. Leaving now may weaken the positioning it produces.
               <br /><br />
-              Your progress is saved. You can return to complete this session at any time — but finishing in one sitting is strongly encouraged for the best outcome.
+              Everything so far is saved. You can come back any time — one sitting still gives the best result.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter className="flex-col-reverse sm:flex-row gap-2 sm:gap-0">

@@ -4,6 +4,7 @@ import { lifeLogEntries, promptLibrary, sliRecords, students } from "@shared/win
 import { log } from "../logger";
 import * as orchestrator from "../orchestrator";
 import * as messaging from "./messaging-store";
+import * as promptLog from "./prompt-log-store";
 
 /**
  * The career-and-personal life log (Feature List B2).
@@ -50,7 +51,29 @@ export type NewEntry = {
  */
 export async function promptFor(studentId: number, category?: string) {
   const prompt = await messaging.nextPrompt(studentId, category);
-  return prompt ? { id: prompt.id, text: prompt.promptText, category: prompt.category } : null;
+  if (!prompt) return null;
+
+  /*
+   * ── THE DELIVERY THE REVEAL CYCLE CANNOT RECONSTRUCT ───────────────────
+   * IG-RC10's hard filter 0: an absence claim "dies unless prompts in that signal
+   * category were actually delivered". A student shown this prompt who writes nothing
+   * leaves no trace at all otherwise, and "never asked" and "asked and ignored" mean
+   * opposite things about the same silence.
+   *
+   * The answer is always recoverable from the entry text. This is not. So it is written
+   * here, at the moment of asking, and `logDelivery` returns null rather than throwing —
+   * a broken log must never be the reason a student is not asked a question.
+   */
+  await promptLog.logDelivery(db as never, {
+    studentId,
+    promptId: prompt.id,
+    channel: "micro_journal",
+    signalCategory: promptLog.signalCategoryFor(prompt.category),
+    // Null until Danielle approves the tiers; `promptId` is what makes the backfill work.
+    tier: null,
+  });
+
+  return { id: prompt.id, text: prompt.promptText, category: prompt.category };
 }
 
 /* ── Wing's response ────────────────────────────────────────────────────── */
@@ -148,6 +171,19 @@ export async function createEntry(params: NewEntry) {
       voiceRecordingUri: params.voiceRecordingUri ?? null,
     })
     .returning();
+
+  /*
+   * Closes the delivery this answers, or records an unprompted entry as its own event.
+   * Before the model call, on the rule this file already follows for the entry itself:
+   * what the student wrote survives a failure in what Wing says back.
+   */
+  await promptLog.logResponse(db as never, {
+    studentId: params.studentId,
+    promptId: params.promptId ?? null,
+    channel: "micro_journal",
+    text: entry.entryText,
+    at: entry.createdAt ?? new Date(),
+  });
 
   const response = await composeResponse(params.studentId, entry.entryText);
 

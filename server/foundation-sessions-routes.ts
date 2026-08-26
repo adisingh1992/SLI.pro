@@ -3,6 +3,7 @@ import { parseJsonResponse } from "./json-response";
 import { storage } from "./storage";
 import { getPromptSet } from "./prompts";
 import { buildStudentContext } from "./wing/student-context";
+import * as wingChunking from "./wing/chunking";
 import * as orchestrator from "./orchestrator";
 import * as store from "./wing/session-store";
 import type { WingSessionType, ArtifactType } from "./wing/session-store";
@@ -1098,7 +1099,46 @@ export function registerFoundationSessionsRoutes(app: Express) {
           temperature: 0.7,
         });
 
+        /*
+         * ── H-007 ON A STREAMING SURFACE ─────────────────────────────────
+         * Chunked delivery is universal — "consider implementing as system-level
+         * behavior rather than per-card heuristic", and v3.3 calls it a design
+         * requirement rather than a preference. Intake got it by planning the whole
+         * reply, which it can do because intake is request/response.
+         *
+         * This turn streams with maxTokens 4096, so the same approach would replace a
+         * fast first token with a silence of unknown length on the platform's most
+         * quality-critical surface. Instead the tokens keep flowing exactly as before
+         * and the splitter says where a message ENDS, which the client uses to close one
+         * bubble and open the next after a pause.
+         *
+         * Time to first token is therefore unchanged. What the student gains is that the
+         * question arrives as its own message, which is H-007's actual success criterion:
+         * they answer the final prompt rather than the framing.
+         */
+        const chunker = wingChunking.streamChunker();
         let firstToken = 0;
+        let breaks = 0;
+
+        const emitBreaks = (ready: { text: string; pauseBeforeMs: number; isQuestion: boolean }[]) => {
+          for (const c of ready) {
+            /*
+             * The FIRST completed message needs no break in front of it — the client is
+             * already rendering into a bubble. A break is the boundary between two
+             * messages, so it is emitted after the first and before each one that
+             * follows.
+             */
+            if (breaks === 0 && c.pauseBeforeMs === 0) {
+              breaks++;
+              continue;
+            }
+            breaks++;
+            res.write(
+              `data: ${JSON.stringify({ type: "break", pauseMs: c.pauseBeforeMs, isQuestion: c.isQuestion })}\n\n`,
+            );
+          }
+        };
+
         for await (const chunk of stream) {
           if (!firstToken) {
             firstToken = Date.now() - t0;
@@ -1106,6 +1146,18 @@ export function registerFoundationSessionsRoutes(app: Express) {
           }
           assistantContent += chunk;
           res.write(`data: ${JSON.stringify({ type: "chunk", content: chunk })}\n\n`);
+          /*
+           * After the token is written, never before. A splitter fault must not be able
+           * to hold back text the model has already produced.
+           */
+          emitBreaks(chunker.push(chunk));
+        }
+        emitBreaks(chunker.end());
+        if (chunker.tooLong()) {
+          // This file logs through console with a bracketed tag; it has no `log` import.
+          console.warn(
+            `[foundation] reply for session ${session.id} outgrew ${wingChunking.MAX_CHUNKS} messages`,
+          );
         }
         mark("stream done");
 

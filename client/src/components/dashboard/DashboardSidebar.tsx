@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { ChevronDown, Check } from "lucide-react";
+import { ChevronDown } from "lucide-react";
 import sliProLogo from "@/assets/sliPro-logos_aqua.png";
 
 export interface NavItem {
@@ -67,18 +67,26 @@ function PhaseGroupComponent({
             key={idx}
             onClick={() => !item.locked && onItemClick?.(item)}
             className={`text-[15px] my-5 text-white nav-item-link flex items-center gap-2.5 ${
-              item.locked
-                ? "opacity-30 cursor-not-allowed"
-                : item.completed
-                  ? "opacity-100 cursor-pointer"
-                  : "opacity-80 cursor-pointer"
+              /* No locked appearance either: a greyed, not-allowed cursor is a locked
+                 state without the padlock, and her success criterion is that the user
+                 never encounters one. */
+              item.completed ? "opacity-100 cursor-pointer" : "opacity-80 cursor-pointer"
             }`}
           >
-            {item.completed && (
-              <Check className="w-4 h-4 text-[var(--dashboard-aqua)] shrink-0" />
-            )}
+            {/*
+              IG-UX03 and IG-UX01, in four lines.
+
+              The tick made the sidebar a to-do list: "progress bars and checkmarks turn
+              the experience into a to-do list. Milestone language turns it into a
+              portfolio." The padlock made it a gate, and that is settled — IG-UX01, every
+              module enterable at any time, prerequisites communicated inside the module
+              and never on the navigation. Feature List A2 is dead.
+
+              `locked` and `completed` stay on the type: callers still set them and the
+              admin surfaces still report them. This is the navigation declining to render
+              them to a student.
+            */}
             <span>{item.label}</span>
-            {item.locked && <span>🔒</span>}
           </div>
         ))}
     </div>

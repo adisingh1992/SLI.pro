@@ -9,8 +9,14 @@ import {
   schoolCycles,
   selfDescriptions,
 } from "@shared/wing-schema";
-import { INTAKE_SOURCE, PRIOR_INTAKE_SOURCE, parseIntake } from "./parse-intake";
-import { intakeCardToSeed, intakeGateToSeed, seedRows, type SeedCard } from "./seed-shared";
+import { INTAKE_SOURCE, PRIOR_INTAKE_SOURCES, parseIntake } from "./parse-intake";
+import {
+  intakeCardToSeed,
+  intakeGateToSeed,
+  seedRows,
+  seedsOf,
+  type SeedCard,
+} from "./seed-shared";
 
 /**
  * Reads what the database actually holds for the intake module. Writes nothing.
@@ -32,7 +38,19 @@ import { intakeCardToSeed, intakeGateToSeed, seedRows, type SeedCard } from "./s
 let db: ScriptDb["db"];
 let pool: ScriptDb["pool"];
 
-type Verdict = "v1.7" | "v1.1" | "other" | "missing";
+/**
+ * Which document a stored component matches: `current`, one of the released prior
+ * versions by its own path, or neither.
+ *
+ * Named rather than enumerated because the list of prior versions moved when v1.8 landed,
+ * and a hardcoded `"v1.7" | "v1.1"` is how this reporter came to disagree with the writer
+ * it exists to preview. Whoever adds v1.9 should not have to remember to edit a union.
+ */
+type Verdict = string;
+const CURRENT = "current" as const;
+const APPROVED = "current + her approved corrections" as const;
+const NEITHER = "neither" as const;
+const MISSING = "missing" as const;
 
 function rowsByType(seed: SeedCard): Map<string, string> {
   return new Map(seedRows(seed).components.map((r) => [r.componentType, r.content]));
@@ -42,17 +60,56 @@ async function main() {
   ({ db, pool } = await initScript());
 
   const current = parseIntake(readFileSync(INTAKE_SOURCE, "utf8"));
-  const prior = parseIntake(readFileSync(PRIOR_INTAKE_SOURCE, "utf8"));
 
+  /*
+   * ── BOTH SIDES OF THE CURRENT DOCUMENT, AND WHY IT IS NOT A SWITCH ──────
+   * `wing:update-intake` writes the current document WITH her approved corrections
+   * applied. This reporter first mapped it as-delivered only, on the reasoning that
+   * pre-applying them would hide the rows still needing a write. That was half right and
+   * the other half was a real defect: after the write, H-025's two patched components
+   * matched no document at all and were reported as `neither` — "edited by hand". They
+   * were not edited by hand. The pipeline had written exactly what it should, and the
+   * label accused an operator of touching the methodology.
+   *
+   * So the answer is a third state rather than a choice between two. A component that
+   * matches the document as delivered reads `current`; one that matches the document plus
+   * her corrections reads `current + her approved corrections`; only something matching
+   * neither, nor any prior version, is genuinely unexplained. Both readings are true
+   * states of a correct pipeline at different moments, and the pending list below says
+   * which rows are still waiting for the write.
+   *
+   * (The original comment, kept because the reasoning still applies to the as-delivered
+   * half: the corrections are what `wing:update-intake` will write; a reporter that only
+   * pre-applied them would show the database as already correct and hide
+   * exactly the rows that need writing.)
+   */
   const now = new Map<string, SeedCard>();
   for (const c of current.cards) now.set(c.cardCode, intakeCardToSeed(c, INTAKE_SOURCE));
   for (const g of current.gates) now.set(g.cardCode, intakeGateToSeed(g, INTAKE_SOURCE));
 
-  const was = new Map<string, SeedCard>();
-  for (const c of prior.cards) was.set(c.cardCode, intakeCardToSeed(c, PRIOR_INTAKE_SOURCE));
-  for (const g of prior.gates) was.set(g.cardCode, intakeGateToSeed(g, PRIOR_INTAKE_SOURCE));
+  /*
+   * The same document with her approved corrections applied — what `update-intake` writes.
+   * Built through `seedsOf` rather than by hand so the two tools cannot drift: if the patch
+   * table changes, both move together or neither does.
+   */
+  const corrected = seedsOf(current, INTAKE_SOURCE, "apply-approved-corrections");
 
-  const codes = Array.from(new Set(Array.from(now.keys()).concat(Array.from(was.keys()))));
+  /*
+   * Every released version, each mapped with ITS OWN source path, because the provenance
+   * block cites the document a card came from. Comparing against one prior is how a row
+   * seeded from v1.7 gets reported as edited by hand.
+   */
+  const priors = PRIOR_INTAKE_SOURCES.map((source) => {
+    const parsed = parseIntake(readFileSync(source, "utf8"));
+    const was = new Map<string, SeedCard>();
+    for (const c of parsed.cards) was.set(c.cardCode, intakeCardToSeed(c, source));
+    for (const g of parsed.gates) was.set(g.cardCode, intakeGateToSeed(g, source));
+    return { source, was };
+  });
+
+  const codes = Array.from(
+    new Set(Array.from(now.keys()).concat(...priors.map((p) => Array.from(p.was.keys())))),
+  );
 
   const rows = await db
     .select({
@@ -67,11 +124,19 @@ async function main() {
 
   console.log(`\nIntake module — what the database holds\n`);
   console.log(`  current source: ${INTAKE_SOURCE}`);
-  console.log(`  prior source:   ${PRIOR_INTAKE_SOURCE}\n`);
+  console.log(`  prior sources:  ${PRIOR_INTAKE_SOURCES.join(", ")}\n`);
 
-  const tally: Record<Verdict, number> = { "v1.7": 0, "v1.1": 0, other: 0, missing: 0 };
+  const tally: Record<Verdict, number> = {
+    [CURRENT]: 0,
+    [APPROVED]: 0,
+    [NEITHER]: 0,
+    [MISSING]: 0,
+  };
+  for (const p of priors) tally[p.source] = 0;
   const mixed: string[] = [];
   const notSeeded: string[] = [];
+  /** Patched components still holding the document's wording — `update-intake` writes these. */
+  const correctionPending: string[] = [];
 
   for (const code of Array.from(now.keys())) {
     const row = byCode.get(code);
@@ -92,29 +157,80 @@ async function main() {
     const held = new Map(stored.map((r) => [r.componentType as string, r.content]));
 
     const target = rowsByType(now.get(code)!);
-    const before = was.has(code) ? rowsByType(was.get(code)!) : new Map<string, string>();
+    const approvedTarget = corrected.has(code)
+      ? rowsByType(corrected.get(code)!)
+      : new Map<string, string>();
+    const before = priors.map((p) => ({
+      source: p.source,
+      rows: p.was.has(code) ? rowsByType(p.was.get(code)!) : new Map<string, string>(),
+    }));
 
     const verdicts: Verdict[] = [];
     for (const [type, wanted] of Array.from(target.entries())) {
       const have = held.get(type);
-      if (have === undefined) verdicts.push("missing");
-      else if (have === wanted) verdicts.push("v1.7");
-      else if (have === before.get(type)) verdicts.push("v1.1");
-      else verdicts.push("other");
-    }
-    for (const v of verdicts) tally[v]++;
+      if (have === undefined) {
+        verdicts.push(MISSING);
+        continue;
+      }
+      const approvedWanted = approvedTarget.get(type);
+      const patched = approvedWanted !== undefined && approvedWanted !== wanted;
 
-    const distinct = Array.from(new Set(verdicts));
-    if (distinct.length > 1) {
-      mixed.push(`${code}: ${distinct.join(" + ")}`);
+      if (have === wanted) {
+        verdicts.push(CURRENT);
+        /*
+         * A patched component still holding the document's own wording is not wrong, it is
+         * pending: her correction has been approved and not yet written. Named here so the
+         * report says which rows `update-intake` is for, which is the job the as-delivered
+         * comparison was added to do.
+         */
+        if (patched) correctionPending.push(`${code} ${type}`);
+        continue;
+      }
+      if (patched && have === approvedWanted) {
+        verdicts.push(APPROVED);
+        continue;
+      }
+      // Newest prior first, so a component unchanged across versions reads as the newest.
+      const from = before.find((b) => b.rows.get(type) === have);
+      verdicts.push(from ? from.source : NEITHER);
+    }
+    for (const v of verdicts) tally[v] = (tally[v] ?? 0) + 1;
+
+    /*
+     * A mixture means the card's components came from more than one place, which no single
+     * seed or update run produces — so it is worth naming.
+     *
+     * `current` and `approved` together is the exception, and it must be, or this fires on
+     * a healthy card: H-025 has seven components and her patches rewrite two, so a correct
+     * database holds five at the document's wording and two at hers. Treating that as an
+     * anomaly would be the same false alarm as calling her corrections a hand edit, one
+     * layer up.
+     */
+    const sources = new Set(verdicts.map((v) => (v === APPROVED ? CURRENT : v)));
+    if (sources.size > 1) {
+      mixed.push(`${code}: ${Array.from(new Set(verdicts)).join(" + ")}`);
     }
   }
 
   console.log("  component rows, by which document they match:");
-  console.log(`    at v1.7   ${String(tally["v1.7"]).padStart(4)}`);
-  console.log(`    at v1.1   ${String(tally["v1.1"]).padStart(4)}`);
-  console.log(`    neither   ${String(tally.other).padStart(4)}   (edited by hand, or a third version)`);
-  console.log(`    missing   ${String(tally.missing).padStart(4)}`);
+  console.log(`    current   ${String(tally[CURRENT]).padStart(4)}   ${INTAKE_SOURCE}`);
+  console.log(
+    `    approved  ${String(tally[APPROVED]).padStart(4)}   ${INTAKE_SOURCE} + her approved corrections`,
+  );
+  for (const p of priors) {
+    console.log(`    prior     ${String(tally[p.source]).padStart(4)}   ${p.source}`);
+  }
+  console.log(`    neither   ${String(tally[NEITHER]).padStart(4)}   (edited by hand, or a version not listed)`);
+  console.log(`    missing   ${String(tally[MISSING]).padStart(4)}`);
+
+  if (correctionPending.length) {
+    console.log(
+      `\n  ${correctionPending.length} component(s) still hold the document's own wording where\n` +
+        "  an approved correction exists. Not an error — this is exactly what\n" +
+        "  wing:update-intake writes:\n" +
+        correctionPending.map((c) => `    ${c}`).join("\n"),
+    );
+  }
 
   if (notSeeded.length) console.log(`\n  not seeded: ${notSeeded.join(", ")}`);
   if (mixed.length) {
@@ -123,8 +239,15 @@ async function main() {
   }
 
   /* ── The retired card ─────────────────────────────────────────────────── */
-  const dropped = Array.from(was.keys()).filter((c) => !now.has(c));
-  console.log("\n  cards v1.7 dropped:");
+  /*
+   * Anything any released version carried and the current one does not. Collected across
+   * every prior rather than the newest, because a card dropped two versions ago is still
+   * a row in the database and still needs its status reported.
+   */
+  const everPresent = new Set<string>();
+  for (const p of priors) for (const c of Array.from(p.was.keys())) everPresent.add(c);
+  const dropped = Array.from(everPresent).filter((c) => !now.has(c));
+  console.log(`\n  cards dropped by ${INTAKE_SOURCE}:`);
   for (const code of dropped) {
     const row = byCode.get(code);
     console.log(

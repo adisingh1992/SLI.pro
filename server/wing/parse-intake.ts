@@ -53,25 +53,74 @@ import {
 } from "./parse-compendium";
 import { METHODOLOGY_POPULATIONS } from "./population-tags";
 
-/** The document this parser reads. Committed exactly as delivered. */
-export const INTAKE_SOURCE = "methodology/wing-intake-heuristic-cards-v1.7.md";
+/**
+ * The document this parser reads. Committed exactly as delivered.
+ *
+ * ── WHY v1.8 IS A SAFE MOVE, MEASURED RATHER THAN ASSUMED ────────────────
+ * v1.8 is v1.7 plus two component changes, and that was checked by parsing both and
+ * comparing all seven components of all 28 cards and all 13 gate rules:
+ *
+ *   H-014   `failure_path`      — the "often means" frequency claim removed per IG-RC13,
+ *                                 replaced with an instruction not to explain the phrase.
+ *   H-019.5 `detection_method`  — 15 reveal templates to 14, and the range corrected to
+ *                                 "RT-01 through RT-13, RT-15" after RT-14's retirement.
+ *
+ * Nothing else in the seven components of any card, and no gate rule, differs. Same 28
+ * codes, same 13 gates, no collisions, nothing incomplete, nothing misfiled, every
+ * population tag still resolvable. **This parser needed no change for v1.8.**
+ *
+ * Three more edits are in the document and are deliberately invisible to a body hash,
+ * because they are not components: H-019.5's `description` and a prose line both move 15
+ * to 14, and the summary table's reveal-template count is corrected from 13 to 14 (the
+ * range H-020–H-032 plus H-034 is fourteen cards, so v1.7's 13 was wrong). Her footer
+ * claims three template-count fixes; there are four, and the fourth is in the right
+ * direction.
+ *
+ * ── WHAT v1.8 DOES NOT FIX ───────────────────────────────────────────────
+ * H-019.5's `delivery_adaptation` still offers "RT-14 Clean Slate = undergraduate only"
+ * as a live track-specific template, in the same card whose description and detection
+ * method were both corrected for RT-14's retirement. A missed spot in a pass over that
+ * exact card, raised with her on 26 August rather than guessed at here.
+ */
+export const INTAKE_SOURCE = "methodology/wing-intake-heuristic-cards-v1.8.md";
 
 /**
- * The version v1.7 supersedes, kept for one reason only.
+ * Every version this one supersedes, newest first.
  *
- * "Build from v1.7, discard the v1.1 I sent on the 18th" — Danielle, 19 August.
- * Discarded as a source: nothing parses it into a card any more.
+ * "Build from v1.7, discard the v1.1 I sent on the 18th" — Danielle, 19 August. Discarded
+ * as sources: nothing parses either of these into a card any more.
  *
- * It stays in the repo because `update-intake.ts` needs it. Seventeen of the 28
- * card bodies changed between the two versions, and the safe way to replace a
- * seeded card is to check first that the row still says what v1.1 said. A row
- * that matches neither version has been edited by hand in the admin editor, and
- * overwriting that would destroy the methodology owner's own work — silently,
- * because a seed prints what it wrote and not what it replaced.
+ * They stay in the repo because `update-intake.ts` needs them, and it needs **all** of
+ * them rather than one. The safe way to replace a seeded card is to check first that the
+ * row still says what some released version said; a row matching none of them has been
+ * edited by hand in the admin editor, and overwriting that would destroy the methodology
+ * owner's own work — silently, because a seed prints what it wrote and not what it
+ * replaced.
  *
- * Delete this the release after the update has run everywhere.
+ * A single prior version was enough while there was one. It stopped being enough at v1.8,
+ * and not as a tidiness point: the provenance block cites the document it came from, so a
+ * row seeded from v1.7 and compared only against v1.1 differs in its notes for a reason
+ * that has nothing to do with anyone editing it. Every one of the 41 would have been
+ * reported as hand-edited and skipped — a run that refuses safely, looks like a disaster,
+ * and blocks the release for a day while someone works out why.
+ *
+ * Which version the rows were actually seeded from is not knowable from here, so the
+ * script reports the version each row matched instead of assuming one.
+ *
+ * Drop an entry the release after the update has run everywhere.
  */
-export const PRIOR_INTAKE_SOURCE = "methodology/wing-intake-heuristic-cards-v1.1.md";
+export const PRIOR_INTAKE_SOURCES: readonly string[] = [
+  "methodology/wing-intake-heuristic-cards-v1.7.md",
+  "methodology/wing-intake-heuristic-cards-v1.1.md",
+];
+
+/**
+ * The immediate predecessor.
+ *
+ * Kept as its own export because callers outside the update script use it to mean "the
+ * one before this", and repointing it silently would change what they check.
+ */
+export const PRIOR_INTAKE_SOURCE = PRIOR_INTAKE_SOURCES[0];
 
 /**
  * An intake integrity gate — IG-INT01 to IG-INT13.

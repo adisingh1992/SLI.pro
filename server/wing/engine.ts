@@ -222,8 +222,8 @@ export type GateContext = {
  * The gate cards for this session, loaded but not yet rendered.
  *
  * ── WHY LOADING AND COMPILING ARE SEPARATE ───────────────────────────────
- * Two gates apply only when a fact about this turn holds: IG-U012 when the student
- * has uploaded something, IG-U014 when they have an unanswered task — see
+ * Two gates apply only when a fact about this turn holds: IG-U018 when the student
+ * has uploaded something, IG-U020 when they have an unanswered task — see
  * GATE_PRECONDITIONS in gate-compiler.ts for why compiling them regardless is
  * worse than wasteful. One of those facts, whether an uploaded document is in
  * this turn's context, is not known until the context read returns, and the
@@ -238,7 +238,7 @@ export type LoadedGates = {
   gates: GateCard[];
   /** Card code → heuristic id, so an audit finding can be attributed. */
   byCode: Map<string, number>;
-  /** Unanswered assigned tasks. IG-U014's precondition. */
+  /** Unanswered assigned tasks. IG-U020's precondition. */
   openTasks: number;
 };
 

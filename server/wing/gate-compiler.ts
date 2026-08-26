@@ -111,11 +111,11 @@ export const NO_TIER1_SURFACE: readonly string[] = ["H-005"];
  *
  * ── WHY A GATE CAN BE WRONG TO INCLUDE ───────────────────────────────────
  * Most gates describe something Wing must never say, and those belong in every
- * turn. Two do not. IG-U012 — IG-U03 as the document still numbers it — says
- * "fires upon file upload in any module context". IG-U014 says "fires at session
+ * turn. Two do not. IG-U018 — IG-U03 as the document still numbers it — says
+ * "fires upon file upload in any module context". IG-U020 says "fires at session
  * start or Radar check-in WHEN UNCOMPLETED TASKS EXIST in the task log". Both name
  * a state of the world, and on a turn where that state does not hold the rule is
- * not merely wasted tokens — it is suggestive. IG-U014's rule text is a page of
+ * not merely wasted tokens — it is suggestive. IG-U020's rule text is a page of
  * guidance on how to follow up on
  * between-session tasks; handed to a model with no tasks to follow up on, the
  * likeliest effect is that it asks about tasks nobody assigned. A constraint
@@ -142,22 +142,48 @@ type Precondition = {
 };
 
 /*
- * Keyed on the corrected codes. Both of these are Module 11 universal gates, and
- * both were renumbered twice on 18 August: IG-U03 → IG-U006 → IG-U012 and
- * IG-U05 → IG-U008 → IG-U014. The second move was forced by her research-derived
- * gates, which claim IG-U006–IG-U011; see CORRECTIONS in parse-compendium.ts.
+ * Keyed on the CURRENT codes. Both of these are Module 11 universal gates, and both have
+ * now been renumbered three times: IG-U03 → IG-U006 → IG-U012 → IG-U018, and
+ * IG-U05 → IG-U008 → IG-U014 → IG-U020. The second move was forced by her
+ * research-derived gates claiming IG-U006–IG-U011; the third by her platform-wide gates
+ * claiming IG-U012–IG-U017. See CORRECTIONS in parse-compendium.ts.
  *
- * No superseded code appears in this file, deliberately. A stale key here fails
- * OPEN — the gate compiles on every turn regardless of the student's state, and
- * nothing anywhere says why — so the only safe number is the current one.
+ * ── THE BUG THIS SHAPE ALREADY CAUSED ────────────────────────────────────
+ * The previous version of this comment said: "No superseded code appears in this file,
+ * deliberately. A stale key here fails OPEN — the gate compiles on every turn regardless
+ * of the student's state, and nothing anywhere says why — so the only safe number is the
+ * current one."
+ *
+ * That was right about the consequence and wrong about the remedy. The third renumber left
+ * both keys stale, both gates compiled on every turn, and nothing said why — exactly as
+ * predicted. Being careful is not a mechanism. So two changes:
+ *
+ * That was right about the consequence and wrong about the remedy: being careful is not a
+ * mechanism, and this table was careful for a week while both keys pointed at nothing.
+ *
+ * Normalising a code through the rename history was the obvious fix and it is unsafe. A
+ * superseded number can be **reissued** — the trio wore IG-U006–IG-U008 for one morning
+ * and those are her research-derived gates now, IG-U006 being a live seeded card — so
+ * translating IG-U012 to IG-U018 would eventually answer a question about one gate with
+ * another gate's rule.
+ *
+ * The guard therefore lives in the suite, where it can check the key against the CORPUS
+ * rather than against a lookup table: every key here must name a gate that exists, and that
+ * gate's own detection_method must contain the `source` quoted below. A renumber then fails
+ * a test naming the gate, instead of quietly widening what compiles.
+ *
+ * One consequence to be aware of rather than fix here: the rename of the seeded ROWS is a
+ * separate script and has not run for the third move, so a database still holding IG-U012
+ * will not match this table. That is `wing:apply-corrections`' job, and running it is on
+ * the release checklist.
  */
 export const GATE_PRECONDITIONS: Readonly<Record<string, Precondition>> = {
-  "IG-U012": {
+  "IG-U018": {
     holds: (c) => c.hasUploadedDocument !== false,
     reason: "nothing the student uploaded is in this turn's context",
     source: '"Fires upon file upload in any module context"',
   },
-  "IG-U014": {
+  "IG-U020": {
     holds: (c) => c.openTasks === undefined || c.openTasks > 0,
     reason: "the student has no unanswered tasks to follow up on",
     source:

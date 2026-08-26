@@ -2,6 +2,7 @@ import { Express, Request, Response, NextFunction } from "express";
 import * as conversation from "./wing/intake-conversation";
 import * as intakeStore from "./wing/intake-store";
 import { log } from "./logger";
+import { minorProtectionActive } from "./wing/minor-protection";
 
 /**
  * Conversational intake API (Feature List A1).
@@ -36,6 +37,22 @@ export function registerIntakeRoutes(app: Express) {
 
       const record = await intakeStore.getIntakeRecord(req.user!.id);
 
+      /*
+       * IG-S06. The client uses this to skip the demographics step entirely, because
+       * asking and then discarding is still asking. The server refuses the fields
+       * regardless — see the finish route — so this is the courtesy half, not the
+       * enforcement.
+       *
+       * Deliberately only the boolean. Which signal fired, and what the user said to
+       * produce it, are not the client's business and would put a minor-detection
+       * verdict into a browser.
+       */
+      const responses = (await intakeStore.getBrandingIntake(req.user!.id))?.responses ?? {};
+      const protectedFooting = minorProtectionActive({
+        statedUnder18: (responses as Record<string, unknown>)._minor_stated === true,
+        statedInSchool: false,
+      }).active;
+
       res.json({
         messages: state.messages,
         progress: state.progress,
@@ -45,6 +62,7 @@ export function registerIntakeRoutes(app: Express) {
         // `completed` is the whole intake including demographics; `complete` is
         // just the conversation. The dashboard routes on the former.
         finished: !!record?.completed,
+        protectedFooting,
       });
     } catch (error) {
       next(error);
@@ -57,7 +75,18 @@ export function registerIntakeRoutes(app: Express) {
       const result = await conversation.begin(req.user!.id);
       if (!result) return res.status(404).json({ error: "No student record for this account" });
 
-      res.json({ reply: result.reply, progress: result.state.progress, complete: result.state.complete });
+      /*
+       * `delivery` is how the reply arrives — the messages the student sees, each with the
+       * pause before it. `reply` stays as the whole text, so a client that has not been
+       * taught to pace anything still renders one correct message.
+       */
+      res.json({
+        reply: result.reply,
+        delivery: result.delivery,
+        pauseAfterMs: result.pauseAfterMs,
+        progress: result.state.progress,
+        complete: result.state.complete,
+      });
     } catch (error) {
       next(error);
     }
@@ -87,6 +116,8 @@ export function registerIntakeRoutes(app: Express) {
 
       res.json({
         reply: result.reply,
+        delivery: result.delivery,
+        pauseAfterMs: result.pauseAfterMs,
         progress: result.state.progress,
         complete: result.state.complete,
         population: result.state.population,
@@ -110,6 +141,35 @@ export function registerIntakeRoutes(app: Express) {
     try {
       const body = (req.body ?? {}) as Record<string, unknown>;
 
+      /*
+       * ── IG-S06: NO EXTRA PII FROM A SELF-DECLARED MINOR ────────────────
+       * Her card's protected scope sets `extraPiiCollection: false`, and this route is
+       * the only place the platform asks for race, gender identity, identity
+       * representation or first-generation status. Collecting those from someone who has
+       * told Wing they are under eighteen is the concrete thing that gate exists to
+       * prevent, and until now the route asked everyone.
+       *
+       * Enforced HERE and not only in the client. A client that skips the step is a
+       * courtesy; a server that accepts the fields anyway means one stale bundle, one
+       * curl, or one replayed request writes them. The client change below stops it being
+       * asked; this stops it being stored.
+       *
+       * `institutionSetting` is deliberately absent rather than guessed: no column
+       * carries it yet, and absent reads as off, which is her ruling for Berkeley. When
+       * institutions can configure it, that value comes from here and nothing else moves.
+       */
+      const captured = (await intakeStore.getBrandingIntake(req.user!.id))?.responses ?? {};
+      const protection = minorProtectionActive({
+        /*
+         * One flag, not two. `intake-conversation.ts` sets `_minor_stated` for either
+         * signal — an explicit age under eighteen, or being at school now — because both
+         * make the gate active and the verdict is the same. Which one it was is in the
+         * log, and the distinction belongs on an admin surface rather than here.
+         */
+        statedUnder18: (captured as Record<string, unknown>)._minor_stated === true,
+        statedInSchool: false,
+      });
+
       const demographics: Record<string, unknown> = {};
       for (const key of [
         "race_ethnicity",
@@ -126,7 +186,21 @@ export function registerIntakeRoutes(app: Express) {
         else if (typeof v === "boolean") demographics[key] = v;
       }
 
-      if (Object.keys(demographics).length) {
+      if (protection.active) {
+        /*
+         * Dropped, not stored-and-hidden. A field that is written and then filtered on
+         * read is still a field the platform holds about a minor, and the gate is about
+         * collection.
+         */
+        const refused = Object.keys(demographics);
+        if (refused.length) {
+          log(
+            `IG-S06: refused ${refused.length} demographic field(s) for user ${req.user!.id} — ` +
+              protection.because,
+            "intake",
+          );
+        }
+      } else if (Object.keys(demographics).length) {
         await intakeStore.mergeIntakeResponses(req.user!.id, demographics);
       }
 

@@ -9,6 +9,8 @@ import {
   users,
 } from "@shared/wing-schema";
 import { log } from "../logger";
+import { maySend } from "./safety-hold-store";
+import type { OutboundKind } from "./suppression";
 
 /**
  * Messaging — templates, sending, and the one audit trail (Feature List B3).
@@ -102,8 +104,44 @@ export async function sendTemplated(params: {
   sequenceKey?: string;
   sequenceStep?: number;
   promptId?: number | null;
+  /**
+   * What kind of outbound this is, for the safety hold.
+   *
+   * Optional so no caller breaks, and an absent kind falls back to the channel — which
+   * is itself an OutboundKind for email, sms and push. The fallback is not a loophole:
+   * every kind in the list is suppressed identically, so guessing wrong holds the same
+   * message it would otherwise have held.
+   */
+  outboundKind?: OutboundKind;
 }): Promise<SendResult> {
   const channel = params.channel ?? "email";
+
+  /*
+   * ── THE SAFETY HOLD ────────────────────────────────────────────────────
+   * Before the template, before the render, before the provider. If IG-S01 has fired for
+   * this student, Wing does not speak first — every channel, no exception, per the
+   * interim rule and Danielle's ruling of 25 August that seven days is a minimum with no
+   * auto-resume.
+   *
+   * Here rather than in each caller because there are five callers and there will be
+   * more, and a rule that every caller has to remember is a rule that one of them will
+   * not. This is the funnel: nothing outbound reaches a provider except through it.
+   *
+   * It does NOT gate Wing answering someone. Nothing on this path is a reply — a reply
+   * goes through the turn path — and `mayRespondToUser()` exists so that stays true.
+   */
+  if (params.studentId) {
+    const kind: OutboundKind =
+      params.outboundKind ?? (channel === "in_app" ? "in_app_nudge" : channel);
+    const verdict = await maySend(db as never, params.studentId, kind);
+    if (!verdict.allowed) {
+      log(
+        `held: ${params.templateKey} (${channel}) to student ${params.studentId} — ${verdict.why}`,
+        "messaging",
+      );
+      return { sent: false, reason: "safety_hold" };
+    }
+  }
 
   try {
     const template = await getTemplate(params.templateKey, channel);
