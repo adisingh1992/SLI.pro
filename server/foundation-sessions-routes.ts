@@ -19,6 +19,7 @@ import * as voice from "./wing/voice";
 import { compileSafety, safetyTokenEstimate } from "./wing/safety-rules";
 import * as scoring from "./wing/scoring";
 import * as classifier from "./wing/classifier";
+import { foundationOpening, isFoundationNumber } from "@shared/session-access";
 
 /**
  * Foundation Sessions — running natively on the Wing schema.
@@ -40,8 +41,13 @@ import * as classifier from "./wing/classifier";
  * and maps to session_type foundation_1..3 internally.
  *
  * Turns carry provenance assigned at capture; there is no separate mirroring
- * step any more. Forward-locking is engine logic here in the route layer, per
- * spec §8 ("prerequisites are engine logic, not schema").
+ * step any more.
+ *
+ * There is no forward-locking. WING_DECISIONS ruling 1 settled the C1 conflict in favour
+ * of IG-UX01 — "every module enterable at any time; depth adapts, access does not" — and
+ * this route layer was the thing enforcing the opposite: `start` answered 403 and the arc
+ * was seeded with `status: "locked"`. Prerequisites are now reported as data and said
+ * inside the session, per `shared/session-access.ts`.
  */
 
 const isAuthenticated = (req: Request, res: Response, next: NextFunction) => {
@@ -487,30 +493,17 @@ export async function checkSessionCompletion(
   }
 }
 
-/**
- * Creates the three Foundation Session rows on first access.
- * Session 1 is available; 2 and 3 are locked until prerequisites complete.
+/*
+ * `initializeFoundationSessions` and `unlockNextSession` were here.
+ *
+ * The first seeded sessions 2 and 3 as `locked`; the second flipped the next one to
+ * `available` when its predecessor completed. Both implemented Feature List A2, which
+ * ruling 1 superseded. The arc now comes from `store.ensureFoundationArc`, which creates
+ * all three at the column default, and there is nothing left to unlock.
+ *
+ * Deleted rather than left as no-ops. A function called `unlockNextSession` that unlocks
+ * nothing reads, to the next person, as the place where access is decided.
  */
-async function initializeFoundationSessions(studentId: number) {
-  const existing = await store.listSessions(studentId, store.FOUNDATION_TYPES);
-  if (existing.length >= 3) return;
-
-  const present = new Set(existing.map((s) => s.sessionType));
-  for (const n of [1, 2, 3]) {
-    const type = sessionTypeFor(n);
-    if (present.has(type)) continue;
-    await store.ensureSession(studentId, type, n === 1 ? "available" : "locked");
-  }
-}
-
-/** Unlocks the next session in the arc once its prerequisite completes. */
-async function unlockNextSession(studentId: number, completedNumber: number) {
-  if (completedNumber >= 3) return;
-  const next = await store.getSession(studentId, sessionTypeFor(completedNumber + 1));
-  if (next && next.status === "locked") {
-    await store.updateSessionStatus(next.id, "available");
-  }
-}
 
 /* ── Routes ────────────────────────────────────────────────────────────── */
 
@@ -522,7 +515,7 @@ export function registerFoundationSessionsRoutes(app: Express) {
     async (req: Request, res: Response, next: NextFunction) => {
       try {
         const studentId = await store.studentIdFor(req.user as any);
-        await initializeFoundationSessions(studentId);
+        await store.ensureFoundationArc(studentId);
 
         const rows = await store.listSessions(studentId, store.FOUNDATION_TYPES);
         res.json(rows.map(toApiSession));
@@ -545,7 +538,7 @@ export function registerFoundationSessionsRoutes(app: Express) {
         }
 
         const studentId = await store.studentIdFor(req.user as any);
-        await initializeFoundationSessions(studentId);
+        await store.ensureFoundationArc(studentId);
 
         const session = await store.getSession(studentId, sessionTypeFor(sessionNumber));
         if (!session) return res.status(404).json({ error: "Session not found" });
@@ -576,15 +569,16 @@ export function registerFoundationSessionsRoutes(app: Express) {
 
         const legacyUserId = req.user!.id;
         const studentId = await store.studentIdFor(req.user as any);
-        await initializeFoundationSessions(studentId);
+        await store.ensureFoundationArc(studentId);
 
         const session = await store.getSession(studentId, sessionTypeFor(sessionNumber));
         if (!session) return res.status(404).json({ error: "Session not found" });
 
-        if (session.status === "locked") {
-          return res.status(403).json({ error: "Complete the previous session first" });
-        }
-
+        /*
+         * No status check. This answered `403 "Complete the previous session first"`,
+         * which was both the C1 violation ruling 1 resolved and — in its own error
+         * string — an IG-UX03 one.
+         */
         const updated = await store.startSession(session.id);
 
         // Opening guidance is Wing's first turn — captured as ai_prompt.
@@ -593,8 +587,24 @@ export function registerFoundationSessionsRoutes(app: Express) {
             await profileStore.getProfessionalStatus(legacyUserId),
           );
           const initialMessage = promptSet.getInitialGuidanceMessage(sessionNumber);
-          if (initialMessage) {
-            await store.addAiTurn(session.id, initialMessage);
+
+          /*
+           * "Prerequisites are communicated inside the module, never on the navigation."
+           * Entering out of order is allowed and is not silent: one sentence naming what
+           * Wing does not have, offering the earlier session and never redirecting to it.
+           *
+           * Appended to the opening rather than sent as its own turn, so the student reads
+           * one message and the transcript carries one `ai_prompt`. IG-UX06 replaces the
+           * whole opening; this is the floor until then.
+           */
+          const opening = isFoundationNumber(sessionNumber)
+            ? await store
+                .completedFoundationNumbers(studentId)
+                .then((done) => foundationOpening(sessionNumber, done, initialMessage))
+            : (initialMessage ?? "");
+
+          if (opening) {
+            await store.addAiTurn(session.id, opening);
           }
         }
 
@@ -691,11 +701,12 @@ export function registerFoundationSessionsRoutes(app: Express) {
         await store.completeSession(session.id);
         const updated = await store.updateSessionStatus(session.id, "ended_early");
 
-        // Only unlock the next session if the methodology considered this one
-        // genuinely complete — ending early should not skip prerequisites.
-        if (analysis.shouldComplete) {
-          await unlockNextSession(studentId, sessionNumber);
-        }
+        /*
+         * An unlock call stood here, conditional on `analysis.shouldComplete` so that
+         * ending early could not skip a prerequisite. Nothing to unlock now — the next
+         * session was already enterable — and `shouldComplete` still decides whether the
+         * artifact is written, which is the part that actually mattered.
+         */
 
         console.log(
           `[foundation] session ${sessionNumber}: ended early ` +
@@ -1268,7 +1279,6 @@ export function registerFoundationSessionsRoutes(app: Express) {
           });
 
           await store.completeSession(session.id);
-          await unlockNextSession(studentId, sessionNumber);
 
           res.write(
             `data: ${JSON.stringify({
@@ -1339,7 +1349,13 @@ export function registerFoundationSessionsRoutes(app: Express) {
         if (!session) return res.status(404).json({ error: "Session not found" });
 
         const { status } = req.body ?? {};
-        const allowed = ["locked", "available", "in_progress", "completed", "ended_early"];
+        /*
+         * `locked` is gone from this list, not from the enum. Ruling 1 removed the only
+         * thing that read it, so accepting a write of it would leave a field asserting a
+         * state nothing enforces — the failure shape this codebase keeps producing.
+         * Migration 0027 flips the rows that already carry it.
+         */
+        const allowed = ["available", "in_progress", "completed", "ended_early"];
         if (status && !allowed.includes(status)) {
           return res.status(400).json({ error: `status must be one of ${allowed.join(", ")}` });
         }
@@ -1347,7 +1363,6 @@ export function registerFoundationSessionsRoutes(app: Express) {
         let updated = session;
         if (status === "completed") {
           updated = await store.completeSession(session.id);
-          await unlockNextSession(studentId, sessionNumber);
         } else if (status) {
           updated = await store.updateSessionStatus(session.id, status);
         }

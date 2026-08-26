@@ -113,6 +113,38 @@ export async function ensureSession(
   return created;
 }
 
+/**
+ * The three Foundation rows, all `available`. Idempotent.
+ *
+ * IG-UX01, ruling 1: "every module enterable at any time; depth adapts, access does not."
+ * This used to write `locked` onto sessions 2 and 3, and an identical copy of the loop
+ * lived in `server/routes.ts` — so the two had to be corrected in lockstep, which is the
+ * shape of bug that has already cost this codebase three renumbered gate codes. One
+ * function now, called from both.
+ *
+ * `available` is not passed: it is the column default, and letting the schema state it
+ * means a future caller cannot accidentally reintroduce a status the ruling removed.
+ */
+export async function ensureFoundationArc(studentId: number) {
+  const existing = await listSessions(studentId, FOUNDATION_TYPES);
+  if (existing.length >= FOUNDATION_TYPES.length) return existing;
+
+  const present = new Set(existing.map((s) => s.sessionType));
+  for (const type of FOUNDATION_TYPES) {
+    if (present.has(type)) continue;
+    await ensureSession(studentId, type);
+  }
+  return listSessions(studentId, FOUNDATION_TYPES);
+}
+
+/** The Foundation session numbers this student has finished. Informational only. */
+export async function completedFoundationNumbers(studentId: number): Promise<number[]> {
+  const rows = await listSessions(studentId, FOUNDATION_TYPES);
+  return rows
+    .filter((r) => r.status === "completed")
+    .map((r) => foundationNumber(r.sessionType));
+}
+
 export async function startSession(sessionId: number) {
   const [row] = await db
     .update(sessions)

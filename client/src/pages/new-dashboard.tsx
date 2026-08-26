@@ -7,7 +7,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
-import { LogOut, User, ChevronDown } from "lucide-react";
+import { LogOut, User, ChevronDown, ChevronRight } from "lucide-react";
 import { useLocation } from "wouter";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
@@ -29,6 +29,8 @@ import ToolCard from "@/components/dashboard/ToolCard";
 import UserAvatar from "@/components/user-avatar";
 import "@/assets/css/new-dashboard.css";
 import { hasSelectedSli, hasRefinedSli } from "@/lib/sli";
+import { recommend } from "@shared/recommendation";
+import { SESSION_MINUTES } from "@shared/transitions";
 
 /*
  * A2: "Add contextual micro-copy at every transition: what the next section
@@ -47,21 +49,21 @@ const SESSION_CONTENT = [
     header: "Session 1",
     title: "Functional Identity Mapping",
     description: "Define your primary business function and positioning",
-    duration: "About 10 minutes",
+    duration: SESSION_MINUTES[1],
     reveals: "Which single function you're credible in — and what you've been hedging across.",
   },
   {
     header: "Session 2",
     title: "Professional Credibility Assessment",
     description: "Identify measurable expertise and business impact",
-    duration: "About 12 minutes",
+    duration: SESSION_MINUTES[2],
     reveals: "Which of your claims someone would actually bet on, and which need proof.",
   },
   {
     header: "Session 3",
     title: "Positioning Story Development",
     description: "Extract compelling stories that prove your unique value",
-    duration: "About 12 minutes",
+    duration: SESSION_MINUTES[3],
     reveals: "The story you'll tell when someone asks what you do — built from evidence, not adjectives.",
   },
 ];
@@ -150,6 +152,8 @@ function useDashboardStatus(
     hasResume,
     hasLinkedIn,
     isDocumentsComplete,
+    // IG-UX02 needs which session is next, not just whether all three are done.
+    completedSessionCount,
     areAllSessionsComplete,
     areAllModulesComplete,
   };
@@ -464,6 +468,33 @@ export default function NewDashboardPage() {
     (hasSliSelected || hasSliRefined) &&
     !!latestFreshnessReport;
 
+  /*
+   * IG-UX02: "Wing recommends ONE action at a time. Not 'here are your options.'"
+   *
+   * Everything below already existed on this page; the rule that turns it into an opinion
+   * lives in shared/recommendation.ts, with the sequence read off this file's own lock
+   * conditions so a recommendation can never point at a disabled screen.
+   *
+   * `lastKey` is deliberately NOT passed. Her success criteria include "the same
+   * recommendation never appears twice in a row", and the only place to keep the previous
+   * one client-side is browser storage — which would rotate the advice on a page refresh.
+   * A student who reloads without doing the thing would watch the thing they should do be
+   * replaced by something else, which is the same harm as rotating on the linear path.
+   * `recommend()` takes the argument and is tested with it, ready for a server-side
+   * recommendation log; until that exists, repeating is the honest behaviour.
+   */
+  const recommendation = recommend({
+    intakeComplete: status.isAssessmentComplete,
+    hasResume: status.hasResume,
+    hasLinkedIn: status.hasLinkedIn,
+    foundationSessionsBuilt: status.completedSessionCount,
+    hasBrandReport: !!latestFreshnessReport,
+    sliOptionsReady: !!hasSli,
+    sliChosen: !!(hasSliSelected || hasSliRefined),
+    linkedinOptimised: !!latestLinkedinOptimization,
+    openHomework: homeworkData?.filter((hw) => !hw.answerText).length ?? 0,
+  });
+
   const handleNavItemClick = (item: { label: string; locked?: boolean }) => {
     if (item.locked) return;
     if (item.label === "Professional Branding Assessment") {
@@ -622,6 +653,41 @@ export default function NewDashboardPage() {
             {headingAccent}
           </span>
         </h1>
+
+        {/*
+          IG-UX02. One action, one reason, and the time it takes — her three elements, in
+          her order. The card itself is the click target rather than a button beside a
+          repeated label, and it dispatches through `handleNavItemClick` so a Foundation
+          session still starts through its mutation and the coaching call still opens
+          Calendly. The tool cards below stay: "the user can always browse the module
+          library for other options."
+        */}
+        <button
+          type="button"
+          onClick={() => handleNavItemClick({ label: recommendation.navLabel })}
+          className="group mb-10 w-full max-w-[900px] rounded-lg border border-[var(--dashboard-aqua-dark)] bg-white p-6 text-left transition-shadow hover:shadow-md"
+        >
+          <span className="block text-xs uppercase tracking-[0.14em] text-[var(--dashboard-aqua-dark)]">
+            Recommended
+          </span>
+          <span className="mt-2 flex items-center justify-between gap-4">
+            <span className="text-2xl font-medium">{recommendation.action}</span>
+            <ChevronRight className="h-5 w-5 shrink-0 text-[var(--dashboard-aqua-dark)] transition-transform group-hover:translate-x-1" />
+          </span>
+          <span className="mt-3 block text-sm text-muted-foreground">
+            {recommendation.why}
+          </span>
+          {/*
+            Rendered only where the product already states a duration. Wing quoting an
+            invented figure would be a claim, so six of the eleven actions carry none
+            rather than a guess.
+          */}
+          {recommendation.minutes && (
+            <span className="mt-3 block text-sm text-muted-foreground">
+              {recommendation.minutes}
+            </span>
+          )}
+        </button>
 
         {currentPhase === "assessment" && (
           <DirectiveCard

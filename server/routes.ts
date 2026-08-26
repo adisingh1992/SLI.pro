@@ -1905,18 +1905,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!target) return res.status(404).json({ error: "User not found" });
       if (!(await requireStudentInScope(scope, userId, res))) return;
 
-      // Sessions live in wing; create the arc on first access (1 available,
-      // 2 and 3 locked until their prerequisite completes).
+      /*
+       * Sessions live in wing; create the arc on first access. This was a duplicate of
+       * `initializeFoundationSessions` in foundation-sessions-routes.ts, seeding 2 and 3
+       * as `locked` — so ruling 1 had to be applied in two places or in neither. One
+       * helper now, in the store, all three at the column default.
+       */
       const studentId = await wingStore.studentIdFor(target as any);
-      const existing = await wingStore.listSessions(studentId, wingStore.FOUNDATION_TYPES);
-      if (existing.length < 3) {
-        const present = new Set(existing.map((s) => s.sessionType));
-        for (const n of [1, 2, 3]) {
-          const type = `foundation_${n}` as (typeof wingStore.FOUNDATION_TYPES)[number];
-          if (present.has(type)) continue;
-          await wingStore.ensureSession(studentId, type, n === 1 ? "available" : "locked");
-        }
-      }
+      await wingStore.ensureFoundationArc(studentId);
 
       res.json(await wingStore.getFoundationSessionsForUser(target));
     } catch (error) {

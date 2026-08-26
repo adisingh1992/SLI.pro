@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Loader2, Play, MessageSquare, ArrowLeft } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { FOUNDATION_TRANSITIONS, renderTransition } from "@shared/transitions";
 
 /** Wing session shape. `sessionNumber` is derived from session_type by the API. */
 type FoundationSession = {
@@ -22,6 +23,14 @@ type FoundationSession = {
   completedAt?: string;
   timerElapsedSeconds?: number;
   progress?: number;
+  /**
+   * What the session produced. The API returns it; this type had never declared it.
+   *
+   * Loose on purpose: the shape differs per session — `primaryFunction`, then
+   * `credibilityTier`, then `brandClaim` — and the three are already typed properly in
+   * the schema. Narrowing them again here would be a second place to keep in step.
+   */
+  completionData?: Record<string, unknown> | null;
 };
 
 export default function FoundationPage() {
@@ -58,6 +67,26 @@ export default function FoundationPage() {
       });
     },
   });
+
+  /**
+   * The value IG-UX05's acknowledgment names — "Your primary function is Marketing."
+   *
+   * Null when the session produced no value, which happens when it ended early. The
+   * transition then falls back to naming what was produced without asserting a value that
+   * does not exist, rather than congratulating the student on nothing.
+   */
+  const outcomeFor = (n: number, session?: FoundationSession): string | null => {
+    const data = session?.completionData as Record<string, unknown> | undefined;
+    if (!data) return null;
+    const read = (k: string) => (typeof data[k] === "string" ? (data[k] as string) : null);
+    if (n === 1) return read("primaryFunction");
+    if (n === 2) {
+      const tier = read("credibilityTier");
+      return tier ? `Tier ${tier}` : null;
+    }
+    if (n === 3) return read("brandClaim");
+    return null;
+  };
 
   const getStatusBadge = (status: FoundationSession['status']) => {
     /*
@@ -245,14 +274,28 @@ export default function FoundationPage() {
     }
   };
 
-  const getPostSessionMessage = (sessionNumber: number) => {
+  const getPostSessionMessage = (sessionNumber: number, session?: FoundationSession) => {
     switch (sessionNumber) {
       case 1:
-        return "Functional identity mapped. Your primary expertise area is now clear. Continue to Session 2 to identify your credibility to date.";
       case 2:
-        return "Credibility foundation established. Your measurable expertise provides the foundation for stronger professional positioning. Continue to Session 3 to develop the stories that prove your unique value.";
       case 3:
-        return "Your positioning framework is built. You can now book a session with a positioning coach or explore enhancement modules to deepen specific areas.";
+        /*
+         * IG-UX05. All three of these were missing the time estimate, and two opened with
+         * a generic acknowledgment — "Functional identity mapped" is the shape her card
+         * rules out by name, because the output is a function and the message should say
+         * which one.
+         *
+         * The durations were never missing data: this page has shown 7-9, 8-10 and 9-10
+         * minutes on the session cards all along. They just never reached the moment the
+         * student is deciding whether to continue, which is the moment her card is about.
+         *
+         * `renderTransition` requires all three parts, so a transition that lacks one
+         * cannot be written here any more.
+         */
+        return renderTransition(
+          FOUNDATION_TRANSITIONS[sessionNumber as 1 | 2 | 3],
+          outcomeFor(sessionNumber, session),
+        );
       default:
         return "";
     }
@@ -320,7 +363,7 @@ export default function FoundationPage() {
                     {showPostMessage && (
                       <div className="mx-4 mt-4 mb-0 bg-green-50/80 dark:bg-green-900/20 border border-green-200/50 dark:border-green-800/50 rounded-lg p-3 text-center">
                         <p className="text-xs font-medium text-green-800 dark:text-green-200">
-                          {getPostSessionMessage(completedPrevious.sessionNumber)}
+                          {getPostSessionMessage(completedPrevious.sessionNumber, completedPrevious)}
                         </p>
                       </div>
                     )}
