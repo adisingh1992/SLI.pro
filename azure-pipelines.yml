@@ -300,6 +300,38 @@ stages:
           steps:
           - task: AzureCLI@2
             displayName: Update scheduler job image
+            # ─────────────────────────────────────────────────────────────────
+            # The scheduler job is created once, by hand, per environment
+            # (AZURE_SCHEDULER.md). Stage does not have one and does not need one
+            # — the cadence work is scoped to production — so this step SKIPS
+            # when there is nothing to point at, rather than failing the build.
+            #
+            # It skips loudly. `SucceededWithIssues` turns the stage amber and
+            # puts a line in the run summary, because a silent green build that
+            # did not update the scheduler is how a production deploy ends up
+            # running last week's image on a nightly cron.
+            #
+            # ── WHY THE VARIABLES ARE PASSED THROUGH `env:` ──────────────────
+            # This is the actual bug in the 30 Aug run, and it is a trap worth
+            # naming. Azure DevOps substitutes `$(FOO)` only for variables it
+            # KNOWS; an undefined one is left in the script verbatim. Bash then
+            # reads `$(SCHEDULER_JOB_NAME)` as command substitution and tries to
+            # RUN a command by that name:
+            #
+            #     line 3: SCHEDULER_JOB_NAME: command not found
+            #
+            # The substitution yields an empty string, so `az containerapp job
+            # show --name ""` ran, exited 0 without finding anything, the guard
+            # passed, and `az containerapp job update` then died on
+            # `KeyError: 'properties'` — a traceback about the CLI's internals
+            # for what was really a missing variable-group value.
+            #
+            # `env:` values are not shell-evaluated, so an undefined variable
+            # arrives as the literal text `$(SCHEDULER_JOB_NAME)` instead of
+            # executing anything. That is detectable, and the check below
+            # detects it. The same reasoning applies to every inline script in
+            # this file that interpolates a variable-group value.
+            # ─────────────────────────────────────────────────────────────────
             inputs:
               azureSubscription: slipro-azure-stage
               scriptType: bash
@@ -307,26 +339,57 @@ stages:
               inlineScript: |
                 set -euo pipefail
 
-                if ! az containerapp job show \
-                     --name "$(SCHEDULER_JOB_NAME)" \
-                     --resource-group "$(RESOURCE_GROUP)" > /dev/null 2>&1; then
-                  echo "No job named $(SCHEDULER_JOB_NAME) in $(RESOURCE_GROUP)."
+                JOB="${SCHEDULER_JOB_NAME:-}"
+
+                skip() {
+                  echo "##vso[task.logissue type=warning]Scheduler job not updated: $1"
+                  echo "$1"
                   echo "Create it once with the command in AZURE_SCHEDULER.md, then re-run."
-                  exit 1
+                  echo "##vso[task.complete result=SucceededWithIssues;]"
+                  exit 0
+                }
+
+                # An unset pipeline variable reaches here as its own literal.
+                case "$JOB" in
+                  "" | '$('*)
+                    skip "SCHEDULER_JOB_NAME is not set in the slipro-stage variable group." ;;
+                esac
+
+                # Checked by what comes BACK, not by the exit code.
+                #
+                # `az containerapp job show --name ""` exits 0, which is how the
+                # old guard let an empty name through to `update`. Requiring the
+                # command to return the job's own name is a test the missing
+                # case cannot pass.
+                FOUND=$(az containerapp job show \
+                  --name "$JOB" \
+                  --resource-group "$RESOURCE_GROUP" \
+                  --query name -o tsv 2>/dev/null || true)
+
+                if [ -z "$FOUND" ]; then
+                  skip "No Container Apps job named '$JOB' in resource group '$RESOURCE_GROUP'."
                 fi
 
+                # Past this point the job exists, so anything that fails is a
+                # real failure and the stage should go red for it.
                 az containerapp job update \
-                  --name "$(SCHEDULER_JOB_NAME)" \
-                  --resource-group "$(RESOURCE_GROUP)" \
-                  --image "$(ACR_NAME).azurecr.io/$(imageName):$(imageTag)"
+                  --name "$JOB" \
+                  --resource-group "$RESOURCE_GROUP" \
+                  --image "$JOB_IMAGE"
 
                 # What the schedule actually is, in the deploy log, so a cron
                 # somebody changed in the portal is visible here rather than
                 # only in the portal.
                 az containerapp job show \
-                  --name "$(SCHEDULER_JOB_NAME)" \
-                  --resource-group "$(RESOURCE_GROUP)" \
+                  --name "$JOB" \
+                  --resource-group "$RESOURCE_GROUP" \
                   --query "{cron:properties.configuration.scheduleTriggerConfig.cronExpression, \
                             parallelism:properties.configuration.scheduleTriggerConfig.parallelism, \
                             retries:properties.configuration.replicaRetryLimit}" \
                   -o table
+            env:
+              # Resolved by Azure DevOps into the environment, never into the
+              # script text — see the note above.
+              SCHEDULER_JOB_NAME: $(SCHEDULER_JOB_NAME)
+              RESOURCE_GROUP: $(RESOURCE_GROUP)
+              JOB_IMAGE: $(ACR_NAME).azurecr.io/$(imageName):$(imageTag)
