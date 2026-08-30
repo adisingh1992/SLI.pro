@@ -1,5 +1,6 @@
-import { and, asc, count, eq, gte, isNotNull, lte, sql, SQL } from "drizzle-orm";
+import { and, asc, count, eq, gte, inArray, isNotNull, lte, sql, SQL } from "drizzle-orm";
 import { db } from "../db";
+import { LIVE_SLI_STATUSES } from "./sli-store";
 import {
   advisorAppointments,
   institutions,
@@ -216,8 +217,8 @@ export async function cohortMetrics(f: MetricsFilter): Promise<CohortMetrics> {
     .innerJoin(students, eq(students.id, sliRecords.studentId))
     .where(
       where
-        ? and(where, eq(sliRecords.status, "selected" as any))
-        : eq(sliRecords.status, "selected" as any),
+        ? and(where, inArray(sliRecords.status, LIVE_SLI_STATUSES as any))
+        : inArray(sliRecords.status, LIVE_SLI_STATUSES as any),
     );
 
   const [appts] = await db
@@ -318,9 +319,15 @@ export async function studentRows(f: MetricsFilter) {
           and s.status::text = 'completed'
           and s.session_type::text like 'foundation_%'
       )::int`,
+      /*
+       * Named `hasSelectedSli` for the CSV column that already ships under that
+       * header. It means "has a live SLI" — see LIVE_SLI_STATUSES; filtering on
+       * 'selected' alone reported false for every student ever exported.
+       */
       hasSelectedSli: sql<boolean>`exists (
         select 1 from wing.sli_records r
-        where r.student_id = ${students.id} and r.status::text = 'selected'
+        where r.student_id = ${students.id}
+          and r.status::text in ('active', 'selected')
       )`,
     })
     .from(students)

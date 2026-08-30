@@ -139,7 +139,9 @@ function Router() {
       <Route path="/admin/heuristics/:id" component={AdminHeuristicDetailPage} />
       <Route path="/admin/sequences">{() => <Redirect to="/admin/methodology/sequences" />}</Route>
       <Route path="/admin/criteria">{() => <Redirect to="/admin/session-design/completion" />}</Route>
-      <Route path="/admin/objectives">{() => <Redirect to="/admin/session-design/objectives" />}</Route>
+      {/* /admin/objectives retired with the objective renderer (Tier 1 part 4). The tab
+          it redirected to no longer exists; the old link lands on Session design. */}
+      <Route path="/admin/objectives">{() => <Redirect to="/admin/session-design/completion" />}</Route>
       <Route path="/admin/users/:userId/coaching-notes">{() => <RedirectStudent tab="coaching-notes" />}</Route>
       <Route path="/admin/users/:userId/summary/:summaryId">{() => <RedirectStudent tab="summary" />}</Route>
 

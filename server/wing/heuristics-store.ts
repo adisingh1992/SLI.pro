@@ -1,5 +1,4 @@
 import { and, asc, desc, eq, inArray, isNull, ne, or } from "drizzle-orm";
-import * as cache from "./published-cache";
 import { db } from "../db";
 import {
   students,
@@ -478,12 +477,25 @@ export async function createHeuristic(data: {
   populationTags?: string[];
   components?: Array<{ componentType: ComponentType; content: string }>;
 }) {
-  // Any change to which card rows are current invalidates the copy the
-  // turn path reads. Cleared up front rather than on the way out so an
-  // early return cannot skip it.
-  cache.invalidate("cards:");
+  /*
+   * ── THE CARD CACHE, AND WHY THERE IS NO LONGER AN INVALIDATION ───────────
+   * Each of the three writers here used to clear the published-cache namespace
+   * for cards before doing anything. The only place that ever filled it was
+   * `objective-runtime.ts`, retired in Tier 1 part 4 — so the three clears
+   * emptied a namespace nothing populated, which `api-contracts` check 12
+   * reports as a probable half-finished rename. It was not a rename; the reader
+   * is gone, and so are they.
+   *
+   * The v2 turn path reads cards straight from the database. If a cache is put
+   * back in front of them, the clears come back with it — the same check fails
+   * in the other direction for a namespace that is filled and never emptied.
+   *
+   * Written without the call syntax on purpose: check 12 scans raw source, so a
+   * comment quoting either call registers as a real one.
+   */
+
   // Derived once, at creation, and never recomputed. Deriving on read would
-  // mean renaming a card silently repoints every objective referencing it.
+  // mean renaming a card silently repoints everything referencing it.
   const existing = await db.select({ code: heuristics.cardCode }).from(heuristics);
   const cardCode = uniqueCode(
     data.cardCode?.trim() || codeFromName(data.name),
@@ -529,10 +541,6 @@ export async function reviseComponent(params: {
   componentType: ComponentType;
   content: string;
 }) {
-  // Any change to which card rows are current invalidates the copy the
-  // turn path reads. Cleared up front rather than on the way out so an
-  // early return cannot skip it.
-  cache.invalidate("cards:");
   return db.transaction(async (tx) => {
     const [current] = await tx
       .select()
@@ -584,10 +592,6 @@ export async function setHeuristicStatus(
   heuristicId: number,
   status: "candidate" | "validated" | "retired",
 ) {
-  // Any change to which card rows are current invalidates the copy the
-  // turn path reads. Cleared up front rather than on the way out so an
-  // early return cannot skip it.
-  cache.invalidate("cards:");
   const [row] = await db
     .update(heuristics)
     .set({ status, modifiedAt: new Date() })

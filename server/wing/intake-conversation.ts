@@ -30,6 +30,9 @@ import {
   type PopulationTag,
 } from "./intake-beats";
 import { askedFor, describePlan, isCodeOwnedField, planTurn } from "./baseline-turn";
+import { detectTrack, pathwayFor, type Answers } from "./audience-track";
+import { revealFacts } from "./reveal-facts";
+import { revealDirective, selectReveal } from "./reveal-select";
 
 /**
  * The conversational intake (Feature List A1).
@@ -283,7 +286,15 @@ function buildSystemPrompt(params: {
   beat: Beat | null;
   captured: Record<string, unknown>;
   style: DeliveryStyle | null;
-  withInsight: boolean;
+  /**
+   * The reveal for this turn, rendered — or null, which is the commoner answer.
+   *
+   * Was `withInsight: boolean`. A boolean could only ever select the generic
+   * instruction, which asked the model to find its own tension in everything the
+   * student had said. Her selection rules pick one shape, from one pair of answers,
+   * and refuse when nothing qualifies — see `selectReveal`.
+   */
+  insightDirective: string | null;
   firstName: string;
   wrapUp: boolean;
   /** Unconditional. A module constant with no inputs — see safety-rules.ts. */
@@ -332,7 +343,17 @@ function buildSystemPrompt(params: {
 
   parts.push(renderCaptured(params.captured));
 
-  if (params.withInsight) parts.push(INSIGHT_INSTRUCTION);
+  /*
+   * The directive first, then the register. The directive says WHAT the observation
+   * is and what it rests on; INSIGHT_INSTRUCTION says how it is delivered — mark it,
+   * quote them, normalise it, one small action, move on. Neither is sufficient: the
+   * shape without the register produces a diagnosis, and the register without the
+   * shape is what shipped before this, which is a model guessing.
+   */
+  if (params.insightDirective) {
+    parts.push(params.insightDirective);
+    parts.push(INSIGHT_INSTRUCTION);
+  }
 
   if (params.baselineGuidance) parts.push(params.baselineGuidance);
 
@@ -513,6 +534,18 @@ export async function respond(userId: number, message: string): Promise<TurnResu
   await recordHumanTurn(before.sessionId, text, { channel: "in_app" });
 
   /*
+   * This turn's answer, filed under the question it answers — computed here rather
+   * than at the write below, because the reveal needs it.
+   *
+   * `_asked` is written at the END of a turn, so `before.captured._track_answers`
+   * holds everything up to but NOT including what the student just said. On the turn
+   * where the reveal fires, that is exactly the answer most likely to complete a
+   * contradiction: Q7 is asked eighth and RT-08 reads the Q5/Q6/Q7 triangle. Selecting
+   * from the stale set would have deferred reveals that qualified.
+   */
+  const trackAnswers = withTrackAnswer(before.captured, text);
+
+  /*
    * The person wrote to Wing of their own accord, which is the only thing that lifts a
    * safety hold. Recorded here rather than after the reply, because it is true the moment
    * they typed it and a model failure must not cost them the return.
@@ -605,13 +638,55 @@ export async function respond(userId: number, message: string): Promise<TurnResu
     log(`[intake] baseline — ${describePlan(turn.baseline)}`, "intake");
   }
 
-  const wantsInsight =
+  /*
+   * ── THE EARLY INSIGHT, IN TWO PARTS ────────────────────────────────────
+   * A1 calls this the early value add and marks it critical: "by approximately
+   * question 8-10 … Wing must surface a preliminary insight". It has two questions
+   * in it and they were answered by one boolean.
+   *
+   * TIMING — `insightReady` and `insightWindowClosed`. Enough exchanges, enough
+   * material beats satisfied, not already delivered, not past the window.
+   *
+   * CONTENT — `selectReveal`, which is where her rules live: fourteen templates in
+   * five priority bands, each with a trigger over classified facts, a track
+   * restriction, and a falsifiability requirement that refuses a template with
+   * nothing quotable. It returns one template or an IG-INT06 deferral, and it cannot
+   * return a blend — "Frankenstein reveals lose coherence".
+   *
+   * Only timing ran. `selectReveal`, `revealFacts` and the track detector were all
+   * written and tested and imported by nothing, so what fired was the generic
+   * instruction: find a tension somewhere in everything they have said. That reveals
+   * something most of the time, and it is not what she specified — no band priority,
+   * no falsifiability check, and no way to decline.
+   *
+   * Deferral is the part worth having most. The old path could not say no: once the
+   * timing gate opened, the model was told to produce an insight, and a weak one at
+   * the moment the product is asking someone to believe it is worse than none. That
+   * is IG-INT06's whole argument, and the reveal moves to the start of Foundation 1.
+   */
+  const timingReady =
     insightReady({
       exchanges,
       population: before.population,
       captured: turn.captured,
       alreadyDelivered: before.insightDelivered,
     }) && !insightWindowClosed(exchanges);
+
+  let insightDirective: string | null = null;
+  if (timingReady) {
+    const chosen = chooseReveal(trackAnswers ?? before.captured._track_answers);
+    if (!chosen) {
+      log(`reveal held for user ${userId}: no Q-numbered answers recorded yet`, "intake");
+    } else if (chosen.selection.outcome === "fire") {
+      insightDirective = revealDirective(chosen.selection.template, chosen.facts);
+      log(
+        `reveal ${chosen.selection.template.code} for user ${userId}: ${chosen.selection.because}`,
+        "intake",
+      );
+    } else {
+      log(`reveal deferred for user ${userId}: ${chosen.selection.because}`, "intake");
+    }
+  }
 
   const style = readStyle(before.captured);
 
@@ -658,7 +733,7 @@ export async function respond(userId: number, message: string): Promise<TurnResu
     beat: turn.beat,
     captured: turn.captured,
     style,
-    withInsight: wantsInsight,
+    insightDirective,
     firstName: who?.firstName ?? "there",
     wrapUp: turn.wrapUp,
     safetySection,
@@ -740,17 +815,21 @@ export async function respond(userId: number, message: string): Promise<TurnResu
     }
 
     /*
-     * pathway gets its own column as well as living in structured_responses.
+     * `pathway` is NOT taken from the model here, and the branch that did has been
+     * removed rather than left in.
      *
-     * `intake_records.pathway` is what A2's founder/freelancer branch reads,
-     * and the sessions change register on it — hiring manager, investor or
-     * client. Leaving it only inside the JSON blob would mean every consumer
-     * reaching into structured_responses to find it, which is how a field ends
-     * up with two answers.
+     * It could never have run: `KNOWN_FIELDS` is built from the beats' `captures`
+     * arrays and no beat captures `pathway`, so `sanitiseExtracted` dropped the key
+     * before this line ever saw it. What it looked like from a distance was a field
+     * being written; what it was, was a comment describing a mechanism that did not
+     * exist — and `intake_records.pathway` sat NULL for every student while A2's
+     * founder/freelancer branch waited on it.
+     *
+     * It is derived instead, once, as intake closes: see `derivePathway`. That is
+     * what `intake-beats.test.ts` says it should be — "it must be derived from the
+     * audience track" — and deriving from the track is stronger than asking a model
+     * to classify, because the track rules are enumerated and tested.
      */
-    if (typeof extracted.pathway === "string") {
-      await intakeStore.setPathway(userId, extracted.pathway as any);
-    }
   }
 
   /*
@@ -805,7 +884,10 @@ export async function respond(userId: number, message: string): Promise<TurnResu
    *
    * Null on the closing turn, which asks for nothing.
    */
-  await intakeStore.mergeIntakeResponses(userId, { _asked: turn.nextAsked });
+  await intakeStore.mergeIntakeResponses(userId, {
+    _asked: turn.nextAsked,
+    ...(trackAnswers ? { _track_answers: trackAnswers } : {}),
+  });
 
   /*
    * ── DELIVERY ───────────────────────────────────────────────────────────
@@ -825,7 +907,7 @@ export async function respond(userId: number, message: string): Promise<TurnResu
    * two things that pull against each other — and marking it delivered anyway would burn
    * the one chance at that moment on a turn where it never happened.
    */
-  const revealed = wantsInsight && parsed.deliveredInsight === true;
+  const revealed = insightDirective !== null && parsed.deliveredInsight === true;
   const plan = planChunks(reply, { kind: revealed ? "reveal" : "reply" });
 
   /*
@@ -906,6 +988,110 @@ export async function respond(userId: number, message: string): Promise<TurnResu
   };
 }
 
+/* ── The audience track, and the one field A2 derives from it ───────────── */
+
+/**
+ * This turn's answer, filed under the question it answers.
+ *
+ * `audience-track` reads her question codes — Q1…Q7 — and nothing else: no name, no
+ * profile, no demographics. `Beat.question` is the mapping and it is already declared
+ * on every beat, so nothing here is invented; `_asked` says which beat the student is
+ * answering, and this files the text under that beat's question.
+ *
+ * ── WHY A SECOND COPY OF TEXT THE TRANSCRIPT ALREADY HAS ─────────────────
+ * Reluctantly, and because the alternative is not "one copy" but "no derivation". The
+ * transcript records what was said and in what order; it does not record which beat
+ * each turn answered, and `_asked` is overwritten every turn. Once intake closes, the
+ * mapping is unrecoverable, so it is kept as it is made.
+ *
+ * Underscore-prefixed, so `renderCaptured` filters it and the model never reads it
+ * back as something the student volunteered — the same rule `_asked` and
+ * `_delivery_style` follow.
+ *
+ * Baselines are skipped. Her B1–B3 are scores, the track rules read none of them, and
+ * a number filed as an answer would only dilute the text the regexes run over.
+ */
+function withTrackAnswer(
+  captured: Record<string, unknown>,
+  text: string,
+): Record<string, string> | null {
+  const asked = captured._asked as { beat?: string } | null | undefined;
+  if (!asked?.beat) return null;
+
+  const beat = BEATS.find((b) => b.key === asked.beat);
+  if (!beat || beat.question.charAt(0) !== "Q") return null;
+
+  const prior = (captured._track_answers ?? {}) as Record<string, string>;
+  return { ...prior, [beat.question]: text };
+}
+
+/**
+ * The reveal for this turn: her track detection, her fact classification, her
+ * selection rules — or null when there is nothing recorded to run them over.
+ *
+ * Returns the facts alongside the selection because the directive quotes them, and
+ * recomputing would mean two answers to "what did it decide from".
+ */
+function chooseReveal(
+  raw: unknown,
+): { selection: ReturnType<typeof selectReveal>; facts: ReturnType<typeof revealFacts> } | null {
+  const answers = (raw ?? {}) as Answers;
+  if (!Object.keys(answers).length) return null;
+
+  const track = detectTrack(answers).track;
+  const facts = revealFacts(answers, track);
+  return { selection: selectReveal(facts), facts };
+}
+
+/**
+ * Derives `intake_records.pathway` and writes it. Called once, as intake closes.
+ *
+ * ── THE FIELD THAT NOTHING WROTE ─────────────────────────────────────────
+ * A2's founder/freelancer branch is built and was receiving nothing.
+ * `PATHWAY_GUIDANCE` is injected into every Foundation prompt and `populationTagsFor`
+ * maps venture and freelance onto the entrepreneur populations — and the column those
+ * read stayed NULL for every student, so a founder was coached as an employee.
+ *
+ * Not because the question was dropped by accident: it was dropped on purpose, and
+ * `intake-beats.test.ts` records the decision — "pathway is no longer asked … it must
+ * be derived from the audience track". The deriver was written too. It had no caller,
+ * so nothing asked and nothing derived, and the only visible trace was a NULL column.
+ *
+ * ── WHY AT finish() AND NOT PER TURN ─────────────────────────────────────
+ * `detectTrack` wants two questions to agree before it will name a track, so a partial
+ * answer set produces a worse verdict rather than an earlier one. Nothing downstream
+ * reads the pathway until a Foundation session opens, which is after this.
+ *
+ * ── AND WHY IT CAN STILL DECLINE ─────────────────────────────────────────
+ * `pathwayFor` always returns a value — employment is its residual — so it is only
+ * called once there is at least one answer to read. Writing "employment" for a student
+ * who has told Wing nothing would be a guess wearing a derivation's clothes.
+ *
+ * Best-effort: a failure here costs a branch, and throwing would cost the student the
+ * end of their intake.
+ */
+async function derivePathway(userId: number, captured: Record<string, unknown>): Promise<void> {
+  try {
+    const answers = (captured._track_answers ?? {}) as Answers;
+    if (!Object.keys(answers).length) {
+      log(`no pathway derived for user ${userId}: no Q-numbered answers recorded`, "intake");
+      return;
+    }
+
+    const verdict = detectTrack(answers);
+    const pathway = pathwayFor(verdict.track, answers);
+    await intakeStore.setPathway(userId, pathway);
+
+    log(
+      `pathway for user ${userId}: ${pathway} ` +
+        `(track ${verdict.track ?? "none"}, ${verdict.confidence})`,
+      "intake",
+    );
+  } catch (err) {
+    log(`pathway derivation failed for user ${userId}: ${(err as Error).message}`, "intake");
+  }
+}
+
 function readStyle(captured: Record<string, unknown>): DeliveryStyle | null {
   const v = captured._delivery_style;
   return isDeliveryStyle(v) ? v : null;
@@ -921,6 +1107,9 @@ function readStyle(captured: Record<string, unknown>): DeliveryStyle | null {
 export async function finish(userId: number): Promise<void> {
   const state = await getState(userId);
   if (!state) return;
+
+  // Before the transcript is sealed, so a failure here is visible in the same run.
+  await derivePathway(userId, state.captured);
 
   const { completeTranscript } = await import("./provenance");
   await sessionStore.completeSession(state.sessionId);

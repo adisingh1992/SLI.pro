@@ -173,8 +173,24 @@ export async function updateEnhancementModule(
     await store.addElapsedSeconds(moduleId, data.timerElapsed);
   }
 
-  if (data.status === "completed") {
-    return store.completeSession(moduleId);
+  /*
+   * ── ENDING EARLY SEALS THE TRANSCRIPT TOO ──────────────────────────────
+   * `completeSession` is what calls `completeTranscript`, and only `"completed"`
+   * reached it — so a module the student left at a natural stopping point kept its
+   * transcript open forever, while the equivalent Foundation route seals first and
+   * records the distinct end state second (`foundation-sessions-routes.ts`:
+   * `completeSession(...)` then `updateSessionStatus(..., "ended_early")`).
+   *
+   * The two statuses stay distinct after this. Sealing is about the transcript being
+   * finished being written to; `ended_early` is about how it finished, and every
+   * reader that separates a completed module from an abandoned one still can.
+   */
+  if (data.status === "completed" || data.status === "ended_early") {
+    await store.completeSession(moduleId);
+    if (data.status === "ended_early") {
+      return store.updateSessionStatus(moduleId, "ended_early");
+    }
+    return store.getSessionById(moduleId);
   }
   if (data.status === "in_progress") {
     const current = await store.getSessionById(moduleId);

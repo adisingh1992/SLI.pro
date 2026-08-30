@@ -48,7 +48,11 @@ export type TemplateSpec = {
     | "Life log"
     | "Milestones"
     | "Positioning launch"
-    | "Academic calendar";
+    | "Academic calendar"
+    /* The only automated message a safety hold permits. Its own group because it is
+       governed by a different rule from everything else here: suppression stops the rest,
+       and this is the stated exception. */
+    | "Safety";
 };
 
 const firstName: TemplateVariable = {
@@ -177,6 +181,19 @@ export const TEMPLATE_CATALOGUE: TemplateSpec[] = [
     sender: "engagement.runDueSequences",
     group: "Dormancy",
     variables: [firstName, dashboardLink],
+  },
+
+  /* ── Safety ──────────────────────────────────────────────────────────── */
+  {
+    templateKey: "safety_soft_check_in",
+    title: "Soft check-in during a safety hold",
+    trigger:
+      "Once, thirty days after a safety hold opened, and only if the student has not come " +
+      "back in the meantime. Never repeated. This is the ONLY automated message a hold " +
+      "permits — everything else Wing sends is suppressed while one is open.",
+    sender: "run-sequences (hourly job)",
+    group: "Safety",
+    variables: [firstName],
   },
 
   /* ── Life log ────────────────────────────────────────────────────────── */

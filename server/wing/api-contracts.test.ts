@@ -1,4 +1,4 @@
-import { readFileSync, readdirSync } from "fs";
+import { existsSync, readFileSync, readdirSync } from "fs";
 import { join } from "path";
 
 /**
@@ -555,6 +555,18 @@ console.log("\nNo throw inside a React state updater");
  * distrust the editor rather than look for a cache.
  *
  * So every namespace that is read must be cleared by someone.
+ *
+ * ── COMMENTS ARE NOT CALLS ───────────────────────────────────────────────
+ * Read as code, not as prose. This block used to scan raw source, so the two
+ * sentences above — which quote both calls to explain the rule — counted as a
+ * real read and a real clear of a "templates:" namespace nothing has. Harmless
+ * there, and not harmless in general: retiring the objective renderer left
+ * three clears of "cards:" with no reader, and a comment in the file explaining
+ * why would have registered as the missing reader and hidden the finding.
+ *
+ * The same rule the migration checks already follow, in their words: a CREATE
+ * in a comment is not a statement, and an IF NOT EXISTS in a comment is not a
+ * guard.
  */
 console.log("\nEvery cached namespace is invalidated somewhere");
 {
@@ -574,7 +586,12 @@ console.log("\nEvery cached namespace is invalidated somewhere");
     if (path.endsWith("api-contracts.test.ts")) continue;
     if (path.endsWith("published-cache.ts")) continue; // the module itself
     if (path.endsWith("published-cache.test.ts")) continue; // exercises both sides
-    const src = readFileSync(path, "utf8");
+
+    // Local, like every other block's copy: each check is a scope of its own so
+    // a later one cannot quietly depend on an earlier one's helpers.
+    const src = readFileSync(path, "utf8")
+      .replace(/\/\*[\s\S]*?\*\//g, "")
+      .replace(/\/\/.*$/gm, "");
 
     for (const m of Array.from(src.matchAll(/cache\.cached\(\s*[`"']([a-z_]+):/g))) {
       if (!readNamespaces.has(m[1])) {
@@ -1402,6 +1419,432 @@ console.log("\nSelf-description capture stores the user's words only");
 
   if (failures === before22) {
     console.log(`  ok — one caller, passing the user's own message`);
+  }
+}
+
+/* ── 23 · A student never asserts their own completion ────────────────────
+ *
+ * Two routes had the same shape. `PATCH /api/foundation-sessions/:n` took
+ * `{ status }` and wrote it; `PATCH /api/enhancement-modules/:code` took
+ * `updateEnhancementModuleSchema`, which is the insert schema `.partial()`, so it
+ * took `status`, `completedAt` AND `completionData`. Both sat behind
+ * `isAuthenticated` and both resolved the record from `req.user` — so neither was
+ * a route into anyone else's data. Each was a route into your own outcome.
+ *
+ * Completion is earned on the turn path. `checkSessionCompletion` and
+ * `checkModuleCompletion` read the whole transcript, and only where they agree
+ * does the server write the artifact and complete the session. The two always
+ * travel together, in that order. Through either PATCH, one request marked the
+ * work done with no transcript behind it — and on the module route the client
+ * could supply the artifact too, which is the thing an advisor reads as the
+ * student's work.
+ *
+ * The foundation route is gone; nothing called it. The module route is the timer
+ * and nothing else, which is all any client has ever sent it.
+ *
+ * SCOPE. This is the trust boundary where a student's own request reaches a
+ * session's completion state, and it is these two files. It is deliberately NOT a
+ * blanket rule: `PATCH /api/admin/heuristics/:id/status` legitimately takes a
+ * status from a body — admin-only, and a card's status rather than a student's —
+ * and `enhancement-store` dispatches on a status its server-side callers give it.
+ * A rule wide enough to cover those would have to carve them out, and a check
+ * with carve-outs is a check nobody trusts.
+ */
+console.log("\nNo student route accepts its own completion");
+{
+  const before23 = failures;
+
+  // Local, like every other block's copy: each check is a scope of its own so a
+  // later one cannot quietly depend on an earlier one's helpers.
+  const strip = (src: string) =>
+    src.replace(/\/\*[\s\S]*?\*\//g, "").replace(/\/\/.*$/gm, "");
+
+  /* The two files where a student's own request reaches a session record. */
+  const STUDENT_SESSION_ROUTES = [
+    "foundation-sessions-routes.ts",
+    "enhancement-modules-routes.ts",
+  ];
+
+  /*
+   * Everything a student's request is allowed to say about their own session:
+   * what they typed, and how long they have been sitting there. Every other
+   * property of a session — whether it started, whether it finished, what it
+   * produced — is the server's to decide, from the transcript.
+   *
+   * A whitelist rather than a blacklist of the dangerous fields, because the
+   * module route's bug was precisely that its field list came from
+   * `insertEnhancementModuleSchema.partial()` and therefore grew, silently, every
+   * time the table did. Naming what is allowed is the only version of this rule
+   * that does not need updating when someone adds a column.
+   */
+  const ALLOWED_BODY_FIELDS = new Set([
+    "content",
+    "role",
+    "timerElapsed",
+    "timerElapsedSeconds",
+  ]);
+
+  /* Writers that take a payload. `completeSession` takes only an id, and both
+   * files call it on paths the server decides. */
+  const WRITERS = ["updateSessionStatus", "updateEnhancementModule"];
+
+  let reads = 0;
+  let writes = 0;
+
+  for (const file of STUDENT_SESSION_ROUTES) {
+    const path = join(SERVER, file);
+    if (!existsSync(path)) {
+      fail(`${file} not found — check 23 proved nothing for it`);
+      continue;
+    }
+    const src = strip(readFileSync(path, "utf8"));
+
+    /*
+     * A — every field taken from the body is named, and named here.
+     *
+     * Three shapes, because the bug used the third: destructured straight off
+     * `req.body`, read as `req.body.x`, or parsed into a variable that is then
+     * read field by field. An earlier version of this check looked only for
+     * `status` near `req.body` on one line, and a mutation that parsed the body
+     * into `updateData` and read `updateData.status` two lines later walked past
+     * it.
+     */
+    const fields = new Set<string>();
+
+    for (const m of Array.from(src.matchAll(/(?:const|let|var)\s*\{([^}]*)\}\s*=\s*[^;\n]*\breq\.body\b/g))) {
+      for (const raw of m[1].split(",")) {
+        const name = raw.split(":")[0].trim();
+        if (name) fields.add(name);
+      }
+    }
+    for (const m of Array.from(src.matchAll(/\breq\.body\.(\w+)/g))) fields.add(m[1]);
+
+    /* Variables assigned from the body, and every field later read off them. */
+    const bodyVars = new Set(
+      Array.from(src.matchAll(/(?:const|let|var)\s+(\w+)\s*=\s*[^;\n]*\breq\.body\b/g)).map(
+        (m) => m[1],
+      ),
+    );
+    for (const v of Array.from(bodyVars)) {
+      for (const m of Array.from(src.matchAll(new RegExp(`\\b${v}\\.(\\w+)`, "g")))) {
+        fields.add(m[1]);
+      }
+    }
+
+    for (const f of Array.from(fields)) {
+      reads++;
+      if (!ALLOWED_BODY_FIELDS.has(f)) {
+        fail(
+          `${file} takes "${f}" from the request body. A student's request may say ` +
+            `what they typed and how long they have been there; whether the session ` +
+            `is finished, and what it produced, is decided from the transcript and ` +
+            `written with its artifact`,
+        );
+      }
+    }
+
+    /*
+     * B — and nothing is written from a variable.
+     *
+     * A parsed body passed wholesale reads every field without naming one, which
+     * is how the module route wrote `status` and `completionData` while appearing
+     * to be about the timer.
+     */
+    for (const writer of WRITERS) {
+      for (const m of Array.from(src.matchAll(new RegExp(`${writer}\\(\\s*([^;]*?)\\)`, "gs")))) {
+        const args = m[1];
+        const comma = args.indexOf(",");
+        if (comma < 0) continue;
+        const payload = args.slice(comma + 1).trim();
+        writes++;
+        if (!/^["'`]/.test(payload) && !payload.startsWith("{")) {
+          fail(
+            `${file}: ${writer}(..., ${payload.split("\n")[0].slice(0, 40)}) — the ` +
+              `payload must be a literal at the call site, so what a request can ` +
+              `write is visible here rather than in a schema somewhere else`,
+          );
+        }
+      }
+    }
+  }
+
+  if (!reads) fail("no request-body reads found in the student routes — check 23A proved nothing");
+  if (!writes) fail("no session-state writes found in the student routes — check 23B proved nothing");
+
+  if (failures === before23) {
+    console.log(
+      `  ok — ${reads} body field(s), all of them the student's own words or their ` +
+        `timer; ${writes} literal session write(s)`,
+    );
+  }
+}
+
+/* ── 24 · Nobody reads an SLI status that no row holds ────────────────────
+ *
+ * Every insert of `status: "selected"` in `sli-store.ts` is followed on the next
+ * line by `markActive`, which sets `"active"`. So no row is ever left at
+ * `"selected"`, and a reader that filters on it alone finds nothing — for every
+ * student, silently, with no error anywhere.
+ *
+ * Five did. The advisor snapshot had no SLI headline; the cohort dashboard
+ * reported zero students with a completed SLI, which is the number a career
+ * centre defends its budget with; the CSV column was false for everyone; the
+ * Session 3 completion email shipped an empty statement; and Wing's life-log
+ * reply could not see the SLI it exists to connect entries to. Each read looked
+ * right on its own, and no type could tell them apart — the column is an enum and
+ * `"selected"` is a member of it.
+ *
+ * `LIVE_SLI_STATUSES` is the ranking `getActive` has always used, exported so it
+ * is stated once. The rule is that nothing filters on one status by hand.
+ */
+console.log("\nNo reader filters SLIs on a single status");
+{
+  const before24 = failures;
+
+  // Local, like every other block's copy: each check is a scope of its own so a
+  // later one cannot quietly depend on an earlier one's helpers.
+  const walk = (dir: string): string[] =>
+    readdirSync(dir, { withFileTypes: true }).flatMap((e) => {
+      const p = join(dir, e.name);
+      if (e.isDirectory()) return walk(p);
+      return e.isFile() && p.endsWith(".ts") ? [p] : [];
+    });
+  const strip = (src: string) =>
+    src.replace(/\/\*[\s\S]*?\*\//g, "").replace(/\/\/.*$/gm, "");
+
+  const STORE = "server/wing/sli-store.ts";
+  let readers = 0;
+
+  for (const path of walk(SERVER)) {
+    if (path.endsWith(".test.ts")) continue;
+    const rel = path.replace(process.cwd() + "/", "");
+    const src = strip(readFileSync(path, "utf8"));
+
+    /*
+     * `sli-store.ts` is exempt: it is where the statuses are written, where the
+     * ranking is defined, and where `markActive` has to name them one at a time.
+     */
+    if (rel === STORE) continue;
+
+    /* Drizzle form: eq(sliRecords.status, "selected") */
+    for (const m of Array.from(src.matchAll(/eq\(\s*sliRecords\.status\s*,\s*["'`](\w+)["'`]/g))) {
+      readers++;
+      fail(
+        `${rel}: filters SLIs on status "${m[1]}" alone. Use LIVE_SLI_STATUSES from ` +
+          `sli-store — every "selected" row is set to "active" on the next line, so ` +
+          `this matches nothing`,
+      );
+    }
+
+    /* Raw SQL form, in the CSV export and anywhere else that reaches for it. */
+    for (const m of Array.from(src.matchAll(/sli_records[\s\S]{0,200}?status::text\s*=\s*'(\w+)'/g))) {
+      readers++;
+      fail(
+        `${rel}: raw SQL filters sli_records on status = '${m[1]}' alone — same trap. ` +
+          `Use \`status::text in ('active', 'selected')\``,
+      );
+    }
+  }
+
+  /* The constant has to exist for the rule to have somewhere to point. */
+  const store = readFileSync(join(process.cwd(), STORE), "utf8");
+  if (!/export const LIVE_SLI_STATUSES\s*=/.test(store)) {
+    fail("sli-store.ts no longer exports LIVE_SLI_STATUSES — check 24 has nothing to recommend");
+  }
+
+  if (failures === before24) {
+    console.log(`  ok — no single-status SLI filter outside ${STORE}`);
+  }
+}
+
+
+/* ── 25 · Nothing reads the legacy conversation tables ────────────────────
+ *
+ * Post-cutover every turn is written to `wing.transcript_turns`. The four
+ * `public` tables that used to hold conversations —  foundation_sessions,
+ * foundation_session_messages, enhancement_modules, enhancement_module_messages —
+ * are frozen: the migrator copied them across and nothing has appended a row since.
+ *
+ * A reader still pointed at them does not fail. It returns nothing, and "nothing"
+ * is a shape this product produces legitimately all the time. The admin transcript
+ * export sat like that: it queried the legacy pair, found no rows for anybody, and
+ * rendered a workbook containing one sheet reading "No transcripts found" — which
+ * is exactly what it would render for a cohort that genuinely had not started. The
+ * sibling export directly above it had been repointed at the wing store and this
+ * one was missed, so the two sat in the same file disagreeing about where
+ * conversations live.
+ *
+ * The rule is the whole-tree one, because the next reader will be written in a
+ * file that does not exist yet: only the legacy storage layer and the migrator may
+ * name these tables.
+ */
+console.log("\nNothing outside the legacy layer reads the frozen conversation tables");
+{
+  const before25 = failures;
+
+  const walk = (dir: string): string[] =>
+    readdirSync(dir, { withFileTypes: true }).flatMap((e) => {
+      const p = join(dir, e.name);
+      if (e.isDirectory()) return walk(p);
+      return e.isFile() && p.endsWith(".ts") ? [p] : [];
+    });
+
+  const FROZEN = [
+    "foundationSessions",
+    "foundationSessionMessages",
+    "enhancementModules",
+    "enhancementModuleMessages",
+  ];
+
+  /*
+   * `storage.ts` and `database-storage.ts` ARE the legacy layer — the interface the
+   * MVP was written against, kept so the migrator and the old admin screens still
+   * compile. `migrate-data.ts` is the thing that reads them on purpose, once.
+   */
+  const ALLOWED = new Set([
+    "server/storage.ts",
+    "server/database-storage.ts",
+    "server/wing/migrate-data.ts",
+  ]);
+
+  for (const path of walk(SERVER)) {
+    const rel = path.slice(process.cwd().length + 1).replace(/\\/g, "/");
+    if (ALLOWED.has(rel) || rel.endsWith(".test.ts")) continue;
+
+    /* Comments discuss these names on purpose — check 12's lesson. */
+    const code = readFileSync(path, "utf8")
+      .replace(/\/\*[\s\S]*?\*\//g, "")
+      .replace(/\/\/.*$/gm, "");
+
+    /*
+     * Matched on the IMPORT, not on the identifier.
+     *
+     * A bare `\bfoundationSessions\b` scan reports three files that have nothing to
+     * do with the table: `sli.ts` names a local parameter that way, and
+     * `profile-store.ts` and `student-record.ts` both return a `foundationSessions`
+     * PROPERTY built from the wing tables. A rule that cries wolf on the correct
+     * code gets an exception added to it, and the exception is where the next real
+     * one hides. You cannot query a drizzle table you did not import, so the import
+     * is both the narrower test and the complete one.
+     */
+    const LEGACY_MODULE = /["'`](?:@shared\/schema|\.\.?(?:\/\.\.)*\/shared\/schema)["'`]/;
+    const imports = Array.from(
+      code.matchAll(/import\s+([\s\S]*?)\s+from\s+(["'`][^"'`]+["'`])/g),
+    ).filter((m) => LEGACY_MODULE.test(m[2]));
+
+    for (const imp of imports) {
+      const clause = imp[1];
+
+      /* `import * as legacy from "@shared/schema"` — then `legacy.foundationSessions`. */
+      const ns = clause.match(/^\*\s+as\s+([A-Za-z_$][\w$]*)$/);
+      for (const table of FROZEN) {
+        const named = new RegExp(`[{,]\\s*${table}\\s*[,}]`).test(clause);
+        const viaNs = ns ? new RegExp(`\\b${ns[1]}\\.${table}\\b`).test(code) : false;
+        if (named || viaNs) {
+          fail(
+            `${rel} imports \`${table}\` from the legacy schema — nothing has written ` +
+              `that table since the cutover, so whatever it reads is empty. Go through ` +
+              `the wing stores.`,
+          );
+        }
+      }
+    }
+  }
+
+  /*
+   * And the replacement has a caller.
+   *
+   * This is the other half and it is not decoration: a bulk reader that nothing
+   * imports is the exact shape of every dead surface this suite has had to pin —
+   * present, correct, and not in the path. Without this, deleting the export's call
+   * site would leave check 25 passing on a route that renders nothing at all.
+   */
+  const storeSrc = existsSync(join(SERVER, "wing/session-store.ts"))
+    ? readFileSync(join(SERVER, "wing/session-store.ts"), "utf8")
+    : "";
+  if (!/export async function turnsForExport\(/.test(storeSrc)) {
+    fail("session-store.ts no longer exports turnsForExport — the export has no bulk reader");
+  } else {
+    const callers = walk(SERVER).filter((path) => {
+      const rel = path.slice(process.cwd().length + 1).replace(/\\/g, "/");
+      if (rel === "server/wing/session-store.ts" || rel.endsWith(".test.ts")) return false;
+      const code = readFileSync(path, "utf8")
+        .replace(/\/\*[\s\S]*?\*\//g, "")
+        .replace(/\/\/.*$/gm, "");
+      return /\bturnsForExport\(/.test(code);
+    });
+    if (!callers.length) {
+      fail("turnsForExport has no caller — the transcript export is reading nothing");
+    }
+  }
+
+  if (failures === before25) {
+    console.log("  ok — the frozen tables are named only by the legacy layer, and the wing reader is wired");
+  }
+}
+
+/* ── 26 · One writer into the evidence portfolio, and it checks the claim ──
+ *
+ * `evidence_portfolio_items` holds positioning claims shown to the student as
+ * things they can say about themselves. A4 is the reason `authenticity.ts` exists:
+ * a claim that overstates what the transcript supports is worse than no claim,
+ * because the student takes it into an interview.
+ *
+ * There were two writers. `wing/evidence-portfolio.ts` ran every claim through the
+ * authenticity rules; `wing/artifact-store.ts` had a second `addEvidenceItem` that
+ * inserted whatever it was handed. Nothing called the second one, which is the only
+ * reason it never mattered — and an unchecked insert with a friendlier signature is
+ * precisely what somebody reaches for when the checked path looks like work. A row
+ * that entered through it would have rendered in the portfolio UI indistinguishably
+ * from one that had passed.
+ *
+ * So: exactly one writer, and it is the one that imports the checker.
+ */
+console.log("\nOne writer into the evidence portfolio, and it runs the authenticity check");
+{
+  const before26 = failures;
+
+  const walk = (dir: string): string[] =>
+    readdirSync(dir, { withFileTypes: true }).flatMap((e) => {
+      const p = join(dir, e.name);
+      if (e.isDirectory()) return walk(p);
+      return e.isFile() && p.endsWith(".ts") ? [p] : [];
+    });
+
+  const writers: string[] = [];
+  for (const path of walk(SERVER)) {
+    const rel = path.slice(process.cwd().length + 1).replace(/\\/g, "/");
+    if (rel.endsWith(".test.ts")) continue;
+    const code = readFileSync(path, "utf8")
+      .replace(/\/\*[\s\S]*?\*\//g, "")
+      .replace(/\/\/.*$/gm, "");
+    if (/\.insert\(\s*evidencePortfolioItems\s*\)/.test(code)) writers.push(rel);
+  }
+
+  const CHECKED = "server/wing/evidence-portfolio.ts";
+  if (writers.length !== 1 || writers[0] !== CHECKED) {
+    fail(
+      `evidence_portfolio_items is written by [${writers.join(", ") || "nothing"}] — ` +
+        `it must be written only by ${CHECKED}, which is the path that runs the claim ` +
+        `through authenticity.ts first`,
+    );
+  } else {
+    /*
+     * And the one writer still checks. Read from the source rather than trusted,
+     * because "the only writer" is worth nothing if that writer stopped checking.
+     */
+    const src = readFileSync(join(process.cwd(), CHECKED), "utf8")
+      .replace(/\/\*[\s\S]*?\*\//g, "")
+      .replace(/\/\/.*$/gm, "");
+    if (!/from ["'`]\.\/authenticity["'`]/.test(src)) {
+      fail(`${CHECKED} no longer imports authenticity.ts — the only writer stopped checking`);
+    } else if (!/checkAuthenticity\(/.test(src) && !/applyRewrites\(/.test(src)) {
+      fail(`${CHECKED} imports authenticity.ts but calls nothing from it`);
+    }
+  }
+
+  if (failures === before26) {
+    console.log(`  ok — ${CHECKED} is the only writer and it runs the check`);
   }
 }
 

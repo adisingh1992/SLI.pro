@@ -38,9 +38,9 @@ async function resolveModuleCriteria(
   }
 }
 import { storage } from "./storage";
+import { z } from "zod";
 import {
   insertEnhancementModuleMessageSchema,
-  updateEnhancementModuleSchema,
 } from "../shared/schema";
 import { getModulePromptSet } from "./enhancement-module-prompts";
 import * as orchestrator from "./orchestrator";
@@ -541,7 +541,15 @@ async function foundationOutcomes(
 
   const out: Array<{ sessionNumber: number; completionData: any }> = [];
   for (const row of rows) {
-    if (row.status !== "completed") continue;
+    /*
+     * `ended_early` counts. The Foundation early-exit route writes the session's
+     * artifact BEFORE it records the end state, so a student who left Session 1 at a
+     * natural point has a real `functional_identity` — and skipping it here meant no
+     * module ever saw it. That is A3's "modules operate in isolation from the
+     * functional identity map" reappearing for exactly the students most likely to
+     * need the continuity.
+     */
+    if (row.status !== "completed" && row.status !== "ended_early") continue;
     const n = store.foundationNumber(row.sessionType);
     const artifact = await store.getArtifact(row.id, artifactFor[n]);
     if (artifact?.content) {
@@ -677,18 +685,34 @@ NOTE: This context was provided in the user's initial questionnaire. The convers
 }
 
 // Format previous module context for analysis
+/**
+ * The other modules' outcomes, for the analysis prompt.
+ *
+ * Same defect as the conversation path had, in a second copy: B read A, C read A and
+ * B, and A read nothing — so the ordering A3 removed from access was still hard-coded
+ * into what each module knows. One loop over every OTHER module now, in whatever
+ * order the student did them.
+ *
+ * `ended_early` is included for the same reason it is on the conversation path: the
+ * early-exit route writes a real `module_outcome` artifact, and skipping it would
+ * treat a student who stopped at a natural point as having done nothing.
+ */
 async function formatPreviousModulesAnalysisContext(
   userId: number,
   currentModuleCode: string,
 ): Promise<string> {
   try {
-    let context = "";
+    const others = (await moduleStore.getEnhancementModulesForUser(userId))
+      .filter((m) => m.moduleCode !== currentModuleCode)
+      .filter((m) => m.status === "completed" || m.status === "ended_early")
+      .filter((m) => m.completionData)
+      .sort((a, b) => a.moduleCode.localeCompare(b.moduleCode));
 
-    // For Module B, include Module A summary
-    if (currentModuleCode === "B") {
-      const moduleA = await moduleStore.getEnhancementModule(userId, "A");
-      if (moduleA?.status === "completed" && moduleA.completionData) {
-        const data = moduleA.completionData;
+    let context = "";
+    for (const m of others) {
+      const data = m.completionData as any;
+
+      if (m.moduleCode === "A") {
         context += `
 ═══════════════════════════════════════════════════════════════
 BACKGROUND CONTEXT: MODULE A (Digital Behavior & LinkedIn)
@@ -701,37 +725,29 @@ Content Strategy: ${data.contentStrategy?.behaviorChange ?? "Not defined"}
 NOTE: User completed Module A covering digital behavior and LinkedIn strategy. Conversation may build upon this.
 ═══════════════════════════════════════════════════════════════
 `;
-      }
-    }
-
-    // For Module C, include Module A and B summaries
-    if (currentModuleCode === "C") {
-      const moduleA = await moduleStore.getEnhancementModule(userId, "A");
-      const moduleB = await moduleStore.getEnhancementModule(userId, "B");
-
-      if (moduleA?.status === "completed" && moduleA.completionData) {
-        const data = moduleA.completionData;
+      } else if (m.moduleCode === "B") {
         context += `
 ═══════════════════════════════════════════════════════════════
-BACKGROUND CONTEXT: MODULE A (Digital Behavior & LinkedIn)
-═══════════════════════════════════════════════════════════════
-
-Brand Claim: ${data.brandClaim ?? "Not established"}
-`;
-      }
-
-      if (moduleB?.status === "completed" && moduleB.completionData) {
-        const data = moduleB.completionData;
-        context += `
-MODULE B (Network Position Mapping)
+BACKGROUND CONTEXT: MODULE B (Network Position Mapping)
 ═══════════════════════════════════════════════════════════════
 
 Functional Identity: ${data.functionalIdentity ?? "Not established"}
 Value Proposition: ${data.valueProposition ?? "Not articulated"}
 
-NOTE: User completed Modules A & B. Conversation may reference prior work without repeating it.
+NOTE: User completed Module B. Conversation may reference prior work without repeating it.
 ═══════════════════════════════════════════════════════════════
 `;
+      } else {
+        /*
+         * Module C has no renderer, here or in `formatModuleSummary`, and inventing
+         * one would mean guessing at the shape of its `completionData`. Logged rather
+         * than dropped in silence: a student who finished C and then opened A gets
+         * nothing from it, and that should be visible to whoever reads the log rather
+         * than discovered from a conversation that felt oddly ignorant.
+         */
+        console.warn(
+          `[modules] no summary renderer for module ${m.moduleCode}; its outcome is not in the prompt`,
+        );
       }
     }
 
@@ -925,11 +941,21 @@ export function setupEnhancementModulesRoutes(app: Express) {
               content: initialMessage,
             });
           }
-        } else if (module.status === "available") {
-          // Update status to in_progress if it was available
+        } else if (module.status === "available" || module.status === "ended_early") {
+          /*
+           * `ended_early` is here because without it the exit was a one-way door.
+           * Only `available` was promoted, so a module a student stopped stayed at
+           * `ended_early`; `/start` returned success and the stream route then
+           * refused every message with "Module must be in progress or completed".
+           * A3 asks for exit "at any natural stopping point", which is only a
+           * stopping point if they can pick it up again.
+           *
+           * `startedAt` is not reset on a resume — the module started when it
+           * started, and the reporting reads that column as first contact.
+           */
           await moduleStore.updateEnhancementModule(module.id, {
             status: "in_progress",
-            startedAt: new Date(),
+            ...(module.status === "available" ? { startedAt: new Date() } : {}),
           });
 
           // Check if module has any messages, if not add initial guidance message
@@ -1028,26 +1054,29 @@ export function setupEnhancementModulesRoutes(app: Express) {
           formatLinkedinOptimizationContext(userId),
         ]);
 
-        // Fetch previous module's completion data for chaining
-        let previousModuleData = null;
-        let moduleAData = null;
-        if (moduleCode === "B") {
-          const moduleA = await moduleStore.getEnhancementModule(userId, "A");
-          if (moduleA?.status === "completed" && moduleA.completionData) {
-            previousModuleData = moduleA.completionData;
-          }
-        } else if (moduleCode === "C") {
-          const [moduleA, moduleB] = await Promise.all([
-            moduleStore.getEnhancementModule(userId, "A"),
-            moduleStore.getEnhancementModule(userId, "B"),
-          ]);
-          if (moduleB?.status === "completed" && moduleB.completionData) {
-            previousModuleData = moduleB.completionData;
-          }
-          if (moduleA?.status === "completed" && moduleA.completionData) {
-            moduleAData = moduleA.completionData;
-          }
-        }
+        /*
+         * ── EVERY OTHER MODULE, IN WHATEVER ORDER THEY WERE DONE ──────────────
+         * A3: "students can complete them in any order or skip entirely" and "Wing
+         * must have full context from all completed Foundation Sessions AND any
+         * previously completed Enhancement Modules".
+         *
+         * This was three hand-written branches: B read A, C read A and B, and A read
+         * NOTHING. So the ordering the spec removed from access was still hard-coded
+         * into context — a student who did C, then B, then A had a Module A
+         * conversation that knew nothing about either of the modules they had just
+         * finished, which is the isolation A3 was written to close, surviving in the
+         * one place nobody looked.
+         *
+         * One read of every module, minus this one. `ended_early` counts: the early
+         * exit writes a real `module_outcome` artifact, and dropping it would mean a
+         * student who stopped at a natural point had done nothing at all.
+         */
+        const otherModules = (await moduleStore.getEnhancementModulesForUser(userId))
+          .filter((m) => m.moduleCode !== moduleCode)
+          .filter((m) => m.status === "completed" || m.status === "ended_early")
+          .filter((m) => m.completionData)
+          /* Stable order, so the same history renders the same prompt twice running. */
+          .sort((a, b) => a.moduleCode.localeCompare(b.moduleCode));
 
         // Set up SSE headers
         res.setHeader("Content-Type", "text/event-stream");
@@ -1063,18 +1092,9 @@ export function setupEnhancementModulesRoutes(app: Express) {
         let assistantContent = "";
 
 
-        // Build previous module summaries string for context chaining
-        let previousSummaries = "";
-        if (moduleCode === "B" && previousModuleData) {
-          previousSummaries = formatModuleSummary("A", previousModuleData);
-        } else if (moduleCode === "C") {
-          if (moduleAData) {
-            previousSummaries += formatModuleSummary("A", moduleAData);
-          }
-          if (previousModuleData) {
-            previousSummaries += formatModuleSummary("B", previousModuleData);
-          }
-        }
+        const previousSummaries = otherModules
+          .map((m) => formatModuleSummary(m.moduleCode, m.completionData))
+          .join("");
 
         // Generate system prompt based on user's professional status
         const systemPrompt = getModulePromptSet(req.user!.professionalStatus).getSystemPrompt(moduleCode, {
@@ -1189,113 +1209,19 @@ export function setupEnhancementModulesRoutes(app: Express) {
     },
   );
 
-  // POST /api/enhancement-modules/:moduleCode/message - Send message to module (legacy endpoint)
-  app.post(
-    "/api/enhancement-modules/:moduleCode/message",
-    isAuthenticated,
-    async (req: Request, res: Response) => {
-      try {
-        const { moduleCode } = req.params;
-        const { content } = req.body;
-
-        if (!["A", "B", "C"].includes(moduleCode)) {
-          return res.status(400).json({ error: "Invalid module code" });
-        }
-
-        if (!content || typeof content !== "string") {
-          return res.status(400).json({ error: "Message content is required" });
-        }
-
-        // Get the module
-        const module = await moduleStore.getEnhancementModule(
-          req.user!.id,
-          moduleCode,
-        );
-        if (!module) {
-          return res.status(404).json({ error: "Module not found" });
-        }
-
-        if (module.status === "completed") {
-          return res.status(400).json({ error: "Module is already completed" });
-        }
-
-        // Save user message
-        await moduleStore.createEnhancementModuleMessage({
-          moduleId: module.id,
-          role: "user",
-          content,
-        });
-
-        // Get all messages for context
-        const messages = await moduleStore.getEnhancementModuleMessages(module.id);
-
-        // Generate AI response (placeholder for now - you'll add real prompts later)
-        const systemPrompt = `You are a professional coaching assistant helping with ${
-          moduleCode === "A"
-            ? "Digital Behavior Analysis Framework: LinkedIn Presence & Content Strategy Assessment"
-            : moduleCode === "B"
-              ? "Network Position Mapping Framework: Strategic Relationship & Influence Analysis"
-              : "Career Aspiration Alignment Framework: Long-Term Goals & Positioning Refinement"
-        }. 
-      
-      Provide thoughtful, actionable guidance based on the conversation context.`;
-
-        const userMessages = messages.slice(-10).map((msg: any) => ({
-          role: msg.role as "user" | "assistant",
-          content: msg.content,
-        }));
-
-        // Non-streaming fallback for the same coaching surface -> flagship.
-        const { text: completionText } = await orchestrator.complete({
-          tier: "flagship",
-          maxTokens: 1000,
-          system: systemPrompt,
-          messages: userMessages,
-        });
-
-        const assistantResponse =
-          completionText ||
-          "I apologize, but I encountered an error generating a response.";
-
-        // Save assistant message
-        await moduleStore.createEnhancementModuleMessage({
-          moduleId: module.id,
-          role: "assistant",
-          content: assistantResponse,
-        });
-
-        // Check for completion
-        const userProfile = await profileStore.getUserProfile(req.user!.id);
-        const allMessages = await moduleStore.getEnhancementModuleMessages(
-          module.id,
-        );
-        const completionCheck = await checkModuleCompletion(
-          req.user!.id,
-          moduleCode,
-          allMessages,
-          userProfile,
-          req.user!.professionalStatus,
-        );
-
-        if (completionCheck.shouldComplete && completionCheck.completionData) {
-          await moduleStore.updateEnhancementModule(module.id, {
-            status: "completed",
-            completedAt: new Date(),
-            completionData: completionCheck.completionData,
-          });
-        }
-
-        res.json({
-          success: true,
-          message: assistantResponse,
-          completed: completionCheck.shouldComplete,
-        });
-      } catch (error) {
-        console.error("Error processing module message:", error);
-        res.status(500).json({ error: "Failed to process message" });
-      }
-    },
-  );
+  /*
+   * There is no non-streaming `POST /message`.
+   *
+   * One existed — a second, older copy of the turn handler kept beside
+   * `messages/stream`. Nothing called it: the client streams. It had drifted into a
+   * different function from the route it shadowed, and the difference was not cosmetic.
+   * It assembled no cross-module context, so Wing answered on that module alone; and it
+   * still ran the completion check, so a request to it could mark a module COMPLETED
+   * from a conversation the analysis prompt had never seen in full.
+   *
+   * A duplicate write path that decides less and commits the same thing is not dead
+   * weight, it is a second answer to a question that should have one. Removed.
+   */
 
   /**
    * Ends a module early — a distinct status, not a completion (Feature List A3).
@@ -1368,7 +1294,36 @@ export function setupEnhancementModulesRoutes(app: Express) {
     },
   );
 
-  // PATCH /api/enhancement-modules/:moduleCode - Update module (e.g., timer elapsed)
+  /*
+   * PATCH /api/enhancement-modules/:moduleCode — the timer, and nothing else.
+   *
+   * This took `updateEnhancementModuleSchema`, which is the insert schema minus
+   * two columns and `.partial()` — so behind `isAuthenticated` it accepted
+   * `status`, `startedAt`, `completedAt` and `completionData` from the body and
+   * handed them to the store, which completes the session on
+   * `status === "completed"` and writes a `module_outcome` artifact from
+   * `completionData`.
+   *
+   * The route resolves the module from `req.user`, so it was never a way into
+   * anybody else's record. It was a way for a student to mark their own module
+   * complete without doing it — and, worse, to supply the outcome artifact
+   * themselves, which is the thing an advisor reads as the student's work.
+   *
+   * Completion is decided by `checkModuleCompletion` over the transcript, and the
+   * server writes the status and the artifact together where it agrees. Starting
+   * and ending have their own routes. The only field a client has ever sent here
+   * is `timerElapsed`, so that is the whole schema now, declared inline where it
+   * can be read rather than derived from an insert schema that grows whenever
+   * the table does.
+   *
+   * The same shape and the same fix as PATCH /api/foundation-sessions/:n, which
+   * was removed outright because nothing called it at all. `api-contracts`
+   * check 23 holds both.
+   */
+  const patchModuleSchema = z.object({
+    timerElapsed: z.number().int().nonnegative().optional(),
+  });
+
   app.patch(
     "/api/enhancement-modules/:moduleCode",
     isAuthenticated,
@@ -1380,7 +1335,7 @@ export function setupEnhancementModulesRoutes(app: Express) {
           return res.status(400).json({ error: "Invalid module code" });
         }
 
-        const updateData = updateEnhancementModuleSchema.parse(req.body);
+        const updateData = patchModuleSchema.parse(req.body);
 
         const module = await moduleStore.getEnhancementModule(
           req.user!.id,
@@ -1390,7 +1345,14 @@ export function setupEnhancementModulesRoutes(app: Express) {
           return res.status(404).json({ error: "Module not found" });
         }
 
-        await moduleStore.updateEnhancementModule(module.id, updateData);
+        /*
+         * Spelled out at the call site rather than spread. The store dispatches on
+         * whatever keys it is given, so passing a parsed body wholesale makes the
+         * set of writable columns a property of a schema in another file.
+         */
+        await moduleStore.updateEnhancementModule(module.id, {
+          timerElapsed: updateData.timerElapsed,
+        });
 
         res.json({ success: true });
       } catch (error) {

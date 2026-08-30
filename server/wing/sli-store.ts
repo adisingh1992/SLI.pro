@@ -28,6 +28,28 @@ import { studentIdForWingUser } from "./bootstrap";
 export type SliSourceValue = "generated" | "custom" | "refined" | "refresh";
 export type SliStatusValue = "candidate" | "selected" | "active" | "superseded";
 
+/**
+ * The statuses that mean "this is the student's SLI right now".
+ *
+ * Both, not one, and the reason is a trap five readers fell into. Every insert of
+ * `"selected"` in this file is followed on the next line by `markActive`, which
+ * sets `"active"` — see `select`, `refine` and `refresh` below, and both call
+ * sites in `sli-routes.ts`. So NO ROW IS EVER LEFT AT `"selected"`, and a reader
+ * that filters on it alone finds nothing, for every student, silently.
+ *
+ * That is what it did: the advisor snapshot had no SLI headline, the cohort
+ * dashboard reported zero students with a completed SLI, and Wing's life-log
+ * reply could not see the SLI it was written to connect entries to. Each read
+ * looked correct in isolation.
+ *
+ * `"selected"` stays in the list rather than being dropped because it is a real
+ * state the schema permits and a future path may leave a row in it — the failure
+ * to avoid is a reader that knows about only one of the two, in either
+ * direction. `getActive` below has always ranked them correctly; this constant
+ * is that ranking, exported so nobody has to rediscover it.
+ */
+export const LIVE_SLI_STATUSES = ["active", "selected"] as const;
+
 export type SliView = {
   id: number;
   studentId: number;

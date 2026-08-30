@@ -12,6 +12,8 @@
  * elements, in this order, produce the satisfaction-clarity-motivation sequence" makes the
  * sequence part of the rule rather than a formatting preference.
  */
+import { readFileSync, existsSync } from "fs";
+import { join } from "path";
 import {
   FOUNDATION_TRANSITIONS,
   renderTransition,
@@ -177,6 +179,97 @@ console.log("\nEach part closes itself, so nothing runs together");
     }
   }
   if (failures === before) ok("every part ends closed; values are punctuated exactly once");
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+ * And something sends it.
+ *
+ * Everything above was true and green while this module had no importer at all.
+ * A2 asks for "contextual micro-copy at every transition", the transitions were
+ * written, and the `session_completed` event carried the artifact and nothing else —
+ * so the student reached the end of a session and was told nothing about what came
+ * next, by code that tested clean.
+ *
+ * The render is server-side deliberately: it quotes the session's own outcome, so a
+ * client assembling it would need the artifact's field names, and the copy would then
+ * depend on two files agreeing about a JSON shape.
+ * ───────────────────────────────────────────────────────────────────────── */
+console.log("\nThe server renders it into the completion event");
+{
+  const before = failures;
+  const rel = "server/foundation-sessions-routes.ts";
+  const path = join(process.cwd(), rel);
+
+  if (!existsSync(path)) {
+    fail(`${rel} not found — this block proved nothing`);
+  } else {
+    const code = readFileSync(path, "utf8")
+      .replace(/\/\*[\s\S]*?\*\//g, "")
+      .replace(/\/\/.*$/gm, "");
+
+    if (!/renderTransition\(/.test(code)) {
+      fail("nothing calls renderTransition — the transitions are unreachable again");
+    }
+
+    /*
+     * Narrowed to the event payload. An import that never reaches the client is an
+     * identifier appearing in a file, which is what this block exists to tell apart
+     * from a delivered feature.
+     */
+    const at = code.indexOf('type: "session_completed"');
+    if (at < 0) fail("the session_completed event is gone");
+    else {
+      const payload = code.slice(at, code.indexOf("}", code.indexOf("})", at)));
+      if (!/transition:/.test(payload)) {
+        fail("session_completed carries no transition — the student is told nothing about what is next");
+      }
+    }
+
+    /*
+     * Session 3's outcome is null on purpose, and this is a whitelist rather than a
+     * test for the shape of the branch that makes it so.
+     *
+     * Its artifact holds a signature story, a methodology and content angles, and no
+     * positioning claim — so feeding it `signatureStory.title` would render "Your
+     * positioning claim: <a story title>" at the moment the student finishes. The
+     * fields the acknowledgment may read are named here; anything else, in any
+     * session, is a new claim about what an artifact contains.
+     */
+    const fn = code.slice(code.indexOf("function transitionFor("));
+    const body = fn.slice(0, fn.indexOf("\nfunction "));
+    /*
+     * An exec loop rather than `matchAll`: the tsconfig sets no `target`, so it
+     * defaults to ES5 and the iterator comes back untyped. The same reason
+     * `population-tags.ts` uses `Array.from` instead of a spread.
+     */
+    const fields = new Set<string>();
+    const FIELD = /completionData\??\.(\w+)/g;
+    for (let m = FIELD.exec(body); m !== null; m = FIELD.exec(body)) fields.add(m[1]);
+    const allowed = new Set(["primaryFunction", "credibilityTier"]);
+    for (const f of Array.from(fields)) {
+      if (!allowed.has(f)) {
+        fail(
+          `the transition reads completionData.${f} — only primaryFunction (S1) and ` +
+            `credibilityTier (S2) are outcomes an artifact actually carries`,
+        );
+      }
+    }
+    /*
+     * And both are read. A whitelist alone permits the empty set, which renders every
+     * session on its fallback — "Your primary function is mapped." for a student whose
+     * primary function Wing has just written down. The acknowledgment has to name the
+     * output, and the outputs are these two.
+     */
+    for (const f of Array.from(allowed)) {
+      if (!fields.has(f)) {
+        fail(`the transition no longer reads completionData.${f} — that session falls back to a generic line`);
+      }
+    }
+  }
+
+  if (failures === before) {
+    ok("renderTransition reaches the session_completed payload, and session 3 stays on its fallback");
+  }
 }
 
 console.log(failures ? `\n${failures} failure(s)\n` : "\nall passed\n");

@@ -11,6 +11,15 @@ mail.setApiKey(process.env.SENDGRID_API_KEY || '');
 interface EmailParams {
   to: string;
   from: string;
+  /**
+   * Where a reply should go, when the message is asking for one.
+   *
+   * Separate from `from` on purpose: `from` has to stay a sender SendGrid has
+   * verified, and the reply address lives on a different domain — the one with the
+   * Inbound Parse MX record. Setting `from` to it would send every message from an
+   * address that only receives.
+   */
+  replyTo?: string;
   subject: string;
   text?: string;
   html?: string;
@@ -36,6 +45,7 @@ export async function sendEmailDetailed(params: EmailParams): Promise<SendOutcom
     const msg = {
       to: params.to,
       from: params.from, // This needs to be a verified sender in SendGrid
+      ...(params.replyTo ? { replyTo: params.replyTo } : {}),
       subject: params.subject,
       text: params.text || '',
       html: params.html || ''

@@ -501,14 +501,16 @@ export const heuristics = wing.table("heuristics", {
   /**
    * Stable identifier, safe to reference from elsewhere.
    *
-   * Cards had only `id` and `name`. Numeric ids are meaningless in an
-   * objective definition a human has to read, and names change the moment the
-   * methodology owner rewords a card in the editor she already has — so
-   * objectives had nothing they could safely bind an intervention to.
+   * Cards had only `id` and `name`. Numeric ids are meaningless in a definition
+   * a human has to read, and names change the moment the methodology owner
+   * rewords a card in the editor she already has — so anything referring to a
+   * card had nothing it could safely bind to.
    *
-   * Same reasoning as an objective's `key`: the thing other records point at
-   * must survive rewording, because the alternative is a reference that breaks
-   * silently and renders as nothing.
+   * The first consumer was the objective set, retired in Tier 1 part 4. The
+   * reason outlived it: sequence entries, gate audit findings and the v2 cards
+   * all point at this column, and the thing other records point at must survive
+   * rewording, because the alternative is a reference that breaks silently and
+   * renders as nothing.
    */
   cardCode: text("card_code").notNull().unique(),
   name: text("name").notNull(),
@@ -1066,7 +1068,20 @@ export const analysisMethodology = wing.table(
 );
 
 /**
+ * RETIRED — Tier 1 part 4, migration 0032. Rows kept, nothing reads them.
+ *
  * The objective set for a session — what it is trying to achieve, in order.
+ *
+ * The renderer that read this table was gated on `OBJECTIVE_RENDERER_POPULATIONS`,
+ * which was never set, so it never once assembled a prompt for a student. What
+ * carries the argument below in Tier 1 is the v2 Foundation cards — `gate-compiler`
+ * and `voice-compiler` — which assemble a turn prompt from published components and
+ * have been built, audited and reviewed. Two mechanisms for the same job is one more
+ * than anyone can keep correct.
+ *
+ * The table stays because the reasoning does, and because a version history is not
+ * worth destroying to save a table nothing queries. The rest of this comment is why
+ * the design was right, and is still the argument for what replaced it.
  *
  * WHY THIS EXISTS
  * Methodology used to live inside 22,000-character prompt template literals,
@@ -1098,9 +1113,9 @@ export const objectiveSets = wing.table(
     versionNumber: integer("version_number").notNull().default(1),
     status: publishStatus("status").notNull().default("draft"),
     /**
-     * Ordered Objective[]. See objective-rules.ts for the shape and for the
-     * overlay merge, which is a pure function so it can be tested without a
-     * database.
+     * Ordered Objective[]. The shape and the overlay merge lived in
+     * `objective-rules.ts`, removed with the renderer in Tier 1 part 4; the rows
+     * that remain are the only surviving record of it.
      */
     objectives: jsonb("objectives").notNull(),
     changeNote: text("change_note"),
@@ -1117,6 +1132,9 @@ export const objectiveSets = wing.table(
 );
 
 /**
+ * RETIRED — Tier 1 part 4, migration 0032. Its only writer was the objective
+ * renderer, which never ran; nothing writes here now. Rows kept.
+ *
  * Which objective each turn was pursuing.
  *
  * The reason the whole design pays for itself. Turns already carry provenance
@@ -1146,18 +1164,151 @@ export const turnObjectives = wing.table(
   }),
 );
 
-/** Build now · Rotating categorized prompt library, configurable without a
- *  deploy. The "no repeat within 14 days" rule is a query against
- *  message_events.prompt_id, not an unbounded array column. */
-export const promptLibrary = wing.table("prompt_library", {
-  id: id(),
-  category: promptCategory("category").notNull(),
-  promptText: text("prompt_text").notNull(),
-  populationTags: text("population_tags").array().notNull().default(sql`'{}'`),
-  active: boolean("active").notNull().default(true),
-  createdAt: tsNow("created_at"),
-  updatedAt: tsNow("updated_at"),
-});
+/** Build now · Rotating prompt library, configurable without a deploy. The "no
+ *  repeat within 14 days" rule is a query against message_events.prompt_id, not
+ *  an unbounded array column.
+ *
+ *  Widened by 0028 to hold what her library actually carries. Every added column
+ *  answers a line in the micro-journal library's own Integration Notes; see that
+ *  migration, which quotes each one against the column it produced.
+ *
+ *  `category` is the original seven-value enum and is now nullable: none of her
+ *  220 prompts has one, and forcing a value would be inventing a classification.
+ *  It stays for the 28 rows that predate her library and for selectPrompt's
+ *  optional filter. */
+export const promptLibrary = wing.table(
+  "prompt_library",
+  {
+    id: id(),
+    category: promptCategory("category"),
+    promptText: text("prompt_text").notNull(),
+    populationTags: text("population_tags").array().notNull().default(sql`'{}'`),
+
+    /** Her id: a bare number in Section 1, a code like U-01 or EF-03 elsewhere.
+     *  Heartbeat prompts are numbered 1-8 within each track, so this repeats
+     *  across blocks — uniqueness is on (source_block, prompt_code). */
+    promptCode: text("prompt_code"),
+
+    /** Her `*Signal:*` line, verbatim. "Every prompt in this library should be
+     *  tagged with its behavioral signal in the prompt_library schema so the
+     *  adaptive selection engine can choose based on what signal is most
+     *  informative for the current user." — her Integration Notes. */
+    behavioralSignal: text("behavioral_signal"),
+
+    /** One of her eight: language, energy, decision, relationship, industry,
+     *  career, influence, achievement. NULL on every seeded row until she
+     *  assigns them — the library carries analytical prose, not categories, and
+     *  a guess would either manufacture or collapse the distinctness Gate 2
+     *  counts. **This is what currently blocks the Reveal Cycle.** */
+    signalCategory: text("signal_category"),
+
+    /** 1, 2 or 3, proposed by `wing:tag-prompts`. Null until she approves the
+     *  tiers, exactly as in prompt_log. */
+    evidenceTier: smallint("evidence_tier"),
+
+    /** universal | adapted | specific — her three sections. Works with
+     *  populationTags, which already holds the audience. */
+    audienceScope: text("audience_scope"),
+
+    /** micro_journal | heartbeat | synthesis_cycle. Three rhythms across her two
+     *  documents; the third comes from Section 5's preamble — "prompts marked
+     *  *synthesis-cycle* should only be used at monthly/quarterly cadence, not in
+     *  the weekly rotation". NULL where her marker names a delivery MODE rather
+     *  than a rhythm. None of them can fire until the scheduler exists. */
+    cadence: text("cadence"),
+
+    /** Her inline marker from Section 5, verbatim. `cadence` and `eventSensitive`
+     *  are derived from it; this is what they were derived from, so the
+     *  derivation can be checked against her document without reading the
+     *  parser. */
+    deliveryMarker: text("delivery_marker"),
+
+    /** approachable | reflective. Her rotation weighting is "roughly 2:1
+     *  approachable-to-serious in any given week", which needs the two pools to
+     *  be told apart. */
+    library: text("library"),
+
+    /** Her event-sensitivity rule as a filter: "prompts referencing specific
+     *  events … are only eligible for delivery if the user has mentioned the
+     *  event". False by default because her prompts use general scenes on
+     *  purpose. */
+    eventSensitive: boolean("event_sensitive").notNull().default(false),
+
+    /** Where the row came from, so a re-seed diffs against the document rather
+     *  than against memory. */
+    sourceDocument: text("source_document"),
+    sourceBlock: text("source_block"),
+    sourceLine: integer("source_line"),
+
+    /** The row this one was edited from — 0034.
+     *
+     *  Editing a prompt retires its row and inserts a successor rather than updating in
+     *  place, because `life_log_entries.prompt_id` is a foreign key here: a student's
+     *  entry is stored as an answer to THIS row, and rewriting the text re-files every
+     *  past answer under a question that was never asked. NULL on a prompt written from
+     *  scratch. */
+    supersedesId: fk("supersedes_id").references((): AnyPgColumn => promptLibrary.id),
+
+    active: boolean("active").notNull().default(true),
+    createdAt: tsNow("created_at"),
+    updatedAt: tsNow("updated_at"),
+  },
+  /* `prompt_library_code_idx` — UNIQUE on (source_block, prompt_code) WHERE
+     prompt_code IS NOT NULL AND active — lives in 0028, narrowed to live rows by
+     0034. It is partial, which this drizzle version cannot express, and a
+     non-partial version would be wrong twice over: the 28 pre-existing rows carry
+     neither column and would all collide, and a successor keeping her prompt_code
+     would collide with the predecessor it supersedes. */
+  (t) => ({
+    selectionIdx: index("prompt_library_selection_idx").on(
+      t.active,
+      t.cadence,
+      t.library,
+      t.audienceScope,
+    ),
+  }),
+);
+
+/** Build now · The opener pool, as its own layer.
+ *
+ *  "The universal opener pool should be implemented as a separate layer — the
+ *  system selects the opener independently of the prompt, ensuring variety in
+ *  how prompts feel even when the underlying question repeats at the 14-day
+ *  minimum interval." — her Integration Notes.
+ *
+ *  A table rather than a column on prompt_library, because independent selection
+ *  is the whole point: folding the opener in would make the two move together,
+ *  which is the one thing that note rules out. */
+export const promptOpeners = wing.table(
+  "prompt_openers",
+  {
+    id: id(),
+    /** casual | warm_return | post_response. Not interchangeable: warm_return is
+     *  for "users who haven't responded in 5+ days" and post_response is for
+     *  following up on a theme, so the pool is a precondition, not a flavour. */
+    pool: text("pool").notNull(),
+    text: text("text").notNull(),
+    /** Her openers interpolate the user's name; one post_response opener also
+     *  interpolates a topic. Recorded so a renderer refuses an opener whose
+     *  placeholders it cannot fill rather than sending "[Name]" to a student. */
+    placeholders: text("placeholders").array().notNull().default(sql`'{}'`),
+    /** Same rule as `prompt_library.supersedes_id` — 0034. `message_events.opener_id`
+     *  records which greeting a student received, so an edit publishes a successor
+     *  rather than rewriting history. */
+    supersedesId: fk("supersedes_id").references((): AnyPgColumn => promptOpeners.id),
+    active: boolean("active").notNull().default(true),
+    createdAt: tsNow("created_at"),
+    updatedAt: tsNow("updated_at"),
+  },
+  /* `prompt_openers_text_idx` — UNIQUE on (pool, text) WHERE active — lives in 0028
+     and was narrowed to live rows by 0034. It is partial, which this drizzle version
+     cannot express. The `active` in the predicate is what makes retire-and-supersede
+     possible: without it, reverting to an earlier opener collides with the retired row
+     that still holds its text. */
+  (t) => ({
+    poolIdx: index("prompt_openers_pool_idx").on(t.active, t.pool),
+  }),
+);
 
 /** Build now · The career-and-personal event log — Tier 1's core
  *  data-generating surface. Human input (entry_text) and AI output
@@ -1307,6 +1458,11 @@ export const messageEvents = wing.table("message_events", {
   sequenceKey: text("sequence_key"),
   sequenceStep: smallint("sequence_step"),
   promptId: fk("prompt_id").references(() => promptLibrary.id), // enforces 14-day no-repeat
+  /** The greeting that carried it, when it had one. Selected independently of
+   *  `promptId`, per her Integration Notes, and read back so the same opener
+   *  does not arrive twice running. NULL on every message that is not a
+   *  life-log prompt, which is most of them. */
+  openerId: fk("opener_id").references(() => promptOpeners.id),
   providerMessageId: text("provider_message_id"), // SendGrid / Twilio
   sentAt: tsNow("sent_at"),
   /**
@@ -1322,6 +1478,14 @@ export const messageEvents = wing.table("message_events", {
   deliveredAt: ts("delivered_at"),
   openedAt: ts("opened_at"),
   clickedAt: ts("clicked_at"),
+  /**
+   * The handle in this message's Reply-To address, when it invited a reply.
+   *
+   * Identity for the inbound webhook. `From` is forgeable, so a reply is attributed
+   * by the address it was sent TO — see migration 0033. NULL on every message that
+   * does not ask for an answer, which is most of them.
+   */
+  replyToken: text("reply_token"),
   repliedAt: ts("replied_at"),
   replyContent: text("reply_content"), // inbound body (human-originated)
   loggedLifeLogEntryId: fk("logged_life_log_entry_id").references(() => lifeLogEntries.id),

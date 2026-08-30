@@ -273,7 +273,7 @@ Wing`,
     templateKey: "life_log_nudge",
     channel: "email",
     subject: "{{prompt}}",
-    body: `Hi {{firstName}},
+    body: `{{opener}}
 
 {{prompt}}
 
@@ -283,12 +283,44 @@ Or anything else that's happened — an interview, a conversation that went side
 
 Wing`,
     voiceNote:
+      "{{opener}} replaces the greeting rather than sitting above it. Every one of her " +
+      "fourteen openers already contains one — \"Hey [Name] — quick one for you.\" — so a " +
+      "'Hi {{firstName}},' line above it would greet the student twice. The opener is " +
+      "chosen independently of the prompt, per her Integration Notes, so the email feels " +
+      "different even when the question comes round again at the 14-day floor. " +
       "The prompt IS the subject line — it is the most interesting thing in the email and " +
       "burying it under 'Your weekly check-in' would waste the one line that gets read in a " +
       "preview pane. The body then explicitly releases them from it ('or anything else'), " +
       "which is the same not-constraining rule the in-app placeholder follows. 'Two sentences " +
       "is plenty' is doing real work: the failure mode for a reflection prompt is implying it " +
       "wants an essay.",
+  },
+
+  /* ── The one message a safety hold permits ──────────────────────────── */
+  {
+    templateKey: "safety_soft_check_in",
+    channel: "email",
+    /*
+     * Her sentence is the subject as well as the body. A subject line that framed it —
+     * "Checking in on you", "How are you doing?" — would be the coaching she ruled out,
+     * and it is the line that shows in a preview pane whether or not the mail is opened.
+     */
+    subject: "I'm here when you're ready.",
+    body: `Hi {{firstName}},
+
+I'm here when you're ready.
+
+Wing`,
+    voiceNote:
+      "Her ruling, verbatim: \"If the user hasn't returned after 30 days, Wing sends one " +
+      "soft check-in — not coaching, not a prompt. 'I'm here when you're ready.' That's " +
+      "the only automated contact during a hold.\" " +
+      "So there is no question in it, nothing to do, no link, and no next step — a link " +
+      "back into the app is a prompt wearing a different coat. It names no service and " +
+      "offers no resource, because Wing does not know what is available to this person " +
+      "and inventing one would be worse than saying nothing. " +
+      "It is short because the length is the message: anything longer starts explaining " +
+      "itself, and a person who has been away for a month did not ask for an explanation.",
   },
 
   /* ── E1 Life-event follow-up — 24h after a log entry ────────────────── */

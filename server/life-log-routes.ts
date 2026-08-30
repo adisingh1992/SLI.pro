@@ -53,8 +53,14 @@ export function registerLifeLogRoutes(app: Express) {
       const studentId = await requireStudent(req, res);
       if (!studentId) return;
 
-      const category = typeof req.query.category === "string" ? req.query.category : undefined;
-      res.json({ prompt: await store.promptFor(studentId, category) });
+      /*
+       * `category` used to be read off the query string and passed through. It was the
+       * legacy seven-value field, which Danielle's library does not use, so it could
+       * only ever narrow the pool to nothing. Selection is now by audience and cadence
+       * — see `promptFor`. A client still sending the parameter gets a prompt instead
+       * of null, which is the direction this change goes in.
+       */
+      res.json({ prompt: await store.promptFor(studentId) });
     } catch (error) {
       next(error);
     }

@@ -160,6 +160,32 @@ export async function maySend(
   return { allowed: false, why: verdict.why };
 }
 
+/**
+ * Every student whose single day-30 check-in is due.
+ *
+ * ── WHY A CANDIDATE QUERY AND THEN THE TESTED PREDICATE ──────────────────
+ * The SQL narrows to holds that could possibly qualify — open, never checked in, fired at
+ * least thirty days ago. It does NOT decide. `softCheckInDue` is the decision, it is
+ * tested against her rules, and one of those rules cannot be expressed here at all: "any
+ * return at all, not the qualified kind that lifts the hold" reads the student's own
+ * turns, not this table.
+ *
+ * So this is a filter for the scheduler's benefit — thirty days of holds rather than every
+ * hold ever opened — and every candidate is then put to the function that knows.
+ */
+export async function softCheckInCandidates(db: Db): Promise<number[]> {
+  const r = await db.execute(sql`
+    SELECT DISTINCT "student_id"
+    FROM "wing"."safety_holds"
+    WHERE "returned_at" IS NULL
+      AND "soft_check_in_sent_at" IS NULL
+      AND "fired_at" <= now() - interval '30 days'
+  `);
+  return (r.rows ?? [])
+    .map((row) => Number(row.student_id))
+    .filter((id) => Number.isFinite(id));
+}
+
 /** Students whose single day-30 check-in is due. For the scheduler, when it exists. */
 export async function softCheckInIsDue(
   db: Db,

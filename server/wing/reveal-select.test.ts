@@ -15,11 +15,14 @@
  */
 import { detectTrack, type Answers } from "./audience-track";
 import { revealFacts } from "./reveal-facts";
+import { readFileSync, existsSync } from "fs";
+import { join } from "path";
 import {
   TEMPLATES,
   assess,
   falsifiable,
   igInt12Violations,
+  revealDirective,
   selectReveal,
   trackRelevant,
 } from "./reveal-select";
@@ -31,7 +34,7 @@ const fail = (msg: string) => {
 };
 const ok = (msg: string) => console.log(`  ok — ${msg}`);
 
-/** Classify then select, the way the conversation will. */
+/** Classify then select, the way the conversation does — see the last block. */
 const run = (answers: Answers) =>
   selectReveal(revealFacts(answers, detectTrack(answers).track));
 
@@ -381,6 +384,124 @@ console.log("\nEvery enabled template is reachable by some real answer set");
   if (failures === before) {
     ok(`all ${TEMPLATES.filter((t) => t.enabled).length} enabled templates reachable`);
   }
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+ * The directive, and the fact that anything asks for one.
+ *
+ * Everything above this point was true for the whole time NOTHING IMPORTED THIS
+ * MODULE. Fourteen templates, five bands, the falsifiability refusal and the
+ * IG-INT06 deferral were built, tested and green, and the intake shipped a generic
+ * "find a tension somewhere" instruction instead. A suite that only exercises its
+ * own module cannot tell that apart from a suite that matters.
+ * ───────────────────────────────────────────────────────────────────────── */
+console.log("\nThe directive quotes them, names the shape, and leaks no code");
+{
+  const before = failures;
+
+  const answers: Answers = {
+    Q4: "I want to be a product lead at a company people have heard of",
+    Q5: "I'm a senior analyst at Meridian Health",
+    Q6: "Honestly the thing I'm best at is getting two teams that disagree to ship something",
+    Q7: "People tell me I'm the one who unblocks things, which surprises me every time",
+  };
+  const selection = run(answers);
+
+  if (selection.outcome !== "fire") {
+    fail(`the fixture no longer fires a reveal (${selection.because}) — this block proves nothing`);
+  } else {
+    const text = revealDirective(selection.template, revealFacts(answers, detectTrack(answers).track));
+
+    /* Their own words, not a paraphrase — IG-U006 falsifiability lives on the quote. */
+    const quoted = selection.template.quotes
+      .map((q) => answers[q])
+      .filter((a): a is string => !!a && a.trim().length > 0);
+    for (const a of quoted) {
+      if (!text.includes(a)) fail(`the directive does not quote "${a.slice(0, 40)}…"`);
+    }
+    if (!quoted.length) fail("the fixture chose a template with nothing to quote");
+
+    /* The shape, so the model is not left to pick its own. */
+    if (!text.includes(selection.template.name)) {
+      fail(`the directive does not name the shape (${selection.template.name})`);
+    }
+
+    /*
+     * And no identifiers. Same rule the gate compiler follows: IG-U005 forbids
+     * internal methodology vocabulary in user-facing content, and a model handed
+     * "RT-01" will eventually say it out loud.
+     */
+    for (const t of TEMPLATES) {
+      if (text.includes(t.code)) fail(`the directive carries the template code ${t.code}`);
+      if (text.includes(t.card)) fail(`the directive carries the card code ${t.card}`);
+    }
+
+    /* IG-INT12: the inference rests on the relationship, never on one statement. */
+    if (!/relationship BETWEEN/i.test(text)) {
+      fail("the directive does not tell the model the observation rests on two statements");
+    }
+  }
+
+  if (failures === before) ok("their words, the shape, no code, and IG-INT12 stated");
+}
+
+console.log("\nThe intake actually asks");
+{
+  const before = failures;
+  const path = join(process.cwd(), "server/wing/intake-conversation.ts");
+
+  if (!existsSync(path)) {
+    fail("intake-conversation.ts not found — this block proved nothing");
+  } else {
+    const code = readFileSync(path, "utf8")
+      .replace(/\/\*[\s\S]*?\*\//g, "")
+      .replace(/\/\/.*$/gm, "");
+
+    if (!/\bselectReveal\(/.test(code)) {
+      fail("the intake never calls selectReveal — the selection rules are unreachable again");
+    }
+    if (!/\brevealDirective\(/.test(code)) {
+      fail("the intake never renders a directive, so a chosen template changes nothing");
+    }
+
+    /*
+     * The prompt takes the rendered directive, not a boolean. A boolean can only
+     * select the generic instruction, which is what this replaced — and it would
+     * read, at a call site, exactly like a wired reveal.
+     */
+    if (/withInsight/.test(code)) {
+      fail("buildSystemPrompt still takes a withInsight boolean — a chosen template cannot reach it");
+    }
+    if (!/insightDirective/.test(code)) {
+      fail("no insightDirective reaches buildSystemPrompt");
+    }
+
+    /*
+     * A deferral must produce nothing. If the directive were assigned outside the
+     * "fire" branch, IG-INT06 would be a log line and the reveal would still go out.
+     */
+    const assigns = Array.from(code.matchAll(/insightDirective\s*=\s*([^;]+);/g)).map((m) =>
+      m[1].trim(),
+    );
+    const nonNull = assigns.filter((a) => a !== "null");
+    if (nonNull.length !== 1 || !nonNull[0].startsWith("revealDirective(")) {
+      fail(
+        `insightDirective is assigned from ${nonNull.join(", ") || "nothing"} — the only ` +
+          "non-null source may be revealDirective on the fire branch",
+      );
+    }
+
+    /*
+     * And the pause follows the directive, not the timing gate. `revealed` widens the
+     * chunk pause to four seconds; keyed on timing it would pause on a turn where the
+     * reveal deferred and the model just asked the next question.
+     */
+    if (!/const revealed\s*=\s*insightDirective !== null/.test(code)) {
+      fail("the reveal pause is not keyed on the directive");
+    }
+  }
+
+  if (failures === before) ok("selectReveal is called, its choice is rendered, and a deferral sends nothing");
 }
 
 console.log(failures ? `\n${failures} failure(s)\n` : "\nall passed\n");

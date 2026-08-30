@@ -137,14 +137,6 @@ export async function ensureFoundationArc(studentId: number) {
   return listSessions(studentId, FOUNDATION_TYPES);
 }
 
-/** The Foundation session numbers this student has finished. Informational only. */
-export async function completedFoundationNumbers(studentId: number): Promise<number[]> {
-  const rows = await listSessions(studentId, FOUNDATION_TYPES);
-  return rows
-    .filter((r) => r.status === "completed")
-    .map((r) => foundationNumber(r.sessionType));
-}
-
 export async function startSession(sessionId: number) {
   const [row] = await db
     .update(sessions)
@@ -382,4 +374,75 @@ export async function getSessionForUser(
 
   if (!rows.length) return null;
   return { studentId: rows[0].studentId, session: rows[0].session ?? null };
+}
+
+/* ── Bulk transcript read, for the admin export ───────────────────────── */
+
+export type ExportTurn = {
+  /** `wing.users.id` — what the admin export keys its per-student sheets on. */
+  wingUserId: number;
+  sessionId: number;
+  sessionStatus: WingSessionStatus;
+  sessionStartedAt: Date | null;
+  sessionCompletedAt: Date | null;
+  sessionCreatedAt: Date;
+  position: number;
+  turnType: string;
+  content: string;
+  createdAt: Date;
+};
+
+/**
+ * Every turn of one session type across a set of students, in one query.
+ *
+ * ── WHY THIS EXISTS RATHER THAN A LOOP OVER `getTurns` ───────────────────
+ * The admin transcript export runs over a whole cohort. Per-student calls would be
+ * two round trips each — sessions, then turns — and a Berkeley cohort turns that into
+ * several hundred queries behind a request that already has to build a workbook.
+ *
+ * ── AND WHY IT IS AN INNER JOIN ALL THE WAY DOWN ─────────────────────────
+ * A session with no transcript, or a transcript with no turns, is a student who
+ * opened the session and said nothing. The export skips those anyway — a sheet with a
+ * header and no rows tells an advisor nothing — so dropping them here is the same
+ * decision made once instead of twice.
+ *
+ * Ordered by student, then session, then position: the export writes sheets in that
+ * order and would otherwise sort what the index can hand it already sorted.
+ */
+export async function turnsForExport(
+  types: WingSessionType[],
+  wingUserIds: number[],
+): Promise<ExportTurn[]> {
+  if (!types.length || !wingUserIds.length) return [];
+
+  const rows = await db
+    .select({
+      wingUserId: students.userId,
+      sessionId: sessions.id,
+      sessionStatus: sessions.status,
+      sessionStartedAt: sessions.startedAt,
+      sessionCompletedAt: sessions.completedAt,
+      sessionCreatedAt: sessions.createdAt,
+      position: transcriptTurns.sequencePosition,
+      turnType: transcriptTurns.turnType,
+      content: transcriptTurns.content,
+      createdAt: transcriptTurns.createdAt,
+    })
+    .from(students)
+    .innerJoin(sessions, eq(sessions.studentId, students.id))
+    .innerJoin(transcripts, eq(transcripts.sessionId, sessions.id))
+    .innerJoin(transcriptTurns, eq(transcriptTurns.transcriptId, transcripts.id))
+    .where(
+      and(
+        inArray(students.userId, wingUserIds),
+        inArray(sessions.sessionType, types),
+      ),
+    )
+    .orderBy(
+      asc(students.userId),
+      asc(sessions.createdAt),
+      asc(transcriptTurns.sequencePosition),
+    );
+
+  return rows as ExportTurn[];
 }

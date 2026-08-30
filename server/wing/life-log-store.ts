@@ -1,10 +1,20 @@
-import { and, desc, eq, sql } from "drizzle-orm";
+import { and, desc, eq, inArray, sql } from "drizzle-orm";
 import { db } from "../db";
 import { lifeLogEntries, promptLibrary, sliRecords, students } from "@shared/wing-schema";
 import { log } from "../logger";
 import * as orchestrator from "../orchestrator";
+import { parseJsonResponse } from "../json-response";
+import { compileSafety } from "./safety-rules";
+import { LIVE_SLI_STATUSES } from "./sli-store";
+import { populationTagsFor } from "./population-tags";
+import { openHold } from "./safety-hold-store";
+import {
+  IG_MJ04_REGISTER,
+  LOG_REPLY_CONTRACT,
+  parseLogReply,
+  postEntryActions,
+} from "./log-reply";
 import * as messaging from "./messaging-store";
-import * as promptLog from "./prompt-log-store";
 
 /**
  * The career-and-personal life log (Feature List B2).
@@ -44,41 +54,74 @@ export type NewEntry = {
 /**
  * The prompt shown as faded placeholder text.
  *
- * Reuses `messaging.nextPrompt`, which enforces the 14-day no-repeat rule as a
- * query against message_events rather than as state on the student — so adding
- * a prompt to the library takes effect immediately and retiring one does not
- * leave a dangling reference.
+ * ── WHY THIS IS NOT `nextPrompt` ANY MORE ────────────────────────────────
+ * It was, and `nextPrompt` filters on `active` and an optional legacy category and
+ * NOTHING ELSE — no audience, no cadence, no pool ratio. `cardAppliesTo` fails open,
+ * so an untagged prompt reaches everyone: this surface could show a Berkeley
+ * undergraduate an executive-only prompt from Danielle's library.
+ *
+ * That is the same fail-open the email path was fixed for. The fix landed on one of
+ * the two callers, and this was the other one — which is the more visible of the two,
+ * because it is on screen every time a student opens the log.
+ *
+ * `nextLibraryPrompt` applies her actual rules: audience, cadence, the 2:1
+ * approachable-to-reflective ratio, category rotation and event-sensitivity.
+ *
+ * ── THE ONE RULE THIS PATH TURNS OFF ─────────────────────────────────────
+ * IG-MJ05's per-day cap. See `dailyCap` in `nextLibraryPrompt`: the cap governs what
+ * Wing sends unprompted, and a student who opened the log did the prompting.
+ *
+ * ── AND THE ONE THAT IS STILL WEAK HERE ──────────────────────────────────
+ * The 14-day no-repeat rule is a query against `message_events`, which only records
+ * what was SENT. Nothing writes a row when a prompt is merely displayed, so in-app
+ * placeholders can repeat where emailed ones cannot. Recording a display would need a
+ * `message_events` row for something that was never a message, or a second log —
+ * `prompt-log-store.ts` exists for exactly this and has no caller yet. Left as it is,
+ * and written down, rather than papered over: a repeated placeholder is a cosmetic
+ * fault, and the wrong audience was not.
+ *
+ * `category` is gone. It was the legacy seven-value field, and `nextPrompt`'s own
+ * comment records that "her library carries none of those values" — so passing one
+ * could only ever narrow the pool to nothing.
  */
-export async function promptFor(studentId: number, category?: string) {
-  const prompt = await messaging.nextPrompt(studentId, category);
-  if (!prompt) return null;
-
+export async function promptFor(studentId: number) {
   /*
-   * ── THE DELIVERY THE REVEAL CYCLE CANNOT RECONSTRUCT ───────────────────
-   * IG-RC10's hard filter 0: an absence claim "dies unless prompts in that signal
-   * category were actually delivered". A student shown this prompt who writes nothing
-   * leaves no trace at all otherwise, and "never asked" and "asked and ignored" mean
-   * opposite things about the same silence.
-   *
-   * The answer is always recoverable from the entry text. This is not. So it is written
-   * here, at the moment of asking, and `logDelivery` returns null rather than throwing —
-   * a broken log must never be the reason a student is not asked a question.
+   * Read rather than defaulted, for the reason `engagement.ts` states at the sibling
+   * call site: an empty tag list is not a safe default when the matcher fails open.
+   * A student the platform cannot classify gets no prompt rather than everyone's.
    */
-  await promptLog.logDelivery(db as never, {
-    studentId,
-    promptId: prompt.id,
-    channel: "micro_journal",
-    signalCategory: promptLog.signalCategoryFor(prompt.category),
-    // Null until Danielle approves the tiers; `promptId` is what makes the backfill work.
-    tier: null,
+  const to = await messaging.recipient(studentId);
+  if (!to) return null;
+
+  const prompt = await messaging.nextLibraryPrompt(studentId, {
+    // The log page is the micro-journal surface; heartbeat is the weekly emailed pool.
+    cadence: "micro_journal",
+    studentTags: populationTagsFor(to.professionalStatus as any, to.pathway as any),
+    dailyCap: false,
   });
 
-  return { id: prompt.id, text: prompt.promptText, category: prompt.category };
+  return prompt ? { id: prompt.id, text: prompt.promptText, category: prompt.category } : null;
 }
 
 /* ── Wing's response ────────────────────────────────────────────────────── */
 
-const RESPONSE_SYSTEM = `You are Wing, a career positioning partner. A student has just written an entry in their life log — a running record of what is happening in their career and life.
+/*
+ * ── THE SAFETY BLOCK WAS MISSING FROM THIS SURFACE ───────────────────────
+ * `compileSafety()` is compiled into intake and into every Foundation turn, and was absent
+ * here — on the one surface built for a student to write about whatever is happening in
+ * their life, several times a week, unprompted and unstructured.
+ *
+ * The register list below made that worse than neutral rather than merely incomplete:
+ * "Something went badly → empathise. Do not reach for a silver lining" is the branch a
+ * distressed entry falls into, so the reply came back warm, on-voice, and about career
+ * material.
+ *
+ * It goes first, as it does everywhere else — the rules are "before anything else" in
+ * their own words, and a safety instruction after a voice instruction reads as a caveat.
+ */
+const RESPONSE_SYSTEM = `${compileSafety()}
+
+You are Wing, a career positioning partner. A student has just written an entry in their life log — a running record of what is happening in their career and life.
 
 Write a short reply. Two or three sentences, never more.
 
@@ -104,7 +147,9 @@ NEVER
 - Do not summarise back what they just told you. They know what they wrote.
 
 If their SLI is given below, you may connect the entry to it — but only when the
-connection is real. A forced link is worse than no link.`;
+connection is real. A forced link is worse than no link.
+${IG_MJ04_REGISTER}
+${LOG_REPLY_CONTRACT}`;
 
 /**
  * Generates Wing's reply to an entry.
@@ -114,15 +159,27 @@ connection is real. A forced link is worse than no link.`;
  * sharing!" would be the hollow-enthusiasm anti-pattern shipped by accident,
  * and the student cannot tell the difference between that and a real reply.
  */
+/**
+ * Wing's reply, plus what it judged about the entry.
+ *
+ * Returns the judgement rather than only the text because IG-MJ04 and IG-S01 both key on
+ * it, and a caller that got a string back would have to re-read the entry to find out
+ * whether a hold should open.
+ */
 export async function composeResponse(
   studentId: number,
   entryText: string,
-): Promise<string | null> {
+): Promise<{ reply: string | null; safetyHold: boolean; distress: boolean }> {
   try {
     const [sli] = await db
       .select({ statement: sliRecords.statement })
       .from(sliRecords)
-      .where(and(eq(sliRecords.studentId, studentId), eq(sliRecords.status, "selected" as any)))
+      .where(
+        and(
+          eq(sliRecords.studentId, studentId),
+          inArray(sliRecords.status, LIVE_SLI_STATUSES as any),
+        ),
+      )
       .orderBy(desc(sliRecords.createdAt))
       .limit(1);
 
@@ -141,11 +198,21 @@ export async function composeResponse(
       messages: [{ role: "user", content: `${context}\n\nTheir entry:\n${entryText}` }],
     });
 
-    const text = result.text?.trim();
-    return text || null;
+    /*
+     * The same JSON path intake uses, including its tolerance for a model that wraps the
+     * object in a fence or a sentence. A parse failure yields an empty judgement — no
+     * reply and both flags false — and the entry is still saved, which is the behaviour
+     * this function already had when the model was unavailable.
+     */
+    const judgement = parseLogReply(parseJsonResponse(result.text ?? ""));
+    return {
+      reply: judgement.reply || null,
+      safetyHold: judgement.safetyHold,
+      distress: judgement.distress,
+    };
   } catch (err) {
     log(`life log response failed for student ${studentId}: ${(err as Error).message}`, "lifelog");
-    return null;
+    return { reply: null, safetyHold: false, distress: false };
   }
 }
 
@@ -172,39 +239,62 @@ export async function createEntry(params: NewEntry) {
     })
     .returning();
 
-  /*
-   * Closes the delivery this answers, or records an unprompted entry as its own event.
-   * Before the model call, on the rule this file already follows for the entry itself:
-   * what the student wrote survives a failure in what Wing says back.
-   */
-  await promptLog.logResponse(db as never, {
-    studentId: params.studentId,
-    promptId: params.promptId ?? null,
-    channel: "micro_journal",
-    text: entry.entryText,
-    at: entry.createdAt ?? new Date(),
-  });
+  const judged = await composeResponse(params.studentId, entry.entryText);
 
-  const response = await composeResponse(params.studentId, entry.entryText);
-
-  if (response) {
+  if (judged.reply) {
     await db
       .update(lifeLogEntries)
-      .set({ wingResponse: response })
+      .set({ wingResponse: judged.reply })
       .where(eq(lifeLogEntries.id, entry.id));
   }
 
-  // Writing an entry is activity, so it resets the dormancy clock — otherwise
-  // a student logging diligently every week would still be chased as dormant
-  // for not having opened a session.
-  try {
-    const engagement = await import("./engagement");
-    await engagement.resetDormancy(params.studentId);
-  } catch (err) {
-    log(`dormancy reset failed after entry: ${(err as Error).message}`, "lifelog");
+  const actions = postEntryActions(judged);
+
+  /*
+   * IG-S01.
+   *
+   * No `reportsCrisis()` here, and that is deliberate. It was, and a mutation replacing
+   * this whole condition with `if (judged.safetyHold)` changed nothing — because
+   * `parseLogReply` has already forced the value to a real boolean with `=== true`, which
+   * is exactly what `reportsCrisis` does. The guard read as a protection that was not
+   * there, and a redundant guard is worse than none: a mutation test cannot tell it from
+   * its absence.
+   *
+   * The strict read still happens; it happens once, at the parse, where it is tested
+   * directly against the string "false" and nine other near misses.
+   *
+   * Wrapped so a failure to record the hold cannot lose the student's entry, which is
+   * already written above.
+   */
+  if (actions.openHold) {
+    try {
+      await openHold(db as any, params.studentId, "life log entry");
+      log(`safety hold opened for student ${params.studentId} from a life log entry`, "lifelog");
+    } catch (err) {
+      log(`hold failed after entry: ${(err as Error).message}`, "lifelog");
+    }
   }
 
-  return { ...entry, wingResponse: response };
+  /*
+   * IG-MJ04: "wait for the next scheduled prompt cycle."
+   *
+   * Resetting dormancy is how an entry tells the rest of the platform the student is
+   * active, and it is right for an ordinary entry. Under distress it is the escalation her
+   * rule forbids — a re-engaged student is one the sequences may chase, so a hard week
+   * would answer itself with more contact from Wing.
+   */
+  if (actions.mayRaiseCadence) {
+    try {
+      const engagement = await import("./engagement");
+      await engagement.resetDormancy(params.studentId);
+    } catch (err) {
+      log(`dormancy reset failed after entry: ${(err as Error).message}`, "lifelog");
+    }
+  } else {
+    log(`cadence left alone for student ${params.studentId}: ${actions.why}`, "lifelog");
+  }
+
+  return { ...entry, wingResponse: judged.reply };
 }
 
 /** Generates a missing reply for an existing entry. */
@@ -222,12 +312,27 @@ export async function backfillResponse(entryId: number): Promise<boolean> {
 
   if (!entry || entry.wingResponse) return false;
 
-  const response = await composeResponse(entry.studentId, entry.entryText);
-  if (!response) return false;
+  const judged = await composeResponse(entry.studentId, entry.entryText);
+  if (!judged.reply) return false;
+
+  /*
+   * The hold is opened here too, and that is not a duplicate. This path runs when the
+   * original call failed — the entry was saved with no reply and nothing was judged — so
+   * this is the FIRST time anything has read those words. `openHold` is idempotent about
+   * an already-open hold, so a retry on an entry that was judged before costs nothing.
+   */
+  if (postEntryActions(judged).openHold) {
+    try {
+      await openHold(db as any, entry.studentId, "life log entry");
+      log(`safety hold opened for student ${entry.studentId} on backfill`, "lifelog");
+    } catch (err) {
+      log(`hold failed on backfill: ${(err as Error).message}`, "lifelog");
+    }
+  }
 
   await db
     .update(lifeLogEntries)
-    .set({ wingResponse: response })
+    .set({ wingResponse: judged.reply })
     .where(eq(lifeLogEntries.id, entryId));
 
   return true;

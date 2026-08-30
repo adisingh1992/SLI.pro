@@ -25,12 +25,16 @@ RUN npm ci
 
 COPY . .
 
-# Client -> dist/public, server -> dist/index.js, migrator -> dist/migrate.js
-# The migrator is bundled so migrations can run as a Container Apps job using
-# this same image, without tsx at runtime.
+# Client -> dist/public, server -> dist/index.js, migrator -> dist/migrate.js,
+# scheduler -> dist/sequences.js
+#
+# The migrator and the scheduler are bundled so both can run as Container Apps
+# jobs using this same image, without tsx at runtime. One image, one tag, one
+# rollback: the hourly job and the app it drives can never be different builds.
 RUN npm run build:client \
  && npm run build:server \
- && npm run build:migrate
+ && npm run build:migrate \
+ && npm run build:sequences
 
 # ── Runtime stage ────────────────────────────────────────────────────────────
 FROM node:20-alpine AS runtime

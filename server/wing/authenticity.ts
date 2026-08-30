@@ -434,6 +434,53 @@ export function checkSpokenVoicePreserved(original: string, edited: string): Fin
   return findings;
 }
 
+/* ── Where the standard runs ────────────────────────────────────────────── */
+
+/**
+ * The surfaces that generate text a student will publish or say out loud, and
+ * whether this standard reaches them.
+ *
+ * Written down because the scope's instruction for the portfolio was "extend its
+ * callers rather than writing a second checker", and a checker with one caller
+ * looks identical to a checker with three from inside the module. The test that
+ * accompanies this list reads the named files, not this list — a surface that
+ * claims "checked" here and does not import `checkAuthenticity` fails.
+ *
+ * `unchecked` rows are the honest half. A snapshot an advisor reads is not
+ * something the student publishes under their own name, which is the property
+ * the standard exists to protect.
+ */
+export const AUTHENTICITY_SURFACES: ReadonlyArray<{
+  file: string;
+  what: string;
+  status: "checked" | "unchecked";
+  note: string;
+}> = [
+  {
+    file: "server/linkedin-content-routes.ts",
+    what: "LinkedIn post drafts",
+    status: "checked",
+    note: "instructed with renderStandardForPrompt, measured, one retry taken only if it scores better",
+  },
+  {
+    file: "server/wing/evidence-portfolio.ts",
+    what: "Behavioural Evidence Portfolio positioning claims",
+    status: "checked",
+    note:
+      "instructed with claimStandardForPrompt, measured per claim, one batched rewrite " +
+      "of the flagged claims only — evidence, competency and turn id are never taken " +
+      "from the rewrite",
+  },
+  {
+    file: "server/wing/advisor-snapshot.ts",
+    what: "the advisor's read of a student",
+    status: "unchecked",
+    note:
+      "deliberately. This is Wing writing to an advisor about a student, not the " +
+      "student publishing under their own name — the standard's premise does not hold",
+  },
+];
+
 /* ── What the three content gates ask for, and what runs ────────────────── */
 
 /**
@@ -506,4 +553,72 @@ ${FLAGGED_VOCABULARY.map((f) => f.phrase).join(", ")}.
 
 9. NOT A LIST OF FRAGMENTS. If it is bulleted, each bullet is a real sentence.
    Four one-line bullets is a slide, not a post.`;
+}
+
+/* ── The same standard, at the length of one sentence ───────────────────── */
+
+/**
+ * The rules of `checkAuthenticity` that can fire on a short piece of text.
+ *
+ * This exists because of a trap. `passes` is `score >= 70`, and one vocabulary
+ * hit costs 12 — so a fifteen-word positioning claim reading "I leveraged my
+ * passion for data to spearhead a pivotal initiative" scores 64 and fails, but
+ * a claim with a single "leverage" scores 88 and PASSES. A caller that gates a
+ * one-sentence claim on `passes` has written a check that cannot fail for the
+ * commonest defect it is looking for.
+ *
+ * The four rules below have no length precondition. The other five do — monotony
+ * needs four sentences, abstraction and first_person need forty words, list_heavy
+ * needs four bullet lines, voice_drift needs two texts — so on a claim they are
+ * silent, and silence is not a pass. Callers working at this length count
+ * findings; they do not read `passes`.
+ *
+ * And the limit that follows from it, worth stating rather than discovering:
+ * "Demonstrates strong leadership skills" produces NO findings. It is four words,
+ * so the length-gated rules stay quiet, and it contains none of the flagged
+ * vocabulary. The check cannot catch an abstract third-person claim. What
+ * prevents that shape is the instruction — rules 4 and 5 of
+ * `claimStandardForPrompt` — and the caller should not read a clean report as
+ * evidence the claim is any good.
+ */
+export const SHORT_TEXT_RULES: ReadonlyArray<Finding["rule"]> = [
+  "vocabulary",
+  "hedging",
+  "connectors",
+  "engagement_bait",
+];
+
+/**
+ * The standard as it applies to a single first-person claim.
+ *
+ * Not a second standard — the same word lists, rendered for a different shape.
+ * `renderStandardForPrompt` is written for a LinkedIn post and four of its nine
+ * rules (engagement bait, sentence-length variation, hashtag walls, bullet
+ * substance) have no meaning for one sentence. Sending them anyway spends prompt
+ * budget instructing a model about hashtags in a JSON claim generator, and an
+ * instruction the output cannot violate teaches the model nothing.
+ *
+ * `checkAuthenticity` is still the checker, and it is deliberately broader than
+ * this instruction: engagement bait is not worth a line here, and is caught if it
+ * somehow appears. The instruction is short so it gets followed; the check is
+ * wide so nothing slips.
+ */
+export function claimStandardForPrompt(): string {
+  return `── THE 360BREW AUTHENTICITY STANDARD, FOR A CLAIM ──────────────────────
+A positioning claim is a sentence the student says out loud to an interviewer
+and is then asked about. Write it the way they would say it.
+
+1. BANNED VOCABULARY. Not one of these, in any form:
+${FLAGGED_VOCABULARY.map((f) => f.phrase).join(", ")}.
+
+2. NO HEDGING. Not "${HEDGES.slice(0, 4).join('", "')}", and nothing like them.
+   A hedged claim is not a claim.
+
+3. NO FILLER CONNECTORS. Not "${GENERIC_CONNECTORS.slice(0, 3).join('", "')}".
+
+4. FIRST PERSON, ALWAYS. "I ran the rota for eleven people", not "demonstrates
+   strong organisational skills". The second one is a performance review.
+
+5. SPECIFIC. A number, a name, a tool, a duration — something only this student
+   could say. "Improved efficiency" is not a claim, it is a category.`;
 }

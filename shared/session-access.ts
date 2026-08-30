@@ -127,28 +127,11 @@ export function outOfOrderNote(
   );
 }
 
-/**
- * The session's opening message, note included.
+/*
+ * `foundationOpening` moved to `shared/session-opening.ts` when IG-UX06 landed.
  *
- * ── WHY THIS FUNCTION EXISTS ─────────────────────────────────────────────
- * Because the route should not be able to get it wrong. The first version left the route
- * to assemble `[guidance, note].filter(Boolean).join()` itself, and the static check that
- * was supposed to protect it only proved the identifier `outOfOrderNote` appeared
- * somewhere in the file — a mutation that computed the note and then dropped it passed.
- *
- * Same lesson as IG-UX05's `Transition` type: make the shape structural rather than
- * checked afterwards. There is now one call, it returns the whole opening, and the note
- * cannot be computed and discarded because the caller never sees it separately.
- *
- * `guidance` is the population's static opener from `server/prompts`. Null is allowed —
- * some sessions have none — and then the note stands alone, which is still better than
- * silence for someone entering out of order.
+ * It is still the single assembly point and still exists for the same reason — the route
+ * must not be able to compute a part and drop it — but the opening now also carries what
+ * Wing already knows, and that belongs with the accumulation table rather than here. This
+ * file keeps the access semantics: what is missing, and the sentence that says so.
  */
-export function foundationOpening(
-  n: FoundationNumber,
-  completed: readonly number[],
-  guidance: string | null,
-): string {
-  const note = outOfOrderNote(n, completed);
-  return [guidance?.trim() || null, note].filter(Boolean).join("\n\n");
-}

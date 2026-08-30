@@ -197,8 +197,28 @@ export type ParsedPrompt = {
   block: string;
   /** Nearest preceding `##` section. */
   section: string;
+  /**
+   * Nearest preceding `#` heading.
+   *
+   * Needed because the heartbeat file puts its two SECTIONs at h1 and its populations at
+   * h2, the opposite way round from the micro-journal library. Without it, Section 4's
+   * heartbeat prompts and Section 5's new-population prompts are indistinguishable — and
+   * they have different cadences.
+   */
+  h1: string;
   /** The `*Signal: …*` line beneath it, when there is one. */
   signal: string | null;
+  /**
+   * Her trailing parenthetical, verbatim, when there is one.
+   *
+   * Section 5 marks its prompts inline — `*(heartbeat)*`, `*(synthesis-cycle only)*`,
+   * `*(heartbeat — requires event-sensitivity flag)*` — and those markers are the only
+   * statement anywhere of which prompts are event-sensitive and which belong to the
+   * monthly rhythm rather than the weekly one. Kept as she wrote it rather than parsed
+   * into flags here: the interpretation belongs to whatever consumes it, and the raw
+   * string is what a reviewer can check against the document.
+   */
+  deliveryMarker: string | null;
   line: number;
 };
 
@@ -214,13 +234,22 @@ export type ParsedPrompt = {
  */
 const NUMBERED = /^(\d{1,3})\.\s+["“](.+?)["”]\s*$/;
 const CODED = /^([A-Z]{1,3}-[A-Z]?\d{2,3})[.:]\s+["“](.+?)["”]/;
-const SIGNAL = /^\*+\s*Signal:\s*(.+?)\s*\*+\s*$/i;
+/*
+ * Two forms, both hers. The micro-journal library wraps the line in asterisks; Section 5
+ * of the heartbeat file writes it bare. A pattern that required the asterisks read every
+ * Section 5 signal as absent — 28 prompts whose behavioural signal she DID supply, filed
+ * as missing.
+ */
+const SIGNAL = /^\*{0,2}\s*Signal:\s*(.+?)\s*\*{0,2}\s*$/i;
+/** Her trailing `*(…)*`, at the end of a prompt line. */
+const MARKER = /\*\((.+?)\)\*\s*$/;
 
 export function parsePrompts(text: string): ParsedPrompt[] {
   const lines = text.split("\n");
   const out: ParsedPrompt[] = [];
   let section = "";
   let block = "";
+  let h1 = "";
 
   for (let i = 0; i < lines.length; i++) {
     const raw = lines[i];
@@ -232,6 +261,12 @@ export function parsePrompts(text: string): ParsedPrompt[] {
     }
     if (line.indexOf("## ") === 0) {
       section = line.slice(3).trim();
+      block = "";
+      continue;
+    }
+    if (line.indexOf("# ") === 0) {
+      h1 = line.slice(2).trim();
+      section = "";
       block = "";
       continue;
     }
@@ -252,7 +287,17 @@ export function parsePrompts(text: string): ParsedPrompt[] {
       }
     }
 
-    out.push({ id, text: body, block, section, signal, line: i + 1 });
+    const m = line.match(MARKER);
+    out.push({
+      id,
+      text: body,
+      block,
+      section,
+      h1,
+      signal,
+      deliveryMarker: m ? m[1].trim() : null,
+      line: i + 1,
+    });
   }
 
   return out;

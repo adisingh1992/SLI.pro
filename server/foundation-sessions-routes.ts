@@ -8,7 +8,6 @@ import * as orchestrator from "./orchestrator";
 import * as store from "./wing/session-store";
 import type { WingSessionType, ArtifactType } from "./wing/session-store";
 import { isAiTurn } from "./wing/turn-type";
-import * as objectiveRuntime from "./wing/objective-runtime";
 import * as engagement from "./wing/engagement";
 import type { PriorSessionContext } from "./prompts/types";
 import * as docStore from "./wing/document-store";
@@ -19,7 +18,13 @@ import * as voice from "./wing/voice";
 import { compileSafety, safetyTokenEstimate } from "./wing/safety-rules";
 import * as scoring from "./wing/scoring";
 import * as classifier from "./wing/classifier";
-import { foundationOpening, isFoundationNumber } from "@shared/session-access";
+import { isFoundationNumber } from "@shared/session-access";
+import { foundationOpening, type WingKnows } from "@shared/session-opening";
+import {
+  FOUNDATION_TRANSITIONS,
+  renderTransition,
+  type TransitionTrack,
+} from "@shared/transitions";
 
 /**
  * Foundation Sessions — running natively on the Wing schema.
@@ -135,6 +140,55 @@ const ARTIFACT_FOR_SESSION: Record<number, ArtifactType> = {
   2: "credibility_assessment",
   3: "signature_story",
 };
+
+/**
+ * The transition message for a session that has just completed.
+ *
+ * ── WHERE EACH OUTCOME COMES FROM ────────────────────────────────────────
+ * Named per session rather than guessed at, because the acknowledgment has to name
+ * the OUTPUT — "That's a real piece of work" without the output is praise for effort,
+ * which is the thing IG-UX05 is written against.
+ *
+ * Session 3 passes null ON PURPOSE. Its artifact carries a signature story, a
+ * methodology and content angles; it carries no positioning claim. Rendering the
+ * story's title after "Your positioning claim:" would put a wrong word in front of
+ * the student at the moment they finish, so the transition falls back to its own
+ * authored line — "Your positioning stories are captured" — which is true.
+ *
+ * ── AND WHY THE TRACK IS ONLY EVER TWO OF ITS THREE VALUES ───────────────
+ * Her adaptations are undergraduate (warmer) and executive (minimal acknowledgment,
+ * heavier on connection). Undergraduate resolves from `professional_status`.
+ * Executive does not: `mid_career_or_senior` emits BOTH `mid_career` and `executive`
+ * as population tags, so reading the tag would apply the executive register to every
+ * mid-career student. That error is not symmetric — the register work made the same
+ * call for the same reason: minimal scaffolding aimed at a mid-career person reads as
+ * brusque, while the reverse costs a few extra words. So it stays `default` until the
+ * platform holds a seniority signal that distinguishes them.
+ */
+function transitionFor(
+  sessionNumber: number,
+  completionData: any,
+  professionalStatus: string | null | undefined,
+): string | null {
+  const t = FOUNDATION_TRANSITIONS[sessionNumber as 1 | 2 | 3];
+  if (!t) return null;
+
+  const outcome =
+    sessionNumber === 1
+      ? (completionData?.primaryFunction ?? null)
+      : sessionNumber === 2
+        ? /*
+           * Rendered as "Tier 2", not "2" — the field is a bare tier number and the
+           * sentence reads "documented at ${outcome}".
+           */
+          (completionData?.credibilityTier ? `Tier ${completionData.credibilityTier}` : null)
+        : null;
+
+  const track: TransitionTrack =
+    professionalStatus === "undergraduate_or_recent_grad" ? "undergraduate" : "default";
+
+  return renderTransition(t, typeof outcome === "string" && outcome.trim() ? outcome : null, track);
+}
 
 function sessionTypeFor(n: number): WingSessionType {
   return `foundation_${n}` as WingSessionType;
@@ -277,6 +331,87 @@ NOTE: The user has already established their credibility position in Session 2.
     console.error("Error formatting previous sessions context:", error);
     return "";
   }
+}
+
+/**
+ * What Wing knows about this student, for IG-UX06's opening.
+ *
+ * ── WHY NOT `buildPriorSessionContexts` ──────────────────────────────────
+ * That one filters `n < currentSessionNumber`, which is right for prompt assembly — a
+ * session is briefed on what came before it — and wrong here. Ruling 1 removed the order,
+ * so a student can finish Session 3 and then open Session 1, and an opening that ignored
+ * their story because of its number would be the generic introduction this gate forbids.
+ * Widening that function instead would have changed what every turn is briefed on.
+ *
+ * ── WHAT COUNTS AS UNREADABLE ────────────────────────────────────────────
+ * A session marked finished whose record yields nothing citable. Her failure path is about
+ * a returning user whose prior data cannot be reached, and this is that condition as the
+ * platform can actually observe it: the row says done, the content says nothing.
+ */
+async function buildWingKnows(studentId: number, legacyUserId: number): Promise<WingKnows> {
+  const rows = await store.listSessions(studentId, store.FOUNDATION_TYPES);
+  const completed: number[] = [];
+  const facts: Pick<WingKnows, "fn" | "evidence" | "story"> = { fn: null, evidence: null, story: null };
+  let unreadable = false;
+
+  for (const row of rows) {
+    if (row.status !== "completed") continue;
+    const n = store.foundationNumber(row.sessionType);
+    if (!isFoundationNumber(n)) continue;
+    completed.push(n);
+
+    const artifact = await store.getArtifact(row.id, ARTIFACT_FOR_SESSION[n]);
+    const data = (artifact?.content ?? null) as any;
+
+    /*
+     * Days, floored, from the completion timestamp. Null when the row does not carry one —
+     * the citation then omits the timing rather than inventing "recently".
+     */
+    const finishedAt = row.completedAt ? new Date(row.completedAt).getTime() : null;
+    const daysAgo =
+      finishedAt && Number.isFinite(finishedAt)
+        ? Math.max(0, Math.floor((Date.now() - finishedAt) / 86_400_000))
+        : null;
+
+    /*
+     * One value per session, and each one is what her Part 2.5 table names for that row:
+     * the function, what credibility rests on, the strongest story. `proofBullets` before
+     * `brandClaim` because a bullet is the evidence and the claim is what it supports.
+     */
+    const value: string | null =
+      n === 1
+        ? (data?.primaryFunction ?? null)
+        : n === 2
+          ? (data?.proofBullets?.[0] ?? data?.brandClaim ?? null)
+          : (data?.signatureStory?.title ?? null);
+
+    if (typeof value === "string" && value.trim()) {
+      const fact = { value: value.trim(), sourceSession: n, daysAgo };
+      if (n === 1) facts.fn = fact;
+      else if (n === 2) facts.evidence = fact;
+      else facts.story = fact;
+    } else {
+      unreadable = true;
+    }
+  }
+
+  let hasResume = false;
+  let hasLinkedIn = false;
+  try {
+    const documents = await docStore.getDocuments(legacyUserId);
+    hasResume = documents.some((d: any) => d.type === "resume");
+    hasLinkedIn = documents.some((d: any) => d.type === "linkedin");
+  } catch (error) {
+    /*
+     * Documents only move the opening between "nothing" and her documents row, and a
+     * failed read there must not cost the student a session start. Treated as absent,
+     * which understates what Wing holds — the safe direction, since the alternative is
+     * claiming to have read a document Wing could not open.
+     */
+    console.warn("[foundation] could not read documents for the opening", error);
+  }
+
+  return { hasResume, hasLinkedIn, completed, ...facts, unreadablePriorWork: unreadable };
 }
 
 /**
@@ -575,11 +710,24 @@ export function registerFoundationSessionsRoutes(app: Express) {
         if (!session) return res.status(404).json({ error: "Session not found" });
 
         /*
-         * No status check. This answered `403 "Complete the previous session first"`,
-         * which was both the C1 violation ruling 1 resolved and — in its own error
-         * string — an IG-UX03 one.
+         * No PREREQUISITE check. This answered `403 "Complete the previous session
+         * first"`, which was both the C1 violation ruling 1 resolved and — in its own
+         * error string — an IG-UX03 one. Any session is enterable at any time.
+         *
+         * ── BUT A FINISHED SESSION IS NOT RESTARTED ───────────────────────────
+         * `startSession` unconditionally sets `in_progress` and a fresh `startedAt`,
+         * so with no guard at all, reopening a completed session demoted it. That is
+         * not a cosmetic status change: `buildWingKnows` and `buildPriorSessionContexts`
+         * both key on `status === "completed"`, so the next session would open having
+         * silently forgotten the one the student had just re-read.
+         *
+         * A2 asks for exactly this — "students who have completed a session should be
+         * able to revisit it without losing progress" — and the revisit is what was
+         * losing it. Reading a finished session is not starting it; the turn route
+         * already admits `completed` sessions, so a student can still add to one.
          */
-        const updated = await store.startSession(session.id);
+        const updated =
+          session.status === "completed" ? session : await store.startSession(session.id);
 
         // Opening guidance is Wing's first turn — captured as ai_prompt.
         if ((await store.countTurns(session.id)) === 0) {
@@ -597,10 +745,17 @@ export function registerFoundationSessionsRoutes(app: Express) {
            * one message and the transcript carries one `ai_prompt`. IG-UX06 replaces the
            * whole opening; this is the floor until then.
            */
+          /*
+           * IG-UX06: the opening reads what Wing already holds. This used to be the
+           * population's static string alone, so a student who had finished two sessions
+           * was greeted by copy written for someone Wing had never met.
+           */
           const opening = isFoundationNumber(sessionNumber)
-            ? await store
-                .completedFoundationNumbers(studentId)
-                .then((done) => foundationOpening(sessionNumber, done, initialMessage))
+            ? foundationOpening(
+                sessionNumber,
+                await buildWingKnows(studentId, legacyUserId),
+                initialMessage,
+              )
             : (initialMessage ?? "");
 
           if (opening) {
@@ -860,10 +1015,9 @@ export function registerFoundationSessionsRoutes(app: Express) {
          *   turns 2.9s | context 6.0s | prompt 11.2s | first token 14.1s
          *
          * The 5.2s "prompt" phase was not prompt assembly. Completion criteria
-         * are cached and the objective renderer is off for this population, so
-         * almost all of that was this one model call, which had only been
-         * running since 6.0s. Started here it overlaps the context reads as
-         * well, and the phase collapses to whatever is left over.
+         * are cached, so almost all of that was this one model call, which had
+         * only been running since 6.0s. Started here it overlaps the context
+         * reads as well, and the phase collapses to whatever is left over.
          *
          * A promise created and awaited later is only a win if it is created
          * at the earliest point its inputs exist. Otherwise it is a serial
@@ -947,41 +1101,29 @@ export function registerFoundationSessionsRoutes(app: Express) {
         );
 
         /*
-         * EXPERIMENT — assemble the prompt from objectives instead of the
-         * prompt file, for allowlisted populations only.
+         * One prompt path, not two.
          *
-         * Off unless OBJECTIVE_RENDERER_POPULATIONS names this student's
-         * population. Returns null on anything unexpected — flag off, no
-         * published objective set, or an error — and the legacy prompt runs
-         * exactly as before. A student mid-session must never see this break.
+         * There used to be a `buildObjectivePrompt` call in front of this,
+         * assembling the prompt from a published objective set for populations
+         * named in `OBJECTIVE_RENDERER_POPULATIONS`. That allowlist was never
+         * set, so the branch never once ran for a student, and it was retired in
+         * Tier 1 part 4 along with the objective sets themselves (migration
+         * 0032). The comparison it existed to make — a focused ~1,500-character
+         * prompt against the 22,000-character file — is the same comparison the
+         * v2 Foundation cards make, and those are the ones that have been built
+         * and audited.
          *
-         * The comparison this exists to make: a focused ~1,500-character
-         * prompt carrying one objective and its cards, against the 22,000-
-         * character file that carries everything at once. Which produces better
-         * coaching is a question no amount of design settles.
+         * Left as one expression on purpose. A `?? legacy` fallback whose left
+         * side is never non-null reads, in review, exactly like a live A/B.
          */
-        const objectivePrompt = await objectiveRuntime.buildObjectivePrompt({
-          sessionId: session.id,
-          sessionType: sessionTypeFor(sessionNumber),
-          sessionTitle: `Foundation Session ${sessionNumber}`,
-          professionalStatus,
-          identity: promptSet.getSystemPrompt({ sessionNumber }).slice(0, 600),
-          studentContext: [resumeSummary, ...priorSessions.map((p) => p.conversationTranscript)]
-            .filter(Boolean)
-            .join("\n\n"),
+        const basePrompt = promptSet.getSystemPrompt({
+          sessionNumber,
+          resumeSummary,
+          priorSessions: priorSessions.length > 0 ? priorSessions : undefined,
+          // Same row the analysis reads, rendered for the conversation. This
+          // pairing is the whole point: one definition, two renderings.
           completionCriteria: conversationCriteria,
         });
-
-        const basePrompt =
-          objectivePrompt?.prompt ??
-          promptSet.getSystemPrompt({
-            sessionNumber,
-            resumeSummary,
-            priorSessions: priorSessions.length > 0 ? priorSessions : undefined,
-            // Same row the analysis reads, rendered for the conversation. This
-            // pairing is the whole point: one definition, two renderings.
-            completionCriteria: conversationCriteria,
-          });
 
         // Everything up to here is prompt assembly proper. Marked separately
         // from the engine wait below so the two are never confused again — the
@@ -1182,9 +1324,9 @@ export function registerFoundationSessionsRoutes(app: Express) {
          * the student is looking at.
          *
          * It used to run BEFORE the client was told the turn had ended, which
-         * meant two further model calls — objective evidence, then a
-         * full-transcript completion analysis — sat between the last token
-         * appearing on screen and the input becoming usable again. The reply
+         * meant two further model calls — objective evidence, since retired,
+         * then a full-transcript completion analysis — sat between the last
+         * token appearing on screen and the input becoming usable again. The reply
          * was visibly complete and the composer stayed disabled for several
          * more seconds, every single turn. That is the "takes super long"
          * complaint, and it was never the conversation being slow.
@@ -1243,23 +1385,17 @@ export function registerFoundationSessionsRoutes(app: Express) {
         ];
 
         /*
-         * Which objectives this turn satisfied — the measurement half of the
-         * experiment, and the reason it is worth running at all.
+         * `recordObjectiveEvidence` ran here — one mid-tier call per human turn,
+         * judging which objectives the transcript had satisfied. It was gated to
+         * the same empty allowlist as the prompt half above, so it never wrote a
+         * row, and it went with the rest of the renderer in Tier 1 part 4.
          *
-         * Attributed to the HUMAN turn, not Wing's reply: the student is who
-         * satisfies an objective. Costs one mid-tier call per turn, which is
-         * why it is gated to allowlisted populations. Never throws — losing a
-         * data point is acceptable, losing the session is not.
+         * What it was for is still the right idea and is worth carrying forward:
+         * per-objective satisfaction rates are the only honest way to compare a
+         * conversation change between cohorts, because replay cannot work when
+         * changing what Wing says changes what the student says next. The v2
+         * equivalent is `gate_audit_findings`, which is populated and reviewed.
          */
-        await objectiveRuntime.recordObjectiveEvidence({
-          sessionId: session.id,
-          sessionType: sessionTypeFor(sessionNumber),
-          professionalStatus,
-          turnId: humanTurn.id,
-          transcript: allMessages
-            .map((m) => `${m.role.toUpperCase()}: ${m.content}`)
-            .join("\n\n"),
-        });
 
         const completionCheck = await checkSessionCompletion(
           legacyUserId,
@@ -1285,6 +1421,23 @@ export function registerFoundationSessionsRoutes(app: Express) {
               type: "session_completed",
               artifactType: ARTIFACT_FOR_SESSION[sessionNumber],
               content: completionCheck.completionData,
+              /*
+               * IG-UX05, and A2's "contextual micro-copy at every transition: what
+               * the next section does, approximately how long it takes, and what it
+               * will reveal."
+               *
+               * The three parts are hers and so is their order — acknowledgment,
+               * connection, time estimate — because "these three elements, in this
+               * order, produce the satisfaction-clarity-motivation sequence". Time
+               * first reads as a schedule; connection first reads as a lecture.
+               *
+               * Rendered server-side rather than left to the client, for the reason
+               * the session opening is: it quotes the student's own outcome, and a
+               * client that assembles it needs the artifact's field names, which
+               * makes the copy depend on two files agreeing. This is the same event
+               * that already carries the artifact.
+               */
+              transition: transitionFor(sessionNumber, completionCheck.completionData, professionalStatus),
             })}\n\n`,
           );
         }
@@ -1334,46 +1487,42 @@ export function registerFoundationSessionsRoutes(app: Express) {
   );
 
   /** Status updates (e.g. manual completion from admin tooling). */
-  app.patch(
-    "/api/foundation-sessions/:sessionNumber",
-    isAuthenticated,
-    async (req: Request, res: Response, next: NextFunction) => {
-      try {
-        const sessionNumber = parseSessionNumber(req.params.sessionNumber);
-        if (!sessionNumber) {
-          return res.status(400).json({ error: "Invalid session number. Must be 1, 2, or 3" });
-        }
-
-        const studentId = await store.studentIdFor(req.user as any);
-        const session = await store.getSession(studentId, sessionTypeFor(sessionNumber));
-        if (!session) return res.status(404).json({ error: "Session not found" });
-
-        const { status } = req.body ?? {};
-        /*
-         * `locked` is gone from this list, not from the enum. Ruling 1 removed the only
-         * thing that read it, so accepting a write of it would leave a field asserting a
-         * state nothing enforces — the failure shape this codebase keeps producing.
-         * Migration 0027 flips the rows that already carry it.
-         */
-        const allowed = ["available", "in_progress", "completed", "ended_early"];
-        if (status && !allowed.includes(status)) {
-          return res.status(400).json({ error: `status must be one of ${allowed.join(", ")}` });
-        }
-
-        let updated = session;
-        if (status === "completed") {
-          updated = await store.completeSession(session.id);
-        } else if (status) {
-          updated = await store.updateSessionStatus(session.id, status);
-        }
-
-        res.json(toApiSession(updated));
-      } catch (error) {
-        console.error("Error updating foundation session:", error);
-        next(error);
-      }
-    },
-  );
+  /*
+   * ── PATCH /api/foundation-sessions/:n IS GONE ────────────────────────────
+   * It took a `status` from the request body and wrote it, behind
+   * `isAuthenticated`. It resolved the student from `req.user`, so it was never
+   * a way into somebody else's sessions — what it was is a way for a student to
+   * assert their own outcome.
+   *
+   * `status: "completed"` was the damaging one. Completion is EARNED here: the
+   * turn path runs `checkSessionCompletion` over the whole transcript, and only
+   * where that says so does it write the session artifact and then complete the
+   * session. The two always travel together, in that order. This route called
+   * `completeSession` on its own — so a student could mark Foundation 2 done in
+   * one request, with no transcript behind it and, more to the point, no
+   * artifact. A session that is complete and has produced nothing is not a
+   * skipped session, it is a hole in the record every later surface reads.
+   *
+   * Removed rather than re-guarded. Nothing called it — not the dashboard, not
+   * the Foundation page, not the chat page, which use POST `/start`,
+   * POST `/end-early` and the stream. Every transition it offered already has an
+   * owner that does the work the transition implies:
+   *
+   *   available     ensureFoundationArc, and positioning-refresh on a re-open
+   *   in_progress   POST /api/foundation-sessions/:n/start
+   *   ended_early   POST /api/foundation-sessions/:n/end-early, which seals the
+   *                 transcript and writes the artifact first
+   *   completed     the turn path, after checkSessionCompletion agrees
+   *
+   * Putting it back under `isAdmin` would not have worked as written either: the
+   * handler resolves the student from `req.user`, so an admin calling it would
+   * have patched their own record. An admin override, if one is ever wanted,
+   * needs a target student in the path and belongs with the other
+   * `/api/admin/users/:userId/...` routes.
+   *
+   * `api-contracts` enforces the rule this leaves behind: a session status is
+   * never taken from a request body.
+   */
 
   /*
    * Session timer.

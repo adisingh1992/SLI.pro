@@ -3,7 +3,6 @@ import { db } from "../db";
 import { storage } from "../storage";
 import {
   contentDrafts,
-  evidencePortfolioItems,
   freshnessReports,
   linkedinOptimizations,
 } from "@shared/wing-schema";
@@ -301,44 +300,16 @@ export async function createFreshnessReport(data: {
   return { ...row, userId: data.userId };
 }
 
-/* ── Behavioral Evidence Portfolio (feature list A4) ───────────────────── */
-
-/**
- * Each item ties a positioning claim to evidence from the student's own
- * stories and a NACE competency. `sourceTurnId` extends provenance into the
- * product's outputs — the claim can cite the exact human turn it came from.
+/*
+ * The Behavioural Evidence Portfolio (A4) is NOT here.
+ *
+ * Two functions used to be — `addEvidenceItem` and `getEvidencePortfolio` — a
+ * second, unchecked writer into `evidence_portfolio_items` that never acquired a
+ * caller. `wing/evidence-portfolio.ts` is the one that did, and it is the one that
+ * runs every claim through `authenticity.ts` before it is stored.
+ *
+ * They are removed rather than left dormant. An insert path that skips the
+ * authenticity check is exactly the thing somebody reaches for when the checked one
+ * looks like more work, and a claim that entered through it would read in the UI as
+ * though it had passed.
  */
-export async function addEvidenceItem(data: {
-  userId: number;
-  sliId?: number | null;
-  positioningClaim: string;
-  evidence: string;
-  competencyCategory: string;
-  sourceSessionId?: number | null;
-  sourceTurnId?: number | null;
-}) {
-  const studentId = await studentFor(data.userId);
-  const [row] = await db
-    .insert(evidencePortfolioItems)
-    .values({
-      studentId,
-      sliId: data.sliId ?? null,
-      positioningClaim: data.positioningClaim,
-      evidence: data.evidence,
-      competencyCategory: data.competencyCategory,
-      sourceSessionId: data.sourceSessionId ?? null,
-      sourceTurnId: data.sourceTurnId ?? null,
-      sourceType: "ai_generated",
-    })
-    .returning();
-  return row;
-}
-
-export async function getEvidencePortfolio(userId: number) {
-  const studentId = await studentFor(userId);
-  return db
-    .select()
-    .from(evidencePortfolioItems)
-    .where(eq(evidencePortfolioItems.studentId, studentId))
-    .orderBy(desc(evidencePortfolioItems.createdAt));
-}

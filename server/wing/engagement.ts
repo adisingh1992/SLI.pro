@@ -1,8 +1,12 @@
-import { and, desc, eq, sql } from "drizzle-orm";
+import { and, desc, eq, inArray, sql } from "drizzle-orm";
 import { db } from "../db";
 import { sessions, sessionArtifacts, sliRecords, students, users } from "@shared/wing-schema";
 import { log } from "../logger";
 import * as messaging from "./messaging-store";
+import { intervalDaysAt } from "./prompt-cadence";
+import { populationTagsFor } from "./population-tags";
+import { LIVE_SLI_STATUSES } from "./sli-store";
+import { renderOpener } from "./opener";
 
 /**
  * Engagement sequences — the triggers behind Feature List B3.
@@ -36,6 +40,21 @@ export async function onRegistered(studentId: number): Promise<void> {
   try {
     const to = await messaging.recipient(studentId);
     if (!to?.email) return;
+
+    /*
+     * ── DORMANCY IS ENROLLED HERE, NOT ON THE FIRST SIGN OF LIFE ──────────
+     * `resetDormancy` creates the sequence row, and its only two callers were
+     * completing a session and writing a log entry. So the day-14/19/24 sequence
+     * could only ever reach a student who had already done something — and the
+     * population S3 exists for is the one that registers and then does not.
+     * They had no row, so nothing was ever due, and the runner had nothing to
+     * find. A re-engagement sequence that cannot reach the disengaged.
+     *
+     * It sits ABOVE the three early returns below on purpose. Put after them, a
+     * student whose welcome mail failed to send would be un-enrolled as well as
+     * un-welcomed, which is the same bug with a smaller blast radius.
+     */
+    await resetDormancy(studentId);
 
     if (await messaging.alreadySent(studentId, "welcome_1")) return;
 
@@ -122,7 +141,7 @@ export async function onSessionCompleted(params: {
         .where(
           and(
             eq(sliRecords.studentId, params.studentId),
-            eq(sliRecords.status, "selected" as any),
+            inArray(sliRecords.status, LIVE_SLI_STATUSES as any),
           ),
         )
         .orderBy(desc(sliRecords.createdAt))
@@ -337,13 +356,69 @@ export async function runDueSequences(now = new Date()): Promise<{ sent: number;
       if (item.sequenceKey === "life_log") {
         const step = item.currentStep + 1;
 
-        const daysRunning = item.startedAt
-          ? (now.getTime() - new Date(item.startedAt).getTime()) / 86400000
-          : 0;
-        const cadenceDays = daysRunning < 30 ? 5 : 7;
+        /*
+         * Her Triggers 2 and 3: "every 5 days for first month, then weekly".
+         *
+         * The interval was a ternary here — `daysRunning < 30 ? 5 : 7` — which was
+         * correct and untested, and was then written a second time in
+         * `prompt-cadence.ts` while B2's cadence was being built out. Two copies of one
+         * rule is the drift this codebase keeps producing, so the tested one wins and
+         * this reads from it. The SCHEDULE stays here, in the sequence machinery; only
+         * the interval moved.
+         */
+        const enrolledAt = item.startedAt ? new Date(item.startedAt).getTime() : now.getTime();
+        const cadenceDays = intervalDaysAt(
+          { enrolledAt, lastSentAt: null, onHold: false, active: true },
+          now.getTime(),
+        );
 
-        const lifeLog = await import("./life-log-store");
-        const prompt = await lifeLog.promptFor(item.studentId);
+        /*
+         * Danielle's library, not the legacy pool.
+         *
+         * This called `lifeLog.promptFor`, which routes to `messaging.nextPrompt` — the
+         * older selector, over the 28 seeded rows that predate her library, picked
+         * uniformly at random with no population filter. So every prompt Wing has ever
+         * emailed came from 28 prompts rather than from her 295, and an executive could
+         * be sent an undergraduate prompt.
+         *
+         * `nextLibraryPrompt` applies her rules: audience, cadence, the 2:1 pool ratio,
+         * event-sensitivity and IG-MJ05's one-per-day cap.
+         */
+        /*
+         * Both fields come from `recipient()` on the same round trip as the address.
+         *
+         * An empty tag list is NOT a safe default here: `cardAppliesTo` fails open, so a
+         * student the platform cannot classify matches every prompt — including the
+         * audience-specific ones. That is the direction that sends an executive-only
+         * prompt to an undergraduate, so the values are read rather than defaulted.
+         */
+        const studentTags = populationTagsFor(to.professionalStatus as any, to.pathway as any);
+
+        const prompt = await messaging.nextLibraryPrompt(item.studentId, {
+          cadence: cadenceDays === 7 ? "heartbeat" : "micro_journal",
+          studentTags,
+        });
+
+        /*
+         * Her opener pool, chosen independently of the prompt — "ensuring variety in how
+         * prompts feel even when the underlying question repeats at the 14-day minimum
+         * interval."
+         *
+         * `followingUpOn` is null and will be until something detects a theme worth
+         * following up on. That is Radar's job and Radar is Tier 2, so the post-response
+         * pool is unreachable today. Passed explicitly rather than omitted, so the gap is
+         * a stated null instead of a field somebody forgot.
+         */
+        const [openers, openerState] = await Promise.all([
+          messaging.activeOpeners(),
+          messaging.openerStateFor(item.studentId),
+        ]);
+
+        const opener = renderOpener(
+          openers,
+          { ...openerState, followingUpOn: null },
+          { Name: to.firstName ?? "" },
+        );
 
         const r = await messaging.sendTemplated({
           studentId: item.studentId,
@@ -355,6 +430,19 @@ export async function runDueSequences(now = new Date()): Promise<{ sent: number;
           // query over message_events.prompt_id, so a prompt sent by email
           // counts the same as one shown in the app.
           promptId: prompt?.id ?? null,
+          openerId: opener?.id ?? null,
+          /*
+           * B2 Trigger 2: "Student can reply directly — response logged without
+           * opening app."
+           *
+           * The only send that sets this, and deliberately. A reply address on a
+           * welcome email or a session-completion email invites an answer nothing
+           * reads; on the soft check-in it would be worse, because that message is
+           * the one contact a safety hold permits and is written not to be a
+           * question. This one IS a question — it carries her prompt as its subject
+           * line — so it is the message a reply belongs to.
+           */
+          invitesReply: true,
           vars: {
             ...vars,
             /*
@@ -368,7 +456,18 @@ export async function runDueSequences(now = new Date()): Promise<{ sent: number;
              * The fallback is written to work as both a subject and an opening
              * line, so the email reads as intended rather than as damaged.
              */
-            prompt: prompt?.text ?? "What's happened since we last talked?",
+            prompt: prompt?.promptText ?? "What's happened since we last talked?",
+            /*
+             * Never null, for the same reason `prompt` is not: `render()` leaves an
+             * unresolved variable visible, so a student with no name on file would open
+             * an email that began "{{opener}}".
+             *
+             * The fallback is the template's own former greeting. `renderOpener` returns
+             * null when it cannot fill the name — deliberately, since "Hey [Name]" is
+             * worse than a plain greeting — and this is what that null becomes on the
+             * wire.
+             */
+            opener: opener?.text ?? `Hi ${to.firstName ?? "there"},`,
             logLink: `${APP_URL()}/log`,
           },
         });

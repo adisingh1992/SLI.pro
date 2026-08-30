@@ -37,11 +37,32 @@ BEGIN
   RAISE NOTICE '0027: % session row(s) carrying the retired status', n;
 END $$;
 
-UPDATE "wing"."sessions"
-SET "status" = 'available',
-    "updated_at" = now()
-WHERE "status" = 'locked'
-  AND "session_type" IN ('foundation_1', 'foundation_2', 'foundation_3');
+-- The write is wrapped in its own precondition rather than left to the WHERE clause.
+--
+-- `WHERE "status" = 'locked'` already makes a second run match nothing, and that was the
+-- first version of this file. The contract suite rejected it, correctly: it reads the
+-- SHAPE of a migration, and "this UPDATE happens to be idempotent" is an argument a
+-- reviewer has to reconstruct rather than something the file states. 0010's backfill is
+-- the precedent — it was re-runnable and would still have destroyed data.
+--
+-- So the precondition is explicit. On a replay nothing carries the retired status, the
+-- IF is false, and no row is touched at all — no locks taken, no `updated_at` moved on
+-- rows that did not change.
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1
+    FROM "wing"."sessions"
+    WHERE "status" = 'locked'
+      AND "session_type" IN ('foundation_1', 'foundation_2', 'foundation_3')
+  ) THEN
+    UPDATE "wing"."sessions"
+    SET "status" = 'available',
+        "updated_at" = now()
+    WHERE "status" = 'locked'
+      AND "session_type" IN ('foundation_1', 'foundation_2', 'foundation_3');
+  END IF;
+END $$;
 
 -- Any other session type still carrying it is not something this migration invented a
 -- policy for, so it is reported rather than rewritten.

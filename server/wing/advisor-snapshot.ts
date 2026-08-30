@@ -10,6 +10,7 @@ import {
   users,
 } from "@shared/wing-schema";
 import { log } from "../logger";
+import { LIVE_SLI_STATUSES } from "./sli-store";
 import * as messaging from "./messaging-store";
 
 /**
@@ -164,7 +165,10 @@ export async function compose(studentId: number): Promise<Snapshot | null> {
       .select({ title: sliRecords.title, statement: sliRecords.statement })
       .from(sliRecords)
       .where(
-        and(eq(sliRecords.studentId, studentId), eq(sliRecords.status, "selected" as any)),
+        and(
+          eq(sliRecords.studentId, studentId),
+          inArray(sliRecords.status, LIVE_SLI_STATUSES as any),
+        ),
       )
       .orderBy(desc(sliRecords.createdAt))
       .limit(1);

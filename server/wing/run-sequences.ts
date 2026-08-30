@@ -8,10 +8,18 @@ import { initScript, type ScriptDb } from "../script-init";
  *       npm run wing:run-sequences -- --dry-run
  *
  * ── WHY A SCRIPT AND NOT AN IN-PROCESS TIMER ─────────────────────────────
- * The target is an Azure Function on a timer trigger. Keeping the work in a
- * standalone entry point means that becomes a deployment concern rather than a
- * rewrite — the Function calls this, or a cron does, or a person does while
- * testing on stage. The scheduling decision stays outside the logic.
+ * It runs as an Azure Container Apps job on a schedule trigger, hourly, using
+ * the same image as the app — the pattern the migration job already uses. See
+ * AZURE_SCHEDULER.md for the resource and the cron.
+ *
+ * Hourly rather than daily because `daily_prompt_hour_local` exists: students
+ * choose when they hear from Wing, and a daily run can only honour one hour for
+ * everybody. Every job below asks "who is due now", so running more often costs
+ * queries and sends nothing extra.
+ *
+ * Keeping the work in a standalone entry point means the schedule is a
+ * deployment concern rather than a rewrite — the job calls this, or a cron
+ * does, or a person does while testing on stage.
  *
  * An in-process `setInterval` would also mean every container replica runs the
  * same sequence, and a student gets three copies of the same dormancy email.
@@ -23,6 +31,27 @@ import { initScript, type ScriptDb } from "../script-init";
 const DRY_RUN = process.argv.includes("--dry-run");
 
 let pool: ScriptDb["pool"];
+
+/*
+ * ── WHY FAILURES ARE COLLECTED RATHER THAN THROWN ────────────────────────
+ * Each job below is wrapped so one failure cannot stop the others — a broken
+ * calendar job must not mean nobody gets an internship milestone. That was
+ * right, and on a scheduled job it was also silent: every failure was caught,
+ * logged to a stdout nobody was reading, and the execution recorded as a
+ * success. A job that has been failing for a month looks identical to one that
+ * has nothing to do.
+ *
+ * So failures are collected and the process exits non-zero at the end, after
+ * every job has had its turn. Container Apps records a failed execution, and
+ * the next hourly run catches up whatever was missed.
+ */
+const failures: string[] = [];
+
+function failed(job: string, err: unknown) {
+  const message = (err as Error)?.message ?? String(err);
+  failures.push(`${job}: ${message}`);
+  console.error(`[sequences] ${job} failed: ${message}`);
+}
 
 async function main() {
   ({ pool } = await initScript());
@@ -76,24 +105,58 @@ async function main() {
         `${touchpoints.sent} sent, ${touchpoints.skipped} skipped.`,
     );
   } catch (err) {
-    console.error(`[sequences] calendar touchpoints failed: ${(err as Error).message}`);
+    failed("calendar touchpoints", err);
   }
 
   try {
     const followUps = await events.runEventFollowUps();
     console.log(`[sequences] ${followUps.sent} life-event follow-up(s) sent.`);
   } catch (err) {
-    console.error(`[sequences] event follow-ups failed: ${(err as Error).message}`);
+    failed("event follow-ups", err);
   }
 
   try {
     const milestones = await events.runInternshipMilestones();
-    console.log(`[sequences] ${milestones.sent} internship milestone(s) sent.\n`);
+    console.log(`[sequences] ${milestones.sent} internship milestone(s) sent.`);
   } catch (err) {
-    console.error(`[sequences] internship milestones failed: ${(err as Error).message}\n`);
+    failed("internship milestones", err);
+  }
+
+  /*
+   * ── The one message a safety hold permits ──────────────────────────────
+   *
+   * Her ruling: "If the user hasn't returned after 30 days, Wing sends one soft check-in
+   * — not coaching, not a prompt. 'I'm here when you're ready.' That's the only automated
+   * contact during a hold."
+   *
+   * It rides this runner because it is on a clock and nothing else was going to call it.
+   * `softCheckInIsDue` has existed since the hold store was written, with no caller.
+   *
+   * It is deliberately NOT routed through `maySend`. Everything else Wing sends asks that
+   * function for permission and is refused while a hold is open; this message is the
+   * exception to the suppression, so asking would refuse the one thing the rule requires.
+   */
+  try {
+    const soft = await import("./soft-check-in");
+    const result = await soft.runDueSoftCheckIns();
+    console.log(
+      `[sequences] ${result.sent} soft check-in(s) sent, ` +
+        `${result.candidates} candidate(s) considered.\n`,
+    );
+  } catch (err) {
+    failed("soft check-ins", err);
   }
 
   await pool.end();
+
+  if (failures.length) {
+    console.error(
+      `\n[sequences] ${failures.length} job(s) failed:\n` +
+        failures.map((f) => `    ${f}`).join("\n") +
+        `\n[sequences] The next hourly execution catches up what was missed.\n`,
+    );
+    process.exit(1);
+  }
 }
 
 main().catch((err) => {

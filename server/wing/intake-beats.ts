@@ -501,10 +501,12 @@ export function hasTension(captured: Record<string, unknown>): boolean {
    * evidence, RT-01 sets Q5's presentation against Q6's strength, RT-08 reads the
    * Q5/Q6/Q7 triangle.
    *
-   * This stays a coarse gate. Real tension is a cross-answer comparison per template
-   * and belongs to reveal selection (H-019.5), which supersedes this function. Until
-   * that exists, this is what stops the model claiming an insight it has no grounds
-   * for — which is the job the predicate was written to do.
+   * This stays a coarse gate, and since 30 August it is only the gate. Real tension is
+   * a cross-answer comparison per template and belongs to reveal selection (H-019.5) —
+   * which now runs: `intake-conversation` calls `selectReveal` on every turn this
+   * predicate opens, and a template that cannot quote two of the student's own answers
+   * is refused there. What survives here is the cheap pre-filter that avoids building
+   * facts and evaluating fourteen triggers on a turn with nothing to compare.
    */
   const wants = ["goals", "immediate_priorities", "career_focus", "target_functions"].some(nonEmpty);
   const describesSelf = [

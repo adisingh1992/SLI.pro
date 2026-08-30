@@ -46,6 +46,7 @@ const REQUIRED_TEMPLATES = [
   "positioning_launch_week",
   "calendar_touchpoint_incomplete",
   "calendar_touchpoint_complete",
+  "safety_soft_check_in",
 ];
 
 let pool: ScriptDb["pool"];

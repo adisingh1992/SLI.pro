@@ -5,6 +5,7 @@
 # into one image and served from one Container App.
 #
 #   validate → build image (ACR) → migrate (job) → deploy revision → health gate
+#                                                              → point the scheduler job
 #
 # Prerequisites (see AZURE_DEVOPS_RUNBOOK.md):
 #   - Service connection `slipro-azure-stage` using workload identity federation
@@ -24,7 +25,8 @@ pr:
 
 variables:
   - group: slipro-stage          # AZURE_SUBSCRIPTION, ACR_NAME, RESOURCE_GROUP,
-                                 # CONTAINER_APP_NAME, MIGRATE_JOB_NAME
+                                 # CONTAINER_APP_NAME, MIGRATE_JOB_NAME,
+                                 # SCHEDULER_JOB_NAME
   - name: imageName
     value: slipro-api
   - name: imageTag
@@ -272,3 +274,59 @@ stages:
                 echo "Revision did not become healthy within 5 minutes."
                 echo "Roll back with: az containerapp revision activate ..."
                 exit 1
+
+# ── 5. Scheduler ─────────────────────────────────────────────────────────────
+#
+# Everything Wing sends without being asked runs hourly as a Container Apps job
+# from this same image — see AZURE_SCHEDULER.md for the resource and the cron.
+#
+# AFTER Deploy, and that ordering is the point: if the health gate above fails
+# the app rolls back, and a scheduler already pointed at the new image would
+# keep running the build that was just rejected against a live database.
+#
+# The job is not created here. Creating infrastructure from a deploy pipeline is
+# how an environment gets rebuilt by accident; this only moves the image.
+- stage: Scheduler
+  displayName: Point the scheduler at this build
+  dependsOn: Deploy
+  condition: succeeded()
+  jobs:
+  - deployment: Scheduler
+    displayName: Container Apps job image
+    environment: slipro-stage
+    strategy:
+      runOnce:
+        deploy:
+          steps:
+          - task: AzureCLI@2
+            displayName: Update scheduler job image
+            inputs:
+              azureSubscription: slipro-azure-stage
+              scriptType: bash
+              scriptLocation: inlineScript
+              inlineScript: |
+                set -euo pipefail
+
+                if ! az containerapp job show \
+                     --name "$(SCHEDULER_JOB_NAME)" \
+                     --resource-group "$(RESOURCE_GROUP)" > /dev/null 2>&1; then
+                  echo "No job named $(SCHEDULER_JOB_NAME) in $(RESOURCE_GROUP)."
+                  echo "Create it once with the command in AZURE_SCHEDULER.md, then re-run."
+                  exit 1
+                fi
+
+                az containerapp job update \
+                  --name "$(SCHEDULER_JOB_NAME)" \
+                  --resource-group "$(RESOURCE_GROUP)" \
+                  --image "$(ACR_NAME).azurecr.io/$(imageName):$(imageTag)"
+
+                # What the schedule actually is, in the deploy log, so a cron
+                # somebody changed in the portal is visible here rather than
+                # only in the portal.
+                az containerapp job show \
+                  --name "$(SCHEDULER_JOB_NAME)" \
+                  --resource-group "$(RESOURCE_GROUP)" \
+                  --query "{cron:properties.configuration.scheduleTriggerConfig.cronExpression, \
+                            parallelism:properties.configuration.scheduleTriggerConfig.parallelism, \
+                            retries:properties.configuration.replicaRetryLimit}" \
+                  -o table

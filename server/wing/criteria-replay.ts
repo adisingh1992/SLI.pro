@@ -175,6 +175,26 @@ export async function replay(params: {
             candidate.legacyUserId,
             moduleCode!,
             messages,
+            /*
+             * ── FOUR ARGUMENTS, AND TWO WERE IN THE WRONG SLOTS ──────────────
+             * The signature is (userId, moduleCode, messages, userProfile,
+             * professionalStatus?, criteriaOverride?). This passed
+             * `professionalStatus` into `userProfile` and `rendered` into
+             * `professionalStatus`, leaving `criteriaOverride` undefined.
+             *
+             * So the replay never evaluated the draft — it fell back to the
+             * PUBLISHED criteria and reported how those performed — and the whole
+             * rendered criteria string arrived where a population tag was expected,
+             * which resolved every candidate to mid-career. The screen said the draft
+             * had been tested against real sessions, and nothing about the draft had
+             * been read. It typechecked because both parameters are loosely typed.
+             *
+             * `userProfile` is null on purpose: `checkModuleCompletion` never reads
+             * it, and passing the professional status into it — which is what made
+             * the mistake survive review — put a real value in a slot that ignores
+             * it and made the shape look deliberate.
+             */
+            null,
             candidate.professionalStatus,
             rendered,
           )

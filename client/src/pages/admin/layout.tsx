@@ -175,7 +175,7 @@ const METHODOLOGY: NavItem[] = [
     icon: Target,
     href: "/admin/session-design",
     alsoMatches: ["/admin/objectives", "/admin/criteria"],
-    description: "Objectives, completion criteria and transcript analysis",
+    description: "When a session counts as finished, and how the transcript is read",
   },
   {
     tone: "deep",

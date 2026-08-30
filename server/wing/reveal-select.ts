@@ -430,6 +430,60 @@ export function selectReveal(facts: RevealFacts): Selection {
   };
 }
 
+/* ── Rendering the chosen template for a turn ───────────────────────────── */
+
+/**
+ * The prompt block for a reveal that fired.
+ *
+ * ── WHY THIS DOES NOT CARRY HER COPY ─────────────────────────────────────
+ * Each template names the card that holds the wording — `RT-01` → `H-020` and so on.
+ * Those cards are seeded as candidates and no published sequence carries them, so
+ * reading one today returns nothing. Rendering "the card's copy, when there is any"
+ * would produce a reveal whose quality depends on a database state nobody can see
+ * from the transcript, and this codebase has been caught three times by a surface
+ * that looks live and is empty.
+ *
+ * So this renders the part that IS decided: which shape, resting on which of the
+ * student's own answers. When the intake cards publish, the copy joins it here.
+ *
+ * ── NO CODE REACHES THE PROMPT ───────────────────────────────────────────
+ * Not `RT-01`, not `H-020`. Same rule the gate compiler follows for the same reason:
+ * IG-U005 forbids internal methodology vocabulary in user-facing content, and a model
+ * given a code will eventually say one. The template's NAME is a plain-English
+ * description of a shape and is safe; its identifiers are not, and are not passed.
+ *
+ * ── THE TWO RULES IT ENCODES ─────────────────────────────────────────────
+ * IG-INT12, in v3.3's hardened form: the inference rests on the relationship between
+ * two statements, never on the content of one. And IG-U006 falsifiability: an
+ * observation that would be equally true of anyone is not an observation. Both are
+ * already enforced in `assess` — a template cannot be selected without quotable
+ * material — but the model has to be told, because the selection cannot write the
+ * sentence.
+ */
+export function revealDirective(template: RevealTemplate, facts: RevealFacts): string {
+  const quoted = template.quotes
+    .map((q) => (facts.answers[q] ?? "").trim())
+    .filter((a) => a.length > 0)
+    .map((a) => `  · "${a}"`)
+    .join("\n");
+
+  return `── THE OBSERVATION THIS TURN, AND WHAT IT RESTS ON ──────────────────────
+One shape has been chosen for this reveal from what they have actually said. Use
+that shape and no other, and do not blend it with a second one.
+
+The shape: ${template.name}
+
+Build the observation from the relationship BETWEEN these things they told you —
+never from the content of any one of them on its own:
+
+${quoted}
+
+Quote their own words back to them. The observation has to be one that would be
+plainly false for a different person; that is the whole of why it lands. If you
+cannot name how two of the lines above pull against each other, set
+deliveredInsight false and simply ask the next question.`;
+}
+
 /* ── Table invariants ───────────────────────────────────────────────────── */
 
 /**

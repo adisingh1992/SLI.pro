@@ -22,12 +22,13 @@ import { registerVoiceRoutes } from "./voice-routes";
 import { registerTaggingRoutes } from "./tagging-routes";
 import { registerCriteriaRoutes } from "./criteria-routes";
 import { registerMethodologyRoutes } from "./methodology-routes";
-import { registerObjectiveRoutes } from "./objectives-routes";
 import { registerAdvisorRoutes } from "./advisor-routes";
 import { registerTemplateRoutes } from "./template-routes";
 import { registerMetricsRoutes } from "./metrics-routes";
 import { registerInstitutionRoutes } from "./institution-routes";
 import { registerLifeLogRoutes } from "./life-log-routes";
+import { registerInboundEmailRoutes } from "./inbound-email-routes";
+import { registerPromptLibraryRoutes } from "./prompt-library-routes";
 import { registerIntakeRoutes } from "./intake-routes";
 import { registerRefreshRoutes } from "./refresh-routes";
 import { registerPortfolioRoutes } from "./portfolio-routes";
@@ -44,6 +45,7 @@ import { studentRecord } from "./wing/student-record";
 import * as sliStore from "./wing/sli-store";
 import * as artifactStore from "./wing/artifact-store";
 import * as wingModuleStore from "./wing/enhancement-store";
+import { isAiTurn } from "./wing/turn-type";
 import {
   insertExperienceSchema,
   insertEducationSchema,
@@ -55,13 +57,16 @@ import {
   insertMonthlyCheckInSchema,
   insertCoachingNoteSchema,
   User,
-  foundationSessions,
-  foundationSessionMessages,
-  enhancementModules,
-  enhancementModuleMessages,
 } from "@shared/schema";
-import { db } from "./db";
-import { and, asc, eq, inArray } from "drizzle-orm";
+/*
+ * No `db` and no drizzle operators here any more.
+ *
+ * The last raw-table read in this file was the transcript export, which queried the
+ * legacy `public` tables directly. With it going through `wing/session-store`, the
+ * route layer no longer reaches past the stores into the schema — which is the point:
+ * a route that builds its own query is a route that can miss a filter every store
+ * already applies.
+ */
 import { extractDocumentText, validateExtractedText } from "./document-extractor";
 import * as docStore from "./wing/document-store";
 import * as intakeStore from "./wing/intake-store";
@@ -137,12 +142,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   registerTaggingRoutes(app);
   registerCriteriaRoutes(app);
   registerMethodologyRoutes(app);
-  registerObjectiveRoutes(app);
   registerAdvisorRoutes(app);
   registerTemplateRoutes(app);
   registerMetricsRoutes(app);
   registerInstitutionRoutes(app);
   registerLifeLogRoutes(app);
+  registerInboundEmailRoutes(app);
+  registerPromptLibraryRoutes(app);
   registerIntakeRoutes(app);
   registerRefreshRoutes(app);
   registerPortfolioRoutes(app);
@@ -1702,7 +1708,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       type SessionRecord = {
         id: number;
-        userId: number;
         startedAt: Date | null;
         completedAt: Date | null;
         status: string;
@@ -1714,84 +1719,49 @@ export async function registerRoutes(app: Express): Promise<Server> {
         createdAt: Date;
       };
 
+      /*
+       * ── READ FROM THE WING TABLES, NOT THE LEGACY ONES ──────────────────
+       * This route used to select from `public.foundation_session_messages` and
+       * `public.enhancement_module_messages`. Nothing has written to either since the
+       * cutover — every turn now lands in `wing.transcript_turns` — so the export had
+       * been silently returning "No transcripts found" for every session and module
+       * while looking exactly like a working feature. The sibling export two routes up
+       * was repointed at `wingStore` and this one was missed.
+       *
+       * Speaker comes from `turn_type` via `isAiTurn`, never from `provenance_tag`:
+       * every migrated turn carries `provenance_unknown` by design, so keying on
+       * provenance would render Wing's own questions as the student's words in an
+       * export an advisor reads as a record of the conversation.
+       */
+      const wingTypes = isFoundation
+        ? ([`foundation_${sessionNumber}`] as wingStore.WingSessionType[])
+        : ([`enhancement_${moduleCode.toLowerCase()}`] as wingStore.WingSessionType[]);
+
       const userIds = sortedUsers.map((u) => u.id);
       const recordsByUser = new Map<number, SessionRecord[]>();
       const messagesByRecord = new Map<number, TranscriptMessage[]>();
 
-      if (userIds.length > 0) {
-        if (isFoundation) {
-          const rows = await db
-            .select()
-            .from(foundationSessions)
-            .where(
-              and(
-                inArray(foundationSessions.userId, userIds),
-                eq(foundationSessions.sessionNumber, sessionNumber),
-              ),
-            );
-          for (const r of rows) {
-            const rec: SessionRecord = {
-              id: r.id,
-              userId: r.userId,
-              startedAt: (r.startedAt as Date | null) ?? null,
-              completedAt: (r.completedAt as Date | null) ?? null,
-              status: r.status,
-              createdAt: r.createdAt as Date,
-            };
-            const list = recordsByUser.get(r.userId) ?? [];
-            list.push(rec);
-            recordsByUser.set(r.userId, list);
-          }
-          const recordIds = rows.map((r) => r.id);
-          if (recordIds.length > 0) {
-            const msgRows = await db
-              .select()
-              .from(foundationSessionMessages)
-              .where(inArray(foundationSessionMessages.sessionId, recordIds))
-              .orderBy(asc(foundationSessionMessages.createdAt));
-            for (const m of msgRows) {
-              const list = messagesByRecord.get(m.sessionId) ?? [];
-              list.push({ role: m.role, content: m.content, createdAt: m.createdAt as Date });
-              messagesByRecord.set(m.sessionId, list);
-            }
-          }
-        } else {
-          const rows = await db
-            .select()
-            .from(enhancementModules)
-            .where(
-              and(
-                inArray(enhancementModules.userId, userIds),
-                eq(enhancementModules.moduleCode, moduleCode),
-              ),
-            );
-          for (const r of rows) {
-            const rec: SessionRecord = {
-              id: r.id,
-              userId: r.userId,
-              startedAt: (r.startedAt as Date | null) ?? null,
-              completedAt: (r.completedAt as Date | null) ?? null,
-              status: r.status,
-              createdAt: r.createdAt as Date,
-            };
-            const list = recordsByUser.get(r.userId) ?? [];
-            list.push(rec);
-            recordsByUser.set(r.userId, list);
-          }
-          const recordIds = rows.map((r) => r.id);
-          if (recordIds.length > 0) {
-            const msgRows = await db
-              .select()
-              .from(enhancementModuleMessages)
-              .where(inArray(enhancementModuleMessages.moduleId, recordIds))
-              .orderBy(asc(enhancementModuleMessages.createdAt));
-            for (const m of msgRows) {
-              const list = messagesByRecord.get(m.moduleId) ?? [];
-              list.push({ role: m.role, content: m.content, createdAt: m.createdAt as Date });
-              messagesByRecord.set(m.moduleId, list);
-            }
-          }
+      const seenSession = new Set<number>();
+      for (const t of await wingStore.turnsForExport(wingTypes, userIds)) {
+        if (!seenSession.has(t.sessionId)) {
+          seenSession.add(t.sessionId);
+          const list = recordsByUser.get(t.wingUserId) ?? [];
+          list.push({
+            id: t.sessionId,
+            startedAt: t.sessionStartedAt,
+            completedAt: t.sessionCompletedAt,
+            status: t.sessionStatus,
+            createdAt: t.sessionCreatedAt,
+          });
+          recordsByUser.set(t.wingUserId, list);
         }
+        const msgs = messagesByRecord.get(t.sessionId) ?? [];
+        msgs.push({
+          role: isAiTurn(t.turnType as any) ? "assistant" : "user",
+          content: t.content,
+          createdAt: t.createdAt,
+        });
+        messagesByRecord.set(t.sessionId, msgs);
       }
 
       let userCount = 0;

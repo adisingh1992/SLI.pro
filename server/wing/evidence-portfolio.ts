@@ -13,6 +13,8 @@ import {
   renderForPrompt,
   resolveCompetency,
 } from "./nace-competencies";
+import { checkAuthenticity, claimStandardForPrompt, type Finding } from "./authenticity";
+import { applyRewrites, flagClaims, renderFlagged } from "./claim-rewrite";
 
 /**
  * The Behavioral Evidence Portfolio (Feature List A4).
@@ -41,6 +43,21 @@ import {
  * a null source — an unattributable claim is exactly the kind of plausible,
  * confident, unverifiable output that makes a portfolio worse than no
  * portfolio.
+ *
+ * ── AND IT MUST SOUND LIKE THEM ──────────────────────────────────────────
+ * The 360Brew authenticity standard applies here for the same reason it applies
+ * to a LinkedIn draft: this is text a person repeats under their own name and is
+ * then questioned about. A claim reading "I leveraged my passion for data to
+ * spearhead a pivotal initiative" is not made better by being well-attributed —
+ * it is a well-attributed sentence nobody says out loud, and the interviewer
+ * hears the vocabulary before they hear the evidence.
+ *
+ * So generation is instructed with `claimStandardForPrompt`, every accepted
+ * claim is measured with `checkAuthenticity`, and the flagged ones get one
+ * batched rewrite. Scope note: IG-V05 and IG-V07 are what run. IG-V06 —
+ * content archetype calibration — is Module 6 craft and defers with Module 6,
+ * per the Tier 1 scope's own deferral table. It is not implemented here and
+ * this file does not claim it is.
  */
 
 export type PortfolioItem = {
@@ -52,6 +69,20 @@ export type PortfolioItem = {
   sourceSessionId: number | null;
   sourceTurnId: number | null;
   createdAt: Date;
+  /**
+   * The authenticity standard, measured at read time rather than stored.
+   *
+   * Stored, this would be a second copy of a fact derivable from the claim, and
+   * it would freeze a list built to move: `FLAGGED_VOCABULARY` is "kept as data
+   * so Danielle can add to it without a deploy — this list ages fast". Computed
+   * here, a word she adds on Tuesday reports against every existing portfolio on
+   * Tuesday, with no rebuild and no flagship call.
+   *
+   * Usually empty: the build already rewrites what it can. What survives is a
+   * claim the rewrite could not clean, and the student is the one who decides
+   * what to do about it — this module reports, it does not silently edit.
+   */
+  authenticityFindings: Finding[];
 };
 
 const SYSTEM = `You build Behavioral Evidence Portfolios.
@@ -96,6 +127,11 @@ RULES
 7. If a piece of evidence is weak — vague, unquantified, or something anyone
    could say — leave it out. The portfolio's whole value is that everything in
    it survives a follow-up question.
+
+8. The claim must obey the standard below. It is a hard constraint, not a
+   preference — the claim is checked against it after you write it.
+
+${claimStandardForPrompt()}
 
 OUTPUT — JSON only:
 {
@@ -151,7 +187,97 @@ export type BuildResult = {
   created: number;
   skipped: number;
   reasons: string[];
+  /** Claims that tripped the authenticity standard and were successfully rewritten. */
+  rewritten: number;
+  /** Claims still carrying findings after the rewrite. Saved anyway — see below. */
+  flagged: number;
 };
+
+type AcceptedItem = {
+  positioningClaim: string;
+  evidence: string;
+  competencyCategory: string;
+  sourceTurnId: number;
+  sourceSessionId: number;
+};
+
+const REWRITE_SYSTEM = `You rewrite positioning claims that break a writing standard.
+
+Each claim is already true and already backed by evidence the student gave. The
+substance is settled and not yours to change. What is wrong is the wording, and
+the exact phrases are named for you.
+
+${claimStandardForPrompt()}
+
+RULES
+
+1. Keep the claim's meaning exactly. Same achievement, same scope, same scale.
+   You are changing how it is said, not what it says.
+2. Do not swap a banned word for another banned word.
+3. Do not add detail. If the original does not name a number, you do not know
+   one — inventing it is the worst thing you could do here, because the student
+   will be asked about it.
+4. If a claim cannot be fixed without changing what it says, return it unchanged.
+   That is a real answer and it is better than a fabrication.
+
+OUTPUT — JSON only:
+{ "claims": [ { "index": number, "positioningClaim": string } ] }
+
+Use the index each claim was given. Omit any you did not change.`;
+
+/**
+ * One batched rewrite of the claims that trip the standard. Mutates in place.
+ *
+ * The model call is here; the decisions are in `claim-rewrite.ts`, which is pure
+ * and takes strings. That split is the point, not tidiness: the reconciler is
+ * never told what any claim is attributed to, so a call whose job is fixing a
+ * word cannot re-attribute an item to a different turn — the guard above it, and
+ * the one this file calls the one that matters most.
+ *
+ * ── WHY findings.length AND NOT report.passes ────────────────────────────
+ * `passes` is `score >= 70` and a vocabulary hit costs 12, so a one-sentence
+ * claim containing "leverage" scores 88 and passes. Gating on `passes` at this
+ * length would be a check that cannot fail for the commonest thing it looks for.
+ * `SHORT_TEXT_RULES` in `authenticity.ts` is the list of rules that can fire on a
+ * sentence at all, and its comment carries the limit that goes with it: a clean
+ * report on a four-word abstraction is silence, not a pass.
+ *
+ * ── ONE PASS, AND ONLY IF BETTER ─────────────────────────────────────────
+ * Same shape as the LinkedIn draft path: one call, and a rewrite is taken only
+ * when it carries strictly fewer findings. What survives is saved with its
+ * findings intact rather than dropped, and `get` reports them.
+ */
+async function rewriteFlaggedClaims(accepted: AcceptedItem[]): Promise<number> {
+  const claims = accepted.map((a) => a.positioningClaim);
+  const flagged = flagClaims(claims);
+  if (!flagged.length) return 0;
+
+  let parsed: { claims?: unknown };
+  try {
+    const result = await orchestrator.complete({
+      // Cheaper than the build: this is a wording pass over settled substance,
+      // not the judgement about what counts as evidence.
+      tier: "mid",
+      system: REWRITE_SYSTEM,
+      maxTokens: 2000,
+      temperature: 0.6,
+      messages: [
+        { role: "user", content: `Claims to fix:\n\n${renderFlagged(claims, flagged)}` },
+      ],
+    });
+    parsed = parseJsonResponse(result.text, "portfolio claim rewrite");
+  } catch (err) {
+    // A failed rewrite is not a failed build. The claims stand, flagged.
+    log(`portfolio claim rewrite failed: ${(err as Error).message}`, "portfolio");
+    return 0;
+  }
+
+  const outcome = applyRewrites(claims, flagged, parsed.claims);
+  outcome.claims.forEach((claim, i) => {
+    accepted[i].positioningClaim = claim;
+  });
+  return outcome.rewritten;
+}
 
 /**
  * Builds (or rebuilds) the portfolio for a student.
@@ -162,12 +288,13 @@ export type BuildResult = {
  */
 export async function build(userId: number, opts: { replace?: boolean } = {}): Promise<BuildResult> {
   const studentId = await sliStore.studentIdForUser(userId);
-  if (!studentId) return { created: 0, skipped: 0, reasons: ["no student record"] };
+  const empty = (reason: string): BuildResult =>
+    ({ created: 0, skipped: 0, reasons: [reason], rewritten: 0, flagged: 0 });
+
+  if (!studentId) return empty("no student record");
 
   const turns = await humanTurnsFor(studentId);
-  if (!turns.length) {
-    return { created: 0, skipped: 0, reasons: ["no substantive student turns yet"] };
-  }
+  if (!turns.length) return empty("no substantive student turns yet");
 
   const activeSli = await sliStore.getActive(userId);
 
@@ -206,20 +333,14 @@ export async function build(userId: number, opts: { replace?: boolean } = {}): P
     parsed = parseJsonResponse(result.text, "evidence portfolio");
   } catch (err) {
     log(`portfolio build failed for user ${userId}: ${(err as Error).message}`, "portfolio");
-    return { created: 0, skipped: 0, reasons: [`generation failed: ${(err as Error).message}`] };
+    return empty(`generation failed: ${(err as Error).message}`);
   }
 
   const validTurnIds = new Set(budgeted.map((t) => t.id));
   const turnSession = new Map(budgeted.map((t) => [t.id, t.sessionId]));
 
   const reasons: string[] = [];
-  const accepted: {
-    positioningClaim: string;
-    evidence: string;
-    competencyCategory: string;
-    sourceTurnId: number;
-    sourceSessionId: number;
-  }[] = [];
+  const accepted: AcceptedItem[] = [];
 
   for (const raw of Array.isArray(parsed.items) ? parsed.items : []) {
     const item = raw as Record<string, unknown>;
@@ -261,6 +382,18 @@ export async function build(userId: number, opts: { replace?: boolean } = {}): P
     });
   }
 
+  /*
+   * The standard runs here — after acceptance, before the write.
+   *
+   * After, because there is no point spending a rewrite on a claim the
+   * attribution guard is about to drop. Before, because the row that reaches the
+   * database should be the one the student is meant to say out loud; rewriting
+   * on read would mean the portfolio's stored text and its displayed text differ,
+   * and the advisor and the student would be looking at different sentences.
+   */
+  const rewritten = await rewriteFlaggedClaims(accepted);
+  const flagged = flagClaims(accepted.map((a) => a.positioningClaim)).length;
+
   if (opts.replace !== false) {
     await db.delete(evidencePortfolioItems).where(eq(evidencePortfolioItems.studentId, studentId));
   }
@@ -280,11 +413,12 @@ export async function build(userId: number, opts: { replace?: boolean } = {}): P
 
   const skipped = reasons.length;
   log(
-    `portfolio for user ${userId}: ${accepted.length} item(s), ${skipped} dropped`,
+    `portfolio for user ${userId}: ${accepted.length} item(s), ${skipped} dropped, ` +
+      `${rewritten} claim(s) rewritten, ${flagged} still flagged`,
     "portfolio",
   );
 
-  return { created: accepted.length, skipped, reasons };
+  return { created: accepted.length, skipped, reasons, rewritten, flagged };
 }
 
 /* ── Reading ────────────────────────────────────────────────────────────── */
@@ -308,6 +442,7 @@ export async function get(userId: number): Promise<PortfolioItem[]> {
     sourceSessionId: r.sourceSessionId,
     sourceTurnId: r.sourceTurnId,
     createdAt: r.createdAt,
+    authenticityFindings: checkAuthenticity(r.positioningClaim).findings,
   }));
 }
 

@@ -44,7 +44,18 @@ const SECRET_MAP: Record<string, string> = {
   "AZURE-OPENAI-ENDPOINT-ALT": "AZURE_OPENAI_ENDPOINT_ALT",
   "AZURE-OPENAI-KEY-ALT": "AZURE_OPENAI_KEY_ALT",
   "AZURE-OPENAI-DEPLOYMENT-WHISPER": "AZURE_OPENAI_DEPLOYMENT_WHISPER",
-  "WING-FROM-EMAIL": "WING_FROM_EMAIL"
+  "WING-FROM-EMAIL": "WING_FROM_EMAIL",
+  /*
+   * The inbound reply path (B2 Trigger 2). All three, or none of it runs.
+   *
+   * SECRET is the path the webhook is mounted at; unset, the route is not registered
+   * at all rather than registered and open. DOMAIN is the host with the Inbound Parse
+   * MX record; unset, no outbound message carries a reply address, because a Reply-To
+   * pointing at a domain with no MX bounces every answer a student sends.
+   */
+  "INBOUND-EMAIL-SECRET": "INBOUND_EMAIL_SECRET",
+  "INBOUND-EMAIL-DOMAIN": "INBOUND_EMAIL_DOMAIN",
+  "INBOUND-EMAIL-LOCAL": "INBOUND_EMAIL_LOCAL"
 };
 
 // Config the app cannot start without.

@@ -19,7 +19,6 @@ import {
   enteredOutOfOrder,
   isFoundationNumber,
   missingPrerequisites,
-  foundationOpening,
   outOfOrderNote,
   type FoundationNumber,
 } from "@shared/session-access";
@@ -153,45 +152,11 @@ console.log("\nTwo absences join into a sentence, not a list");
   check("joining", ok, ok ? "both absences in one clause, joined with \"or\"" : `got: ${note}`);
 }
 
-/* ─────────────────────────────────────────────────────────────────────────
- * 4a. The opening always carries the note when there is one.
- *
- * This is the assertion that replaced a static check. The route no longer assembles the
- * opening, so the only way to lose the note is to break this function — and a mutation
- * that returns `guidance` alone fails here rather than passing a scan for an identifier.
- * ───────────────────────────────────────────────────────────────────────── */
-console.log("\nThe opening carries the note whenever there is one");
-{
-  const bad: string[] = [];
-  let withNote = 0;
-  for (const target of FOUNDATION_SEQUENCE) {
-    for (let mask = 0; mask < 8; mask++) {
-      const done = FOUNDATION_SEQUENCE.filter((_, i) => mask & (1 << i));
-      const note = outOfOrderNote(target, done);
-
-      for (const guidance of ["Let's begin.", "", null]) {
-        const opening = foundationOpening(target, done, guidance);
-
-        if (note) {
-          withNote++;
-          if (!opening.includes(note)) bad.push(`session ${target} [${done}] guidance=${JSON.stringify(guidance)}: note absent`);
-        } else if (opening !== (guidance?.trim() ?? "")) {
-          bad.push(`session ${target} [${done}]: opening changed with nothing missing`);
-        }
-
-        /* The guidance comes first — the note is an aside, not the greeting. */
-        if (guidance?.trim() && note && opening.indexOf(guidance.trim()) > opening.indexOf(note)) {
-          bad.push(`session ${target}: note precedes the guidance`);
-        }
-        /* No empty guidance leaving a blank line above the note. */
-        if (opening.startsWith("\n") || opening.includes("\n\n\n")) {
-          bad.push(`session ${target}: stray blank lines in the opening`);
-        }
-      }
-    }
-  }
-  check("opening", bad.length === 0, bad.length === 0 ? `${withNote} openings carrying a note, guidance first` : bad.slice(0, 3).join("; "));
-}
+/*
+ * 4a moved to `session-opening.test.ts` with `foundationOpening` itself, when IG-UX06
+ * made the opening carry what Wing knows as well as what it lacks. The check that the
+ * assembled opening always contains the note lives there, over the same states.
+ */
 
 /* ─────────────────────────────────────────────────────────────────────────
  * 5. isFoundationNumber does not admit anything else.

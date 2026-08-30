@@ -1,31 +1,32 @@
 import { useLocation, useParams } from "wouter";
-import { CheckSquare, ScanSearch, Target } from "lucide-react";
+import { CheckSquare, ScanSearch } from "lucide-react";
 import AdminLayout from "../layout";
 import { RequirePlatformAdmin } from "../require-platform-admin";
 import { PageShell, PageHeader } from "@/components/admin/page";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { AlertTriangle } from "lucide-react";
-import { ObjectivesPanel } from "./objectives-panel";
 import { CriteriaPanel } from "./criteria-panel";
 import { AnalysisPanel } from "./analysis-panel";
 
 /**
- * How a session works, start to finish.
+ * How a session works, once it is under way.
  *
- * ── THREE SCREENS THAT ONLY MAKE SENSE TOGETHER ──────────────────────────
- * These were "Objectives", "Completion" and "Analysis" — three sidebar entries
- * whose relationship was explained only in a comment in the old layout file,
- * where nobody using the product could read it. They are three stages of one
- * pipeline:
+ * ── TWO SCREENS THAT ONLY MAKE SENSE TOGETHER ────────────────────────────
+ * These were "Completion" and "Analysis" — separate sidebar entries whose
+ * relationship was explained only in a comment in the old layout file, where
+ * nobody using the product could read it. They are two stages of one pipeline:
  *
- *   Objectives   what the session is trying to reach
- *   Completion   whether it got there
+ *   Completion   whether the session got where it was going
  *   Analysis     how the finished transcript is then read
  *
- * Split apart, the natural mistake is editing a completion criterion without
- * looking at the objective it is meant to be judging. Side by side as tabs,
- * with the order preserved, the sequence is the navigation.
+ * There was a third, "Objectives" — what the session is trying to reach. It
+ * edited `objective_sets`, which the renderer read and which was retired in
+ * Tier 1 part 4 (migration 0032); the renderer was never enabled for any
+ * population and never assembled a prompt. An editor whose saves reach nothing
+ * is worse than no editor, because it looks like methodology is in force. What
+ * a session is trying to reach now lives in the v2 Foundation cards, edited
+ * under Methodology.
  *
  * ── THE WARNING IS ON THE PAGE, NOT IN THE SOURCE ────────────────────────
  * Nothing here has a review gate. A saved criterion applies to every student on
@@ -34,17 +35,17 @@ import { AnalysisPanel } from "./analysis-panel";
  */
 
 const TABS = [
-  { id: "objectives", label: "Objectives", icon: Target },
   { id: "completion", label: "Completion", icon: CheckSquare },
   { id: "analysis", label: "Analysis", icon: ScanSearch },
 ] as const;
 
 type TabId = (typeof TABS)[number]["id"];
 
-/** Old routes, each of which was its own page. */
+/** Old routes: two that were once their own pages, and one that is now retired. */
 const LEGACY: Record<string, TabId> = {
   criteria: "completion",
   methodology: "analysis",
+  objectives: "completion",
 };
 
 export default function SessionDesignPage() {
@@ -54,7 +55,7 @@ export default function SessionDesignPage() {
   const raw = params.tab;
   const tab: TabId = TABS.some((t) => t.id === raw)
     ? (raw as TabId)
-    : (LEGACY[raw ?? ""] ?? "objectives");
+    : (LEGACY[raw ?? ""] ?? "completion");
 
   return (
     <RequirePlatformAdmin>
@@ -62,7 +63,7 @@ export default function SessionDesignPage() {
         <PageShell width="wide">
           <PageHeader
             title="Session design"
-            description="What a session is trying to reach, when it counts as finished, and how the transcript is read afterwards."
+            description="When a session counts as finished, and how the transcript is read afterwards."
           />
 
           <Alert className="border-warn/30 bg-warn-soft [&>svg]:text-warn">
@@ -91,7 +92,6 @@ export default function SessionDesignPage() {
               </TabsList>
             </div>
 
-            {tab === "objectives" && <ObjectivesPanel />}
             {tab === "completion" && <CriteriaPanel />}
             {tab === "analysis" && <AnalysisPanel />}
           </Tabs>
