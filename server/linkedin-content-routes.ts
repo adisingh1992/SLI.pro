@@ -3,6 +3,7 @@ import { eq } from "drizzle-orm";
 import { db } from "./db";
 import { IStorage } from "./storage";
 import { storage } from "./storage";
+import { isStudent } from "./admin-guards";
 import * as wingStore from "./wing/session-store";
 import * as artifactStore from "./wing/artifact-store";
 import * as sliStore from "./wing/sli-store";
@@ -16,12 +17,10 @@ const log = (message: string, tag = "express") => {
   console.log(`${new Date().toLocaleTimeString()} [${tag}] ${message}`);
 };
 
-const isAuthenticated = (req: Request, res: Response, next: NextFunction) => {
-  if (req.isAuthenticated()) {
-    return next();
-  }
-  res.status(401).json({ error: "Not authenticated" });
-};
+// Every route below is the caller's own drafts, resolved from `req.user!.id`.
+// `isStudent` also refuses a signed-in admin — see admin-guards.ts. Aliased so
+// nothing below needed to change.
+const isAuthenticated = isStudent;
 
 // Helper function for exponential backoff retries when calling the model
 async function callWithRetry<T>(

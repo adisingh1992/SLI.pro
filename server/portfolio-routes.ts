@@ -1,7 +1,7 @@
 import { Express, Request, Response, NextFunction } from "express";
 import * as portfolio from "./wing/evidence-portfolio";
 import { log } from "./logger";
-import { isAdmin, isAuthenticated } from "./admin-guards";
+import { isAdmin, isStudent } from "./admin-guards";
 
 /**
  * Behavioral Evidence Portfolio API (Feature List A4).
@@ -15,7 +15,7 @@ import { isAdmin, isAuthenticated } from "./admin-guards";
  */
 
 export function registerPortfolioRoutes(app: Express) {
-  app.get("/api/portfolio", isAuthenticated, async (req, res, next) => {
+  app.get("/api/portfolio", isStudent, async (req, res, next) => {
     try {
       const [items, coverage] = await Promise.all([
         portfolio.get(req.user!.id),
@@ -34,7 +34,7 @@ export function registerPortfolioRoutes(app: Express) {
    * transcript, and running it twice should produce the portfolio as it stands
    * rather than two overlapping copies.
    */
-  app.post("/api/portfolio/build", isAuthenticated, async (req, res, next) => {
+  app.post("/api/portfolio/build", isStudent, async (req, res, next) => {
     try {
       const result = await portfolio.build(req.user!.id);
 

@@ -72,7 +72,7 @@ import { extractDocumentText, validateExtractedText } from "./document-extractor
 import * as docStore from "./wing/document-store";
 import * as intakeStore from "./wing/intake-store";
 import * as profileStore from "./wing/profile-store";
-import { isAdmin, isPlatformAdmin, requireScope } from "./admin-guards";
+import { isAdmin, isPlatformAdmin, isStudent, requireScope } from "./admin-guards";
 import {
   userIdsForInstitution,
   isStudentInScope,
@@ -156,17 +156,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
   registerPortfolioRoutes(app);
   registerCalendarRoutes(app);
 
-  // Middleware to check if user is authenticated
+  /*
+   * `isAuthenticated` stays "signed in", unchanged, and is now used ONLY by the
+   * three /api/documents/:id routes below (GET, DELETE, PATCH .../analysis).
+   * Each of those has its own ownership-OR-admin check inline
+   * (`document.studentId !== callerStudentId && !req.user.isAdmin`) — a
+   * deliberate, existing admin capability to read or manage a specific
+   * student's uploaded document by id. Swapping their guard to `isStudent`
+   * would 403 an admin before that check ever runs, removing a capability that
+   * works today.
+   *
+   * Every OTHER route in this file that used to share this guard is a
+   * caller's own record with no such bypass — most read straight off
+   * `req.user.id`, and the handful with an ownership check (experiences,
+   * education, skills, languages, by :id) have no `!req.user.isAdmin` branch,
+   * so an admin hitting them already gets refused today, just with a generic
+   * "Unauthorized" from the ownership check instead of a named one. Those are
+   * now on `isStudent` directly, imported from admin-guards — the earlier admin
+   * refusal is now explicit at the door instead of implicit three lines later.
+   */
   const isAuthenticated = (req: Request, res: Response, next: NextFunction) => {
     if (!req.isAuthenticated()) {
       return res.status(401).json({ message: "Unauthorized" });
     }
     next();
   };
-  
+
   // Middleware to check if user is an admin
   // Profile routes
-  app.patch("/api/profile", isAuthenticated, async (req, res, next) => {
+  app.patch("/api/profile", isStudent, async (req, res, next) => {
     try {
       const validationResult = updateProfileSchema.safeParse(req.body);
       if (!validationResult.success) {
@@ -200,7 +218,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Onboarding route: save professionalStatus + discoverySource for LinkedIn users
-  app.patch("/api/user/onboarding", isAuthenticated, async (req, res, next) => {
+  app.patch("/api/user/onboarding", isStudent, async (req, res, next) => {
     try {
       const { professionalStatus, discoverySource, discoverySourceOther } = req.body;
 
@@ -221,7 +239,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Experience routes
-  app.get("/api/experiences", isAuthenticated, async (req, res, next) => {
+  app.get("/api/experiences", isStudent, async (req, res, next) => {
     try {
       const experiences = await storage.getExperiences(req.user.id);
       res.json(experiences);
@@ -230,7 +248,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/experiences", isAuthenticated, async (req, res, next) => {
+  app.post("/api/experiences", isStudent, async (req, res, next) => {
     try {
       const validationResult = insertExperienceSchema.safeParse({
         ...req.body,
@@ -251,7 +269,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.put("/api/experiences/:id", isAuthenticated, async (req, res, next) => {
+  app.put("/api/experiences/:id", isStudent, async (req, res, next) => {
     try {
       const experienceId = parseInt(req.params.id);
       const experience = await storage.getExperience(experienceId);
@@ -286,7 +304,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.delete(
     "/api/experiences/:id",
-    isAuthenticated,
+    isStudent,
     async (req, res, next) => {
       try {
         const experienceId = parseInt(req.params.id);
@@ -309,7 +327,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   );
 
   // Education routes
-  app.get("/api/education", isAuthenticated, async (req, res, next) => {
+  app.get("/api/education", isStudent, async (req, res, next) => {
     try {
       const education = await storage.getEducations(req.user.id);
       res.json(education);
@@ -318,7 +336,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/education", isAuthenticated, async (req, res, next) => {
+  app.post("/api/education", isStudent, async (req, res, next) => {
     try {
       const validationResult = insertEducationSchema.safeParse({
         ...req.body,
@@ -339,7 +357,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.put("/api/education/:id", isAuthenticated, async (req, res, next) => {
+  app.put("/api/education/:id", isStudent, async (req, res, next) => {
     try {
       const educationId = parseInt(req.params.id);
       const education = await storage.getEducation(educationId);
@@ -372,7 +390,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete("/api/education/:id", isAuthenticated, async (req, res, next) => {
+  app.delete("/api/education/:id", isStudent, async (req, res, next) => {
     try {
       const educationId = parseInt(req.params.id);
       const education = await storage.getEducation(educationId);
@@ -393,7 +411,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Skills routes
-  app.get("/api/skills", isAuthenticated, async (req, res, next) => {
+  app.get("/api/skills", isStudent, async (req, res, next) => {
     try {
       const skills = await storage.getSkills(req.user.id);
       res.json(skills);
@@ -402,7 +420,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/skills", isAuthenticated, async (req, res, next) => {
+  app.post("/api/skills", isStudent, async (req, res, next) => {
     try {
       const validationResult = insertSkillSchema.safeParse({
         ...req.body,
@@ -423,7 +441,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete("/api/skills/:id", isAuthenticated, async (req, res, next) => {
+  app.delete("/api/skills/:id", isStudent, async (req, res, next) => {
     try {
       const skillId = parseInt(req.params.id);
       const skill = await storage.getSkill(skillId);
@@ -444,7 +462,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Languages routes
-  app.get("/api/languages", isAuthenticated, async (req, res, next) => {
+  app.get("/api/languages", isStudent, async (req, res, next) => {
     try {
       const languages = await storage.getLanguages(req.user.id);
       res.json(languages);
@@ -453,7 +471,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/languages", isAuthenticated, async (req, res, next) => {
+  app.post("/api/languages", isStudent, async (req, res, next) => {
     try {
       const validationResult = insertLanguageSchema.safeParse({
         ...req.body,
@@ -474,7 +492,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete("/api/languages/:id", isAuthenticated, async (req, res, next) => {
+  app.delete("/api/languages/:id", isStudent, async (req, res, next) => {
     try {
       const languageId = parseInt(req.params.id);
       const language = await storage.getLanguage(languageId);
@@ -495,7 +513,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Questionnaire routes
-  app.get("/api/questionnaire", isAuthenticated, async (req, res, next) => {
+  app.get("/api/questionnaire", isStudent, async (req, res, next) => {
     try {
       const questionnaire = await intakeStore.getQuestionnaire(req.user.id);
       if (!questionnaire) {
@@ -507,7 +525,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/questionnaire", isAuthenticated, async (req, res, next) => {
+  app.post("/api/questionnaire", isStudent, async (req, res, next) => {
     try {
       // Check if user already has a questionnaire
       const existingQuestionnaire = await intakeStore.getQuestionnaire(req.user.id);
@@ -552,7 +570,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Route for saving draft questionnaire
   app.post(
     "/api/questionnaire/draft",
-    isAuthenticated,
+    isStudent,
     async (req, res, next) => {
       try {
         // Check if user already has a questionnaire
@@ -615,7 +633,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     },
   );
 
-  app.put("/api/questionnaire", isAuthenticated, async (req, res, next) => {
+  app.put("/api/questionnaire", isStudent, async (req, res, next) => {
     try {
       // Check if user has a questionnaire to update
       const existingQuestionnaire = await intakeStore.getQuestionnaire(req.user.id);
@@ -648,7 +666,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Combined profile route for client - get user profile data including questionnaire
-  app.get("/api/user/profile", isAuthenticated, async (req, res, next) => {
+  app.get("/api/user/profile", isStudent, async (req, res, next) => {
     try {
       const userProfile = await profileStore.getUserProfile(req.user.id);
       const questionnaire = await intakeStore.getQuestionnaire(req.user.id);
@@ -663,7 +681,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Document routes
-  app.get("/api/documents", isAuthenticated, async (req, res, next) => {
+  app.get("/api/documents", isStudent, async (req, res, next) => {
     try {
       const documents = await docStore.getDocuments(req.user.id);
       res.json(documents);
@@ -707,7 +725,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/documents", isAuthenticated, async (req, res, next) => {
+  app.post("/api/documents", isStudent, async (req, res, next) => {
     try {
       const validationResult = insertDocumentSchema.safeParse({
         ...req.body,
@@ -810,7 +828,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
    * constraint, so a resubmitted month produced two rows and double counted in
    * every report.
    */
-  app.get("/api/monthly-check-ins", isAuthenticated, async (req, res, next) => {
+  app.get("/api/monthly-check-ins", isStudent, async (req, res, next) => {
     try {
       res.json(await checkinStore.listCheckIns(req.user!.id));
     } catch (error) {
@@ -818,7 +836,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/monthly-check-ins/month/:month", isAuthenticated, async (req, res, next) => {
+  app.get("/api/monthly-check-ins/month/:month", isStudent, async (req, res, next) => {
     try {
       const checkIn = await checkinStore.getCheckIn(req.user!.id, req.params.month);
       if (!checkIn) return res.status(404).json({ message: "Monthly check-in not found" });
@@ -835,7 +853,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
    * student id comes from the session and the row is addressed by month, so
    * there is no id a caller could supply for somebody else's check-in.
    */
-  app.post("/api/monthly-check-ins", isAuthenticated, async (req, res, next) => {
+  app.post("/api/monthly-check-ins", isStudent, async (req, res, next) => {
     try {
       const month = String(req.body?.month ?? "").trim();
       if (!/^\d{4}-\d{2}$/.test(month)) {
@@ -2046,7 +2064,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   })();
 
   // Branding Intake routes
-  app.get("/api/branding-intake", isAuthenticated, async (req, res, next) => {
+  app.get("/api/branding-intake", isStudent, async (req, res, next) => {
     try {
       const userId = req.user!.id;
       const intake = await intakeStore.getBrandingIntake(userId);
@@ -2056,7 +2074,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/branding-intake", isAuthenticated, async (req, res, next) => {
+  app.post("/api/branding-intake", isStudent, async (req, res, next) => {
     try {
       const userId = req.user!.id;
       const bodySchema = z.object({

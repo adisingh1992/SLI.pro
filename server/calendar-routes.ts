@@ -4,7 +4,7 @@ import { db } from "./db";
 import { students } from "@shared/wing-schema";
 import * as calendar from "./wing/calendar-touchpoints";
 import { log } from "./logger";
-import { isAdmin, isAuthenticated } from "./admin-guards";
+import { isAdmin, isStudent } from "./admin-guards";
 
 /**
  * Academic calendar configuration (B3 S4) and internship dates (B3 E2).
@@ -85,7 +85,7 @@ export function registerCalendarRoutes(app: Express) {
    * an internship that fell through should stop the milestone messages rather
    * than deliver two reminders about a job nobody started.
    */
-  app.put("/api/user/internship", isAuthenticated, async (req, res, next) => {
+  app.put("/api/user/internship", isStudent, async (req, res, next) => {
     try {
       const raw = req.body?.startDate;
       const startDate = raw === null || raw === "" ? null : String(raw).trim();
@@ -108,7 +108,7 @@ export function registerCalendarRoutes(app: Express) {
     }
   });
 
-  app.get("/api/user/internship", isAuthenticated, async (req, res, next) => {
+  app.get("/api/user/internship", isStudent, async (req, res, next) => {
     try {
       const [row] = await db
         .select({ startDate: students.internshipStartDate })

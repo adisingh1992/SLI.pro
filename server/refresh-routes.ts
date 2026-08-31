@@ -2,6 +2,7 @@ import { Express, Request, Response, NextFunction } from "express";
 import * as refresh from "./wing/positioning-refresh";
 import * as sliStore from "./wing/sli-store";
 import { log } from "./logger";
+import { isStudent } from "./admin-guards";
 
 /**
  * Positioning Refresh — career-evolution re-entry (Feature List A2).
@@ -17,10 +18,9 @@ import { log } from "./logger";
  * positioning is not allowed to have changed yet.
  */
 
-const isAuthenticated = (req: Request, res: Response, next: NextFunction) => {
-  if (req.isAuthenticated()) return next();
-  res.status(401).json({ error: "Not signed in" });
-};
+// `isStudent` also refuses a signed-in admin, who has no active SLI for this
+// to refresh — see admin-guards.ts. Aliased so nothing below needed to change.
+const isAuthenticated = isStudent;
 
 export function registerRefreshRoutes(app: Express) {
   /** Whether a refresh is offered, plus the conversation so far. */

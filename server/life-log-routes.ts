@@ -1,6 +1,7 @@
 import { Express, Request, Response, NextFunction } from "express";
 import * as store from "./wing/life-log-store";
 import { log } from "./logger";
+import { isStudent } from "./admin-guards";
 
 /**
  * Life log API (Feature List B2).
@@ -12,10 +13,10 @@ import { log } from "./logger";
  * and these are the most personal records in the system.
  */
 
-const isAuthenticated = (req: Request, res: Response, next: NextFunction) => {
-  if (req.isAuthenticated()) return next();
-  res.status(401).json({ error: "Not signed in" });
-};
+// `isStudent` also refuses a signed-in admin, who has no `wing_students` row
+// for `requireStudent` below to resolve — see admin-guards.ts. Aliased so
+// nothing below needed to change.
+const isAuthenticated = isStudent;
 
 /** Session user → wing student. 404 rather than 500 when there is no student row. */
 async function requireStudent(req: Request, res: Response): Promise<number | null> {

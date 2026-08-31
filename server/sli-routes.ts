@@ -7,7 +7,7 @@ import * as profileStore from "./wing/profile-store";
 import * as identity from "./wing/identity-store";
 import { parseJsonResponse } from "./json-response";
 import { log } from "./logger";
-import { isAdmin } from "./admin-guards";
+import { isAdmin, isStudent } from "./admin-guards";
 
 /**
  * SLI routes — running natively on the Wing schema.
@@ -28,10 +28,10 @@ import { isAdmin } from "./admin-guards";
  */
 
 export function registerSliRoutes(app: Express, storage: IStorage) {
-  const isAuthenticated = (req: Request, res: Response, next: NextFunction) => {
-    if (req.isAuthenticated() && req.user) return next();
-    res.status(401).json({ message: "Unauthorized" });
-  };
+  // The student section below resolves everything from `req.user!.id`.
+  // `isStudent` also refuses a signed-in admin, who has no SLI of their own —
+  // see admin-guards.ts. Aliased so nothing below needed to change.
+  const isAuthenticated = isStudent;
 
   /** Confirms the SLI belongs to the caller (student-id comparison). */
   async function assertOwnership(sliId: number, userId: number) {

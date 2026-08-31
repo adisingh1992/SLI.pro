@@ -2,7 +2,7 @@ import { Express, Request, Response, NextFunction } from "express";
 import { eq } from "drizzle-orm";
 import { db } from "./db";
 import { userChannelPreferences } from "@shared/wing-schema";
-import { isAuthenticated } from "./admin-guards";
+import { isStudent } from "./admin-guards";
 
 /**
  * The Email/SMS toggles on Settings.
@@ -22,7 +22,7 @@ import { isAuthenticated } from "./admin-guards";
 export function registerNotificationPreferencesRoutes(app: Express) {
   app.get(
     "/api/user/notification-preferences",
-    isAuthenticated,
+    isStudent,
     async (req: Request, res: Response, next: NextFunction) => {
       try {
         const userId = (req.user as any).id;
@@ -48,7 +48,7 @@ export function registerNotificationPreferencesRoutes(app: Express) {
 
   app.patch(
     "/api/user/notification-preferences",
-    isAuthenticated,
+    isStudent,
     async (req: Request, res: Response, next: NextFunction) => {
       try {
         const userId = (req.user as any).id;

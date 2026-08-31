@@ -53,7 +53,7 @@ import * as intakeStore from "./wing/intake-store";
 import * as sliStore from "./wing/sli-store";
 import * as profileStore from "./wing/profile-store";
 import * as identity from "./wing/identity-store";
-import { isAdmin, isAuthenticated } from "./admin-guards";
+import { isAdmin, isStudent } from "./admin-guards";
 
 
 // Format previous module's completion data into a summary for the next module's system prompt
@@ -862,7 +862,7 @@ export function setupEnhancementModulesRoutes(app: Express) {
   // GET /api/enhancement-modules - Get all modules for user
   app.get(
     "/api/enhancement-modules",
-    isAuthenticated,
+    isStudent,
     async (req: Request, res: Response) => {
       try {
         const modules = await moduleStore.getEnhancementModulesForUser(
@@ -879,7 +879,7 @@ export function setupEnhancementModulesRoutes(app: Express) {
   // GET /api/enhancement-modules/:moduleCode - Get specific module with messages
   app.get(
     "/api/enhancement-modules/:moduleCode",
-    isAuthenticated,
+    isStudent,
     async (req: Request, res: Response) => {
       try {
         const { moduleCode } = req.params;
@@ -908,7 +908,7 @@ export function setupEnhancementModulesRoutes(app: Express) {
   // POST /api/enhancement-modules/:moduleCode/start - Start or continue a module
   app.post(
     "/api/enhancement-modules/:moduleCode/start",
-    isAuthenticated,
+    isStudent,
     async (req: Request, res: Response) => {
       try {
         const { moduleCode } = req.params;
@@ -985,7 +985,7 @@ export function setupEnhancementModulesRoutes(app: Express) {
   // POST /api/enhancement-modules/:moduleCode/messages/stream - Send message with streaming response
   app.post(
     "/api/enhancement-modules/:moduleCode/messages/stream",
-    isAuthenticated,
+    isStudent,
     async (req: Request, res: Response, next: NextFunction) => {
       try {
         const moduleCode = req.params.moduleCode as "A" | "B" | "C";
@@ -1238,7 +1238,7 @@ export function setupEnhancementModulesRoutes(app: Express) {
    */
   app.post(
     "/api/enhancement-modules/:moduleCode/end-early",
-    isAuthenticated,
+    isStudent,
     async (req: Request, res: Response) => {
       try {
         const { moduleCode } = req.params;
@@ -1326,7 +1326,7 @@ export function setupEnhancementModulesRoutes(app: Express) {
 
   app.patch(
     "/api/enhancement-modules/:moduleCode",
-    isAuthenticated,
+    isStudent,
     async (req: Request, res: Response) => {
       try {
         const { moduleCode } = req.params;

@@ -26,6 +26,36 @@ export const isAuthenticated = (req: Request, res: Response, next: NextFunction)
   res.status(401).json({ error: "Not signed in" });
 };
 
+/**
+ * Signed in, and NOT an admin. The other half of the admin/student split —
+ * `isAdmin`/`isPlatformAdmin` above already refuse a student on an admin
+ * route; nothing enforced the reverse. Every route outside `/api/admin/*` in
+ * this codebase serves exactly one student's own data (their sessions,
+ * documents, SLI, life log...), and an admin account has no `wing_students`
+ * row behind it to serve — before this guard, an admin's own session
+ * satisfied `isAuthenticated` on those routes just like a student's would.
+ *
+ * Use this in place of `isAuthenticated` for a route that is a student's own
+ * business data. Leave `isAuthenticated` itself alone for anything genuinely
+ * shared between both — `/api/user`, `/api/logout` — tightening it in place
+ * would silently narrow a name that still needs to mean "signed in" there.
+ *
+ * The client enforces the same split presentationally (`ProtectedRoute`
+ * redirects a signed-in admin away from every Wing student page). This is the
+ * boundary: hiding a page does not stop a request.
+ */
+export const isStudent = (req: Request, res: Response, next: NextFunction) => {
+  if (!req.isAuthenticated() || !req.user) {
+    return res.status(401).json({ error: "Not signed in" });
+  }
+  if (req.user.isAdmin) {
+    return res.status(403).json({
+      error: "This account is an administrator — sign in as a student to use this.",
+    });
+  }
+  next();
+};
+
 /** Either admin role. Cohort operations. */
 export const isAdmin = (req: Request, res: Response, next: NextFunction) => {
   if (req.isAuthenticated() && req.user?.isAdmin) return next();

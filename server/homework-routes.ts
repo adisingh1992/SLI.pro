@@ -1,7 +1,7 @@
 import { Express, Request, Response, NextFunction } from 'express';
 import { z } from 'zod';
 import * as homework from './wing/homework-store';
-import { isAdmin, isAuthenticated } from "./admin-guards";
+import { isAdmin, isStudent } from "./admin-guards";
 
 /**
  * Homework routes — on wing.
@@ -94,7 +94,7 @@ export function registerHomeworkRoutes(app: Express) {
   });
 
   /** Student: their own homework. */
-  app.get("/api/user/homework", isAuthenticated, async (req, res, next) => {
+  app.get("/api/user/homework", isStudent, async (req, res, next) => {
     try {
       res.json(await homework.listForUser(req.user!.id));
     } catch (error) {
@@ -102,7 +102,7 @@ export function registerHomeworkRoutes(app: Express) {
     }
   });
 
-  app.patch("/api/user/homework/:id/answer", isAuthenticated, async (req, res, next) => {
+  app.patch("/api/user/homework/:id/answer", isStudent, async (req, res, next) => {
     try {
       const id = parseInt(req.params.id);
       if (isNaN(id)) return res.status(400).json({ error: "Invalid homework ID" });

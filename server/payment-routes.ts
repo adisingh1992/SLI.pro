@@ -5,6 +5,7 @@ import { storage } from "./storage";
 import * as commerce from "./wing/commerce-store";
 import QRCode from "qrcode";
 import * as identity from "./wing/identity-store";
+import { isStudent } from "./admin-guards";
 
 if (!process.env.STRIPE_SECRET_KEY) {
   throw new Error('Missing required Stripe secret: STRIPE_SECRET_KEY');
@@ -12,13 +13,17 @@ if (!process.env.STRIPE_SECRET_KEY) {
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
-// Middleware to check if user is authenticated
-const isAuthenticated = (req: Request, res: Response, next: Function) => {
-  if (!req.isAuthenticated()) {
-    return res.status(401).json({ message: "Unauthorized" });
-  }
-  next();
-};
+/*
+ * Middleware to check if user is authenticated — and a student. The three
+ * routes below (checkout, subscription status, cancel) are all a caller's own
+ * billing, resolved from `req.user`, so a signed-in admin has no entitlement
+ * of their own for these to act on. `isStudent` also refuses them — see
+ * admin-guards.ts.
+ *
+ * `/api/payments/webhook` above is NOT guarded by this — it verifies a Stripe
+ * signature instead, deliberately, and must stay that way.
+ */
+const isAuthenticated = isStudent;
 
 export function registerPaymentRoutes(app: Express) {
   // Stripe webhook handler - raw body is handled in server/index.ts

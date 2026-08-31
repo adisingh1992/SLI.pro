@@ -13,19 +13,36 @@ export function ProtectedRoute({
   component: () => React.JSX.Element | null;
 }) {
   const { user, isLoading } = useAuth();
-  
+
+  /*
+   * ── THE OTHER HALF OF THE ADMIN/STUDENT SPLIT ────────────────────────────
+   * `AdminLayout` already refuses a signed-in student on any `/admin/*` route
+   * (redirects to `/admin/login`, which itself sends a signed-in-but-not-admin
+   * visitor back here). Nothing enforced the reverse: this component only ever
+   * checked `!!user`, so an admin's own session — `institution_admin` or
+   * `platform_admin` — satisfied that check exactly like a student's and
+   * rendered the Wing student UI as them. There is no student record behind an
+   * admin account (no `wing_students` row, no Foundation sessions, no SLI), so
+   * `/api/user/profile` and `/api/branding-intake` below would have been
+   * firing for a user they were never scoped to serve.
+   *
+   * `user.isAdmin` — student pages are for everyone else. Checked, and the
+   * queries below gated on it, before touching student-only data at all.
+   */
+  const isStudent = !!user && !user.isAdmin;
+
   const { data: userProfile } = useQuery<UserProfile>({
     queryKey: ["/api/user/profile"],
-    enabled: !!user,
+    enabled: isStudent,
   });
 
   const { data: brandingIntake, isLoading: isIntakeLoading, isError: isIntakeError } = useQuery<BrandingIntake | null>({
     queryKey: ["/api/branding-intake"],
-    enabled: !!user,
+    enabled: isStudent,
     retry: 1,
   });
 
-  if (isLoading || (!!user && isIntakeLoading && !isIntakeError)) {
+  if (isLoading || (isStudent && isIntakeLoading && !isIntakeError)) {
     return (
       <Route path={path}>
         <div className="flex items-center justify-center min-h-screen">
@@ -39,6 +56,14 @@ export function ProtectedRoute({
     return (
       <Route path={path}>
         <Redirect to="/auth" />
+      </Route>
+    );
+  }
+
+  if (user.isAdmin) {
+    return (
+      <Route path={path}>
+        <Redirect to="/admin/dashboard" />
       </Route>
     );
   }

@@ -3,6 +3,7 @@ import * as conversation from "./wing/intake-conversation";
 import * as intakeStore from "./wing/intake-store";
 import { log } from "./logger";
 import { minorProtectionActive } from "./wing/minor-protection";
+import { isStudent } from "./admin-guards";
 
 /**
  * Conversational intake API (Feature List A1).
@@ -18,10 +19,10 @@ import { minorProtectionActive } from "./wing/minor-protection";
  * demographics step at the end is explicitly skippable.
  */
 
-const isAuthenticated = (req: Request, res: Response, next: NextFunction) => {
-  if (req.isAuthenticated()) return next();
-  res.status(401).json({ error: "Not signed in" });
-};
+// Every route below resolves the student from `req.user!.id`. `isStudent` also
+// refuses a signed-in admin, who has no student record for this to serve —
+// see admin-guards.ts. Aliased so nothing below needed to change.
+const isAuthenticated = isStudent;
 
 export function registerIntakeRoutes(app: Express) {
   /**

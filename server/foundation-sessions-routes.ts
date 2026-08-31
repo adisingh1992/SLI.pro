@@ -1,4 +1,5 @@
 import { Express, Request, Response, NextFunction } from "express";
+import { isStudent } from "./admin-guards";
 import { parseJsonResponse } from "./json-response";
 import { storage } from "./storage";
 import { getPromptSet } from "./prompts";
@@ -56,10 +57,15 @@ import {
  * inside the session, per `shared/session-access.ts`.
  */
 
-const isAuthenticated = (req: Request, res: Response, next: NextFunction) => {
-  if (req.isAuthenticated()) return next();
-  res.status(401).json({ error: "Not authenticated" });
-};
+/*
+ * Every route below resolves the student from `req.user` (via
+ * `store.studentIdFor`), so this has always been a student's own Foundation
+ * Sessions. `isStudent` is the shared guard that also refuses a signed-in
+ * admin, who has no `wing_students` row for these routes to serve — see
+ * `admin-guards.ts` for why. Aliased under the old name so nothing below
+ * needed to change.
+ */
+const isAuthenticated = isStudent;
 
 /**
  * The published completion criteria for a population/session, rendered for the
