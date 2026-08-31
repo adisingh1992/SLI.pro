@@ -45,7 +45,7 @@ import { codeFromName, uniqueCode } from "./card-code";
  *
  * H-014 and H-021 below are SCAFFOLDING. They were written from the worked
  * example in spec §5 so the engine can be demonstrated end to end; they are
- * NOT validated SLI.pro methodology and no one on the methodology side has
+ * NOT validated MyWing methodology and no one on the methodology side has
  * reviewed them. They are inserted with status 'candidate' and say so in their
  * notes component. Danielle and Sam author the real cards through the
  * authoring API; when they do, these should be retired, not edited.
@@ -53,7 +53,7 @@ import { codeFromName, uniqueCode } from "./card-code";
 
 const DRY_RUN = process.argv.includes("--dry-run");
 
-const DIRECT_INSTITUTION = "SLI.pro Direct";
+const DIRECT_INSTITUTION = "MyWing Direct";
 
 type ComponentSeed = {
   componentType:

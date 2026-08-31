@@ -269,6 +269,23 @@ export async function accept(
   const state = await getState(userId);
   if (!state?.currentSli) return null;
 
+  /*
+   * Idempotent against a second `accept()` for the same proposal. The client
+   * (`chat.tsx`'s `acceptRefreshProposal`) now guards the button itself, but
+   * this route doesn't get to assume every caller is that button — a retried
+   * request or an older client could still land twice. Once this session is
+   * `completed`, a refresh has already been written; running it again would
+   * create a second sibling SLI row descending from the same parent and
+   * immediately supersede the first one for no reason.
+   */
+  if (state.complete) {
+    log(
+      `positioning refresh already accepted for user ${userId} (session ${state.sessionId}) — skipping`,
+      "refresh",
+    );
+    return sliStore.getActive(userId);
+  }
+
   const created = await sliStore.refresh(state.currentSli.id, {
     statement: proposal.statement,
     rationale: proposal.rationale,

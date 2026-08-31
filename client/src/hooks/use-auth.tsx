@@ -36,16 +36,26 @@ const registerSchema = insertUserSchema.extend({
     .refine(pwd => /\d/.test(pwd), "Password must contain at least one number")
     .refine(pwd => /[a-z]/.test(pwd), "Password must contain at least one lowercase letter")
     .refine(pwd => /[A-Z]/.test(pwd), "Password must contain at least one uppercase letter"),
-  confirmPassword: z.string(),
-  phoneNumber: z.string().min(1, "Phone number is required").refine(val => /^[+]?[(]?[0-9]{3}[)]?[-\s.]?[0-9]{3}[-\s.]?[0-9]{4,6}$/.test(val), {
+  /*
+   * Kept in step with `server/auth.ts`'s schema, which is the one that decides. Three
+   * fields the old long-form signup required are optional now — see that file for why
+   * each; the short version is that the MyWing form asks the minimum and Wing establishes
+   * professional status during intake, where the answer is better anyway.
+   *
+   * This copy exists so the client can show an error beside the field instead of after a
+   * round trip. It must never be STRICTER than the server's: a rule only enforced here is
+   * one an API client walks straight past, which is the more dangerous direction.
+   */
+  confirmPassword: z.string().optional(),
+  phoneNumber: z.string().refine(val => !val || /^[+]?[(]?[0-9]{3}[)]?[-\s.]?[0-9]{3}[-\s.]?[0-9]{4,6}$/.test(val), {
     message: "Please enter a valid phone number",
-  }),
+  }).optional(),
   professionalStatus: z.enum([
     "undergraduate_or_recent_grad",
     "early_career",
     "mid_career_or_senior",
     "career_break_or_transition",
-  ], { required_error: "Please select your professional situation" }),
+  ]).optional(),
   discoverySource: z.enum([
     "university_partnership",
     "colleague_or_mentor",
@@ -53,9 +63,17 @@ const registerSchema = insertUserSchema.extend({
     "web_search",
     "professional_network_or_conference",
     "other",
-  ], { required_error: "Please select how you heard about us" }),
+  ]).optional(),
   discoverySourceOther: z.string().optional(),
-}).refine(data => data.password === data.confirmPassword, {
+  /** Institutional reporting. Nested because it is stored apart — see migration 0035. */
+  demographics: z.object({
+    age: z.number().int().min(13).max(120).optional(),
+    gender: z.string().nullable().optional(),
+    genderSelfDescribe: z.string().nullable().optional(),
+    ethnicities: z.array(z.string()).optional(),
+    marketingOptIn: z.boolean().optional(),
+  }).optional(),
+}).refine(data => data.confirmPassword === undefined || data.password === data.confirmPassword, {
   message: "Passwords do not match",
   path: ["confirmPassword"]
 }).refine(data => data.discoverySource !== "other" || (data.discoverySourceOther && data.discoverySourceOther.trim().length > 0), {
@@ -105,7 +123,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const res = await apiRequest("POST", "/api/register", credentials);
       return (await res.json()) as User;
     },
-    onSuccess: () => {
+    /*
+     * Mirrors `loginMutation`'s onSuccess. This was empty, which is why signup did not
+     * redirect: `/api/register` creates the session server-side same as `/api/login` does,
+     * but the client never told react-query about it, so `useAuth().user` stayed null,
+     * the `<Redirect to="/" />` guard at the top of signup.tsx never had a user to redirect
+     * on, and the page just sat there after a successful "Create my account".
+     */
+    onSuccess: (userData: User) => {
+      queryClient.setQueryData(["/api/user"], userData);
     },
     onError: (error: Error) => {
       // Check for specific error messages
@@ -124,12 +150,31 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       await apiRequest("POST", "/api/logout");
 
       /*
-       * Clear, not invalidate. The cache holds the previous student's sessions,
-       * SLI and intake answers, and now that there is a single client this
-       * actually empties it — which matters on a shared library machine. The
-       * follow-up invalidate that used to sit here was redundant after a clear.
+       * ── WHY THE REDIRECT USED TO TAKE A WHILE ────────────────────────────
+       * Nothing here ever navigated. `ProtectedRoute` redirects to `/auth`
+       * purely reactively, off `useAuth().user` going null — and `user` comes
+       * from the `["/api/user"]` query. The old code called `queryClient.clear()`
+       * and stopped, which just EMPTIES the cache; it doesn't tell that query
+       * the answer is "signed out". So every mounted query — `/api/user`
+       * included — had to notice it had no data and independently REFETCH
+       * before anything could react. That meant: a full extra `/api/user`
+       * round trip just to discover `user: null`, run in parallel with every
+       * other query on the page the student was still looking at (dashboard
+       * tiles, chat threads, milestones...) doing the exact same thing against
+       * a session the server had already ended — each one failing, most
+       * retrying once (the app's default `retry: 1`) before settling. All of
+       * that happened before `ProtectedRoute` ever got the `user: null` it was
+       * waiting on to redirect.
+       *
+       * Cancel what's in flight, clear the cache, then WRITE the answer
+       * directly rather than waiting for a fetch to discover it. `setQueryData`
+       * is synchronous — React sees `user: null` in the very next render,
+       * `ProtectedRoute` redirects immediately, and the old page's components
+       * unmount before their queries get a chance to re-fire at all.
        */
+      await queryClient.cancelQueries();
       queryClient.clear();
+      queryClient.setQueryData(["/api/user"], null);
     },
     onSuccess: () => {
       toast({

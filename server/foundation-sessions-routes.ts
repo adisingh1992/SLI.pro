@@ -18,6 +18,7 @@ import * as voice from "./wing/voice";
 import { compileSafety, safetyTokenEstimate } from "./wing/safety-rules";
 import * as scoring from "./wing/scoring";
 import * as classifier from "./wing/classifier";
+import { ensureSliGenerated } from "./sli";
 import { isFoundationNumber } from "@shared/session-access";
 import { foundationOpening, type WingKnows } from "@shared/session-opening";
 import {
@@ -686,6 +687,27 @@ export function registerFoundationSessionsRoutes(app: Express) {
         res.json({ session: toApiSession(session), turns, artifacts });
       } catch (error) {
         console.error("Error fetching foundation session:", error);
+        next(error);
+      }
+    },
+  );
+
+  /**
+   * Wing's most recent observation about this student, for the dashboard's "Wing's
+   * observations" card. Always 200 — `{ observation: null }` is the real, honest
+   * empty state for a student Wing hasn't said anything about yet, not a 404; see
+   * `store.latestObservation`'s own comment for where this comes from.
+   */
+  app.get(
+    "/api/wing/observation",
+    isAuthenticated,
+    async (req: Request, res: Response, next: NextFunction) => {
+      try {
+        const studentId = await store.studentIdFor(req.user as any);
+        const observation = await store.latestObservation(studentId);
+        res.json({ observation });
+      } catch (error) {
+        console.error("Error fetching latest observation:", error);
         next(error);
       }
     },
@@ -1466,14 +1488,30 @@ export function registerFoundationSessionsRoutes(app: Express) {
             .classifySession(session.id)
             .then(() => scoring.scoreSession(session.id));
 
-          // S2 — completion email within the hour (Feature List B3). Also
-          // after res.end(): the student has finished and should not wait on
-          // an email. Never throws, so a floating promise is safe here.
-          void engagement.onSessionCompleted({
-            studentId,
-            sessionId: session.id,
-            sessionNumber,
-          });
+          /*
+           * Session 3 is where a student's first SLI gets created (Feature
+           * List §E5 — "SLI Completion Celebration, when: Foundation Session
+           * 3 complete"). `ensureSliGenerated` never throws, but the S2 email
+           * below reads the SLI it creates (`onSessionCompleted`'s
+           * `sessionNumber === 3` branch), so it is awaited before that call
+           * rather than fired alongside it — otherwise the email's
+           * `sliStatement` would race an SLI that hasn't been written yet.
+           * Both still run after `res.end()`; the student is not waiting on
+           * either.
+           */
+          void (async () => {
+            if (sessionNumber === 3) {
+              await ensureSliGenerated(legacyUserId, session.id);
+            }
+            // S2 — completion email within the hour (Feature List B3). Also
+            // after res.end(): the student has finished and should not wait on
+            // an email. Never throws, so a floating promise is safe here.
+            await engagement.onSessionCompleted({
+              studentId,
+              sessionId: session.id,
+              sessionNumber,
+            });
+          })();
         }
       } catch (error) {
         console.error("Error in foundation session stream:", error);

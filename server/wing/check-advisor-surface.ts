@@ -26,7 +26,7 @@ async function main() {
   if (!inst.length) console.log("   !! no institutions — the advisor form has nothing to attach to");
 
   // Advisors are keyed to an institution, so a Berkeley advisor needs a Berkeley
-  // row to file under. "SLI.pro Direct" alone is fine for testing and not enough
+  // row to file under. "MyWing Direct" alone is fine for testing and not enough
   // for August.
   const names = inst.map((i) => i.name.toLowerCase()).join(" ");
   for (const partner of ["berkeley", "vanderbilt"]) {

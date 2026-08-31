@@ -168,7 +168,7 @@ async function generateLinkedinContentDrafts(userId: number) {
      * nothing constrains the tokens it actually reaches for. The standard below
      * lists them.
      */
-    const systemPrompt = `You are a professional content strategist for SLI.pro, creating custom LinkedIn posts for clients.
+    const systemPrompt = `You are a professional content strategist for MyWing, creating custom LinkedIn posts for clients.
 
 ${renderStandardForPrompt()}`;
     

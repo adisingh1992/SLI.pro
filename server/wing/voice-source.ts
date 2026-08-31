@@ -382,7 +382,7 @@ const GUIDE_ANTI_PATTERNS: VoiceSeedComponent[] = [
     short: "Never say \"explore your options\", \"build your personal brand\", \"optimise your resume\".",
     full:
       "Corporate career-center speak: \"Explore your options.\" \"Build your personal brand.\" " +
-      "\"Optimize your resume.\" This language is exactly what SLI.pro exists to replace.",
+      "\"Optimize your resume.\" This language is exactly what MyWing exists to replace.",
   },
   {
     componentType: "anti_pattern",

@@ -95,6 +95,50 @@ const ENUM_FIELDS: Record<string, readonly string[]> = {
 /** Field names the intake is allowed to write. Anything else is dropped. */
 const KNOWN_FIELDS = new Set(BEATS.flatMap((b) => b.captures));
 
+/**
+ * Every free-text or enum field the model may write into `extracted`, with the question
+ * it came from — rendered into the prompt so the model has the exact keys, not just a
+ * prose description of what to listen for.
+ *
+ * ── THE BUG THIS EXISTS TO FIX ────────────────────────────────────────────────────
+ * It was missing entirely. `renderBeat` told the model WHAT to learn, in prose — "their
+ * self-presentation instinct" — and `OUTPUT_CONTRACT` told it to return `extracted` as
+ * an object, but nothing anywhere told it what to NAME the keys. `sanitiseExtracted`
+ * keeps only keys in `KNOWN_FIELDS`, the exact snake_case names each beat's `captures`
+ * declares, so a model free-associating a key — `presentation_style` instead of
+ * `self_presentation_style`, `field` instead of `career_focus` — had everything it wrote
+ * silently dropped, every turn, for every beat except `professional_status`, the one
+ * field `OUTPUT_CONTRACT` happens to name explicitly for its enum rule.
+ *
+ * That is not a rare miss. It is why a beat could go unsatisfied turn after turn even
+ * though the student plainly answered it: `isSatisfied` never saw a value land, so
+ * `nextBeatAfter` kept stepping forward — and once every later beat was in the same
+ * state, the walk ran off the end of the list and `nextBeat` restarted it from the top.
+ * From the outside that reads as exactly what it looked like: Wing asking the same nine
+ * questions again after it had already asked them once.
+ *
+ * ── WHY GLOBAL, NOT SCOPED TO THE CURRENT BEAT ────────────────────────────────────
+ * A rich answer legitimately fills fields the current beat does not own — Q3 is
+ * explicitly allowed to be skipped when Q1 or Q2 already named the institution — and a
+ * dictionary scoped to "what this turn is asking" would only ever let that beat's own
+ * answer land, leaving the opportunistic-capture behaviour the spec calls for unable to
+ * write anything.
+ *
+ * Baseline fields (`baseline_*`) are excluded: they are code-owned (`isCodeOwnedField`,
+ * `sanitiseExtracted`) and read by `readScale`/`classifyBarrier`, never by the model, so
+ * listing them here would only invite the model to guess a number in the one field where
+ * a guess is worse than a re-ask.
+ */
+const FIELD_DICTIONARY =
+  `FIELD NAMES — use these exact keys in "extracted". A key not on this list is silently\n` +
+  `discarded, so an invented or paraphrased name records nothing:\n` +
+  BEATS.map((b) => {
+    const names = b.captures.filter((f) => !isCodeOwnedField(f));
+    return names.length ? `${b.question}: ${names.join(", ")}` : null;
+  })
+    .filter((line): line is string => line !== null)
+    .join("\n");
+
 export type IntakeState = {
   sessionId: number;
   messages: { role: "assistant" | "user"; content: string }[];
@@ -166,6 +210,43 @@ NEVER
 - Never mention questions numbers, progress, stages or how much is left.
 - Never ask what their personality type is. You infer it from how they write.`;
 
+/**
+ * What Wing says once the required beats (and, once reached, the optional baselines
+ * too) are all satisfied — fixed text, not model-composed.
+ *
+ * ── THE BUG THIS EXISTS TO FIX ────────────────────────────────────────────────────
+ * "It's just keep going, there is no end." A real transcript ran to over sixty
+ * exchanges: every required beat and all three baselines were satisfied by around
+ * exchange ten, `buildSystemPrompt` correctly started including a CLOSING instruction
+ * telling the model to wrap up and stop asking things — and the model kept right on
+ * going anyway, improvising new questions (a pilot proposal, who could sponsor it,
+ * what evidence to bring the CEO) that aren't in `BEATS` at all. It also did this
+ * mid-intake, in miniature: `renderBaselineGuidance`'s "ONE follow-up, THEN STOP" was
+ * good for exactly one follow-up before the model asked another anyway.
+ *
+ * A soft instruction competing against a long system prompt that spends most of its
+ * words telling the model to be a curious, engaged coach is not reliable, and this file
+ * already has the answer for that: "the model proposes, the code disposes" — the same
+ * reason `readScale` reads baseline numbers instead of asking the model to, and the
+ * same reason the opening in `begin()` is fixed text rather than generated ("there is
+ * nothing to adapt to yet"). At the close there is, symmetrically, nothing NEW to
+ * adapt to: the required material is already gathered. So once `turn.wrapUp` is true,
+ * this replaces `parsed.reply` outright — the model is still called every turn (crisis
+ * detection has to run on every message unconditionally, close or not), but what it
+ * writes for `reply` on a wrap-up turn is discarded rather than shown.
+ */
+const CLOSING_REPLY = (firstName: string) =>
+  `That's what I needed, ${firstName}. Hit "Wrap up" below whenever you're ready — ` +
+  `a short set of optional questions, then your first real session with me.`;
+
+/**
+ * If they keep talking after that. Short on purpose — the alternative is the model
+ * treating a reply to its own closing line as an invitation to open something new,
+ * which is exactly the failure mode this file exists to stop.
+ */
+const CLOSING_NUDGE =
+  `Nothing else I need from you right now — "Wrap up" is right below whenever you're ready.`;
+
 function renderBeat(beat: Beat): string {
   /*
    * The scale note exists because the model's instinct is to be accommodating: offered
@@ -184,7 +265,12 @@ ${beat.intent}
 Why it matters, if they ask: ${beat.why}
 
 A natural way in — rephrase it to fit what they just said, do not recite it:
-"${beat.opening}"${scale}`;
+"${beat.opening}"${scale}
+
+Ask ONLY this. Even if their last answer opens up something genuinely worth
+digging into — a business idea, a specific plan, a real opportunity — that is
+material for their first real session, not for another question here. Land
+one brief, specific reaction to what they said, then ask this and stop.`;
 }
 
 function renderStyle(style: DeliveryStyle | null): string {
@@ -358,16 +444,27 @@ function buildSystemPrompt(params: {
   if (params.baselineGuidance) parts.push(params.baselineGuidance);
 
   if (params.wrapUp) {
+    /*
+     * `reply` is discarded on this turn regardless of what the model writes here — see
+     * `CLOSING_REPLY`. This instruction still matters for `extracted`, `deliveryStyle`
+     * and `safetyHold`, which are still read from this response: it keeps the model
+     * oriented on "the intake is over" rather than mid-conversation, which is what a
+     * correct `safetyHold` judgement needs.
+     */
     parts.push(
       `── THIS TURN: CLOSING ───────────────────────────────────────────────
-You have what you need. Say so briefly, tell them what happens next — a short
-set of optional questions, then their first real session — and stop asking
-things. Do not recap everything they told you.`,
+You have everything required. The intake is OVER — not paused, not at a good
+stopping point, over. Whatever they just said, do not turn it into a new
+question, a follow-up, or a next step to plan. That includes anything that
+sounds like a real opportunity worth digging into; there will be a real
+session for that. Ask nothing else, about anything, for the rest of this
+conversation.`,
     );
   } else if (params.beat && !params.suppressBeat) {
     parts.push(renderBeat(params.beat));
   }
 
+  parts.push(FIELD_DICTIONARY);
   parts.push(OUTPUT_CONTRACT);
   return parts.join("\n\n");
 }
@@ -664,7 +761,15 @@ export async function respond(userId: number, message: string): Promise<TurnResu
    * the moment the product is asking someone to believe it is worse than none. That
    * is IG-INT06's whole argument, and the reveal moves to the start of Foundation 1.
    */
+  /*
+   * `!turn.wrapUp`: an insight the model wrote this turn would have landed inside
+   * `parsed.reply` — which is discarded outright on a wrap-up turn in favour of the
+   * fixed `CLOSING_REPLY` (see below). Without this guard, a reveal could be marked
+   * delivered (`markEarlyInsightDelivered`) for an insight the student never actually
+   * saw, permanently burning the one early-insight opportunity intake gets.
+   */
   const timingReady =
+    !turn.wrapUp &&
     insightReady({
       exchanges,
       population: before.population,
@@ -788,10 +893,25 @@ export async function respond(userId: number, message: string): Promise<TurnResu
     return null;
   }
 
-  const reply = String(parsed.reply ?? "").trim();
-  if (!reply) {
-    log(`intake turn produced no reply for user ${userId}`, "intake");
-    return null;
+  /*
+   * ── THE CLOSE IS FIXED, NOT MODEL-COMPOSED ─────────────────────────────
+   * See `CLOSING_REPLY`/`CLOSING_NUDGE` above for why: a soft instruction telling the
+   * model to stop asking things has already been shown, in production, not to hold once
+   * `wrapUp` goes true — this is the code-level guarantee that a soft instruction can't
+   * be. `alreadyClosed` distinguishes the first wrap-up turn (warmer, names what's next)
+   * from every one after it (short, because the risk on turn two is the model treating
+   * its OWN closing line as an opening to keep going).
+   */
+  const alreadyClosed = before.captured._closing_reached === true;
+  let reply: string;
+  if (turn.wrapUp) {
+    reply = alreadyClosed ? CLOSING_NUDGE : CLOSING_REPLY(who?.firstName ?? "there");
+  } else {
+    reply = String(parsed.reply ?? "").trim();
+    if (!reply) {
+      log(`intake turn produced no reply for user ${userId}`, "intake");
+      return null;
+    }
   }
 
   /* Persist: structured fields first, so the transcript never claims a field
@@ -887,6 +1007,10 @@ export async function respond(userId: number, message: string): Promise<TurnResu
   await intakeStore.mergeIntakeResponses(userId, {
     _asked: turn.nextAsked,
     ...(trackAnswers ? { _track_answers: trackAnswers } : {}),
+    // Sticky once true — see `alreadyClosed` above. `turn.wrapUp` independently
+    // re-evaluates true on every turn from here on anyway (nothing becomes
+    // unsatisfied again), so this only needs to ever be written, never cleared.
+    ...(turn.wrapUp ? { _closing_reached: true } : {}),
   });
 
   /*

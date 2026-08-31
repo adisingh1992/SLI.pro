@@ -44,22 +44,60 @@ async function comparePasswords(supplied: string, stored: string) {
 }
 
 // Extended register schema with validation
+/**
+ * Registration, as the MyWing signup form submits it.
+ *
+ * ── THREE FIELDS STOPPED BEING REQUIRED, AND EACH FOR A REASON ───────────
+ * The old signup was a long form. The new one asks the minimum and lets Wing find out the
+ * rest in conversation, which is the shape of the whole product now.
+ *
+ *   phoneNumber          optional. The form marks it "For SMS notifications. Optional",
+ *                        and SMS is unbuilt — requiring a number for a channel that
+ *                        cannot send is a barrier in exchange for nothing. Still
+ *                        format-checked when given.
+ *   professionalStatus   optional, and this is the load-bearing one. It selects the
+ *                        prompt strategy and resolves the population tags, so it cannot
+ *                        simply be dropped — but the SIGNUP FORM is the wrong place to
+ *                        ask. `intake-conversation.ts` writes it when the conversation
+ *                        surfaces it, which is both better data and A1's actual design.
+ *                        Until intake runs, `getPromptSet` falls back to mid-career.
+ *   discoverySource      optional. The form's dropdown is marked optional.
+ *
+ * `confirmPassword` is optional too: the new form has one password field with a reveal
+ * toggle instead of two fields, so there is nothing to confirm against. The equality
+ * refinement below still holds whenever a client does send both.
+ */
 const registerSchema = insertUserSchema.extend({
   password: z.string().min(8, "Password must be at least 8 characters")
     .refine(pwd => /\d/.test(pwd), "Password must contain at least one number")
     .refine(pwd => /[a-z]/.test(pwd), "Password must contain at least one lowercase letter")
     .refine(pwd => /[A-Z]/.test(pwd), "Password must contain at least one uppercase letter"),
-  confirmPassword: z.string(),
-  phoneNumber: z.string().min(1, "Phone number is required")
-    .refine(val => /^[+]?[(]?[0-9]{3}[)]?[-\s.]?[0-9]{3}[-\s.]?[0-9]{4,6}$/.test(val), {
+  confirmPassword: z.string().optional(),
+  phoneNumber: z.string()
+    .refine(val => !val || /^[+]?[(]?[0-9]{3}[)]?[-\s.]?[0-9]{3}[-\s.]?[0-9]{4,6}$/.test(val), {
       message: "Please enter a valid phone number",
-    }),
+    })
+    .optional(),
   professionalStatus: z.enum([
     "undergraduate_or_recent_grad",
     "early_career",
     "mid_career_or_senior",
     "career_break_or_transition",
-  ], { required_error: "Please select your professional situation" }),
+  ]).optional(),
+  /**
+   * The institutional reporting block.
+   *
+   * Its own object rather than fields alongside the account, because it goes to its own
+   * table — see migration 0035. The nesting is the first line of that separation: a
+   * handler cannot spread this into `createUser` by accident.
+   */
+  demographics: z.object({
+    age: z.number().int().min(13).max(120).optional(),
+    gender: z.string().max(120).nullable().optional(),
+    genderSelfDescribe: z.string().max(300).nullable().optional(),
+    ethnicities: z.array(z.string().max(120)).max(20).optional(),
+    marketingOptIn: z.boolean().optional(),
+  }).optional(),
   discoverySource: z.enum([
     "university_partnership",
     "colleague_or_mentor",
@@ -67,9 +105,9 @@ const registerSchema = insertUserSchema.extend({
     "web_search",
     "professional_network_or_conference",
     "other",
-  ], { required_error: "Please select how you heard about us" }),
+  ]).optional(),
   discoverySourceOther: z.string().optional(),
-}).refine(data => data.password === data.confirmPassword, {
+}).refine(data => data.confirmPassword === undefined || data.password === data.confirmPassword, {
   message: "Passwords do not match",
   path: ["confirmPassword"]
 }).refine(data => data.discoverySource !== "other" || (data.discoverySourceOther && data.discoverySourceOther.trim().length > 0), {
@@ -230,7 +268,7 @@ export function setupAuth(app: Express) {
         });
       }
       
-      const { username, password, firstName, lastName, phoneNumber, professionalStatus, discoverySource, discoverySourceOther } = validationResult.data;
+      const { username, password, firstName, lastName, phoneNumber, professionalStatus, discoverySource, discoverySourceOther, demographics } = validationResult.data;
       
       const existingUser = await identity.getUserByEmail(username);
       if (existingUser) {
@@ -253,24 +291,66 @@ export function setupAuth(app: Express) {
       // every new registration, because its FK points at public.users and the
       // user was created in wing.users.
 
-      const { passwordHash: _, ...userWithoutPassword } = user;
-      res.status(201).json(userWithoutPassword);
-
-      // S1 — welcome sequence (Feature List B3). Fired AFTER the response so a
-      // slow or failing email cannot make registration look broken, which is
-      // the surface that already loses 43% of registrants.
-      void (async () => {
+      /*
+       * The institutional reporting block, if the form sent one.
+       *
+       * Awaited rather than fired after the response, unlike the welcome email below.
+       * The student consented to this being recorded on the screen they just submitted,
+       * and a floating promise that loses the row leaves the institution's report short
+       * with nothing anywhere saying so. It is one insert.
+       *
+       * It does not fail the registration. An account that exists without its reporting
+       * row is recoverable — the student can be asked again — and a registration that
+       * 500s because a reporting insert failed is not.
+       */
+      if (demographics) {
         try {
           const { ensureStudent } = await import("./wing/bootstrap");
-          const engagement = await import("./wing/engagement");
-          // Takes the legacy user row, not an id — it provisions the wing user
-          // as well as the student on first call.
+          const { saveDemographics } = await import("./wing/demographics-store");
           const studentId = await ensureStudent(user as any);
-          if (studentId) await engagement.onRegistered(studentId);
+          await saveDemographics(studentId, {
+            age: demographics.age ?? null,
+            gender: demographics.gender ?? null,
+            genderSelfDescribe: demographics.genderSelfDescribe ?? null,
+            ethnicities: demographics.ethnicities ?? [],
+            marketingOptIn: demographics.marketingOptIn ?? false,
+          });
         } catch (err) {
-          console.error("[engagement] welcome sequence not started:", err);
+          console.error("demographics not recorded for the new registration:", err);
         }
-      })();
+      }
+
+      /*
+       * `req.login` establishes the session — without it registration created the
+       * account but signed nobody in, so the client had nothing to redirect on and a
+       * page reload sent a brand-new registrant straight back to the login screen.
+       * `/api/login` does this; register never did.
+       *
+       * Response goes through `identity.publicUser`, not a hand-rolled `{ passwordHash:
+       * _, ...rest }` spread — that was the same denylist bug `/api/user` had (see the
+       * allowlist note above): it shipped every column on the row to the browser,
+       * `linkedinId` included, rather than the fields the client is meant to see.
+       */
+      req.login(user, (err: any) => {
+        if (err) return next(err);
+        res.status(201).json(identity.publicUser(user));
+
+        // S1 — welcome sequence (Feature List B3). Fired AFTER the response so a
+        // slow or failing email cannot make registration look broken, which is
+        // the surface that already loses 43% of registrants.
+        void (async () => {
+          try {
+            const { ensureStudent } = await import("./wing/bootstrap");
+            const engagement = await import("./wing/engagement");
+            // Takes the legacy user row, not an id — it provisions the wing user
+            // as well as the student on first call.
+            const studentId = await ensureStudent(user as any);
+            if (studentId) await engagement.onRegistered(studentId);
+          } catch (err) {
+            console.error("[engagement] welcome sequence not started:", err);
+          }
+        })();
+      });
     } catch (error) {
       next(error);
     }

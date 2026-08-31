@@ -13,7 +13,7 @@ import { institutions, schoolCycles } from "@shared/wing-schema";
  * `advisors.institution_id` is NOT NULL. Until these rows exist there is
  * nowhere to file a Berkeley or Vanderbilt advisor, so the advisor snapshot
  * cannot be used by either partner — the feature is complete and unusable at
- * the same time. This was invisible because "SLI.pro Direct" exists and makes
+ * the same time. This was invisible because "MyWing Direct" exists and makes
  * the advisor form look functional.
  *
  * ── WHY A CYCLE, NOT JUST AN INSTITUTION ─────────────────────────────────

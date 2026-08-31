@@ -1,22 +1,13 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
-import {
-  ChatHeader,
-  ChatShell,
-  Composer,
-  Sheet,
-  Prose,
-  Thinking,
-  Transcript,
-  Turn,
-} from "@/components/chat";
+import { MessageRow } from "@/components/wing/chat/Bubbles";
+import { toneFor, type Msg } from "@/lib/wing-api";
 import {
   Select,
   SelectContent,
@@ -54,6 +45,20 @@ import { Loader2, Send } from "lucide-react";
  * unambiguous and analytics need exact values, and being asked your ethnicity
  * by a chatbot is more intrusive than a labelled optional field, not less.
  * Every control here can be left alone and the step skipped outright.
+ *
+ * ── THE TRANSCRIPT IS `MessageRow`, NOT ITS OWN BUBBLE STYLE ─────────────
+ * This used to render through `@/components/chat` (`Turn`/`Prose`/`Sheet`), a
+ * generic set of primitives shared with the two coaching surfaces before
+ * those were rebuilt onto Wing's own chat. That left intake — a brand-new
+ * student's very first screen — visually behind the conversation it hands
+ * off to: boxed turns and shadcn form colours instead of Wing's aqua/wine
+ * bubbles.
+ *
+ * It now renders with the literal same `MessageRow` component `WingChatPage`
+ * uses (`@/components/wing/chat/Bubbles`), by mapping intake's own
+ * `{role, content}` messages onto `Msg`. Not a re-styled copy — the same
+ * component, so this page is guaranteed to render identically to the rest of
+ * Wing's chat rather than tracking it by hand.
  */
 
 /** Mirrors the discovery_source enum on wing.users. */
@@ -207,6 +212,16 @@ export default function IntakeChatPage() {
     endRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages.length, begin.isPending, paced]);
 
+  // Grows the composer with its content, same as the main chat's — a fixed
+  // one-line box is the detail that made this page read as a form field
+  // rather than a conversation.
+  useLayoutEffect(() => {
+    const el = inputRef.current;
+    if (!el) return;
+    el.style.height = "auto";
+    el.style.height = `${Math.min(el.scrollHeight, 160)}px`;
+  }, [draft]);
+
   const send = useMutation({
     mutationFn: async (message: string): Promise<TurnResponse> =>
       (await apiRequest("POST", "/api/intake/message", { message })).json(),
@@ -249,8 +264,28 @@ export default function IntakeChatPage() {
   const finish = useMutation({
     mutationFn: async (payload: Record<string, unknown>) =>
       (await apiRequest("POST", "/api/intake/finish", payload)).json(),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/user"] });
+    /*
+     * ── BOTH QUERIES, AWAITED, BEFORE THE NAVIGATE ───────────────────────────
+     * `ProtectedRoute` gates every non-intake route on `useQuery(["/api/branding-intake"])`
+     * — specifically `brandingIntake?.completed === true`. This mutation is what flips
+     * `completed` to true server-side, but it was only ever invalidating `["/api/user"]`.
+     *
+     * So `navigate("/")` fired immediately after `/api/intake/finish` returned, while the
+     * branding-intake query was still serving its last cached (incomplete) value. The very
+     * next render of `ProtectedRoute` saw stale data, didn't see intake as done, and bounced
+     * straight back to `/branding-intake` — the redirect a student could only escape with a
+     * manual refresh, because a refetch-in-the-background eventually settled the cache too
+     * late to matter.
+     *
+     * Fixed the same way the signup redirect was fixed earlier: await the invalidation (both
+     * of them — `/api/user` still matters for anything reading professional_status off it)
+     * before navigating, so the first render after `finish` already sees `completed: true`.
+     */
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["/api/user"] }),
+        queryClient.invalidateQueries({ queryKey: ["/api/branding-intake"] }),
+      ]);
       navigate("/");
     },
     onError: (e: Error) =>
@@ -313,98 +348,114 @@ export default function IntakeChatPage() {
   }
 
   const canFinish = state.data?.complete === true;
+  const busy = send.isPending || begin.isPending || paced;
+
+  /*
+   * `Msg`, mapped from intake's own `{role, content}` messages so the
+   * transcript can hand them straight to `MessageRow` — the same component
+   * `WingChatPage` renders. `tone` doesn't change how a bubble looks
+   * (`MessageRow` only branches on `role`); it's set anyway so the shape is
+   * the real `Msg` type rather than a lookalike.
+   */
+  const wingMessages: Msg[] = messages.map((m, i) =>
+    m.role === "user"
+      ? { id: `intake-${i}`, role: "user", text: m.content }
+      : { id: `intake-${i}`, role: "wing", tone: toneFor(m.content), text: m.content },
+  );
 
   /*
    * The intake is the first screen a new student ever sees, so it carries the
-   * most weight per pixel of anything in the product. It uses the same
-   * primitives as the two coaching surfaces — same turns, same composer, same
-   * thinking indicator — because arriving at Foundation Session 1 should feel
-   * like continuing a conversation rather than moving to a different product.
+   * most weight per pixel of anything in the product. It now renders with
+   * Wing's own chat shell and bubbles rather than the generic primitives the
+   * two coaching surfaces used before their own rebuild — arriving at
+   * Foundation Session 1 should feel like continuing a conversation rather
+   * than moving to a different product.
    *
-   * No side rail and no timer: there is nothing to reference and nothing to
-   * time. The header is the only chrome.
+   * No `AppShell` here on purpose: that sidebar lists a student's threads and
+   * lets them navigate the app, and intake is the gate every route redirects
+   * to until it's done (see `protected-route.tsx`) — offering a way out of it
+   * would undercut the gate. So this is `AppShell`'s canvas and column
+   * proportions without its rail: `bg-wing-canvas`, the same `label-eyebrow`
+   * header, the same `max-w-[720px]` centred transcript.
    */
   return (
-    <ChatShell>
-      <ChatHeader
-        title="Let's start with you"
-        subtitle="A short conversation so Wing knows who it's working with"
-      />
+    <div className="flex h-screen flex-col bg-wing-canvas text-forest">
+      <header className="shrink-0 px-6 pb-3 pt-5 md:px-10">
+        <p className="label-eyebrow">Let's start with you</p>
+        <p className="mt-2 text-sm text-plum/70">
+          A short conversation so Wing knows who it's working with
+        </p>
+      </header>
 
-      {/*
-        One sheet on the canvas. Narrower than a session's, because there is no
-        rail beside it and a full-width column of conversation on a large
-        display has nothing anchoring it.
-      */}
-      <div className="flex min-h-0 flex-1 justify-center p-4 sm:px-6 sm:py-5">
-        <Sheet className="w-full max-w-3xl">
-          <Transcript>
-            {messages.map((m, i) => (
-              <Turn
-                key={i}
-                role={m.role === "user" ? "user" : "assistant"}
-                testId={`intake-${m.role}-${i}`}
-              >
-                {m.role === "user" ? m.content : <Prose content={m.content} />}
-              </Turn>
-            ))}
+      <div className="min-h-0 flex-1 overflow-y-auto px-6 md:px-10">
+        <div className="mx-auto flex max-w-[720px] flex-col gap-6 pb-4">
+          {wingMessages.map((m, i) => (
+            <MessageRow key={m.id} msg={m} isLastOfRun={wingMessages[i + 1]?.role !== m.role} />
+          ))}
 
-            {(send.isPending || begin.isPending || paced) && <Thinking />}
+          {busy && (
+            <MessageRow msg={{ id: "intake-thinking", role: "thinking", text: "" }} isLastOfRun />
+          )}
 
-            <div ref={endRef} />
-          </Transcript>
+          <div ref={endRef} className="h-24" />
+        </div>
+      </div>
 
-          <Composer
-        note={
-          canFinish ? (
-            <div className="flex items-center justify-between gap-3">
+      <div className="shrink-0 bg-gradient-to-t from-wing-canvas via-wing-canvas px-6 pb-6 md:px-10">
+        <div className="mx-auto max-w-[720px] space-y-2">
+          {canFinish && (
+            <div className="flex items-center justify-between gap-3 rounded-2xl bg-aqua-light px-4 py-2.5 text-sm text-wine">
               <span>That's everything I need — keep going if you want, or wrap up.</span>
               <Button
-                variant="outline"
                 size="sm"
-                className="shrink-0 border-rule"
                 onClick={() => setShowClosing(true)}
+                className="h-auto shrink-0 rounded-full bg-white px-3 py-1.5 text-xs font-medium text-wine ring-1 ring-wing-border hover:bg-white/80"
               >
                 Wrap up
               </Button>
             </div>
-          ) : null
-        }
-      >
-        <div className="flex items-end gap-1 rounded-2xl border border-rule bg-background p-1.5 transition-colors focus-within:border-brand/40">
-          <Textarea
-            ref={inputRef}
-            value={draft}
-            onChange={(e) => setDraft(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" && !e.shiftKey) {
-                e.preventDefault();
-                submit();
-              }
+          )}
+
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              submit();
             }}
-            placeholder="Type your answer…"
-            rows={1}
-            // text-base: below 16px iOS zooms on focus and never zooms back.
-            className="max-h-40 min-h-9 flex-1 resize-none border-0 bg-transparent px-2 py-[6px] text-base leading-6 text-ink shadow-none placeholder:text-ink-soft/60 focus-visible:ring-0 sm:text-[15px]"
-            disabled={send.isPending}
-          />
-          <Button
-            onClick={submit}
-            size="icon"
-            disabled={!draft.trim() || send.isPending}
-            className="h-9 w-9 shrink-0 rounded-full bg-brand text-white hover:bg-brand/90"
+            className="flex items-end gap-3 rounded-3xl bg-white px-4 py-3 shadow-[0_6px_24px_-12px_rgba(42,42,56,0.35)] ring-1 ring-wing-border"
           >
-            {send.isPending ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <Send className="h-4 w-4" />
-            )}
-          </Button>
+            <textarea
+              ref={inputRef}
+              rows={1}
+              value={draft}
+              onChange={(e) => setDraft(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && !e.shiftKey) {
+                  e.preventDefault();
+                  submit();
+                }
+              }}
+              placeholder="Type your answer.."
+              aria-label="Your message"
+              disabled={send.isPending}
+              // text-[16px]: below that, iOS zooms in on focus and never zooms back out.
+              className="min-w-0 flex-1 resize-none overflow-y-auto bg-transparent py-1.5 text-[16px] leading-relaxed text-forest outline-none placeholder:text-plum/60"
+            />
+            <button
+              type="submit"
+              aria-label="Send"
+              disabled={!draft.trim() || send.isPending}
+              className="mb-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-salmon text-white transition-transform hover:scale-105 disabled:opacity-40 disabled:hover:scale-100"
+            >
+              {send.isPending ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Send className="h-4 w-4" />
+              )}
+            </button>
+          </form>
         </div>
-          </Composer>
-        </Sheet>
       </div>
-    </ChatShell>
+    </div>
   );
 }
 

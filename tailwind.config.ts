@@ -106,6 +106,50 @@ export default {
         },
         canvas: "hsl(var(--canvas))",
         rule: "hsl(var(--rule))",
+
+        /*
+         * ── The Wing student palette ─────────────────────────────────
+         *
+         * Ported from the wing5 prototype. These are `rgb(var(--x) / <alpha-value>)`
+         * rather than `hsl(...)` because the prototype's own markup uses opacity
+         * modifiers on them throughout — `text-plum/60`, `bg-aqua-light/60`. A token
+         * that cannot take an alpha makes those utilities emit nothing at all, with
+         * no error, and the element renders at full opacity. The channel values and
+         * the oklch originals they came from are in index.css.
+         *
+         * Separate names from the admin tokens above on purpose: the admin panel is
+         * out of scope for this rebuild and shares this config.
+         */
+        wine: {
+          DEFAULT: "rgb(var(--wine) / <alpha-value>)",
+          dark: "rgb(var(--wine-dark) / <alpha-value>)",
+        },
+        aqua: {
+          DEFAULT: "rgb(var(--aqua) / <alpha-value>)",
+          light: "rgb(var(--aqua-light) / <alpha-value>)",
+        },
+        salmon: {
+          DEFAULT: "rgb(var(--salmon) / <alpha-value>)",
+          light: "rgb(var(--salmon-light) / <alpha-value>)",
+        },
+        midnight: "rgb(var(--midnight) / <alpha-value>)",
+        plum: {
+          DEFAULT: "rgb(var(--plum) / <alpha-value>)",
+          label: "rgb(var(--plum-label) / <alpha-value>)",
+          body: "rgb(var(--plum-body) / <alpha-value>)",
+          rule: "rgb(var(--plum-rule) / <alpha-value>)",
+        },
+        forest: "rgb(var(--forest) / <alpha-value>)",
+        sand: "rgb(var(--sand) / <alpha-value>)",
+        olive: "rgb(var(--olive) / <alpha-value>)",
+        /*
+         * The prototype's page colour. Named `wing-canvas`, not `canvas`: `canvas`
+         * is already taken above by the retired student UI's token, and silently
+         * repointing a name the admin config still resolves is the kind of change
+         * that shows up as one screen looking slightly wrong months later.
+         */
+        "wing-canvas": "rgb(var(--wing-canvas) / <alpha-value>)",
+        "wing-border": "rgb(var(--wing-border) / <alpha-value>)",
         muted: {
           DEFAULT: "hsl(var(--muted))",
           foreground: "hsl(var(--muted-foreground))",
@@ -138,6 +182,10 @@ export default {
           border: "hsl(var(--sidebar-border))",
           ring: "hsl(var(--sidebar-ring))",
         },
+      },
+      fontFamily: {
+        /* Montserrat is already preloaded in client/index.html at 200/400/500/600. */
+        wing: ['"Montserrat"', "ui-sans-serif", "system-ui", "sans-serif"],
       },
       keyframes: {
         "accordion-down": {

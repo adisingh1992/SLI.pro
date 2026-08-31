@@ -463,7 +463,7 @@ export const STAGE_LABELS: Record<string, string[]> = {
   ],
 };
 
-export const PRIVACY_TEXT = `Your responses help personalize your SLI.pro experience and provide aggregate insights to improve our methodology. Individual responses remain confidential and are never shared with employers or third parties without your explicit consent.
+export const PRIVACY_TEXT = `Your responses help personalize your Wing experience and provide aggregate insights to improve our methodology. Individual responses remain confidential and are never shared with employers or third parties without your explicit consent.
 
 For university partnership participants: Aggregate demographic data (percentages, not individual responses) may be shared with your institution to evaluate program effectiveness and inform career support improvements.`;
 

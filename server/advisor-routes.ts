@@ -23,7 +23,7 @@ import { isAdmin } from "./admin-guards";
  * us which system to integrate with.
  *
  * That decision has a boundary worth stating, because the tables here look like
- * the start of something they are not: SLI.pro does not own scheduling. We
+ * the start of something they are not: MyWing does not own scheduling. We
  * accept an appointment time and act on it. We do not manage availability,
  * booking, rescheduling, cancellation policy or reminders about the meeting
  * itself — Berkeley and Vanderbilt already have systems that do. Anything in

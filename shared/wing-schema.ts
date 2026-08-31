@@ -1240,25 +1240,14 @@ export const promptLibrary = wing.table(
     sourceBlock: text("source_block"),
     sourceLine: integer("source_line"),
 
-    /** The row this one was edited from — 0034.
-     *
-     *  Editing a prompt retires its row and inserts a successor rather than updating in
-     *  place, because `life_log_entries.prompt_id` is a foreign key here: a student's
-     *  entry is stored as an answer to THIS row, and rewriting the text re-files every
-     *  past answer under a question that was never asked. NULL on a prompt written from
-     *  scratch. */
-    supersedesId: fk("supersedes_id").references((): AnyPgColumn => promptLibrary.id),
-
     active: boolean("active").notNull().default(true),
     createdAt: tsNow("created_at"),
     updatedAt: tsNow("updated_at"),
   },
   /* `prompt_library_code_idx` — UNIQUE on (source_block, prompt_code) WHERE
-     prompt_code IS NOT NULL AND active — lives in 0028, narrowed to live rows by
-     0034. It is partial, which this drizzle version cannot express, and a
-     non-partial version would be wrong twice over: the 28 pre-existing rows carry
-     neither column and would all collide, and a successor keeping her prompt_code
-     would collide with the predecessor it supersedes. */
+     prompt_code IS NOT NULL — lives in 0028 only. It is partial, which this
+     drizzle version cannot express, and a non-partial version would be wrong:
+     the 28 pre-existing rows carry neither column and would all collide. */
   (t) => ({
     selectionIdx: index("prompt_library_selection_idx").on(
       t.active,
@@ -1292,23 +1281,45 @@ export const promptOpeners = wing.table(
      *  interpolates a topic. Recorded so a renderer refuses an opener whose
      *  placeholders it cannot fill rather than sending "[Name]" to a student. */
     placeholders: text("placeholders").array().notNull().default(sql`'{}'`),
-    /** Same rule as `prompt_library.supersedes_id` — 0034. `message_events.opener_id`
-     *  records which greeting a student received, so an edit publishes a successor
-     *  rather than rewriting history. */
-    supersedesId: fk("supersedes_id").references((): AnyPgColumn => promptOpeners.id),
     active: boolean("active").notNull().default(true),
     createdAt: tsNow("created_at"),
     updatedAt: tsNow("updated_at"),
   },
-  /* `prompt_openers_text_idx` — UNIQUE on (pool, text) WHERE active — lives in 0028
-     and was narrowed to live rows by 0034. It is partial, which this drizzle version
-     cannot express. The `active` in the predicate is what makes retire-and-supersede
-     possible: without it, reverting to an earlier opener collides with the retired row
-     that still holds its text. */
+  /* `prompt_openers_text_idx` — UNIQUE on (pool, text) — is in 0028 only, for
+     symmetry with the note above: both uniqueness rules are enforced by the
+     database and stated there. */
   (t) => ({
     poolIdx: index("prompt_openers_pool_idx").on(t.active, t.pool),
   }),
 );
+
+/** Build now · The institutional reporting block — migration 0035.
+ *
+ *  Collected at registration under an explicit promise: "Collected for [Institution]
+ *  reporting. Does not affect your Wing experience."
+ *
+ *  A SEPARATE TABLE, not columns on `students`, and that is the promise expressed as
+ *  schema. Columns on `students` would be honoured the day they were added and quietly
+ *  broken the first time a context builder selected the whole row — which is how
+ *  `student_context` is assembled. Nothing that builds a prompt joins this table; see
+ *  `wing/demographics-store.ts`, which is its only accessor.
+ *
+ *  Every field is nullable. "Prefer not to say" is one of the form's own options and is
+ *  stored as that string — an answer, distinct from NULL meaning never asked. */
+export const studentDemographics = wing.table("student_demographics", {
+  id: id(),
+  studentId: fk("student_id").notNull().unique().references(() => students.id, { onDelete: "cascade" }),
+  /** A year, not a date of birth — a DOB identifies far more than reporting needs. */
+  age: smallint("age"),
+  gender: text("gender"),
+  genderSelfDescribe: text("gender_self_describe"),
+  ethnicities: text("ethnicities").array().notNull().default(sql`'{}'`),
+  marketingOptIn: boolean("marketing_opt_in").notNull().default(false),
+  /** When the acknowledgement was ticked. A boolean cannot date a consent record. */
+  privacyAcceptedAt: ts("privacy_accepted_at"),
+  createdAt: tsNow("created_at"),
+  updatedAt: tsNow("updated_at"),
+});
 
 /** Build now · The career-and-personal event log — Tier 1's core
  *  data-generating surface. Human input (entry_text) and AI output

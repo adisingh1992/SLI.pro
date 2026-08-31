@@ -236,7 +236,7 @@ export function registerSliRoutes(app: Express, storage: IStorage) {
        * reported as "refinement is broken" rather than as an error. Structured
        * output removes the parsing step instead of hardening it.
        */
-      const systemPrompt = `You are a professional branding expert for SLI.pro, helping a client refine their chosen Single Lasting Impression (SLI) based on their feedback. Use the original SLI options and the client's specific feedback to create an optimized version that precisely meets their needs.
+      const systemPrompt = `You are a professional branding expert for MyWing, helping a client refine their chosen Single Lasting Impression (SLI) based on their feedback. Use the original SLI options and the client's specific feedback to create an optimized version that precisely meets their needs.
 
 Respond with ONLY a JSON object, no prose before or after, in exactly this shape:
 

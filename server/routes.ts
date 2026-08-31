@@ -27,6 +27,7 @@ import { registerTemplateRoutes } from "./template-routes";
 import { registerMetricsRoutes } from "./metrics-routes";
 import { registerInstitutionRoutes } from "./institution-routes";
 import { registerLifeLogRoutes } from "./life-log-routes";
+import { registerNotificationPreferencesRoutes } from "./notification-preferences-routes";
 import { registerInboundEmailRoutes } from "./inbound-email-routes";
 import { registerPromptLibraryRoutes } from "./prompt-library-routes";
 import { registerIntakeRoutes } from "./intake-routes";
@@ -147,6 +148,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   registerMetricsRoutes(app);
   registerInstitutionRoutes(app);
   registerLifeLogRoutes(app);
+  registerNotificationPreferencesRoutes(app);
   registerInboundEmailRoutes(app);
   registerPromptLibraryRoutes(app);
   registerIntakeRoutes(app);

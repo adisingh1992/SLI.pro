@@ -26,6 +26,28 @@ import { renderOpener } from "./opener";
  * logged to message_events either way, so a silent failure is still visible.
  */
 
+/**
+ * Foundation session number → the module slug that now addresses it.
+ *
+ * The chat is addressed by slug, not by session number, so "your next session" in the
+ * completion email needs the mapping. Falls back to the first module rather than
+ * producing `/chat/undefined`: a student who has just finished Session 3 has no next
+ * one, and the link is only rendered when the template asks for it.
+ */
+const MODULE_SLUG: Readonly<Record<number, string>> = {
+  1: "discover_your_function",
+  2: "prove_your_credibility",
+  3: "tell_your_stories",
+};
+
+/*
+ * ── THE PATHS BELOW ARE THE NEW STUDENT ROUTES ──────────────────────────
+ * Every link in an outbound email used to point at a screen the MyWing rebuild retired:
+ * /foundation/session/1, /dashboard, /log, /portfolio, /linkedin-content-drafts. The
+ * router redirects all five, so nothing broke — but a redirect is a safety net, not a
+ * destination, and the day somebody prunes those routes the emails start landing on a
+ * 404 with no test failing. They point at the real thing instead.
+ */
 const APP_URL = () => process.env.APP_BASE_URL || "http://localhost:5173";
 
 /* ── Event triggers ─────────────────────────────────────────────────────── */
@@ -66,7 +88,7 @@ export async function onRegistered(studentId: number): Promise<void> {
       sequenceStep: 1,
       vars: {
         firstName: to.firstName ?? "there",
-        sessionLink: `${APP_URL()}/foundation/session/1`,
+        sessionLink: `${APP_URL()}/chat/discover_your_function`,
       },
     });
 
@@ -160,8 +182,8 @@ export async function onSessionCompleted(params: {
         primaryFunction: content.primaryFunction ?? content.lockedFunction ?? null,
         insight,
         sliStatement,
-        nextSessionLink: `${APP_URL()}/foundation/session/${params.sessionNumber + 1}`,
-        dashboardLink: `${APP_URL()}/dashboard`,
+        nextSessionLink: `${APP_URL()}/chat/${MODULE_SLUG[params.sessionNumber + 1] ?? "discover_your_function"}`,
+        dashboardLink: `${APP_URL()}/`,
       },
     });
 
@@ -238,8 +260,8 @@ export async function runDueSequences(now = new Date()): Promise<{ sent: number;
 
       const vars = {
         firstName: to.firstName ?? "there",
-        sessionLink: `${APP_URL()}/foundation/session/1`,
-        dashboardLink: `${APP_URL()}/dashboard`,
+        sessionLink: `${APP_URL()}/chat/discover_your_function`,
+        dashboardLink: `${APP_URL()}/`,
       };
 
       if (item.sequenceKey === "welcome") {
@@ -468,7 +490,7 @@ export async function runDueSequences(now = new Date()): Promise<{ sent: number;
              * wire.
              */
             opener: opener?.text ?? `Hi ${to.firstName ?? "there"},`,
-            logLink: `${APP_URL()}/log`,
+            logLink: `${APP_URL()}/milestones`,
           },
         });
 

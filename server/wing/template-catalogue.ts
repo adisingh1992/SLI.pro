@@ -63,12 +63,12 @@ const firstName: TemplateVariable = {
 const sessionLink: TemplateVariable = {
   name: "sessionLink",
   description: "Link to the session they should do next.",
-  sample: "https://app.sli.pro/foundation/session/1",
+  sample: "https://app.mywing.ai/foundation/session/1",
 };
 const dashboardLink: TemplateVariable = {
   name: "dashboardLink",
   description: "Link to the student dashboard.",
-  sample: "https://app.sli.pro/dashboard",
+  sample: "https://app.mywing.ai/dashboard",
 };
 
 export const TEMPLATE_CATALOGUE: TemplateSpec[] = [
@@ -218,7 +218,7 @@ export const TEMPLATE_CATALOGUE: TemplateSpec[] = [
       {
         name: "logLink",
         description: "Link to the student's log.",
-        sample: "https://app.sli.pro/log",
+        sample: "https://app.mywing.ai/log",
       },
     ],
   },
@@ -239,7 +239,7 @@ export const TEMPLATE_CATALOGUE: TemplateSpec[] = [
           "a second message — Wing already replied when they logged it.",
         sample: "Had the second interview. They asked about the migration and I froze on the numbers.",
       },
-      { name: "logLink", description: "Link to their log.", sample: "https://app.sli.pro/log" },
+      { name: "logLink", description: "Link to their log.", sample: "https://app.mywing.ai/log" },
     ],
   },
   {
@@ -255,7 +255,7 @@ export const TEMPLATE_CATALOGUE: TemplateSpec[] = [
         description: "The first 180 characters of what they wrote.",
         sample: "Keep feeling like everyone else knows what they're doing and I'm improvising.",
       },
-      { name: "logLink", description: "Link to their log.", sample: "https://app.sli.pro/log" },
+      { name: "logLink", description: "Link to their log.", sample: "https://app.mywing.ai/log" },
     ],
   },
   {
@@ -266,7 +266,7 @@ export const TEMPLATE_CATALOGUE: TemplateSpec[] = [
     group: "Milestones",
     variables: [
       firstName,
-      { name: "logLink", description: "Link to their log.", sample: "https://app.sli.pro/log" },
+      { name: "logLink", description: "Link to their log.", sample: "https://app.mywing.ai/log" },
     ],
   },
   {
@@ -280,7 +280,7 @@ export const TEMPLATE_CATALOGUE: TemplateSpec[] = [
       {
         name: "portfolioLink",
         description: "Link to their evidence portfolio.",
-        sample: "https://app.sli.pro/portfolio",
+        sample: "https://app.mywing.ai/portfolio",
       },
     ],
   },
@@ -312,7 +312,7 @@ export const TEMPLATE_CATALOGUE: TemplateSpec[] = [
       {
         name: "draftsLink",
         description: "Link to their content drafts.",
-        sample: "https://app.sli.pro/linkedin-content-drafts",
+        sample: "https://app.mywing.ai/linkedin-content-drafts",
       },
     ],
   },

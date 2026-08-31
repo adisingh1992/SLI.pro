@@ -200,7 +200,7 @@ async function callModel(systemPrompt: string, userPrompt: string, maxRetries = 
 
 // 1. Analyze questionnaire data
 export async function generateQuestionnaireSummary(userProfile: any) {
-  const systemPrompt = `You are an expert professional branding analyst at SLI.pro. Your task is to analyze a client's questionnaire responses and produce a structured summary of their professional brand positioning.
+  const systemPrompt = `You are an expert professional branding analyst at MyWing. Your task is to analyze a client's questionnaire responses and produce a structured summary of their professional brand positioning.
 
 EXTREMELY IMPORTANT: You MUST respond with VALID JSON ONLY. Your entire response must be parseable by JSON.parse(). DO NOT include any explanatory text, comments, markdown formatting, or code blocks. Your response should start with '{' and end with '}' without any other characters.
 
@@ -261,7 +261,7 @@ Please analyze this information and create a structured summary of their profess
 
 // 2a. Step 1: Summarize resume content only (token-efficient)
 async function summarizeResumeContent(resumeContent: string) {
-  const systemPrompt = `You are an expert resume analyst for SLI.pro, a professional branding service. Your task is to extract and summarize key career insights from a client's resume.
+  const systemPrompt = `You are an expert resume analyst for MyWing, a professional branding service. Your task is to extract and summarize key career insights from a client's resume.
 
 EXTREMELY IMPORTANT: You MUST respond with VALID JSON ONLY. Your entire response must be parseable by JSON.parse(). DO NOT include any explanatory text, comments, markdown formatting, or code blocks. Your response should start with '{' and end with '}' without any other characters.
 
@@ -309,7 +309,7 @@ Please analyze and summarize the resume content according to the structure in yo
 
 // 2b. Step 2: Analyze resume alignment with questionnaire (token-efficient)
 async function analyzeResumeAlignment(resumeSummary: any, questionnaireAnalysis: any) {
-  const systemPrompt = `You are an expert career alignment analyst for SLI.pro, a professional branding service. Your task is to compare a client's resume summary against their questionnaire responses to identify alignment and gaps.
+  const systemPrompt = `You are an expert career alignment analyst for MyWing, a professional branding service. Your task is to compare a client's resume summary against their questionnaire responses to identify alignment and gaps.
 
 EXTREMELY IMPORTANT: You MUST respond with VALID JSON ONLY. Your entire response must be parseable by JSON.parse(). DO NOT include any explanatory text, comments, markdown formatting, or code blocks. Your response should start with '{' and end with '}' without any other characters.
 
@@ -361,7 +361,7 @@ export async function generateResumeSummary(resumeContent: string, questionnaire
 
 // 3. Analyze LinkedIn profile
 export async function generateLinkedInSummary(linkedinContent: string, questionnaireAnalysis: any, resumeAnalysis: any) {
-  const systemPrompt = `You are an expert LinkedIn profile analyst for SLI.pro, a professional branding service. Your task is to analyze a client's LinkedIn profile content and evaluate its effectiveness in supporting their professional brand.
+  const systemPrompt = `You are an expert LinkedIn profile analyst for MyWing, a professional branding service. Your task is to analyze a client's LinkedIn profile content and evaluate its effectiveness in supporting their professional brand.
 
 EXTREMELY IMPORTANT: You MUST respond with VALID JSON ONLY. Your entire response must be parseable by JSON.parse(). DO NOT include any explanatory text, comments, markdown formatting, or code blocks. Your response should start with '{' and end with '}' without any other characters.
 
@@ -427,7 +427,7 @@ export async function generateAdditionalDocsSummary(
   const analyses = [];
 
   for (const document of documents) {
-    const systemPrompt = `You are an expert document analyst for SLI.pro, a professional branding service. Your task is to analyze an additional document submitted by a client and evaluate how it contributes to their professional brand narrative.
+    const systemPrompt = `You are an expert document analyst for MyWing, a professional branding service. Your task is to analyze an additional document submitted by a client and evaluate how it contributes to their professional brand narrative.
 
 EXTREMELY IMPORTANT: You MUST respond with VALID JSON ONLY. Your entire response must be parseable by JSON.parse(). DO NOT include any explanatory text, comments, markdown formatting, or code blocks. Your response should start with '{' and end with '}' without any other characters.
 
@@ -1198,7 +1198,7 @@ async function calculateRecommendationImplementation(
       log(`No monthly check-in data available for recommendation implementation, using the model for analysis`, "freshness");
       
       // Prepare system prompt for the model analysis
-      const systemPrompt = `You are an expert professional branding strategist at SLI.pro. Your task is to assess how well a client has implemented previous recommendations for improving their professional brand. You will analyze their current resume and LinkedIn profile against specific recommendations from a previous assessment.
+      const systemPrompt = `You are an expert professional branding strategist at MyWing. Your task is to assess how well a client has implemented previous recommendations for improving their professional brand. You will analyze their current resume and LinkedIn profile against specific recommendations from a previous assessment.
 
 EXTREMELY IMPORTANT: You MUST respond with VALID JSON ONLY. Your entire response must be parseable by JSON.parse(). DO NOT include any explanatory text, comments, markdown formatting, or code blocks. Your response should start with '{' and end with '}' without any other characters.
 
@@ -1309,7 +1309,7 @@ async function calculateSLIClarity(userId: number, questionnaireAnalysis: any) {
     const personalBrandStatement = questionnaireAnalysis?.recommendedPositioning?.coreBrandingNarrative || '';
     
     // Create a prompt for the model to analyze alignment and clarity
-    const systemPrompt = `You are an expert professional branding analyst for SLI.pro. Your task is to evaluate the Strategic Leadership Intelligence (SLI) Clarity of a client based on their questionnaire responses and the latest coaching notes.
+    const systemPrompt = `You are an expert professional branding analyst for MyWing. Your task is to evaluate the Strategic Leadership Intelligence (SLI) Clarity of a client based on their questionnaire responses and the latest coaching notes.
 
 EXTREMELY IMPORTANT: You MUST respond with VALID JSON ONLY. Your entire response must be parseable by JSON.parse(). DO NOT include any explanatory text, comments, markdown formatting, or code blocks. Your response should start with '{' and end with '}' without any other characters.
 
@@ -1444,7 +1444,7 @@ export async function generateFinalSynthesis(
       }
     }
     
-    const systemPrompt = `You are an expert professional branding strategist at SLI.pro. Your task is to synthesize all the analyses of a client's materials into a comprehensive professional branding assessment and strategy recommendation.
+    const systemPrompt = `You are an expert professional branding strategist at MyWing. Your task is to synthesize all the analyses of a client's materials into a comprehensive professional branding assessment and strategy recommendation.
 
 EXTREMELY IMPORTANT: You MUST respond with VALID JSON ONLY. Your entire response must be parseable by JSON.parse(). DO NOT include any explanatory text, comments, markdown formatting, or code blocks. Your response should start with '{' and end with '}' without any other characters.
 

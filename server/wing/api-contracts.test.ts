@@ -1848,6 +1848,108 @@ console.log("\nOne writer into the evidence portfolio, and it runs the authentic
   }
 }
 
+/* ── 27 · Nothing that builds a prompt reads the demographic block ────────
+ *
+ * The registration form collects age, gender and race/ethnicity under one sentence:
+ *
+ *     "Collected for [Institution] reporting. Does not affect your Wing experience."
+ *
+ * That is a promise about where the data goes, and it is the kind of promise that decays
+ * silently. Nobody would deliberately put a student's ethnicity into a coaching prompt.
+ * What happens instead is that somebody needs their age for a perfectly good reason,
+ * imports the store, and six months later a context builder spreads the whole row into a
+ * system message — and the only thing that ever said otherwise was a comment.
+ *
+ * The schema puts the promise in reach of a checker: the data is its own table rather
+ * than columns on `students`, so keeping it out of prompts is a question about which
+ * files import ONE module. That question is asked here.
+ *
+ * `demographics-store.ts` is the only permitted accessor, and only `auth.ts` may call it —
+ * the registration write. A reporting screen, when one exists, gets added to the
+ * allowlist deliberately, which is the point.
+ */
+console.log("\nThe demographic block stays out of everything that builds a prompt");
+{
+  const before27 = failures;
+
+  const walk = (dir: string): string[] =>
+    readdirSync(dir, { withFileTypes: true }).flatMap((e) => {
+      const p = join(dir, e.name);
+      if (e.isDirectory()) return walk(p);
+      return e.isFile() && p.endsWith(".ts") ? [p] : [];
+    });
+
+  const STORE = "server/wing/demographics-store.ts";
+  const TABLE = "studentDemographics";
+
+  /* Who may reach the data at all. */
+  const ALLOWED_IMPORTERS = new Set(["server/auth.ts"]);
+
+  if (!existsSync(join(process.cwd(), STORE))) {
+    fail(`${STORE} is missing — check 27 is guarding nothing`);
+  } else {
+    for (const path of walk(SERVER)) {
+      const rel = path.slice(process.cwd().length + 1).replace(/\\/g, "/");
+      if (rel === STORE || rel.endsWith(".test.ts")) continue;
+
+      const code = readFileSync(path, "utf8")
+        .replace(/\/\*[\s\S]*?\*\//g, "")
+        .replace(/\/\/.*$/gm, "");
+
+      /*
+       * Two ways in, and both are checked: importing the store, or going around it
+       * straight to the drizzle table. The second is the one a hurry produces.
+       */
+      const importsStore = /from\s+["'`][^"'`]*demographics-store["'`]/.test(code);
+      const namesTable = new RegExp(`\\b${TABLE}\\b`).test(code);
+
+      if (importsStore && !ALLOWED_IMPORTERS.has(rel)) {
+        fail(
+          `${rel} imports demographics-store. The signup form promises this data does not ` +
+            `affect the Wing experience; only ${Array.from(ALLOWED_IMPORTERS).join(", ")} ` +
+            `may read it. If this is a reporting surface, add it to ALLOWED_IMPORTERS ` +
+            `deliberately.`,
+        );
+      }
+      if (namesTable) {
+        fail(
+          `${rel} names \`${TABLE}\` directly, going around ${STORE}. The single-accessor ` +
+            `rule is what makes the promise checkable — query through the store.`,
+        );
+      }
+    }
+
+    /*
+     * And the store does not grow a prompt-shaped reader.
+     *
+     * `saveDemographics` writes and `demographicsForReporting` is named for its only
+     * legitimate caller. A third export returning this data under a neutral name — `get`,
+     * `forStudent`, `load` — is precisely what a context builder would reach for, so the
+     * export surface is pinned rather than left to review.
+     */
+    const storeSrc = readFileSync(join(process.cwd(), STORE), "utf8");
+    const exported = Array.from(
+      storeSrc.matchAll(/export\s+(?:async\s+)?function\s+([A-Za-z0-9_]+)/g),
+    ).map((m) => m[1]);
+    const EXPECTED = ["saveDemographics", "demographicsForReporting"];
+    const extra = exported.filter((n) => !EXPECTED.includes(n));
+    if (extra.length) {
+      fail(
+        `${STORE} exports ${extra.join(", ")} beyond ${EXPECTED.join(" and ")}. Every ` +
+          `export here is a way this data reaches somewhere — add it to EXPECTED only ` +
+          `once you have decided it is not a prompt.`,
+      );
+    }
+    for (const want of EXPECTED) {
+      if (!exported.includes(want)) fail(`${STORE} no longer exports ${want}`);
+    }
+  }
+
+  if (failures === before27) {
+    console.log("  ok — one accessor, one caller, and no prompt builder touches it");
+  }
+}
+
 /* ── Result ──────────────────────────────────────────────────────────── */
 if (failures) {
   console.error(`\n${failures} contract violation(s)\n`);

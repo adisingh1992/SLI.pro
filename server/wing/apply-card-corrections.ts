@@ -11,7 +11,7 @@ import { CORRECTIONS, renameForCode } from "./parse-compendium";
  *
  * ── WHY A RENAME AND NOT A RE-SEED ───────────────────────────────────────
  * The 53 Tier 1 cards are seeded, sequence version 5 is built from their ids, and
- * SLI.pro Direct 2026 points at it. A re-seed would mint new rows with new ids,
+ * MyWing Direct 2026 points at it. A re-seed would mint new rows with new ids,
  * which orphans the sequence, forces a rebuild, and forces a second publish with a
  * second mid-cycle override — all to change five strings.
  *

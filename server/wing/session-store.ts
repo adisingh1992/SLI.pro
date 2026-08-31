@@ -216,6 +216,36 @@ export async function getTurnsAsMessages(sessionId: number) {
   }));
 }
 
+/**
+ * Wing's most recent observation about this student — the newest turn, across every
+ * session, where a heuristic actually fired (`signal_detected`).
+ *
+ * There is no separate "observations" table to read from. `wing-api.ts` turns this
+ * exact signal into an inline "Wing noticed something" insight card inside a single
+ * thread (`if (t.signalDetected) return { id, role: "insight", text: t.content };`);
+ * this is the same fact, read across every session instead of one, for the
+ * dashboard's "Wing's observations" card — which needed a source, and this is the
+ * only honest one that exists.
+ *
+ * Null for a student Wing hasn't said anything about yet. No placeholder text lives
+ * here — the caller owns the empty state, same convention as `promptFor` in
+ * `life-log-store.ts`.
+ */
+export async function latestObservation(studentId: number) {
+  const [row] = await db
+    .select({
+      content: transcriptTurns.content,
+      createdAt: transcriptTurns.createdAt,
+    })
+    .from(transcriptTurns)
+    .innerJoin(transcripts, eq(transcripts.id, transcriptTurns.transcriptId))
+    .innerJoin(sessions, eq(sessions.id, transcripts.sessionId))
+    .where(and(eq(sessions.studentId, studentId), eq(transcriptTurns.signalDetected, true)))
+    .orderBy(desc(transcriptTurns.createdAt))
+    .limit(1);
+  return row ?? null;
+}
+
 export const addHumanTurn = recordHumanTurn;
 export const addAiTurn = recordAiTurn;
 

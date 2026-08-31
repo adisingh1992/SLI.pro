@@ -121,7 +121,7 @@ export async function generateLinkedInOptimization(
   const session2Data = session2?.completionData;
 
   // Building system prompt
-  const systemPrompt = `You are a professional branding expert for SLI.pro, providing specific recommendations to optimize a client's LinkedIn profile based on their finalized Single Lasting Impression (SLI). Create actionable profile enhancement recommendations that will strengthen their professional narrative.
+  const systemPrompt = `You are a professional branding expert for MyWing, providing specific recommendations to optimize a client's LinkedIn profile based on their finalized Single Lasting Impression (SLI). Create actionable profile enhancement recommendations that will strengthen their professional narrative.
 
 You need to respond with structured data that I can parse programmatically. Your response must be valid JSON.
 

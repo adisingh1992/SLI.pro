@@ -34,9 +34,10 @@ import { cn } from '@/lib/utils';
  *   rectangle makes it harder to read and says "notification" when it should
  *   say "page".
  *
- *   The student's words sit in a soft mint block. They are shorter and they
- *   are interjections, so they benefit from a shape. Mint because it is
- *   `--primary`, the same value the sign-in screen uses.
+ *   The student's words sit in a soft aqua block. They are shorter and they
+ *   are interjections, so they benefit from a shape — `aqua-light`, the
+ *   MyWing token for exactly this job, not `--primary` (the old sign-in
+ *   screen's mint, and now an admin-shared token — see the Tone note below).
  *
  *   No avatars. A small label above each turn does the same work in a
  *   quarter of the space and none of the visual noise.
@@ -53,7 +54,12 @@ import { cn } from '@/lib/utils';
  * What kind of thing a surface holds. Drives its accent rule and label tint.
  *
  *   brand   the product's own output — the live conversation, what a session
- *           found. `--brand` means "current" as much as it means "ours"
+ *           found. Rendered in `wine`, not `--brand`: this file is shared
+ *           only with the (archived, unreachable) Foundation and
+ *           enhancement-module pages, and `--brand` is the admin panel's own
+ *           accent token — using it here would tint the one live consumer,
+ *           intake-chat.tsx, in the admin's mint rather than Wing's palette.
+ *           See the note on `--ink`/`--canvas`/`--rule` in index.css.
  *   info    reference material: look at it if you want, ignore it if not
  *   warn    something that needs a decision, like leaving a session early
  *   neutral no claim either way
@@ -65,19 +71,19 @@ type Tone = 'neutral' | 'brand' | 'info' | 'warn';
  *
  * The conversation sheet and the rail cards are meant to read as the same
  * family of object, which only holds if they use the same values. Two copies of
- * `bg-brand/60` in two components is one edit away from being two different
- * greens, and nothing would fail when it happened.
+ * `bg-wine/60` in two components is one edit away from being two different
+ * colours, and nothing would fail when it happened.
  */
 const TONE_BAR: Record<Tone, string> = {
   neutral: 'bg-rule',
-  brand: 'bg-brand/60',
+  brand: 'bg-wine/60',
   info: 'bg-info/50',
   warn: 'bg-warn/50',
 };
 
 const TONE_TEXT: Record<Tone, string> = {
   neutral: 'text-ink-soft',
-  brand: 'text-brand',
+  brand: 'text-wine',
   info: 'text-info',
   warn: 'text-warn',
 };
@@ -291,7 +297,7 @@ export function Turn({
        * Both are bubbles now, and they are told apart by material rather than
        * by presence:
        *
-       *   the student   mint fill, no border — `--primary`, and it is theirs
+       *   the student   soft aqua fill, no border — `aqua-light`, and it is theirs
        *   Wing          near-white fill with a hairline, sitting a shade off
        *                 the sheet it is on
        *
@@ -304,7 +310,7 @@ export function Turn({
        * one place owns it.
        */}
       {isUser ? (
-        <div className="max-w-[88%] rounded-2xl rounded-tr-sm bg-primary/70 px-4 py-3">
+        <div className="max-w-[88%] rounded-2xl rounded-tr-sm bg-aqua-light px-4 py-3">
           <p className="whitespace-pre-wrap break-words text-[15px] leading-relaxed text-ink">
             {children}
           </p>
@@ -375,7 +381,7 @@ export const Prose = memo(function Prose({ content }: { content: string }) {
            * handed to them.
            */
           blockquote: ({ children }) => (
-            <blockquote className="rounded-lg border-l-2 border-brand bg-background py-2.5 pl-4 pr-3 font-medium text-ink">
+            <blockquote className="rounded-lg border-l-2 border-wine bg-background py-2.5 pl-4 pr-3 font-medium text-ink">
               {children}
             </blockquote>
           ),
@@ -397,7 +403,7 @@ export const Prose = memo(function Prose({ content }: { content: string }) {
               href={href}
               target="_blank"
               rel="noopener noreferrer"
-              className="font-medium text-brand underline underline-offset-2"
+              className="font-medium text-wine underline underline-offset-2"
             >
               {children}
             </a>
@@ -439,7 +445,7 @@ export function Thinking() {
         {[0, 160, 320].map((delay) => (
           <span
             key={delay}
-            className="h-[5px] w-[5px] rounded-full bg-brand/40 motion-safe:animate-pulse"
+            className="h-[5px] w-[5px] rounded-full bg-wine/40 motion-safe:animate-pulse"
             style={{ animationDelay: `${delay}ms` }}
           />
         ))}
@@ -496,7 +502,7 @@ export function TimeReadout({
       <span
         className={cn(
           'h-1.5 w-1.5 rounded-full',
-          phase === 'completed' ? 'bg-good' : phase === 'warning' ? 'bg-warn' : 'bg-brand/50',
+          phase === 'completed' ? 'bg-good' : phase === 'warning' ? 'bg-warn' : 'bg-wine/50',
         )}
       />
       {formatted}
@@ -525,7 +531,7 @@ export function OutcomeCard({
   return (
     <div className="rounded-xl border border-rule bg-background p-5">
       {eyebrow && (
-        <p className="mb-1 text-[11px] font-medium uppercase tracking-[0.08em] text-brand">
+        <p className="mb-1 text-[11px] font-medium uppercase tracking-[0.08em] text-wine">
           {eyebrow}
         </p>
       )}
@@ -598,7 +604,7 @@ export function RailSection({
  */
 export function RailHighlight({ children }: { children: ReactNode }) {
   return (
-    <div className="rounded-lg bg-brand-soft px-3 py-2.5 text-[14px] font-medium leading-relaxed text-brand">
+    <div className="rounded-lg bg-aqua-light px-3 py-2.5 text-[14px] font-medium leading-relaxed text-wine">
       {children}
     </div>
   );
@@ -617,17 +623,17 @@ export function RailMeter({ value, label }: { value: number; label: string }) {
     <div className="space-y-1.5">
       <div className="flex items-baseline justify-between">
         <span className="text-[11px] uppercase tracking-[0.06em] text-ink-soft">{label}</span>
-        <span className="text-[15px] font-medium tabular-nums text-brand">{pct}%</span>
+        <span className="text-[15px] font-medium tabular-nums text-wine">{pct}%</span>
       </div>
       <div
-        className="h-1.5 w-full overflow-hidden rounded-full bg-brand-soft"
+        className="h-1.5 w-full overflow-hidden rounded-full bg-aqua-light"
         role="progressbar"
         aria-valuenow={pct}
         aria-valuemin={0}
         aria-valuemax={100}
         aria-label={label}
       >
-        <div className="h-full rounded-full bg-brand" style={{ width: `${pct}%` }} />
+        <div className="h-full rounded-full bg-wine" style={{ width: `${pct}%` }} />
       </div>
     </div>
   );

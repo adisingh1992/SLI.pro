@@ -219,12 +219,24 @@ export async function composeResponse(
 /* ── Writing ────────────────────────────────────────────────────────────── */
 
 /**
- * Records an entry and Wing's reply.
+ * Records an entry and returns it immediately. Wing's reply, the safety-hold check and
+ * the dormancy reset all happen afterward, in the background.
  *
- * The entry is written first and the response attached after. If the model call
- * fails the student's words are still saved — losing what somebody wrote
- * because an LLM was unavailable would be indefensible, and the reply can be
- * generated later.
+ * ── THIS USED TO MAKE THE STUDENT WAIT ON AN LLM CALL TO SEE THEIR OWN ENTRY ──
+ * The entry was written first, same as now, but the response to the POST didn't go out
+ * until `composeResponse` (a model call), the `wingResponse` update, the safety-hold
+ * check and the dormancy reset had all finished — several sequential async steps, one of
+ * them a network round trip to an LLM. "What's Happened" and the "This week" card both
+ * invalidate and refetch the entry list on a successful submit, so the list really was
+ * updating as soon as it could — it just couldn't, until all of that was done. From the
+ * student's side that reads as "I logged it and it isn't there," when what's actually
+ * happening is the request hasn't returned yet.
+ *
+ * The entry is durably saved the moment the insert below completes; nothing after that
+ * point needs to finish before the client can be told it worked. `backfillResponse`
+ * already exists for the case where the background pass never completes at all (a crash,
+ * a deploy mid-request) — this just puts the ordinary path through that same "reply
+ * shows up after the fact" model instead of reserving it for the failure case.
  */
 export async function createEntry(params: NewEntry) {
   const [entry] = await db
@@ -239,13 +251,19 @@ export async function createEntry(params: NewEntry) {
     })
     .returning();
 
-  const judged = await composeResponse(params.studentId, entry.entryText);
+  void finishEntry(params.studentId, entry.id, entry.entryText).catch((err) => {
+    log(`life log background pass failed for entry ${entry.id}: ${(err as Error).message}`, "lifelog");
+  });
+
+  return { ...entry, wingResponse: null as string | null };
+}
+
+/** The judged reply, the safety hold and the dormancy reset — everything `createEntry` no longer waits on. */
+async function finishEntry(studentId: number, entryId: number, entryText: string) {
+  const judged = await composeResponse(studentId, entryText);
 
   if (judged.reply) {
-    await db
-      .update(lifeLogEntries)
-      .set({ wingResponse: judged.reply })
-      .where(eq(lifeLogEntries.id, entry.id));
+    await db.update(lifeLogEntries).set({ wingResponse: judged.reply }).where(eq(lifeLogEntries.id, entryId));
   }
 
   const actions = postEntryActions(judged);
@@ -268,8 +286,8 @@ export async function createEntry(params: NewEntry) {
    */
   if (actions.openHold) {
     try {
-      await openHold(db as any, params.studentId, "life log entry");
-      log(`safety hold opened for student ${params.studentId} from a life log entry`, "lifelog");
+      await openHold(db as any, studentId, "life log entry");
+      log(`safety hold opened for student ${studentId} from a life log entry`, "lifelog");
     } catch (err) {
       log(`hold failed after entry: ${(err as Error).message}`, "lifelog");
     }
@@ -286,15 +304,13 @@ export async function createEntry(params: NewEntry) {
   if (actions.mayRaiseCadence) {
     try {
       const engagement = await import("./engagement");
-      await engagement.resetDormancy(params.studentId);
+      await engagement.resetDormancy(studentId);
     } catch (err) {
       log(`dormancy reset failed after entry: ${(err as Error).message}`, "lifelog");
     }
   } else {
-    log(`cadence left alone for student ${params.studentId}: ${actions.why}`, "lifelog");
+    log(`cadence left alone for student ${studentId}: ${actions.why}`, "lifelog");
   }
-
-  return { ...entry, wingResponse: judged.reply };
 }
 
 /** Generates a missing reply for an existing entry. */

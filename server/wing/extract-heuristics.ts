@@ -13,7 +13,7 @@ import { codeFromName, uniqueCode } from "./card-code";
  *       npm run wing:extract-heuristics -- --only=mid-career-senior
  *
  * WHY
- * The MVP prompt files already contain SLI.pro's real methodology — signal
+ * The MVP prompt files already contain MyWing's real methodology — signal
  * definitions, interventions and coaching moves, written by the methodology
  * owner and embedded in prose. "Code the engine, not the heuristics" (spec §2)
  * means that content belongs in the database as structured, versioned records.

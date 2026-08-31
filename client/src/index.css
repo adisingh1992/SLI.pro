@@ -170,13 +170,19 @@
 }
 
 @media (min-width: 1024px) {
-  /* The student app: a fifteen-minute conversation, barely denser than 1:1. */
-  html:not(.admin-ui) {
-    --zoom: 0.95;
-    zoom: var(--zoom);
-  }
+  /*
+   * The student app is at 1:1.
+   *
+   * It used to sit at 0.95. The Wing design is drawn at its own scale — 52px display
+   * type, a 380px form column, a 880px card — and a page-level `zoom` renders all of it
+   * at 95% of what the design says, which is exactly the kind of difference that reads as
+   * "the fonts look wrong" without anyone being able to point at a rule. Removed.
+   *
+   * `--zoom: 1` from the block above still applies, so the `calc(100svh / var(--zoom))`
+   * arithmetic that full-height elements use keeps working unchanged.
+   */
 
-  /* The admin panel: a tool someone keeps open all day, and denser for it. */
+  /* The admin panel: a tool someone keeps open all day, and denser for it. Untouched. */
   html.admin-ui {
     --zoom: 0.9;
     zoom: var(--zoom);
@@ -212,5 +218,286 @@
   select,
   textarea {
     font-size: 16px;
+  }
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+   Wing student design system — appended, see the header in the block below.
+   ══════════════════════════════════════════════════════════════════════ */
+/*
+ * The Wing student design system.
+ *
+ * Ported from the wing5 prototype, which is Tailwind 4 and expresses its palette with
+ * `@theme inline` and `oklch()`. This app is Tailwind 3, and the admin panel is built
+ * against it, so the tokens come across as Tailwind 3 CSS variables instead.
+ *
+ * ── WHY THE COLOURS ARE RGB TRIPLETS AND NOT `oklch()` ───────────────────
+ * Not a downgrade, and worth stating because it looks like one.
+ *
+ * The prototype writes `text-plum/60`, `bg-aqua-light/60`, `border-black/5` — opacity
+ * modifiers, on brand colours, throughout. Tailwind produces those by substituting an
+ * `<alpha-value>` into the colour function, which needs the channels separately. A
+ * variable holding a complete `oklch(...)` string has nowhere to put the alpha, so every
+ * one of those utilities silently emits nothing and the component renders at full
+ * opacity — a whole class of "why is that bubble the wrong colour" with no error.
+ *
+ * So each `oklch()` was converted once, here, and the original is kept in the comment
+ * beside it. The conversions are exact to 8-bit sRGB; every one of these is in gamut, so
+ * nothing was clipped.
+ *
+ * ── AND WHY THESE LIVE ALONGSIDE THE ADMIN TOKENS RATHER THAN REPLACING THEM ──
+ * The admin panel is explicitly out of scope for this rebuild. It uses the `hsl(var(--x))`
+ * tokens defined in index.css and none of the names below, which was checked rather than
+ * assumed: `canvas` and `ink` appear zero times across pages/admin, components/admin and
+ * components/ui. They belonged to the retired student UI, so `--canvas` is repointed at
+ * Wing's value and the rest are new names.
+ */
+
+:root {
+  /* Brand — the prototype's `:root` block, converted. */
+  --wine: 42 42 56;              /* #2a2a38 */
+  --wine-dark: 46 24 29;         /* #2e181d */
+  --aqua: 187 214 208;           /* oklch(0.855 0.031 179.6) */
+  --aqua-light: 220 237 233;     /* #dcede9 */
+  --salmon: 205 88 71;           /* oklch(0.607 0.152 30.5) */
+  --salmon-light: 225 149 143;   /* oklch(0.744 0.093 24.7) */
+  --midnight: 50 53 80;          /* oklch(0.339 0.048 279.3) */
+  --plum: 42 42 56;              /* #2a2a38 */
+  --plum-label: 140 114 133;     /* #8c7285 */
+  --plum-body: 118 95 112;       /* #765f70 */
+  --plum-rule: 163 141 157;      /* #a38d9d */
+  --forest: 22 40 33;            /* oklch(0.259 0.028 168.9) */
+  --sand: 174 173 158;           /* oklch(0.744 0.02 100.9) */
+  --olive: 80 80 39;             /* oklch(0.42 0.06 108.5) */
+  --wing-canvas: 250 247 241;    /* #faf7f1 */
+  --wing-border: 231 224 214;    /* #e7e0d6 */
+}
+
+/*
+ * Typography and the focus ring for the student surface. NOT the background.
+ *
+ * ── IT USED TO SET bg AND color, AND THAT WAS A BUG ──────────────────────
+ * This block sits after `@tailwind utilities`, and `.wing-surface` has exactly the same
+ * specificity as `.bg-wine` — one class each. Later wins, so `.wing-surface` silently beat
+ * every Tailwind colour utility written alongside it. The signup page is
+ * `wing-surface … bg-wine` and rendered cream, and `color: forest` leaked a dark green
+ * into any text without an explicit class.
+ *
+ * Nothing warns about this. The class list reads correctly and the cascade disagrees.
+ *
+ * So the surface carries only what no utility competes with, and every page states its own
+ * background and text colour in Tailwind — which is where a reader looks for them anyway.
+ */
+.wing-surface {
+  font-family: "Montserrat", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+.wing-surface :focus-visible {
+  outline: 2px solid rgb(var(--salmon));
+  outline-offset: 2px;
+}
+
+/*
+ * ── WHY THIS CANNOT BE A TAILWIND `focus-visible:outline-none` UTILITY ──────
+ * The rule above is plain, unlayered CSS — it sits outside any `@tailwind`
+ * directive. Every Tailwind utility, including `focus-visible:outline-none`,
+ * compiles into `@layer utilities`. Per the CSS Cascade Layers spec, ANY
+ * unlayered declaration beats ANY layered one at normal priority, regardless
+ * of specificity or source order — so no utility class, however specific,
+ * can ever turn off the rule above. This has to be unlayered too.
+ *
+ * Two inputs get text typed into them directly rather than being navigated
+ * to with the keyboard — the "This week" reply box and the sidebar's
+ * conversation search — and Chrome treats a text input as focus-visible on
+ * an ordinary mouse click, not just on Tab. That's the right behaviour for a
+ * button, where a click and a keyboard activation are the same action either
+ * way, but here it means clicking into the box outlines it in salmon as if
+ * the click were a focus-ring-worthy keyboard event. `.quiet-focus` opts a
+ * specific input out of the global ring; each one that uses it supplies its
+ * own quieter focus treatment (a ring on the pill that wraps it) so focus is
+ * still visible, just not as a hard salmon rectangle.
+ */
+.wing-surface .quiet-focus:focus-visible {
+  outline: none;
+}
+
+/*
+ * ── WHY THIS IS `components`, NOT `utilities` ────────────────────────────────
+ * `--plum` (#2a2a38) and `--wine` (#2a2a38) are, RGB-triple for RGB-triple, the same
+ * colour — not close, identical. That alone is harmless. It stopped being harmless the
+ * moment the dashboard hero tried `label-eyebrow text-aqua` on a `bg-wine` card: two
+ * classes, one specificity each, and `.label-eyebrow`'s own `color: rgb(var(--plum))`
+ * was declared after Tailwind's `.text-aqua` in the compiled output — same cascade bug
+ * as `.wing-surface` above, third time this codebase has hit it. The label rendered
+ * plum-on-wine, i.e. invisible, and the only evidence it was there at all was a
+ * text-selection highlight.
+ *
+ * Tailwind reorders compiled CSS by *layer name* — base, then components, then utilities
+ * — regardless of where each layer's block sits in this source file. Moving
+ * `.label-eyebrow` here, into `components`, makes it emit before every Tailwind utility,
+ * `.text-aqua` included. An explicit colour utility now wins through ordinary cascade
+ * order, no specificity hack required. The five call sites that pass no colour class
+ * (`chat.tsx`, `dashboard.tsx`'s three section headers, `intake-chat.tsx`,
+ * `Bubbles.tsx`'s insight-card heading) keep the default `--plum` exactly as before —
+ * this only changes what happens when something now beats it.
+ */
+@layer components {
+  /* The prototype's `@utility label-eyebrow`. */
+  .label-eyebrow {
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+    font-size: 11px;
+    font-weight: 600;
+    color: rgb(var(--plum));
+  }
+}
+
+@layer utilities {
+  /*
+   * Speech-bubble tails.
+   *
+   * Two pseudo-elements: `::before` inherits the bubble's own background and fills the
+   * corner, `::after` punches it back out in the page colour. `background-color: inherit`
+   * is what makes one rule work for the aqua bubble and the wine one — do not replace it
+   * with a literal.
+   *
+   * `::after` uses the canvas variable directly rather than `var(--background)`: this app
+   * has an admin surface with a different background, and inheriting it would leave a
+   * cream notch on any bubble rendered outside the student shell.
+   */
+  .tail-left {
+    position: relative;
+    border-bottom-left-radius: 0;
+  }
+  .tail-left::before {
+    content: "";
+    position: absolute;
+    bottom: 0;
+    left: -8px;
+    width: 20px;
+    height: 20px;
+    background-color: inherit;
+    border-bottom-right-radius: 16px 14px;
+  }
+  .tail-left::after {
+    content: "";
+    position: absolute;
+    bottom: 0;
+    left: -20px;
+    width: 20px;
+    height: 20px;
+    background-color: rgb(var(--wing-canvas));
+    border-bottom-right-radius: 10px;
+  }
+
+  .tail-right {
+    position: relative;
+    border-bottom-right-radius: 0;
+  }
+  .tail-right::before {
+    content: "";
+    position: absolute;
+    bottom: 0;
+    right: -8px;
+    width: 20px;
+    height: 20px;
+    background-color: inherit;
+    border-bottom-left-radius: 16px 14px;
+  }
+  .tail-right::after {
+    content: "";
+    position: absolute;
+    bottom: 0;
+    right: -20px;
+    width: 20px;
+    height: 20px;
+    background-color: rgb(var(--wing-canvas));
+    border-bottom-left-radius: 10px;
+  }
+
+  .animate-rise {
+    animation: wing-rise 0.55s cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+  .animate-rise-slow {
+    animation: wing-rise 0.9s cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+  .breathe {
+    animation: wing-breathe 1.8s ease-in-out infinite;
+  }
+  /*
+   * The composer's mic button while it's actually recording — an expanding, fading
+   * ring behind the icon, so "Wing is listening" reads at a glance instead of relying
+   * on the icon's own colour change alone. Layered on top of a static salmon icon
+   * rather than replacing `.breathe` in general: `.breathe` (opacity pulsing in place)
+   * stays right for a quieter "something is happening" cue elsewhere; this one needs
+   * to read as "recording, right now" from across the room.
+   */
+  .mic-pulse-ring {
+    animation: wing-mic-ring 1.4s cubic-bezier(0, 0, 0.2, 1) infinite;
+  }
+}
+
+@keyframes wing-rise {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* The three-dot thinking indicator. Referenced from an inline style, not a class. */
+@keyframes wing-dot {
+  0%,
+  60%,
+  100% {
+    opacity: 0.25;
+    transform: translateY(0);
+  }
+  30% {
+    opacity: 1;
+    transform: translateY(-3px);
+  }
+}
+
+@keyframes wing-breathe {
+  0%,
+  100% {
+    opacity: 0.45;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+@keyframes wing-mic-ring {
+  0% {
+    transform: scale(0.9);
+    opacity: 0.55;
+  }
+  100% {
+    transform: scale(1.9);
+    opacity: 0;
+  }
+}
+
+/*
+ * Every animation above is suppressed under prefers-reduced-motion.
+ *
+ * `animate-rise` is on every chat bubble, so a student who has asked their OS for less
+ * motion would otherwise get fourteen pixels of travel per message for the length of a
+ * coaching session.
+ */
+@media (prefers-reduced-motion: reduce) {
+  .animate-rise,
+  .animate-rise-slow,
+  .breathe,
+  .mic-pulse-ring,
+  .thinking-dot {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
   }
 }

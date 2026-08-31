@@ -1,35 +1,39 @@
 import React from "react";
-import { Switch, Route } from "wouter";
+import { Switch, Route, Redirect as WouterRedirect } from "wouter";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import NotFound from "@/pages/not-found";
-import AuthPage from "@/pages/auth-page";
-import ResetPasswordPage from "@/pages/reset-password-page";
-import ProfilePage from "@/pages/profile-page";
-import ProfileCreationPage from "@/pages/profile-creation-page";
-import QuestionnairePage from "@/pages/questionnaire-simple";
-import MonthlyCheckInPage from "@/pages/monthly-check-in-page";
-import FreshnessReportPage from "@/pages/freshness-report-page-fixed";
-import SliSelectionPage from "@/pages/sli-selection-page";
-import SliRefinementPage from "@/pages/sli-refinement-page";
-import LinkedinOptimizationPage from "@/pages/linkedin-optimization-page";
-import LinkedinOptimizationGeneratePage from "@/pages/linkedin-optimization-generate-page";
-import LinkedinContentDraftsPage from "@/pages/linkedin-content-drafts-page";
-import HomeworkPage from "@/pages/homework-page";
-import FoundationPage from "@/pages/foundation-page";
-import FoundationSessionChatPage from "@/pages/foundation-session-chat";
-import EnhancementModulesPage from "@/pages/enhancement-modules-page";
-import EnhancementModuleChatPage from "@/pages/enhancement-module-chat";
-import NewDashboardPage from "@/pages/new-dashboard";
-import IntakeChatPage from "@/pages/intake-chat";
 import { AuthProvider } from "@/hooks/use-auth";
 import { ProtectedRoute } from "@/lib/protected-route";
-import LifeLogPage from "@/pages/life-log-page";
-import PositioningRefreshPage from "@/pages/positioning-refresh-page";
-import PortfolioPage from "@/pages/portfolio-page";
 
-// Admin — one import per screen. The panels that make up each screen live
+/* ── Wing — the student surface ─────────────────────────────────────────
+ *
+ * Replaces the ~20 screens the old student UI had. Those pages are still on disk under
+ * `client/src/pages/` and are reachable from nothing: they are excluded from this router,
+ * so Vite does not bundle them and no URL resolves to one.
+ *
+ * Their BACKEND routes are all still live and untouched — `/api/freshness-reports`,
+ * `/api/linkedin-optimizations`, `/api/monthly-check-ins`, `/api/portfolio`,
+ * `/api/user/homework` and the rest. The admin panel and the exports read several of
+ * them, and nothing about this change deletes data or takes an endpoint away. Any of it
+ * can come back behind a Wing-styled screen without a migration.
+ */
+import WingChatPage from "@/pages/wing/chat";
+import WingDashboardPage from "@/pages/wing/dashboard";
+import WingFilesPage from "@/pages/wing/files";
+import WingMilestonesPage from "@/pages/wing/milestones";
+import WingProfilePage from "@/pages/wing/profile";
+import WingRadarPage from "@/pages/wing/radar";
+import WingSettingsPage from "@/pages/wing/settings";
+import WingLoginPage from "@/pages/wing/login";
+import WingSignupPage from "@/pages/wing/signup";
+
+/* Intake is Wing's conversation and predates this rebuild; it stays as it is. */
+import IntakeChatPage from "@/pages/intake-chat";
+import ResetPasswordPage from "@/pages/reset-password-page";
+
+// Admin — unchanged. One import per screen; the panels that make up each screen live
 // beside it under pages/admin/<area>/.
 import AdminLoginPage from "@/pages/admin/login-page";
 import AdminOverviewPage from "@/pages/admin/overview/overview-page";
@@ -48,58 +52,50 @@ import { Redirect, RedirectStudent } from "@/pages/admin/redirect";
 function Router() {
   return (
     <Switch>
-      {/* Main app routes */}
-      <ProtectedRoute path="/" component={NewDashboardPage} />
-      <ProtectedRoute path="/profile" component={ProfilePage} />
-      <ProtectedRoute path="/profile/create" component={ProfileCreationPage} />
-      <ProtectedRoute path="/questionnaire" component={QuestionnairePage} />
-      <ProtectedRoute path="/monthly-check-in" component={MonthlyCheckInPage} />
-      <ProtectedRoute path="/log" component={LifeLogPage} />
-      <ProtectedRoute path="/positioning-refresh" component={PositioningRefreshPage} />
-      <ProtectedRoute path="/portfolio" component={PortfolioPage} />
-      <ProtectedRoute
-        path="/freshness-report"
-        component={FreshnessReportPage}
-      />
-      <ProtectedRoute
-        path="/sli-selection"
-        component={SliSelectionPage}
-      />
-      <ProtectedRoute
-        path="/sli-refinement"
-        component={SliRefinementPage}
-      />
-      <ProtectedRoute
-        path="/linkedin-optimization/generate"
-        component={LinkedinOptimizationGeneratePage}
-      />
-      <ProtectedRoute
-        path="/linkedin-optimization/:id"
-        component={LinkedinOptimizationPage}
-      />
-      <ProtectedRoute
-        path="/linkedin-optimization"
-        component={LinkedinOptimizationPage}
-      />
-      <ProtectedRoute
-        path="/linkedin-content-drafts"
-        component={LinkedinContentDraftsPage}
-      />
-      <ProtectedRoute path="/homework" component={HomeworkPage} />
-      <ProtectedRoute path="/foundation" component={FoundationPage} />
-      <ProtectedRoute path="/foundation/session/:sessionNumber" component={FoundationSessionChatPage} />
-      <ProtectedRoute path="/enhancement-modules" component={EnhancementModulesPage} />
-      <ProtectedRoute path="/enhancement-modules/:moduleCode" component={EnhancementModuleChatPage} />
-      <ProtectedRoute path="/dashboard" component={NewDashboardPage} />
-      {/* A1: the form-based intake is replaced by Wing's conversation. The old
-          path stays mapped so existing redirects and bookmarks keep working. */}
-      <ProtectedRoute path="/branding-intake" component={IntakeChatPage} />
+      {/* ── Student ─────────────────────────────────────────────────── */}
+      <ProtectedRoute path="/" component={WingDashboardPage} />
+      <ProtectedRoute path="/chat" component={WingChatPage} />
+      <ProtectedRoute path="/chat/:slug" component={WingChatPage} />
+      <ProtectedRoute path="/files" component={WingFilesPage} />
+      <ProtectedRoute path="/milestones" component={WingMilestonesPage} />
+      <ProtectedRoute path="/profile" component={WingProfilePage} />
+      <ProtectedRoute path="/radar" component={WingRadarPage} />
+      <ProtectedRoute path="/settings" component={WingSettingsPage} />
+
+      {/* A1: the form-based intake is Wing's conversation. Both paths stay mapped so
+          existing redirects and bookmarks keep working. */}
       <ProtectedRoute path="/intake" component={IntakeChatPage} />
-      
-      {/* ── Admin ──────────────────────────────────────────────────────
-          Seven screens. Tabs are path segments so every URL is linkable and
-          every pre-consolidation bookmark can be redirected somewhere exact —
-          see pages/admin/redirect.tsx. */}
+      <ProtectedRoute path="/branding-intake" component={IntakeChatPage} />
+
+      {/* ── Retired student URLs ────────────────────────────────────────
+          Every one of these was a screen. They land somewhere sensible rather than on a
+          404, because students have them bookmarked and an emailed link from last week
+          should not dead-end. Each points at whatever now does that job. */}
+      <Route path="/dashboard">{() => <WouterRedirect to="/" />}</Route>
+      <Route path="/log">{() => <WouterRedirect to="/milestones" />}</Route>
+      <Route path="/portfolio">{() => <WouterRedirect to="/" />}</Route>
+      <Route path="/homework">{() => <WouterRedirect to="/" />}</Route>
+      <Route path="/questionnaire">{() => <WouterRedirect to="/intake" />}</Route>
+      <Route path="/monthly-check-in">{() => <WouterRedirect to="/milestones" />}</Route>
+      <Route path="/freshness-report">{() => <WouterRedirect to="/" />}</Route>
+      <Route path="/sli-selection">{() => <WouterRedirect to="/" />}</Route>
+      <Route path="/sli-refinement">{() => <WouterRedirect to="/" />}</Route>
+      <Route path="/positioning-refresh">
+        {() => <WouterRedirect to="/chat/refresh_your_positioning" />}
+      </Route>
+      <Route path="/linkedin-optimization/:rest*">{() => <WouterRedirect to="/files" />}</Route>
+      <Route path="/linkedin-optimization">{() => <WouterRedirect to="/files" />}</Route>
+      <Route path="/linkedin-content-drafts">{() => <WouterRedirect to="/files" />}</Route>
+      <Route path="/foundation/session/:n">{() => <WouterRedirect to="/chat" />}</Route>
+      <Route path="/foundation">{() => <WouterRedirect to="/chat" />}</Route>
+      <Route path="/enhancement-modules/:code">{() => <WouterRedirect to="/chat" />}</Route>
+      <Route path="/enhancement-modules">{() => <WouterRedirect to="/chat" />}</Route>
+      <Route path="/profile/create">{() => <WouterRedirect to="/profile" />}</Route>
+
+      {/* ── Admin — unchanged ───────────────────────────────────────────
+          Seven screens. Tabs are path segments so every URL is linkable and every
+          pre-consolidation bookmark can be redirected somewhere exact — see
+          pages/admin/redirect.tsx. */}
       <Route path="/admin/login" component={AdminLoginPage} />
 
       <Route path="/admin/dashboard" component={AdminOverviewPage} />
@@ -128,10 +124,7 @@ function Router() {
       <Route path="/admin/tagging/sessions/:id" component={AdminTaggingSessionPage} />
       <Route path="/admin/tagging/:tab" component={AdminTaggingPage} />
 
-      {/* ── Retired URLs ───────────────────────────────────────────────
-          Kept so open tabs and pasted links keep working. Ordered before
-          nothing — wouter matches top to bottom and these are all exact
-          paths that no longer collide with the routes above. */}
+      {/* ── Retired admin URLs ──────────────────────────────────────── */}
       <Route path="/admin/reports">{() => <Redirect to="/admin/dashboard/exports" />}</Route>
       <Route path="/admin/templates">{() => <Redirect to="/admin/messages/templates" />}</Route>
       <Route path="/admin/calendar">{() => <Redirect to="/admin/messages/calendar" />}</Route>
@@ -139,14 +132,13 @@ function Router() {
       <Route path="/admin/heuristics/:id" component={AdminHeuristicDetailPage} />
       <Route path="/admin/sequences">{() => <Redirect to="/admin/methodology/sequences" />}</Route>
       <Route path="/admin/criteria">{() => <Redirect to="/admin/session-design/completion" />}</Route>
-      {/* /admin/objectives retired with the objective renderer (Tier 1 part 4). The tab
-          it redirected to no longer exists; the old link lands on Session design. */}
       <Route path="/admin/objectives">{() => <Redirect to="/admin/session-design/completion" />}</Route>
       <Route path="/admin/users/:userId/coaching-notes">{() => <RedirectStudent tab="coaching-notes" />}</Route>
       <Route path="/admin/users/:userId/summary/:summaryId">{() => <RedirectStudent tab="summary" />}</Route>
 
-      {/* Auth and fallback routes */}
-      <Route path="/auth" component={AuthPage} />
+      {/* ── Auth and fallback ───────────────────────────────────────── */}
+      <Route path="/auth" component={WingLoginPage} />
+      <Route path="/signup" component={WingSignupPage} />
       <Route path="/reset-password" component={ResetPasswordPage} />
       <Route component={NotFound} />
     </Switch>

@@ -3,6 +3,14 @@ import { log } from './logger';
 import { analyzeDocument } from './document-analysis';
 import { hasContent } from './document-data';
 import * as orchestrator from "./orchestrator";
+import * as sliStore from "./wing/sli-store";
+import * as profileStore from "./wing/profile-store";
+
+/** `generateSLIs`'s output, plus the auto-activation pick — same shape callers already use. */
+export type GeneratedSli = InsertSli & {
+  recommendedIndex: 1 | 2 | 3 | null;
+  recommendationReason: string | null;
+};
 
 // Helper function for exponential backoff retries
 async function callWithRetry<T>(
@@ -262,7 +270,7 @@ function sanitizeJsonString(str: string): string {
 /**
  * Generate SLIs for a user
  */
-export async function generateSLIs(userProfile: any): Promise<InsertSli | null> {
+export async function generateSLIs(userProfile: any): Promise<GeneratedSli | null> {
   try {
     log(`Generating SLIs for user: ${userProfile.id}`, "sli");
     
@@ -300,7 +308,7 @@ export async function generateSLIs(userProfile: any): Promise<InsertSli | null> 
     const coachingNotesSummary = await getLatestCoachingNotes(userProfile.coachingNotes || []);
     
     // System prompt for the model
-    const systemPrompt = `You are a professional branding strategist working with SLI.pro to craft three powerful, distinct SLIs (Single Lasting Impressions) for a client. Each SLI should balance authenticity and aspiration, serving as a conversationally shareable brand statement.
+    const systemPrompt = `You are a professional branding strategist working with MyWing to craft three powerful, distinct SLIs (Single Lasting Impressions) for a client. Each SLI should balance authenticity and aspiration, serving as a conversationally shareable brand statement.
 
 An SLI is a clear, conversational sentence that expresses the user's unique value proposition—ideal for networking and casual introductions. It connects their authentic experience with their aspirational direction and reflects their natural communication style.
 
@@ -322,6 +330,8 @@ The three SLIs should be meaningfully distinct, highlighting different aspects o
 
 Avoid vague, overly general, or interchangeable phrases. Each SLI should be specific and memorable.
 
+After drafting the three options, decide which one you would lead with if the client could only walk away with one — the strongest, most immediately usable statement of the three. This is not a tie-breaker; weigh them as you would if recommending one to a colleague.
+
 Respond with an EXACT JSON structure as follows:
 {
   "title1": "SLI Option 1: [Descriptive Title]",
@@ -332,10 +342,12 @@ Respond with an EXACT JSON structure as follows:
   "rationale2": "Detailed rationale for option 2...",
   "title3": "SLI Option 3: [Descriptive Title]",
   "statement3": "The conversational SLI statement for option 3",
-  "rationale3": "Detailed rationale for option 3..."
+  "rationale3": "Detailed rationale for option 3...",
+  "recommendedIndex": 1,
+  "recommendationReason": "One or two sentences on why this option is the strongest one to lead with."
 }
 
-Each rationale section should be 3-4 paragraphs of rich, detailed content. Be sure to format the JSON correctly.`;
+"recommendedIndex" must be the number 1, 2, or 3 — whichever option corresponds to your recommendation above. Each rationale section should be 3-4 paragraphs of rich, detailed content. Be sure to format the JSON correctly.`;
 
     // User message
     const userMessage = `Please generate three distinct SLI options for ${userProfile.firstName} ${userProfile.lastName} based on the following information:
@@ -431,7 +443,21 @@ Please generate three distinct, compelling SLI options that this person can use 
     
     // Create the SLI object
     try {
-      const sli: InsertSli = {
+      // Guard the value, not just its presence — an out-of-range or non-numeric
+      // recommendation should fall back to "no recommendation" rather than being
+      // trusted, the same reasoning `sli-routes.ts`'s refinement parsing already
+      // applies to the model's output.
+      const recommendedIndexRaw = Number(sliData.recommendedIndex);
+      const recommendedIndex: 1 | 2 | 3 | null =
+        recommendedIndexRaw === 1 || recommendedIndexRaw === 2 || recommendedIndexRaw === 3
+          ? recommendedIndexRaw
+          : null;
+      const recommendationReason =
+        typeof sliData.recommendationReason === "string" && sliData.recommendationReason.trim()
+          ? sliData.recommendationReason.trim()
+          : null;
+
+      const sli: GeneratedSli = {
         userId: userProfile.id,
         adminId: 0, // This will be set by the caller
         title1: sliData.title1 || 'SLI Option 1',
@@ -443,9 +469,11 @@ Please generate three distinct, compelling SLI options that this person can use 
         title3: sliData.title3 || 'SLI Option 3',
         statement3: sliData.statement3 || 'Statement not generated',
         rationale3: sliData.rationale3 || 'Rationale not generated',
-        selectedSliIndex: null
+        selectedSliIndex: null,
+        recommendedIndex,
+        recommendationReason,
       };
-      
+
       return sli;
     } catch (error) {
       log(`Error creating SLI object from parsed data: ${error}`, "sli");
@@ -454,5 +482,77 @@ Please generate three distinct, compelling SLI options that this person can use 
   } catch (error) {
     log(`Error generating SLIs: ${error}`, "sli");
     return null;
+  }
+}
+
+/**
+ * First-time SLI creation for a student, triggered when Foundation Session 3
+ * completes (Feature List §E5: "SLI Completion Celebration — When: Foundation
+ * Session 3 complete"). Nothing else on the platform ever created this row —
+ * `generateSLIs` above was reachable only through the admin-only
+ * `POST /api/admin/users/:userId/slis/generate` route, so a student who
+ * finished Foundation had no SLI, no dashboard statement, and nothing for
+ * Positioning Refresh to refresh.
+ *
+ * Generates the same three candidates the admin flow does, then activates one
+ * automatically rather than presenting a picker — the platform has no
+ * documented student-facing selection UI post-Foundation (the old
+ * `/sli-selection` page is dead-redirected), and the dashboard/completion-email
+ * copy both assume a single resolved SLI statement exists the moment Session 3
+ * ends, not a pending choice. The model's own `recommendedIndex` picks which
+ * candidate to activate; the other two are kept as `candidate` rows rather
+ * than discarded, so a future "here were your other options" surface has real
+ * data to work with.
+ *
+ * Idempotent: a student who already has a live SLI (prior admin generation,
+ * a re-run of Session 3, re-entry) is left alone rather than getting a second,
+ * competing one activated out from under them.
+ *
+ * Never throws — this runs fire-and-forget after the Session 3 stream has
+ * already closed, alongside `classifySession`/`scoreSession`, and a failure
+ * here must not take those down or surface as an unhandled rejection.
+ */
+export async function ensureSliGenerated(
+  userId: number,
+  generatedInSessionId: number | null,
+): Promise<void> {
+  try {
+    const existing = await sliStore.getActive(userId);
+    if (existing) {
+      log(`User ${userId} already has a live SLI (${existing.status}) — skipping auto-generation`, "sli");
+      return;
+    }
+
+    const userProfile = await profileStore.getUserProfile(userId);
+    if (!userProfile) {
+      log(`ensureSliGenerated: no profile for user ${userId}`, "sli");
+      return;
+    }
+
+    const generated = await generateSLIs(userProfile);
+    if (!generated) {
+      log(`ensureSliGenerated: generateSLIs returned nothing for user ${userId}`, "sli");
+      return;
+    }
+
+    const candidates = await sliStore.createCandidates(userId, generated as unknown as Record<string, any>, {
+      generatedInSessionId,
+    });
+    if (!candidates.length) {
+      log(`ensureSliGenerated: no candidates persisted for user ${userId}`, "sli");
+      return;
+    }
+
+    const chosen =
+      (generated.recommendedIndex && candidates[generated.recommendedIndex - 1]) || candidates[0];
+
+    await sliStore.markActive(chosen.id);
+    log(
+      `Auto-activated SLI ${chosen.id} for user ${userId} from session ${generatedInSessionId ?? "n/a"}` +
+        (generated.recommendedIndex ? " (model recommendation)" : " (fallback: first candidate)"),
+      "sli",
+    );
+  } catch (error) {
+    log(`ensureSliGenerated failed for user ${userId}: ${error}`, "sli");
   }
 }

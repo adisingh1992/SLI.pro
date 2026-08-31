@@ -267,7 +267,10 @@ it:
 "${plan.followUpAsk}"
 
 Do not ask the next question after it. Do not summarise their rating back at
-them. One question, and wait.`;
+them. One question, and wait — and this rule holds on the turn AFTER they
+answer it, too: once they've answered this follow-up, do not ask a second one
+of your own even if their answer raises something interesting. The beat after
+this one is a separate turn, not this one.`;
   }
 
   return null;
