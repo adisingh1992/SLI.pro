@@ -61,6 +61,7 @@ export async function loadTaggedTurns(): Promise<TaggedTurn[]> {
     .where(
       and(
         eq(transcriptTurns.classificationStatus, "hand_tagged"),
+        eq(transcriptTurns.analysisEligible, true),
         // turn_type, not provenance: migrated turns are all provenance_unknown,
         // so the old test would have admitted a migrated AI turn as a human
         // training example if one were ever hand-tagged.

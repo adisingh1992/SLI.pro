@@ -32,6 +32,7 @@ import { registerInboundEmailRoutes } from "./inbound-email-routes";
 import { registerPromptLibraryRoutes } from "./prompt-library-routes";
 import { registerIntakeRoutes } from "./intake-routes";
 import { registerRefreshRoutes } from "./refresh-routes";
+import { registerFreeChatRoutes } from "./free-chat-routes";
 import { registerPortfolioRoutes } from "./portfolio-routes";
 import * as checkinStore from "./wing/checkin-store";
 import { registerCalendarRoutes } from "./calendar-routes";
@@ -153,6 +154,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   registerPromptLibraryRoutes(app);
   registerIntakeRoutes(app);
   registerRefreshRoutes(app);
+  registerFreeChatRoutes(app);
   registerPortfolioRoutes(app);
   registerCalendarRoutes(app);
 

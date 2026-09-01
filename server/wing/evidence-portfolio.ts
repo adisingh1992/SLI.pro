@@ -170,7 +170,12 @@ async function humanTurnsFor(studentId: number): Promise<HumanTurn[]> {
     .from(transcriptTurns)
     .innerJoin(transcripts, eq(transcripts.id, transcriptTurns.transcriptId))
     .innerJoin(sessions, eq(sessions.id, transcripts.sessionId))
-    .where(eq(sessions.studentId, studentId))
+    .where(
+      and(
+        eq(sessions.studentId, studentId),
+        eq(transcriptTurns.analysisEligible, true),
+      ),
+    )
     .orderBy(transcriptTurns.sequencePosition);
 
   return rows

@@ -320,6 +320,7 @@ export async function classifySession(sessionId: number): Promise<void> {
         content: transcriptTurns.content,
         classificationStatus: transcriptTurns.classificationStatus,
         provenanceTag: transcriptTurns.provenanceTag,
+        analysisEligible: transcriptTurns.analysisEligible,
       })
       .from(transcriptTurns)
       .where(eq(transcriptTurns.transcriptId, transcript.id))
@@ -328,6 +329,7 @@ export async function classifySession(sessionId: number): Promise<void> {
     const pending = turns.filter(
       (t) =>
         t.classificationStatus === "provisional" &&
+        t.analysisEligible &&
         t.provenanceTag !== "provenance_unknown" &&
         (t.turnType === "human_spontaneous" || t.turnType === "human_elicited_response"),
     );
@@ -338,7 +340,7 @@ export async function classifySession(sessionId: number): Promise<void> {
     let changed = 0;
     for (const turn of pending) {
       const context = turns
-        .filter((t) => t.position < turn.position)
+        .filter((t) => t.position < turn.position && t.analysisEligible)
         .slice(-CONTEXT_TURNS)
         .map((t) => ({ turnType: t.turnType, content: t.content }));
 

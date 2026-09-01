@@ -379,6 +379,47 @@ export function refreshMsgFor(m: RefreshMessage, i: number): Msg {
     : { id: `refresh-${i}`, role: "wing", tone: toneFor(m.content), text: m.content };
 }
 
+/* ── Scoped free chat — persisted as an ongoing_engagement transcript ─── */
+
+export type FreeChatMessage = {
+  id: number;
+  role: "assistant" | "user";
+  content: string;
+};
+
+export type FreeChatState = {
+  active: boolean;
+  sessionId: number | null;
+  messages: FreeChatMessage[];
+};
+
+export async function getFreeChat(): Promise<FreeChatState> {
+  const res = await apiRequest("GET", "/api/wing/free-chat");
+  return await res.json();
+}
+
+/** Activates the scoped conversation; idempotent and does not store the routing phrase. */
+export async function beginFreeChat(): Promise<FreeChatState> {
+  const res = await apiRequest("POST", "/api/wing/free-chat/begin");
+  return await res.json();
+}
+
+export async function sendFreeChatMessage(content: string): Promise<{
+  reply: string;
+  category: string;
+  userTurnId: number;
+  replyTurnId: number;
+}> {
+  const res = await apiRequest("POST", "/api/wing/free-chat/message", { content });
+  return await res.json();
+}
+
+export function freeChatMsgFor(m: FreeChatMessage): Msg {
+  return m.role === "user"
+    ? { id: `free-${m.id}`, role: "user", text: m.content }
+    : { id: `free-${m.id}`, role: "wing", tone: toneFor(m.content), text: m.content };
+}
+
 /* ── Documents ────────────────────────────────────────────────────────── */
 
 export type WingDocKind = "Resume" | "LinkedIn profile" | "Assessment";

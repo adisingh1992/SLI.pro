@@ -12,13 +12,17 @@ import { useAuth } from "@/hooks/use-auth";
 import {
   acceptPositioningRefresh,
   addLifeLogEntry,
+  beginFreeChat,
   beginPositioningRefresh,
+  freeChatMsgFor,
+  getFreeChat,
   getLifeLog,
   getPositioningRefresh,
   listThreads,
   loadThreadMessages,
   localId,
   refreshMsgFor,
+  sendFreeChatMessage,
   sendPositioningRefreshMessage,
   startFoundationSession,
   streamTurn,
@@ -30,6 +34,9 @@ import {
 } from "@/lib/wing-api";
 import {
   moduleFor,
+  moduleForRoutingRequest,
+  isFreeChatConfirmation,
+  ROUTER_OPENING,
   SLUG_FOR_SESSION_TYPE,
   unavailableOpening,
   type ModuleSlug,
@@ -116,8 +123,9 @@ export default function WingChatPage() {
    * not started this" and "this does not exist".
    */
   const module: WingModule | null = params?.slug ? moduleFor(params.slug) : null;
-  const isRefreshModule = module?.slug === "refresh_your_positioning";
-  const isCheckInModule = module?.slug === "weekly_check_in";
+  const isRefreshModule = module?.behavior === "positioning_refresh";
+  const isCheckInModule = module?.behavior === "weekly_check_in";
+  const isRoutingModule = module?.behavior === "router";
 
   const thread: Thread | null = useMemo(
     () => threads.find((t) => t.id === module?.slug) ?? null,
@@ -142,6 +150,17 @@ export default function WingChatPage() {
     queryFn: getPositioningRefresh,
     enabled: isRefreshModule,
   });
+
+  /**
+   * "Something else" begins as a router. Only an explicit second "Something else"
+   * activates this persisted ongoing-engagement conversation.
+   */
+  const { data: freeChatState, isLoading: freeChatLoading } = useQuery({
+    queryKey: ["wing", "free-chat"],
+    queryFn: getFreeChat,
+    enabled: isRoutingModule,
+  });
+  const isFreeChatActive = isRoutingModule && freeChatState?.active === true;
 
   /* The weekly check-in's opening line is today's actual prompt, not a canned greeting. */
   const { data: lifeLogPrompt } = useQuery({
@@ -171,7 +190,11 @@ export default function WingChatPage() {
    * and stays empty here — `thread` is always null for this module (see the query above).
    */
   const messages: Msg[] = useMemo(() => {
-    const base = isRefreshModule ? (refreshState?.messages.map(refreshMsgFor) ?? []) : stored;
+    const base = isRefreshModule
+      ? (refreshState?.messages.map(refreshMsgFor) ?? [])
+      : isFreeChatActive
+        ? (freeChatState?.messages.map(freeChatMsgFor) ?? [])
+        : stored;
     const out = [...base, ...local];
     if (streaming !== null) {
       out.push(
@@ -181,7 +204,15 @@ export default function WingChatPage() {
       );
     }
     return out;
-  }, [stored, local, streaming, isRefreshModule, refreshState]);
+  }, [
+    stored,
+    local,
+    streaming,
+    isRefreshModule,
+    refreshState,
+    isFreeChatActive,
+    freeChatState,
+  ]);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -268,11 +299,125 @@ export default function WingChatPage() {
       });
   }, [isRefreshModule, refreshState, module?.slug, queryClient]);
 
+  /**
+   * Enter a real destination from either module picker.
+   *
+   * The ambiguous-request router uses this same path after it resolves the student's
+   * answer. That keeps one definition of "open a module": surfaces navigate directly,
+   * Foundation sessions start idempotently, and only then does the URL change.
+   */
+  const openModule = useCallback(
+    async (destination: WingModule) => {
+      if (destination.href) {
+        navigate(destination.href);
+        return;
+      }
+      if (destination.sessionType) {
+        const n = Number(destination.sessionType.replace("foundation_", ""));
+        await startFoundationSession(n);
+        void queryClient.invalidateQueries({ queryKey: ["wing", "threads"] });
+      }
+      navigate(`/chat/${destination.slug}`);
+    },
+    [navigate, queryClient],
+  );
+
   const send = useCallback(
     async (text: string) => {
       if (!module || busy) return;
 
       setLocal((m) => [...m, { id: localId(), role: "user", text }]);
+
+      /*
+       * "Something else" is a routing affordance, not a coaching session. It asks the
+       * one methodology-approved clarifying question (the opening below), resolves a
+       * specific reply to a registry destination, and starts only that destination. An
+       * explicit second "Something else" enters the scoped, persisted ongoing-engagement
+       * thread; nothing is ever persisted under the router slug itself.
+       */
+      if (isRoutingModule) {
+        if (isFreeChatActive) {
+          setBusy(true);
+          setStreaming("");
+          try {
+            const result = await sendFreeChatMessage(text);
+            setLocal((messages) => [
+              ...messages,
+              { id: `free-local-${result.replyTurnId}`, role: "wing", tone: toneFor(result.reply), text: result.reply },
+            ]);
+          } catch {
+            setLocal((messages) => [
+              ...messages,
+              {
+                id: localId(),
+                role: "wing",
+                tone: "observing",
+                text: "That didn't reach me safely. Your thread is still here—try again?",
+              },
+            ]);
+          } finally {
+            setStreaming(null);
+            setBusy(false);
+          }
+          return;
+        }
+
+        if (isFreeChatConfirmation(text)) {
+          setBusy(true);
+          setStreaming("");
+          try {
+            await beginFreeChat();
+            setLocal([]);
+            await queryClient.invalidateQueries({ queryKey: ["wing", "free-chat"] });
+          } catch {
+            setLocal((messages) => [
+              ...messages,
+              {
+                id: localId(),
+                role: "wing",
+                tone: "observing",
+                text: "I couldn't open the free conversation just now. Try again?",
+              },
+            ]);
+          } finally {
+            setStreaming(null);
+            setBusy(false);
+          }
+          return;
+        }
+
+        const destination = moduleForRoutingRequest(text);
+        if (!destination) {
+          setLocal((m) => [
+            ...m,
+            {
+              id: localId(),
+              role: "wing",
+              tone: "proposing",
+              text:
+                "I don't have a module that matches that. If you want a broader conversation that's still focused on your work or career, reply “Something else.”",
+            },
+          ]);
+          return;
+        }
+
+        setBusy(true);
+        try {
+          await openModule(destination);
+        } catch {
+          setLocal((m) => [
+            ...m,
+            {
+              id: localId(),
+              role: "wing",
+              tone: "observing",
+              text: "I found the right place, but couldn't open it. Try choosing it from the module menu?",
+            },
+          ]);
+          setBusy(false);
+        }
+        return;
+      }
 
       /*
        * ── WEEKLY CHECK-IN: A LIFE-LOG ENTRY, NOT A FOUNDATION TURN ──────────────
@@ -367,7 +512,7 @@ export default function WingChatPage() {
        * what this codebase exists not to do — and the student cannot tell the difference,
        * which is what makes it the wrong kind of wrong.
        */
-      if (module.status !== "live" || !module.sessionType) {
+      if (module.behavior !== "foundation" || !module.sessionType) {
         setLocal((m) => [
           ...m,
           { id: localId(), role: "wing", tone: "proposing", text: unavailableOpening(module) },
@@ -485,7 +630,18 @@ export default function WingChatPage() {
         }
       }
     },
-    [module, busy, queryClient, thread, isCheckInModule, lifeLogPrompt, isRefreshModule],
+    [
+      module,
+      busy,
+      queryClient,
+      thread,
+      isCheckInModule,
+      lifeLogPrompt,
+      isRefreshModule,
+      isRoutingModule,
+      isFreeChatActive,
+      openModule,
+    ],
   );
 
   /**
@@ -517,27 +673,6 @@ export default function WingChatPage() {
     }
   }, [refreshProposal, acceptingRefresh, queryClient]);
 
-  const pickModule = useCallback(
-    async (m: WingModule) => {
-      if (m.href) {
-        navigate(m.href);
-        return;
-      }
-      /*
-       * Starting is idempotent and safe on a completed session — the `/start` route grew
-       * a guard after reopening a finished one demoted it to `in_progress` and dropped it
-       * out of every context builder that keys on `completed`.
-       */
-      if (m.sessionType) {
-        const n = Number(m.sessionType.replace("foundation_", ""));
-        await startFoundationSession(n);
-        void queryClient.invalidateQueries({ queryKey: ["wing", "threads"] });
-      }
-      navigate(`/chat/${m.slug}`);
-    },
-    [navigate, queryClient],
-  );
-
   /* No slug: send them to whatever they were last in, or to the first Foundation module. */
   useEffect(() => {
     if (params?.slug || threadsLoading) return;
@@ -550,7 +685,7 @@ export default function WingChatPage() {
    * is unchanged and correct as designed (IG-UX01: every module is tappable, and this is
    * what tapping one with no methodology behind it says).
    *
-   * The two live-but-non-Foundation modules each need their own: Positioning Refresh's
+   * The live-but-non-Foundation modules each need their own: Positioning Refresh's
    * real opening line is server-seeded (`begin()`, above) and arrives as the first
    * `refreshState` message, not through this — this only covers "not available yet" (no
    * SLI to refresh) and the brief gap while that first fetch is in flight. The weekly
@@ -559,6 +694,10 @@ export default function WingChatPage() {
    */
   const opening = useMemo(() => {
     if (!module) return null;
+    if (isRoutingModule) {
+      if (freeChatLoading || !freeChatState) return null;
+      return isFreeChatActive ? null : ROUTER_OPENING;
+    }
     if (isRefreshModule) {
       if (refreshLoading || !refreshState) return null;
       return refreshState.available
@@ -569,7 +708,18 @@ export default function WingChatPage() {
       return lifeLogPrompt?.promptText ?? "What's been happening — in your work, or outside it?";
     }
     return module.status !== "live" ? unavailableOpening(module) : null;
-  }, [module, isRefreshModule, refreshLoading, refreshState, isCheckInModule, lifeLogPrompt]);
+  }, [
+    module,
+    isRoutingModule,
+    isFreeChatActive,
+    freeChatLoading,
+    freeChatState,
+    isRefreshModule,
+    refreshLoading,
+    refreshState,
+    isCheckInModule,
+    lifeLogPrompt,
+  ]);
 
   return (
     <AppShell
@@ -578,7 +728,7 @@ export default function WingChatPage() {
       onOpenExplore={() => setExploreOpen(true)}
     >
       <OfflineBanner />
-      {exploreOpen && <ExploreOverlay onClose={() => setExploreOpen(false)} onPick={pickModule} />}
+      {exploreOpen && <ExploreOverlay onClose={() => setExploreOpen(false)} onPick={openModule} />}
 
       <div className="flex h-screen flex-col">
         <header className="shrink-0 px-6 pb-3 pt-5 md:px-10">
@@ -587,7 +737,11 @@ export default function WingChatPage() {
 
         <div className="min-h-0 flex-1 overflow-y-auto px-6 md:px-10">
           <div className="mx-auto flex max-w-[720px] flex-col gap-6 pb-4">
-            {(threadsLoading || msgsLoading || autoStarting || (isRefreshModule && refreshLoading)) &&
+            {(threadsLoading ||
+              msgsLoading ||
+              autoStarting ||
+              (isRefreshModule && refreshLoading) ||
+              (isRoutingModule && freeChatLoading)) &&
             messages.length === 0 ? (
               <div className="flex justify-center py-16">
                 <Loader2 className="h-5 w-5 animate-spin text-plum/50" />
@@ -673,7 +827,7 @@ export default function WingChatPage() {
               <Composer
                 onSend={send}
                 module={module}
-                onPickModule={pickModule}
+                onPickModule={openModule}
                 busy={busy}
                 onStop={() => {
                   abortRef.current?.abort();

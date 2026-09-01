@@ -814,6 +814,14 @@ export const transcriptTurns = wing.table("transcript_turns", {
   classificationStatus: classificationStatus("classification_status").notNull().default("provisional"),
   classifiedBy: classifierActor("classified_by"),
   classifierPromptId: fk("classifier_prompt_id").references(() => classifierPrompts.id),
+  /**
+   * Human-originated does not automatically mean suitable longitudinal evidence.
+   * Scoped free chat records refused/off-topic turns for audit and conversation
+   * continuity, but those words must not become career memory or pattern evidence.
+   */
+  analysisEligible: boolean("analysis_eligible").notNull().default(true),
+  /** Stable policy reason when analysisEligible is false; never model prose. */
+  analysisExclusionReason: text("analysis_exclusion_reason"),
   createdAt: tsNow("created_at"),
 }, (t) => ({
   positionUnique: uniqueIndex("transcript_turns_position_unique").on(t.transcriptId, t.sequencePosition),

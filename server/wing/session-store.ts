@@ -190,6 +190,8 @@ export async function getTurns(sessionId: number) {
       signalDetected: transcriptTurns.signalDetected,
       activeHeuristicId: transcriptTurns.activeHeuristicId,
       classificationStatus: transcriptTurns.classificationStatus,
+      analysisEligible: transcriptTurns.analysisEligible,
+      analysisExclusionReason: transcriptTurns.analysisExclusionReason,
       channel: transcriptTurns.channel,
       createdAt: transcriptTurns.createdAt,
     })

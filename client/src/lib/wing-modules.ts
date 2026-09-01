@@ -72,6 +72,22 @@ export type ModuleStatus =
   /** Not a coaching conversation — it opens a screen instead. */
   | "surface";
 
+/**
+ * How the chat surface opens and handles a turn for this registry entry.
+ *
+ * `status` answers whether the capability is available; it does not answer how to run
+ * it. Keeping that second decision explicit prevents a live, non-Foundation affordance
+ * from falling through the Foundation-only send path merely because it has no
+ * `sessionType` — the exact failure that left "Something else" as a blank thread.
+ */
+export type ModuleBehavior =
+  | "foundation"
+  | "positioning_refresh"
+  | "weekly_check_in"
+  | "router"
+  | "unavailable"
+  | "surface";
+
 export type WingModule = {
   slug: ModuleSlug;
   /** What the student reads. Presentation only — never stored, never matched on. */
@@ -80,6 +96,7 @@ export type WingModule = {
   desc: string;
   group: ModuleGroup;
   status: ModuleStatus;
+  behavior: ModuleBehavior;
   /**
    * The backend session type, where one exists. `null` for everything that is not a
    * Foundation session — including the live ones, because the weekly check-in is a
@@ -101,6 +118,7 @@ export const WING_MODULES: readonly WingModule[] = [
     desc: "Name the work only you do — the thread under everything you've built.",
     group: "Build your positioning",
     status: "live",
+    behavior: "foundation",
     sessionType: "foundation_1",
     methodology: "Foundation 1 — Functional Identity Mapping",
     inPicker: true,
@@ -111,6 +129,7 @@ export const WING_MODULES: readonly WingModule[] = [
     desc: "Turn what you've done into evidence someone else can repeat.",
     group: "Build your positioning",
     status: "live",
+    behavior: "foundation",
     sessionType: "foundation_2",
     methodology: "Foundation 2 — Credibility Assessment",
     inPicker: true,
@@ -121,6 +140,7 @@ export const WING_MODULES: readonly WingModule[] = [
     desc: "Shape the three stories that carry you through any room.",
     group: "Build your positioning",
     status: "live",
+    behavior: "foundation",
     sessionType: "foundation_3",
     methodology: "Foundation 3 — Story Development",
     inPicker: true,
@@ -131,6 +151,7 @@ export const WING_MODULES: readonly WingModule[] = [
     desc: "Pressure-test the paths you're circling before you commit.",
     group: "Explore and evaluate",
     status: "not_built",
+    behavior: "unavailable",
     sessionType: null,
     methodology: "Module 4 — Career Exploration",
     inPicker: true,
@@ -141,6 +162,7 @@ export const WING_MODULES: readonly WingModule[] = [
     desc: "Read what they're actually asking for, then map yourself against it.",
     group: "Explore and evaluate",
     status: "not_built",
+    behavior: "unavailable",
     sessionType: null,
     methodology: "Module 5 — JD Analysis",
     inPicker: true,
@@ -151,6 +173,7 @@ export const WING_MODULES: readonly WingModule[] = [
     desc: "Draft in your voice, not the category's voice.",
     group: "Create and publish",
     status: "not_built",
+    behavior: "unavailable",
     sessionType: null,
     methodology: "Module 6 — Writing Coach",
     inPicker: true,
@@ -167,6 +190,7 @@ export const WING_MODULES: readonly WingModule[] = [
     desc: "What's moving in your space, filtered to what matters for you.",
     group: "Create and publish",
     status: "not_built",
+    behavior: "surface",
     sessionType: null,
     methodology: "Module 7 — Wing Radar",
     href: "/radar",
@@ -178,6 +202,7 @@ export const WING_MODULES: readonly WingModule[] = [
     desc: "Read the room you're in and where leverage actually sits.",
     group: "Develop and grow",
     status: "not_built",
+    behavior: "unavailable",
     sessionType: null,
     methodology: "Module 9 — Power & Influence",
     inPicker: true,
@@ -188,6 +213,7 @@ export const WING_MODULES: readonly WingModule[] = [
     desc: "A candid read on the gap between where you are and where you're aiming.",
     group: "Develop and grow",
     status: "not_built",
+    behavior: "unavailable",
     sessionType: null,
     methodology: "Module 8 — Competency Intelligence",
     inPicker: true,
@@ -198,6 +224,7 @@ export const WING_MODULES: readonly WingModule[] = [
     desc: "Rehearse the hard questions with the answers you'd actually give.",
     group: "Develop and grow",
     status: "not_built",
+    behavior: "unavailable",
     sessionType: null,
     methodology: "Module 10 — Interview Prep",
     inPicker: true,
@@ -208,6 +235,7 @@ export const WING_MODULES: readonly WingModule[] = [
     desc: "Fewer, better conversations — and a reason for each one.",
     group: "Develop and grow",
     status: "not_built",
+    behavior: "unavailable",
     sessionType: null,
     methodology: "Module 11 — Network Intelligence",
     inPicker: true,
@@ -218,6 +246,7 @@ export const WING_MODULES: readonly WingModule[] = [
     desc: "What's shifted in how you talk about yourself.",
     group: "Your evolution",
     status: "not_built",
+    behavior: "unavailable",
     sessionType: null,
     methodology: "Reveal Cycle",
     inPicker: false,
@@ -233,6 +262,7 @@ export const WING_MODULES: readonly WingModule[] = [
     desc: "Re-anchor the statement as the work changes.",
     group: "Your evolution",
     status: "live",
+    behavior: "positioning_refresh",
     sessionType: null,
     methodology: "Positioning Refresh",
     inPicker: true,
@@ -247,6 +277,7 @@ export const WING_MODULES: readonly WingModule[] = [
     desc: "",
     group: "Your evolution",
     status: "live",
+    behavior: "weekly_check_in",
     sessionType: null,
     methodology: "micro-journal / heartbeat prompt",
     inPicker: true,
@@ -262,6 +293,7 @@ export const WING_MODULES: readonly WingModule[] = [
     desc: "",
     group: "Your evolution",
     status: "live",
+    behavior: "router",
     sessionType: null,
     methodology: "Cross-Module Routing Rules §7",
     inPicker: true,
@@ -272,6 +304,157 @@ const BY_SLUG = new Map(WING_MODULES.map((m) => [m.slug, m]));
 
 export function moduleFor(slug: string): WingModule | null {
   return BY_SLUG.get(slug as ModuleSlug) ?? null;
+}
+
+/**
+ * The one question Cross-Module Routing Rules §7 requires for an ambiguous request.
+ * It is deterministic methodology copy, not model-generated coaching.
+ */
+export const ROUTER_OPENING =
+  "Sure. Are you thinking about content, career exploration, interview prep, or something else?";
+
+/**
+ * Resolve a specific answer to the router's single clarifying question.
+ *
+ * This is deliberately conservative. The router may recognise ordinary names and close
+ * synonyms for modules, but it must never guess a coaching destination from vague text.
+ * The first matching rule wins, so narrow intents (a job description or an interview)
+ * precede broad ones (career exploration or positioning).
+ */
+export function moduleForRoutingRequest(request: string): WingModule | null {
+  const text = request
+    .toLocaleLowerCase("en")
+    .replace(/[\u2018\u2019]/g, "'")
+    .replace(/[_-]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+
+  if (!text) return null;
+
+  const rules: readonly { slug: ModuleSlug; patterns: readonly RegExp[] }[] = [
+    {
+      slug: "analyze_a_job_description",
+      patterns: [
+        /\bjob description\b/,
+        /\bjob posting\b/,
+        /\bjob advert(?:isement)?\b/,
+        /\bjd analysis\b/,
+        /\banaly[sz]e (?:a |the |this )?(?:role|job)\b/,
+      ],
+    },
+    {
+      slug: "interview_prep",
+      patterns: [/\binterview(?:ing|s)?\b/, /\bmock interview\b/, /\binterview prep(?:aration)?\b/],
+    },
+    {
+      slug: "write_something",
+      patterns: [
+        /\bcontent\b/,
+        /\bwriting\b/,
+        /\bwrite (?:a |an |my )?(?:post|article|bio|draft)\b/,
+        /\b(?:linkedin|social) post\b/,
+        /\bdraft(?:ing)?\b/,
+      ],
+    },
+    {
+      slug: "refresh_your_positioning",
+      patterns: [
+        /\bpositioning\b/,
+        /\bpositioning statement\b/,
+        /\brefresh (?:my )?(?:statement|sli)\b/,
+        /\b(?:update|revise|rework) (?:my )?(?:statement|sli)\b/,
+      ],
+    },
+    {
+      slug: "power_and_influence",
+      patterns: [
+        /\bpower(?: dynamics)?\b/,
+        /\binfluence\b/,
+        /\bstakeholder(?:s)?\b/,
+        /\boffice politics\b/,
+      ],
+    },
+    {
+      slug: "competency_check",
+      patterns: [
+        /\bcompetenc(?:y|ies)\b/,
+        /\bskill(?:s)? gap(?:s)?\b/,
+        /\bmy skills\b/,
+        /\bdevelopment gap(?:s)?\b/,
+      ],
+    },
+    {
+      slug: "build_your_network",
+      patterns: [
+        /\bnetwork(?:ing)?\b/,
+        /\bprofessional relationships?\b/,
+        /\boutreach\b/,
+        /\bpeople to contact\b/,
+      ],
+    },
+    {
+      slug: "tell_your_stories",
+      patterns: [
+        /\bstor(?:y|ies|ytelling)\b/,
+        /\bcareer narrative\b/,
+        /\bexperience narrative\b/,
+      ],
+    },
+    {
+      slug: "prove_your_credibility",
+      patterns: [
+        /\bcredibility\b/,
+        /\bachievement(?:s)?\b/,
+        /\baccomplishment(?:s)?\b/,
+        /\bproof (?:of|that)\b/,
+        /\bevidence of (?:my |the )?(?:work|impact|skills?)\b/,
+      ],
+    },
+    {
+      slug: "weekly_check_in",
+      patterns: [
+        /\bweekly check[ -]?in\b/,
+        /\bcheck[ -]?in\b/,
+        /\blife log\b/,
+        /\blog (?:an? |my )?(?:update|milestone|event)\b/,
+        /\bwhat(?:'s| is) been happening\b/,
+      ],
+    },
+    {
+      slug: "discover_your_function",
+      patterns: [
+        /\bfunctional identity\b/,
+        /\bmy function\b/,
+        /\bwhat i (?:actually )?do\b/,
+        /\bdescribe (?:myself|what i do)\b/,
+        /\bprofessional identity\b/,
+      ],
+    },
+    {
+      slug: "explore_career_options",
+      patterns: [
+        /\bcareer (?:exploration|options?|paths?|direction|change|pivot)\b/,
+        /\bexplore (?:a |my )?(?:career|role|roles|options?)\b/,
+        /\bwhat (?:career|role|job) (?:should|could) i\b/,
+        /\bnext (?:career )?(?:move|role|job)\b/,
+      ],
+    },
+  ];
+
+  for (const rule of rules) {
+    if (rule.patterns.some((pattern) => pattern.test(text))) return moduleFor(rule.slug);
+  }
+
+  return null;
+}
+
+/** The explicit second "something else" enters scoped free-chat mode. */
+export function isFreeChatConfirmation(request: string): boolean {
+  return request
+    .trim()
+    .toLocaleLowerCase("en")
+    .replace(/[.!?,;:]+$/g, "")
+    .trim() === "something else";
 }
 
 /** The composer's dropdown, in registry order. */

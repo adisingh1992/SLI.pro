@@ -63,6 +63,10 @@ export interface RecordTurnParams {
    * principally `human_correction`. Provenance is derived from it.
    */
   turnType?: TurnTypeValue;
+  /** Whether this human turn may enter longitudinal analysis and memory. */
+  analysisEligible?: boolean;
+  /** Stable policy reason when analysisEligible is false. */
+  analysisExclusionReason?: string | null;
 }
 
 /** Returns the session's transcript, creating it on first turn. */
@@ -149,6 +153,10 @@ export async function recordTurn(params: RecordTurnParams) {
         // caller-supplied type is a rule-based decision, not a classification.
         classificationStatus: "provisional",
         classifiedBy: "rule",
+        analysisEligible: params.analysisEligible ?? true,
+        analysisExclusionReason: params.analysisEligible === false
+          ? params.analysisExclusionReason ?? "policy_excluded"
+          : null,
       })
       .returning();
 
@@ -168,6 +176,17 @@ export const recordAiTurn = (
   content: string,
   opts: Omit<RecordTurnParams, "sessionId" | "content" | "origin"> = {},
 ) => recordTurn({ sessionId, content, origin: "ai", ...opts });
+
+/**
+ * A second-layer safety judgement may exclude a turn after its provisional scope
+ * classification. The content remains auditable; only analysis eligibility changes.
+ */
+export async function excludeTurnFromAnalysis(turnId: number, reason: string): Promise<void> {
+  await db
+    .update(transcriptTurns)
+    .set({ analysisEligible: false, analysisExclusionReason: reason })
+    .where(eq(transcriptTurns.id, turnId));
+}
 
 /**
  * Marks a transcript complete when its session ends.
@@ -194,6 +213,8 @@ export async function getHumanTurns(sessionId: number) {
       content: transcriptTurns.content,
       provenanceTag: transcriptTurns.provenanceTag,
       signalDetected: transcriptTurns.signalDetected,
+      analysisEligible: transcriptTurns.analysisEligible,
+      analysisExclusionReason: transcriptTurns.analysisExclusionReason,
       createdAt: transcriptTurns.createdAt,
     })
     .from(transcriptTurns)
@@ -206,6 +227,7 @@ export async function getHumanTurns(sessionId: number) {
         // stamped provenance_unknown, so that test passed Wing's own turns
         // into the corpus this function exists to keep human-only.
         sql`${transcriptTurns.turnType} not in ('ai_prompt', 'ai_adapted')`,
+        eq(transcriptTurns.analysisEligible, true),
       ),
     )
     .orderBy(transcriptTurns.sequencePosition);

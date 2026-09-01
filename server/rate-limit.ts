@@ -114,6 +114,28 @@ export function rateLimitByIp(name: string, opts: { windowMs: number; max: numbe
   };
 }
 
+/**
+ * Per-account limiter for authenticated, user-initiated model calls.
+ *
+ * Unlike an IP limit, this does not punish a university cohort sharing one NAT address.
+ * It remains per replica until the target Redis layer exists; the limitation documented
+ * above therefore still applies.
+ */
+export function rateLimitByUser(name: string, opts: { windowMs: number; max: number }) {
+  return (req: Request, res: Response, next: NextFunction) => {
+    const userId = Number((req.user as any)?.id);
+    if (!Number.isInteger(userId) || userId <= 0) return next();
+
+    const { limited, retryAfterSec } = hit(name, String(userId), opts.windowMs, opts.max, Date.now());
+    if (!limited) return next();
+
+    res.setHeader("Retry-After", String(retryAfterSec));
+    res.status(429).json({
+      message: "You're sending messages too quickly. Please wait a moment and try again.",
+    });
+  };
+}
+
 /* ── Failed-login tracking ───────────────────────────────────────────────── */
 
 const LOGIN_WINDOW_MS = 15 * 60 * 1000;

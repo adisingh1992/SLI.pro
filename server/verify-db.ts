@@ -1,9 +1,12 @@
 import "dotenv/config";
 import pg from "pg";
+import { loadSecretFromVault } from "./config";
 
 /**
  * Connectivity + state check for the target database.
  * Run with: npm run db:verify   (VPN must be connected for the private stage DB)
+ * DATABASE_URL resolves from the environment first, then Key Vault, exactly like
+ * server/migrate.ts and the other standalone database scripts.
  *
  * Reports: server version, applied drizzle migrations, table count/list, and
  * whether the pgvector extension is available and enabled.
@@ -12,7 +15,12 @@ import pg from "pg";
 const { Pool } = pg;
 
 async function main() {
-  if (!process.env.DATABASE_URL) throw new Error("DATABASE_URL must be set");
+  if (!(await loadSecretFromVault("DATABASE_URL"))) {
+    throw new Error(
+      "DATABASE_URL must be set in the environment, or available as the " +
+        "'DATABASE-URL' secret in the vault named by KEY_VAULT_URI",
+    );
+  }
 
   const pool = new Pool({
     connectionString: process.env.DATABASE_URL,

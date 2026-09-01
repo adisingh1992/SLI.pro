@@ -18,6 +18,7 @@
  *    the reader deliberately hostile splits.
  */
 import {
+  freeChatMsgFor,
   loadThreadMessages,
   localId,
   streamTurn,
@@ -358,6 +359,7 @@ console.log("\nA module with no session behind it fetches nothing");
         desc: "",
         group: "Develop and grow",
         status: "not_built",
+        behavior: "unavailable",
         sessionType: null,
         methodology: "Module 10",
         inPicker: true,
@@ -373,6 +375,19 @@ console.log("\nA module with no session behind it fetches nothing");
     !called && msgs.length === 0
       ? "no request issued, no messages invented"
       : `called=${called}, ${msgs.length} messages`);
+}
+
+console.log("\nScoped free-chat history preserves speaker identity");
+{
+  const user = freeChatMsgFor({ id: 41, role: "user", content: "I changed teams." });
+  const wing = freeChatMsgFor({ id: 42, role: "assistant", content: "What changed in the work?" });
+  check(
+    "free chat mapping",
+    user.role === "user" && wing.role === "wing" && user.id === "free-41" && wing.id === "free-42",
+    user.role === "user" && wing.role === "wing"
+      ? "stored free-chat turns map to stable user and Wing messages"
+      : `user=${user.role}, wing=${wing.role}`,
+  );
 }
 
 console.log(failed === 0 ? "\nall passed\n" : `\n${failed} failed\n`);

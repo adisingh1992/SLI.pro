@@ -66,6 +66,7 @@ async function main() {
     .where(
       and(
         eq(transcriptTurns.classificationStatus, "provisional"),
+        eq(transcriptTurns.analysisEligible, true),
         ne(transcriptTurns.provenanceTag, "provenance_unknown"),
         ne(transcripts.status, "migrated_provenance_unknown"),
         lt(transcriptTurns.createdAt, cutoff),

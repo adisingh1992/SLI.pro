@@ -21,9 +21,12 @@
 import {
   EXPLORE_GROUPS,
   PICKER_MODULES,
+  ROUTER_OPENING,
   SLUG_FOR_SESSION_TYPE,
   WING_MODULES,
+  isFreeChatConfirmation,
   moduleFor,
+  moduleForRoutingRequest,
   unavailableOpening,
   type ModuleSlug,
 } from "./wing-modules";
@@ -183,7 +186,7 @@ console.log("\nEvery live module has a backend path, and every path is claimed o
   const LIVE_WITHOUT_SESSION: Record<string, string> = {
     refresh_your_positioning: "/api/positioning-refresh/*",
     weekly_check_in: "/api/life-log + /api/life-log/prompt",
-    something_else: "routing — asks one clarifying question, starts no session",
+    something_else: "routing — asks once; explicit confirmation enters ongoing engagement",
   };
 
   const sessionTypes = new Set<string>();
@@ -233,7 +236,66 @@ console.log("\nEvery live module has a backend path, and every path is claimed o
 }
 
 /* ─────────────────────────────────────────────────────────────────────────
- * 5. A module with nothing behind it says so, and does not improvise.
+ * 5. "Something else" is a router, not an empty live module.
+ * ───────────────────────────────────────────────────────────────────────── */
+console.log("\nSomething else asks once, routes specific requests, and starts no session");
+{
+  const bad: string[] = [];
+  const router = moduleFor("something_else");
+
+  if (!router) bad.push("something_else does not resolve");
+  else {
+    if (router.behavior !== "router") bad.push(`behavior is ${router.behavior}, not router`);
+    if (router.sessionType !== null) bad.push(`router claims session ${router.sessionType}`);
+  }
+
+  if (!/content.*career exploration.*interview prep.*something else/i.test(ROUTER_OPENING)) {
+    bad.push("opening is not the one clarifying question from routing rule 7");
+  }
+
+  const cases: readonly [string, ModuleSlug][] = [
+    ["I have an interview next week", "interview_prep"],
+    ["Can you help me analyse this job description?", "analyze_a_job_description"],
+    ["I want to write a LinkedIn post", "write_something"],
+    ["Let's explore career options", "explore_career_options"],
+    ["I need to refresh my positioning", "refresh_your_positioning"],
+    ["Help me work through stakeholder influence", "power_and_influence"],
+    ["I want to understand my skill gaps", "competency_check"],
+    ["I need to build my network", "build_your_network"],
+    ["Let's shape my career stories", "tell_your_stories"],
+    ["I want stronger evidence of my impact", "prove_your_credibility"],
+    ["I want to log a milestone", "weekly_check_in"],
+    ["Help me describe what I do", "discover_your_function"],
+  ];
+
+  for (const [request, expected] of cases) {
+    const actual = moduleForRoutingRequest(request)?.slug ?? null;
+    if (actual !== expected) bad.push(`"${request}" routed to ${actual}, expected ${expected}`);
+  }
+
+  for (const vague of ["Something different", "I don't know", "Can we just talk?"]) {
+    const resolved = moduleForRoutingRequest(vague);
+    if (resolved) bad.push(`vague request "${vague}" guessed ${resolved.slug}`);
+  }
+
+  for (const confirmation of ["Something else", "something else.", "  SOMETHING ELSE!  "]) {
+    if (!isFreeChatConfirmation(confirmation)) {
+      bad.push(`"${confirmation}" did not activate scoped free chat`);
+    }
+  }
+  for (const notConfirmation of ["something else about interviews", "anything else", "else"]) {
+    if (isFreeChatConfirmation(notConfirmation)) {
+      bad.push(`"${notConfirmation}" incorrectly activated scoped free chat`);
+    }
+  }
+
+  check("router behavior", bad.length === 0, bad.length === 0
+    ? `${cases.length} specific intents route; an explicit second Something else enters scoped free chat`
+    : bad.join("; "));
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+ * 6. A module with nothing behind it says so, and does not improvise.
  * ───────────────────────────────────────────────────────────────────────── */
 console.log("\nAn unbuilt module opens with an honest sentence, not a coaching question");
 {
@@ -264,7 +326,7 @@ console.log("\nAn unbuilt module opens with an honest sentence, not a coaching q
 }
 
 /* ─────────────────────────────────────────────────────────────────────────
- * 6. Explore and the picker are both derived, and neither drops a destination.
+ * 7. Explore and the picker are both derived, and neither drops a destination.
  * ───────────────────────────────────────────────────────────────────────── */
 console.log("\nExplore and the picker are two views of one registry");
 {
@@ -305,7 +367,7 @@ console.log("\nExplore and the picker are two views of one registry");
 }
 
 /* ─────────────────────────────────────────────────────────────────────────
- * 7. The slug set is frozen.
+ * 8. The slug set is frozen.
  *
  * ── WHY A LITERAL LIST AND NOT A DERIVED RULE ────────────────────────────
  * This check was added because a mutation got past checks 1-6: renaming one module's

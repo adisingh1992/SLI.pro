@@ -59,6 +59,7 @@ export async function listTaggableSessions() {
       humanTurns: sql<number>`
         count(*) filter (
           where ${transcriptTurns.turnType} not in ('ai_prompt', 'ai_adapted')
+            and ${transcriptTurns.analysisEligible} = true
         )::int`,
       handTagged: sql<number>`
         count(*) filter (where ${transcriptTurns.classificationStatus} = 'hand_tagged')::int`,
@@ -128,12 +129,13 @@ export async function handTagTurn(params: {
       turnType: transcriptTurns.turnType,
       classificationStatus: transcriptTurns.classificationStatus,
       classifiedBy: transcriptTurns.classifiedBy,
+      analysisEligible: transcriptTurns.analysisEligible,
     })
     .from(transcriptTurns)
     .where(eq(transcriptTurns.id, params.turnId))
     .limit(1);
 
-  if (!existing) return null;
+  if (!existing || !existing.analysisEligible) return null;
 
   const [updated] = await db
     .update(transcriptTurns)
@@ -189,7 +191,12 @@ export async function taggingCoverage() {
       count: sql<number>`count(*)::int`,
     })
     .from(transcriptTurns)
-    .where(ne(transcriptTurns.provenanceTag, "provenance_unknown"))
+    .where(
+      and(
+        ne(transcriptTurns.provenanceTag, "provenance_unknown"),
+        eq(transcriptTurns.analysisEligible, true),
+      ),
+    )
     .groupBy(transcriptTurns.turnType, transcriptTurns.classificationStatus);
 
   const byStatus: Record<string, number> = {};
@@ -243,6 +250,7 @@ export async function runValidation(limit = 200) {
     .where(
       and(
         eq(transcriptTurns.classificationStatus, "hand_tagged"),
+        eq(transcriptTurns.analysisEligible, true),
         // turn_type, not provenance — see the note on humanTurns above.
         sql`${transcriptTurns.turnType} not in ('ai_prompt', 'ai_adapted')`,
       ),

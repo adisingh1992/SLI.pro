@@ -82,6 +82,7 @@ async function turnsAfter(sessionId: number, turnId: number | null) {
     .where(
       and(
         eq(transcriptTurns.transcriptId, transcript.id),
+        eq(transcriptTurns.analysisEligible, true),
         gt(transcriptTurns.sequencePosition, fromPosition),
       ),
     )
