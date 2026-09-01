@@ -260,6 +260,13 @@
       "when": 1788240000000,
       "tag": "0036_transcript_analysis_scope",
       "breakpoints": true
+    },
+    {
+      "idx": 37,
+      "version": "7",
+      "when": 1788249892906,
+      "tag": "0037_wing_state_timestamps",
+      "breakpoints": true
     }
   ]
 }

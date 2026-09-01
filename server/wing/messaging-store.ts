@@ -384,13 +384,15 @@ export async function advanceSequence(params: {
   done?: boolean;
 }) {
   try {
+    const now = new Date();
     await db
       .update(engagementSequenceStates)
       .set({
         currentStep: params.step,
         nextRunAt: params.nextRunAt,
         status: (params.done ? "completed" : "active") as any,
-        completedAt: params.done ? new Date() : null,
+        completedAt: params.done ? now : null,
+        updatedAt: now,
       })
       .where(
         and(

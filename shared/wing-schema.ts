@@ -347,6 +347,7 @@ export const userChannelPreferences = wing.table("user_channel_preferences", {
   microPromptsPaused: boolean("micro_prompts_paused").notNull().default(false),
   preferredChannel: messageChannel("preferred_channel").notNull().default("email"),
   dailyPromptHourLocal: smallint("daily_prompt_hour_local").notNull().default(8),
+  createdAt: tsNow("created_at"),
   updatedAt: tsNow("updated_at"),
 });
 
@@ -1458,6 +1459,7 @@ export const engagementSequenceStates = wing.table("engagement_sequence_states",
   startedAt: tsNow("started_at"),
   nextRunAt: ts("next_run_at"), // scheduler cursor (Azure Functions)
   completedAt: ts("completed_at"),
+  updatedAt: tsNow("updated_at"),
 }, (t) => ({
   studentSequenceUnique: uniqueIndex("engagement_sequence_states_student_key_unique")
     .on(t.studentId, t.sequenceKey),
