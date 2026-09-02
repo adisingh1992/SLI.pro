@@ -44,12 +44,22 @@ function parseFilter(req: Request): metrics.MetricsFilter {
     const s = String(v ?? "").trim();
     return s && !Number.isNaN(new Date(s).getTime()) ? s : null;
   };
+  // Same reasoning as `date`: an unrecognized value means "no filter", not a query
+  // that silently matches nobody because it fell through to a comparison against a
+  // string the SQL side was never taught.
+  const completionStatus = (v: unknown): metrics.CompletionStatus | null => {
+    const s = String(v ?? "").trim();
+    return s === "never_started" || s === "in_progress" || s === "completed_all_three"
+      ? s
+      : null;
+  };
 
   return {
     institutionId: num(req.query.institutionId),
     cycleId: num(req.query.cycleId),
     from: date(req.query.from),
     to: date(req.query.to),
+    completionStatus: completionStatus(req.query.completionStatus),
   };
 }
 

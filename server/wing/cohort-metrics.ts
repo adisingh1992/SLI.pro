@@ -33,12 +33,22 @@ import {
  * denominator is zero.
  */
 
+/**
+ * The same three states `neverStarted`/`completedAllThree`/the implicit middle already
+ * partition `CohortMetrics` into (see `engagementDistribution` below) — B4's spec asks
+ * for these to be selectable, not only reportable, so a director can pull just the
+ * "never started" list rather than eyeball it out of the full export.
+ */
+export type CompletionStatus = "never_started" | "in_progress" | "completed_all_three";
+
 export type MetricsFilter = {
   institutionId?: number | null;
   cycleId?: number | null;
   /** ISO date; students registered on or after this. */
   from?: string | null;
   to?: string | null;
+  /** Feature List B4's completion-status dimension. */
+  completionStatus?: CompletionStatus | null;
 };
 
 export type Rate = {
@@ -56,6 +66,55 @@ const rate = (numerator: number, denominator: number): Rate => ({
 
 const SESSION_ORDER = ["foundation_1", "foundation_2", "foundation_3"] as const;
 
+/**
+ * `completionStatus`'s SQL, as a correlated subquery against `sessions` rather than a
+ * join — matching `studentRows`' own pattern below for `sessionsCompleted`/
+ * `hasSelectedSli`. A join here would multiply each student's row per session and break
+ * every other aggregate `studentFilter` feeds, from registration counts to the appointment
+ * totals.
+ *
+ * DISTINCT session_type, not row count, for the same restart reason `perStudent` counts
+ * that way above: a restart adds a `sessions` row without changing how many of the three
+ * the student has actually finished, and a raw count would let it look otherwise.
+ */
+function completionStatusClause(status: CompletionStatus): SQL {
+  // Written out per branch rather than composed from shared sub-fragments, so each
+  // returned `SQL` is one flat, easily-inspected statement rather than depending on
+  // drizzle's fragment-splicing behaving as expected under `and()` — the query this
+  // feeds into every other cohort figure, so the extra duplication buys a query that's
+  // trivial to read back and confirm by eye.
+  if (status === "never_started") {
+    return sql`(
+      select count(distinct s.session_type) from wing.sessions s
+      where s.student_id = ${students.id}
+        and s.started_at is not null
+        and s.session_type::text like 'foundation_%'
+    ) = 0`;
+  }
+  if (status === "completed_all_three") {
+    return sql`(
+      select count(distinct s.session_type) from wing.sessions s
+      where s.student_id = ${students.id}
+        and s.status::text = 'completed'
+        and s.session_type::text like 'foundation_%'
+    ) >= 3`;
+  }
+  // in_progress: started at least one, hasn't finished all three — the complement of
+  // the other two states, not a third independent condition, so it can never disagree
+  // with them about which bucket a student is in.
+  return sql`(
+    select count(distinct s.session_type) from wing.sessions s
+    where s.student_id = ${students.id}
+      and s.started_at is not null
+      and s.session_type::text like 'foundation_%'
+  ) > 0 and (
+    select count(distinct s.session_type) from wing.sessions s
+    where s.student_id = ${students.id}
+      and s.status::text = 'completed'
+      and s.session_type::text like 'foundation_%'
+  ) < 3`;
+}
+
 /** The student-scoped WHERE clause shared by every query below. */
 function studentFilter(f: MetricsFilter): SQL | undefined {
   const parts: SQL[] = [];
@@ -66,6 +125,7 @@ function studentFilter(f: MetricsFilter): SQL | undefined {
   // everything registered on the 14th is the kind of off-by-one nobody notices
   // until a number is questioned in a meeting.
   if (f.to) parts.push(lte(students.createdAt, new Date(`${f.to}T23:59:59.999Z`)));
+  if (f.completionStatus) parts.push(completionStatusClause(f.completionStatus));
   return parts.length ? and(...parts) : undefined;
 }
 
