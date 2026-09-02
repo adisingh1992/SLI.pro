@@ -54,7 +54,8 @@
     "wing:tag-prompts": "tsx server/wing/tag-prompts.ts",
     "wing:seed-research-gates": "tsx server/wing/seed-research-gates.ts",
     "wing:apply-corrections": "tsx server/wing/apply-card-corrections.ts",
-    "wing:populate-prompt-attributes": "tsx server/wing/populate-prompt-attributes.ts"
+    "wing:populate-prompt-attributes": "tsx server/wing/populate-prompt-attributes.ts",
+    "wing:check-image-generation": "tsx server/wing/check-image-generation.ts"
   },
   "dependencies": {
     "@azure/identity": "^4.5.0",
