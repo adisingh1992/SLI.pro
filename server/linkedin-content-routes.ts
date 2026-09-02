@@ -22,6 +22,81 @@ const log = (message: string, tag = "express") => {
 // nothing below needed to change.
 const isAuthenticated = isStudent;
 
+/**
+ * Registers an image asset with LinkedIn and uploads the bytes to it,
+ * returning the asset URN a `ugcPosts` call can reference with
+ * `shareMediaCategory: "IMAGE"`.
+ *
+ * IG-M6-01 (Article Image Generation) says Wing generates a header image via
+ * DALL-E once an article draft is complete, and IG-IMG-03 requires the
+ * student's explicit approval before anything posts. Neither DALL-E
+ * generation nor an approval UI exists yet — that's Spec 4 / Phase 5,
+ * genuinely separate scope (a new model integration, not a publish-endpoint
+ * gap). What WAS a real gap in already-working code: this endpoint had no
+ * way to post an image at all, `shareMediaCategory` was hardcoded to
+ * `"NONE"`. This closes that specific gap — the endpoint can now post
+ * whatever image bytes the caller supplies (already approved, since sending
+ * them here is the approval — the same trust boundary `content` itself
+ * already crosses at this same call). Once DALL-E generation exists, it has
+ * something real to hand this function; until then, a student's own header
+ * image works today.
+ */
+async function uploadImageToLinkedIn(
+  accessToken: string,
+  linkedinId: string,
+  imageBuffer: Buffer,
+): Promise<string> {
+  const registerResponse = await fetch("https://api.linkedin.com/v2/assets?action=registerUpload", {
+    method: "POST",
+    headers: {
+      "Authorization": `Bearer ${accessToken}`,
+      "Content-Type": "application/json",
+      "X-Restli-Protocol-Version": "2.0.0"
+    },
+    body: JSON.stringify({
+      registerUploadRequest: {
+        recipes: ["urn:li:digitalmediaRecipe:feedshare-image"],
+        owner: `urn:li:person:${linkedinId}`,
+        serviceRelationships: [
+          {
+            relationshipType: "OWNER",
+            identifier: "urn:li:userGeneratedContent"
+          }
+        ]
+      }
+    })
+  });
+
+  if (!registerResponse.ok) {
+    const errorText = await registerResponse.text();
+    throw new Error(`LinkedIn image registration failed (${registerResponse.status}): ${errorText}`);
+  }
+
+  const registerData = await registerResponse.json();
+  const uploadUrl =
+    registerData?.value?.uploadMechanism?.["com.linkedin.digitalmedia.uploading.MediaUploadHttpRequest"]?.uploadUrl;
+  const asset = registerData?.value?.asset;
+
+  if (!uploadUrl || !asset) {
+    throw new Error("LinkedIn image registration response missing uploadUrl or asset URN");
+  }
+
+  const uploadResponse = await fetch(uploadUrl, {
+    method: "PUT",
+    headers: {
+      "Authorization": `Bearer ${accessToken}`
+    },
+    body: imageBuffer
+  });
+
+  if (!uploadResponse.ok) {
+    const errorText = await uploadResponse.text();
+    throw new Error(`LinkedIn image upload failed (${uploadResponse.status}): ${errorText}`);
+  }
+
+  return asset as string;
+}
+
 // Helper function for exponential backoff retries when calling the model
 async function callWithRetry<T>(
   fn: () => Promise<T>, 
@@ -481,7 +556,7 @@ export function registerLinkedinContentRoutes(app: Express) {
     try {
       const userId = req.user!.id;
       const draftId = parseInt(req.params.draftId);
-      const { content } = req.body;
+      const { content, imageBase64 } = req.body;
 
       if (isNaN(draftId)) {
         return res.status(400).json({ error: "Invalid draft ID" });
@@ -489,6 +564,19 @@ export function registerLinkedinContentRoutes(app: Express) {
 
       if (!content) {
         return res.status(400).json({ error: "Content is required" });
+      }
+
+      // Optional header image (IG-M6-01) — base64, decoded once here so a bad
+      // payload 400s before any LinkedIn call is made rather than surfacing
+      // as an opaque upstream failure.
+      let imageBuffer: Buffer | null = null;
+      if (imageBase64) {
+        try {
+          imageBuffer = Buffer.from(imageBase64, "base64");
+          if (imageBuffer.length === 0) throw new Error("empty");
+        } catch {
+          return res.status(400).json({ error: "imageBase64 could not be decoded" });
+        }
       }
 
       // Get the user to access their LinkedIn access token
@@ -509,6 +597,22 @@ export function registerLinkedinContentRoutes(app: Express) {
         return res.status(403).json({ error: "Not authorized to access this content draft" });
       }
 
+      // If an image came with this request, register + upload it to LinkedIn
+      // first — a ugcPosts call referencing an asset needs the asset to
+      // already be in the READY state LinkedIn's own docs require.
+      let imageAsset: string | null = null;
+      if (imageBuffer) {
+        try {
+          imageAsset = await uploadImageToLinkedIn(user.linkedinAccessToken, user.linkedinId!, imageBuffer);
+        } catch (err) {
+          console.error("LinkedIn image upload error:", (err as Error).message);
+          return res.status(502).json({
+            error: "Failed to upload image to LinkedIn",
+            details: (err as Error).message
+          });
+        }
+      }
+
       // Post to LinkedIn using the UGC Posts API
       const linkedinResponse = await fetch("https://api.linkedin.com/v2/ugcPosts", {
         method: "POST",
@@ -525,7 +629,10 @@ export function registerLinkedinContentRoutes(app: Express) {
               shareCommentary: {
                 text: content
               },
-              shareMediaCategory: "NONE"
+              shareMediaCategory: imageAsset ? "IMAGE" : "NONE",
+              ...(imageAsset
+                ? { media: [{ status: "READY", media: imageAsset }] }
+                : {})
             }
           },
           visibility: {
@@ -537,9 +644,9 @@ export function registerLinkedinContentRoutes(app: Express) {
       if (!linkedinResponse.ok) {
         const errorText = await linkedinResponse.text();
         console.error("LinkedIn API error:", errorText);
-        return res.status(linkedinResponse.status).json({ 
-          error: "Failed to post to LinkedIn", 
-          details: errorText 
+        return res.status(linkedinResponse.status).json({
+          error: "Failed to post to LinkedIn",
+          details: errorText
         });
       }
 

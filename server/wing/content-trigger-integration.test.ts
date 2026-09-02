@@ -19,7 +19,13 @@
  * itself accepts for the same reason: over-fitting a mock to something more
  * elaborate would be more fragile than the code it tests.
  */
-import { recordTriggerFired, routeContentTrigger } from "./content-trigger-integration";
+import {
+  recordDraftStarted,
+  recordTriggerDeclined,
+  recordTriggerFired,
+  requestContentTrigger,
+  routeContentTrigger,
+} from "./content-trigger-integration";
 
 let failures = 0;
 const fail = (msg: string) => {
@@ -151,6 +157,87 @@ console.log("recordTriggerFired writes exactly one row and does not throw");
   });
   if (calls !== 1) fail(`expected exactly one insert, got ${calls}`);
   if (before === failures) ok("one row written");
+}
+
+console.log("recordTriggerDeclined writes exactly one row and does not throw");
+{
+  const before = failures;
+  let calls = 0;
+  const db = {
+    execute: async (_q: unknown) => {
+      calls++;
+      return { rows: [] };
+    },
+  };
+  await recordTriggerDeclined(db, 1, "post", "radar_suggestion_topic:AI in supply chains");
+  if (calls !== 1) fail(`expected exactly one insert, got ${calls}`);
+  if (before === failures) ok("one row written");
+}
+
+console.log("recordDraftStarted writes exactly one row and does not throw");
+{
+  const before = failures;
+  let calls = 0;
+  const db = {
+    execute: async (_q: unknown) => {
+      calls++;
+      return { rows: [] };
+    },
+  };
+  await recordDraftStarted(db, 1, "article", 42);
+  if (calls !== 1) fail(`expected exactly one insert, got ${calls}`);
+  if (before === failures) ok("one row written");
+}
+
+console.log("requestContentTrigger: explicit post request fires via detectPostTrigger directly -- 9 queries, article's detector never touched");
+{
+  const before = failures;
+  const db = recordingDb((n) => {
+    if (n === 3) return [{ professional_status: "early_career", pathway: null }]; // track
+    if (n >= 1 && n <= 7) return []; // no hold; unestablished comfort; no prior suggestion/action/streak
+    if (n === 8) return []; // detectPostTrigger's progression: published counts -- none
+    if (n === 9) return []; // detectPostTrigger's progression: comfort -- unestablished (explicit override still lifts it to Stage 2)
+    throw new Error(`unexpected call ${n} -- requestContentTrigger should never touch detectArticleTrigger for a "post" request`);
+  });
+  const r = await requestContentTrigger(db, 1, "post");
+  if (!r.fires || r.contentType !== "post") fail(`expected an explicit post fire, got fires=${r.fires} contentType=${r.contentType}`);
+  if (r.detection?.signal !== "explicit") fail(`expected signal "explicit", got ${r.detection?.signal}`);
+  if (before === failures) ok('requestContentTrigger("post") fires after exactly 9 queries, skipping article entirely');
+}
+
+console.log("requestContentTrigger: explicit article request fires via detectArticleTrigger directly, same 9-query shape");
+{
+  const before = failures;
+  const db = recordingDb((n) => {
+    if (n >= 1 && n <= 7) return []; // no hold; unestablished comfort; no prior suggestion/action/streak
+    if (n === 8) return []; // detectArticleTrigger's progression: published counts -- none
+    if (n === 9) return []; // detectArticleTrigger's progression: comfort -- unestablished (explicit override lifts it to Stage 3)
+    throw new Error(`unexpected call ${n}`);
+  });
+  const r = await requestContentTrigger(db, 1, "article");
+  if (!r.fires || r.contentType !== "article") fail(`expected an explicit article fire, got fires=${r.fires} contentType=${r.contentType}`);
+  if (r.detection?.signal !== "explicit") fail(`expected signal "explicit", got ${r.detection?.signal}`);
+  if (before === failures) ok('requestContentTrigger("article") fires after exactly 9 queries');
+}
+
+console.log("requestContentTrigger: cadence still gates an explicit request -- blocked before the detector ever runs");
+{
+  const before = failures;
+  const threeDaysAgo = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString();
+  const db = recordingDb((n) => {
+    if (n === 1) return []; // no holds
+    if (n === 2) return []; // no turns
+    if (n === 3) return [{ professional_status: "mid_career_or_senior", pathway: null }];
+    if (n === 4) return []; // comfort: unestablished
+    if (n === 5) return [{ at: threeDaysAgo }]; // daysSinceLastSuggestion = 3, inside mid_career's 10d band
+    if (n === 6) return []; // daysSinceLastUserContentAction = null
+    if (n === 7) return []; // declineStreak = 0
+    throw new Error(`unexpected call ${n} -- cadence should have blocked before detectPostTrigger ever ran`);
+  });
+  const r = await requestContentTrigger(db, 1, "post");
+  if (r.fires) fail(`expected not due, got fires=true`);
+  if (!r.cadence || r.cadence.due) fail("cadence result should be present and not due");
+  if (before === failures) ok(`explicit request still held on cadence -- "${r.reason}"`);
 }
 
 console.log(`\n${failures} failures\n`);

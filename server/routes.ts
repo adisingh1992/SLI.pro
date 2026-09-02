@@ -28,6 +28,7 @@ import { registerMetricsRoutes } from "./metrics-routes";
 import { registerInstitutionRoutes } from "./institution-routes";
 import { registerLifeLogRoutes } from "./life-log-routes";
 import { registerRadarRoutes } from "./radar-routes";
+import { registerContentTriggerRoutes } from "./content-trigger-routes";
 import { registerNotificationPreferencesRoutes } from "./notification-preferences-routes";
 import { registerInboundEmailRoutes } from "./inbound-email-routes";
 import { registerPromptLibraryRoutes } from "./prompt-library-routes";
@@ -151,6 +152,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   registerInstitutionRoutes(app);
   registerLifeLogRoutes(app);
   registerRadarRoutes(app);
+  registerContentTriggerRoutes(app);
   registerNotificationPreferencesRoutes(app);
   registerInboundEmailRoutes(app);
   registerPromptLibraryRoutes(app);

@@ -92,6 +92,7 @@ import {
   type PostTriggerInput,
   type TriggerDetection,
 } from "./content-trigger-detect";
+import type { ContentType } from "./content-progression";
 import type { ProfessionalStatus, Pathway } from "./population-tags";
 
 type Db = { execute: (q: unknown) => Promise<{ rows: Record<string, unknown>[] }> };
@@ -305,6 +306,56 @@ export async function routeContentTrigger(
 }
 
 /**
+ * H-626's explicit-request override, exposed directly for a student who names
+ * the type they want rather than accepting whatever `routeContentTrigger`
+ * would surface on its own. Still goes through suppression and cadence —
+ * IG-M6-02 has no explicit-request carve-out, confirmed by
+ * `detectPostTrigger`/`detectArticleTrigger`'s own explicit branches sitting
+ * behind `contentTypeAllowed`, and by the existing test titled "cadence
+ * permitting" — but skips `routeContentTrigger`'s article-before-post
+ * priority scan, which exists to pick ONE type when several could plausibly
+ * fire and would be actively wrong here: a student who asks for a post
+ * shouldn't get bumped to an article because Radar also had a post-tagged
+ * suggestion on hand. Comment isn't accepted — `CommentTriggerInput` has no
+ * `explicitRequest` field; H-620 defines no explicit-ask signal, since asking
+ * to comment on something specific is just... commenting on it.
+ */
+export async function requestContentTrigger(
+  db: Db,
+  studentId: number,
+  contentType: "post" | "article",
+  now = Date.now(),
+): Promise<RouteResult> {
+  const suppression = await contentSuggestionsSuppressed(db, studentId, now);
+  if (suppression.suppressed) {
+    return { fires: false, contentType: null, detection: null, cadence: null, reason: suppression.why };
+  }
+
+  const cadenceInputs = await contentSuggestionCadenceInputs(db, studentId);
+  const cadence = isSuggestionDue({
+    track: cadenceInputs.track,
+    comfort: cadenceInputs.comfort,
+    daysSinceLastSuggestion: cadenceInputs.daysSinceLastSuggestion,
+    daysSinceLastUserContentAction: cadenceInputs.daysSinceLastUserContentAction,
+    declineStreak: cadenceInputs.declineStreak,
+    platformSuppressed: false,
+  });
+  if (!cadence.due) {
+    return { fires: false, contentType: null, detection: null, cadence, reason: cadence.reason };
+  }
+
+  const detection =
+    contentType === "article"
+      ? await detectArticleTrigger(db, studentId, { explicitRequest: true })
+      : await detectPostTrigger(db, studentId, { explicitRequest: true });
+
+  if (detection.fires) {
+    return { fires: true, contentType, detection, cadence, reason: detection.reason };
+  }
+  return { fires: false, contentType: null, detection: null, cadence, reason: detection.reason };
+}
+
+/**
  * Writes the `trigger_fired` row for a suggestion this call decided to actually
  * make. `sourceType` follows the same signal the detector already returned:
  * `explicit` means the student asked, everything else is Wing noticing
@@ -323,5 +374,57 @@ export async function recordTriggerFired(
       ("student_id", "trigger_type", "event_type", "trigger_source", "source_type")
     VALUES
       (${studentId}, ${contentType}, 'trigger_fired', ${detection.triggerSource}, ${sourceType})
+  `);
+}
+
+/**
+ * Writes the `trigger_declined` row for a suggestion the student was shown
+ * and turned down — the half of H-627's failure_path this file's own header
+ * already explains isn't `recordTriggerFired`'s job: "recording an actual
+ * student decline belongs to whatever UI presents the suggestion." It's also
+ * what `declineStreak()` above reads to extend or pause cadence (H-625's
+ * 2-decline/3-decline rules) — before this function existed, nothing wrote
+ * that event type at all, so every student's decline streak was silently
+ * always zero. `sourceType` is always `human_originated`: a decline is, by
+ * definition, the student's own choice, never something Wing generated.
+ */
+export async function recordTriggerDeclined(
+  db: Db,
+  studentId: number,
+  contentType: ContentType,
+  triggerSource: string | null,
+): Promise<void> {
+  await db.execute(sql`
+    INSERT INTO "wing"."content_activity_log"
+      ("student_id", "trigger_type", "event_type", "trigger_source", "source_type")
+    VALUES
+      (${studentId}, ${contentType}, 'trigger_declined', ${triggerSource}, 'human_originated')
+  `);
+}
+
+/**
+ * Writes the `draft_started` row for a `content_drafts` row created off an
+ * accepted suggestion. Same gap as `recordTriggerDeclined` above:
+ * `contentSuggestionCadenceInputs`'s `daysSinceLastUserContentAction` query
+ * already reads `event_type IN ('draft_started', 'published')` — it was
+ * written expecting this event to exist — but nothing wrote `draft_started`
+ * anywhere in the codebase before this function, so that half of H-625's "a
+ * content action within 3 days suppresses the next suggestion" rule could
+ * never have actually fired. `sourceType` is `human_originated`: the coaching
+ * scaffold Wing seeds the draft with is AI-generated material (H-615), but
+ * the ACT of starting a draft is the student's, same distinction
+ * `recordTriggerDeclined` draws for the same reason.
+ */
+export async function recordDraftStarted(
+  db: Db,
+  studentId: number,
+  contentType: ContentType,
+  contentDraftId: number,
+): Promise<void> {
+  await db.execute(sql`
+    INSERT INTO "wing"."content_activity_log"
+      ("student_id", "trigger_type", "event_type", "content_draft_id", "source_type")
+    VALUES
+      (${studentId}, ${contentType}, 'draft_started', ${contentDraftId}, 'human_originated')
   `);
 }
