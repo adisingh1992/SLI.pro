@@ -107,11 +107,15 @@ export function AppShell({
   threads,
   activeThreadId,
   onOpenExplore,
+  accountOnly = false,
 }: {
   children: ReactNode;
   threads: Thread[];
   activeThreadId: string | null;
   onOpenExplore: () => void;
+  /** Intake is still the route gate. Keep the shell and account access without
+   *  exposing any destination that sits behind that gate. */
+  accountOnly?: boolean;
 }) {
   const [location, navigate] = useLocation();
   const { user, logoutMutation } = useAuth();
@@ -174,7 +178,11 @@ export function AppShell({
       {expanded ? (
         <aside className="sticky top-0 flex h-screen w-[257px] shrink-0 flex-col bg-wine text-white">
           <div className="flex items-center justify-between px-5 pb-4 pt-5">
-            <Link href="/" className="text-lg font-semibold tracking-tight text-aqua">
+            <Link
+              href={accountOnly ? "/branding-intake" : "/"}
+              aria-label={accountOnly ? "Return to intake" : "Wing home"}
+              className="text-lg font-semibold tracking-tight text-aqua"
+            >
               Wing
             </Link>
             <button
@@ -187,82 +195,88 @@ export function AppShell({
             </button>
           </div>
 
-          <nav className="space-y-0.5 px-3">
-            <NavItem
-              href="/"
-              icon={<Home className="h-4 w-4" />}
-              label="Home"
-              expanded
-              active={location === "/"}
-            />
-            <NavItem
-              onClick={onOpenExplore}
-              icon={<Compass className="h-4 w-4" />}
-              label="Explore"
-              expanded
-            />
-          </nav>
+          {accountOnly ? (
+            <div className="min-h-0 flex-1" />
+          ) : (
+            <>
+              <nav className="space-y-0.5 px-3">
+                <NavItem
+                  href="/"
+                  icon={<Home className="h-4 w-4" />}
+                  label="Home"
+                  expanded
+                  active={location === "/"}
+                />
+                <NavItem
+                  onClick={onOpenExplore}
+                  icon={<Compass className="h-4 w-4" />}
+                  label="Explore"
+                  expanded
+                />
+              </nav>
 
-          <div className="px-4 pb-2 pt-5">
-            <label className="relative block">
-              <Search className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-white/50" />
-              <input
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                placeholder="Search conversations"
-                aria-label="Search conversations"
-                className="quiet-focus w-full rounded-lg bg-white/10 py-2 pl-9 pr-3 text-sm text-white outline-none placeholder:text-white/45 focus-visible:ring-1 focus-visible:ring-aqua"
-              />
-            </label>
-          </div>
+              <div className="px-4 pb-2 pt-5">
+                <label className="relative block">
+                  <Search className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-white/50" />
+                  <input
+                    value={query}
+                    onChange={(e) => setQuery(e.target.value)}
+                    placeholder="Search conversations"
+                    aria-label="Search conversations"
+                    className="quiet-focus w-full rounded-lg bg-white/10 py-2 pl-9 pr-3 text-sm text-white outline-none placeholder:text-white/45 focus-visible:ring-1 focus-visible:ring-aqua"
+                  />
+                </label>
+              </div>
 
-          <div className="min-h-0 flex-1 overflow-y-auto px-3 pb-3">
-            {visible.length === 0 ? (
-              <p className="px-3 py-2 text-sm text-white/50">
-                {q ? "No conversations found." : "Nothing here yet."}
-              </p>
-            ) : (
-              <ul className="space-y-0.5">
-                {visible.map((t) => (
-                  <li key={t.id}>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        navigate(`/chat/${t.id}`);
-                        // Automatic, space-saving only — not the student's own toggle,
-                        // so it doesn't overwrite their stored expand/collapse choice.
-                        if (window.innerWidth < 768) setExpandedState(false);
-                      }}
-                      aria-current={t.id === activeThreadId ? "page" : undefined}
-                      className={`w-full rounded-lg px-3 py-2 text-left text-sm transition-colors ${
-                        t.id === activeThreadId
-                          ? "bg-wine-dark text-aqua"
-                          : "text-white/85 hover:bg-white/10"
-                      }`}
-                    >
-                      <span className="block truncate">{t.title}</span>
-                      {t.when && <span className="block text-[11px] text-white/45">{t.when}</span>}
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            )}
+              <div className="min-h-0 flex-1 overflow-y-auto px-3 pb-3">
+                {visible.length === 0 ? (
+                  <p className="px-3 py-2 text-sm text-white/50">
+                    {q ? "No conversations found." : "Nothing here yet."}
+                  </p>
+                ) : (
+                  <ul className="space-y-0.5">
+                    {visible.map((t) => (
+                      <li key={t.id}>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            navigate(`/chat/${t.id}`);
+                            // Automatic, space-saving only — not the student's own toggle,
+                            // so it doesn't overwrite their stored expand/collapse choice.
+                            if (window.innerWidth < 768) setExpandedState(false);
+                          }}
+                          aria-current={t.id === activeThreadId ? "page" : undefined}
+                          className={`w-full rounded-lg px-3 py-2 text-left text-sm transition-colors ${
+                            t.id === activeThreadId
+                              ? "bg-wine-dark text-aqua"
+                              : "text-white/85 hover:bg-white/10"
+                          }`}
+                        >
+                          <span className="block truncate">{t.title}</span>
+                          {t.when && <span className="block text-[11px] text-white/45">{t.when}</span>}
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
 
-            {/*
-              * Only while a thread is a session. The design shows a second conversation
-              * in the same module; the backend cannot hold one, so the affordance that
-              * would promise it is absent rather than misleading.
-              */}
-            {!threadsAreSessions && (
-              <button
-                type="button"
-                onClick={onOpenExplore}
-                className="mt-2 w-full rounded-lg px-3 py-2 text-left text-sm text-aqua hover:bg-white/10"
-              >
-                New conversation
-              </button>
-            )}
-          </div>
+                {/*
+                  * Only while a thread is a session. The design shows a second conversation
+                  * in the same module; the backend cannot hold one, so the affordance that
+                  * would promise it is absent rather than misleading.
+                  */}
+                {!threadsAreSessions && (
+                  <button
+                    type="button"
+                    onClick={onOpenExplore}
+                    className="mt-2 w-full rounded-lg px-3 py-2 text-left text-sm text-aqua hover:bg-white/10"
+                  >
+                    New conversation
+                  </button>
+                )}
+              </div>
+            </>
+          )}
 
           <div className="border-t border-white/10 px-3 pt-2">
             <ConnectionStatus expanded />
@@ -292,7 +306,11 @@ export function AppShell({
                     <p className="truncate text-[13px] font-semibold text-forest">{name}</p>
                     <p className="truncate text-[11px] text-plum">{user?.username}</p>
                   </div>
-                  <AccountMenuItems onSignOut={signOut} signingOut={logoutMutation.isPending} />
+                  <AccountMenuItems
+                    onSignOut={signOut}
+                    signingOut={logoutMutation.isPending}
+                    accountOnly={accountOnly}
+                  />
                 </div>
               </>
             )}
@@ -333,9 +351,9 @@ export function AppShell({
       ) : (
         <aside className="sticky top-0 flex h-screen w-[64px] shrink-0 flex-col items-center gap-3 bg-wine px-3 py-5 text-white">
           <Link
-            href="/"
+            href={accountOnly ? "/branding-intake" : "/"}
             className="text-[15px] font-bold tracking-[0.14em] text-aqua hover:opacity-80"
-            aria-label="Wing home"
+            aria-label={accountOnly ? "Return to intake" : "Wing home"}
           >
             W
           </Link>
@@ -348,21 +366,23 @@ export function AppShell({
             <PanelLeft className="h-5 w-5" />
           </button>
 
-          <nav className="mt-2 flex flex-col items-center gap-1">
-            <NavItem
-              href="/"
-              icon={<Home className="h-5 w-5" />}
-              label="Home"
-              expanded={false}
-              active={location === "/"}
-            />
-            <NavItem
-              onClick={onOpenExplore}
-              icon={<Compass className="h-5 w-5" />}
-              label="Explore"
-              expanded={false}
-            />
-          </nav>
+          {!accountOnly && (
+            <nav className="mt-2 flex flex-col items-center gap-1">
+              <NavItem
+                href="/"
+                icon={<Home className="h-5 w-5" />}
+                label="Home"
+                expanded={false}
+                active={location === "/"}
+              />
+              <NavItem
+                onClick={onOpenExplore}
+                icon={<Compass className="h-5 w-5" />}
+                label="Explore"
+                expanded={false}
+              />
+            </nav>
+          )}
 
           <div className="flex-1" />
 
@@ -387,7 +407,11 @@ export function AppShell({
                     <p className="truncate text-[13px] font-semibold text-forest">{name}</p>
                     <p className="truncate text-[11px] text-plum">{user?.username}</p>
                   </div>
-                  <AccountMenuItems onSignOut={signOut} signingOut={logoutMutation.isPending} />
+                  <AccountMenuItems
+                    onSignOut={signOut}
+                    signingOut={logoutMutation.isPending}
+                    accountOnly={accountOnly}
+                  />
                 </div>
               </>
             )}
@@ -473,6 +497,7 @@ function ConnectionStatus({ expanded }: { expanded: boolean }) {
 function AccountMenuItems({
   onSignOut,
   signingOut,
+  accountOnly,
 }: {
   onSignOut: () => void;
   /** `logoutMutation.isPending` — the POST itself is normally sub-second now that the
@@ -480,13 +505,18 @@ function AccountMenuItems({
    *  but the button still gives immediate feedback rather than looking inert on a slow
    *  connection. */
   signingOut: boolean;
+  accountOnly: boolean;
 }) {
   return (
     <div className="py-1">
       <MenuLink href="/profile" label="Profile" />
-      <MenuLink href="/milestones" label="What's Happened" />
-      <MenuLink href="/settings" label="Settings" />
-      <MenuLink href="/files" label="Your files" />
+      {!accountOnly && (
+        <>
+          <MenuLink href="/milestones" label="What's Happened" />
+          <MenuLink href="/settings" label="Settings" />
+          <MenuLink href="/files" label="Your files" />
+        </>
+      )}
       <button
         type="button"
         onClick={onSignOut}

@@ -77,8 +77,12 @@ export function ProtectedRoute({
    * presents as an infinite redirect on the first screen a new student sees.
    */
   const isIntakePage = path === "/branding-intake" || path === "/intake";
+  /* The profile contains account data, not a module. It remains reachable so the
+   * restricted intake sidebar can provide useful account access without opening
+   * the rest of Wing. Its own AppShell stays account-only until intake completes. */
+  const isAvailableDuringIntake = isIntakePage || path === "/profile";
 
-  if (!intakeCompleted && !isIntakePage && !isIntakeError) {
+  if (!intakeCompleted && !isAvailableDuringIntake && !isIntakeError) {
     return (
       <Route path={path}>
         <Redirect to="/branding-intake" />

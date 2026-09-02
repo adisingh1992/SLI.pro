@@ -5,6 +5,7 @@ import { ExploreOverlay } from "@/components/wing/ExploreOverlay";
 import { useWingNav } from "@/lib/use-wing-nav";
 import { useAuth } from "@/hooks/use-auth";
 import { listThreads } from "@/lib/wing-api";
+import type { BrandingIntake } from "@shared/schema";
 
 /**
  * "Your profile" — read-only, as the design has it.
@@ -27,7 +28,15 @@ export default function WingProfilePage() {
   const { user } = useAuth();
   const { exploreOpen, setExploreOpen, pickModule } = useWingNav();
 
-  const { data: threads = [] } = useQuery({ queryKey: ["wing", "threads"], queryFn: listThreads });
+  const { data: brandingIntake } = useQuery<BrandingIntake | null>({
+    queryKey: ["/api/branding-intake"],
+  });
+  const accountOnly = brandingIntake?.completed !== true;
+  const { data: threads = [] } = useQuery({
+    queryKey: ["wing", "threads"],
+    queryFn: listThreads,
+    enabled: !accountOnly,
+  });
   const { data: profile, isLoading } = useQuery<Record<string, unknown>>({
     queryKey: ["/api/user/profile"],
   });
@@ -35,9 +44,16 @@ export default function WingProfilePage() {
   const name = [user?.firstName, user?.lastName].filter(Boolean).join(" ") || "—";
 
   return (
-    <AppShell threads={threads} activeThreadId={null} onOpenExplore={() => setExploreOpen(true)}>
+    <AppShell
+      threads={threads}
+      activeThreadId={null}
+      onOpenExplore={() => setExploreOpen(true)}
+      accountOnly={accountOnly}
+    >
       <OfflineBanner />
-      {exploreOpen && <ExploreOverlay onClose={() => setExploreOpen(false)} onPick={pickModule} />}
+      {!accountOnly && exploreOpen && (
+        <ExploreOverlay onClose={() => setExploreOpen(false)} onPick={pickModule} />
+      )}
 
       <div className="min-h-screen px-6 py-10">
         <div className="mx-auto max-w-[720px]">

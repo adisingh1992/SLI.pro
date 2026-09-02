@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -23,6 +23,7 @@ import {
   RACE_ETHNICITY_OPTIONS,
 } from "@/lib/intake-constants";
 import { Loader2, Send } from "lucide-react";
+import { AppShell } from "@/components/wing/AppShell";
 
 /**
  * The conversational intake (Feature List A1) — Wing's first interaction.
@@ -318,9 +319,11 @@ export default function IntakeChatPage() {
 
   if (state.isLoading) {
     return (
-      <div className="flex min-h-screen items-center justify-center">
-        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-      </div>
+      <IntakeShell>
+        <div className="flex min-h-screen items-center justify-center">
+          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+        </div>
+      </IntakeShell>
     );
   }
 
@@ -342,9 +345,21 @@ export default function IntakeChatPage() {
      * cannot reintroduce them. This stops the question being put.
      */
     if (state.data?.protectedFooting) {
-      return <ClosingStep onSubmit={(p) => finish.mutate(p)} pending={finish.isPending} demographicsOff />;
+      return (
+        <IntakeShell>
+          <ClosingStep
+            onSubmit={(p) => finish.mutate(p)}
+            pending={finish.isPending}
+            demographicsOff
+          />
+        </IntakeShell>
+      );
     }
-    return <ClosingStep onSubmit={(p) => finish.mutate(p)} pending={finish.isPending} />;
+    return (
+      <IntakeShell>
+        <ClosingStep onSubmit={(p) => finish.mutate(p)} pending={finish.isPending} />
+      </IntakeShell>
+    );
   }
 
   const canFinish = state.data?.complete === true;
@@ -371,91 +386,100 @@ export default function IntakeChatPage() {
    * Foundation Session 1 should feel like continuing a conversation rather
    * than moving to a different product.
    *
-   * No `AppShell` here on purpose: that sidebar lists a student's threads and
-   * lets them navigate the app, and intake is the gate every route redirects
-   * to until it's done (see `protected-route.tsx`) — offering a way out of it
-   * would undercut the gate. So this is `AppShell`'s canvas and column
-   * proportions without its rail: `bg-wing-canvas`, the same `label-eyebrow`
-   * header, the same `max-w-[720px]` centred transcript.
+   * `AppShell` runs in account-only mode here. That keeps the persistent Wing
+   * frame and gives the student Profile and Sign out, while omitting Home,
+   * Explore, conversation search/history and every other account destination.
+   * The route gate remains authoritative even for a manually entered URL.
    */
   return (
-    <div className="flex h-screen flex-col bg-wing-canvas text-forest">
-      <header className="shrink-0 px-6 pb-3 pt-5 md:px-10">
-        <p className="label-eyebrow">Let's start with you</p>
-        <p className="mt-2 text-sm text-plum/70">
-          A short conversation so Wing knows who it's working with
-        </p>
-      </header>
+    <IntakeShell>
+      <div className="flex h-screen flex-col bg-wing-canvas text-forest">
+        <header className="shrink-0 px-6 pb-3 pt-5 md:px-10">
+          <p className="label-eyebrow">Let's start with you</p>
+          <p className="mt-2 text-sm text-plum/70">
+            A short conversation so Wing knows who it's working with
+          </p>
+        </header>
 
-      <div className="min-h-0 flex-1 overflow-y-auto px-6 md:px-10">
-        <div className="mx-auto flex max-w-[720px] flex-col gap-6 pb-4">
-          {wingMessages.map((m, i) => (
-            <MessageRow key={m.id} msg={m} isLastOfRun={wingMessages[i + 1]?.role !== m.role} />
-          ))}
+        <div className="min-h-0 flex-1 overflow-y-auto px-6 md:px-10">
+          <div className="mx-auto flex max-w-[720px] flex-col gap-6 pb-4">
+            {wingMessages.map((m, i) => (
+              <MessageRow key={m.id} msg={m} isLastOfRun={wingMessages[i + 1]?.role !== m.role} />
+            ))}
 
-          {busy && (
-            <MessageRow msg={{ id: "intake-thinking", role: "thinking", text: "" }} isLastOfRun />
-          )}
+            {busy && (
+              <MessageRow msg={{ id: "intake-thinking", role: "thinking", text: "" }} isLastOfRun />
+            )}
 
-          <div ref={endRef} className="h-24" />
+            <div ref={endRef} className="h-24" />
+          </div>
         </div>
-      </div>
 
-      <div className="shrink-0 bg-gradient-to-t from-wing-canvas via-wing-canvas px-6 pb-6 md:px-10">
-        <div className="mx-auto max-w-[720px] space-y-2">
-          {canFinish && (
-            <div className="flex items-center justify-between gap-3 rounded-2xl bg-aqua-light px-4 py-2.5 text-sm text-wine">
-              <span>That's everything I need — keep going if you want, or wrap up.</span>
-              <Button
-                size="sm"
-                onClick={() => setShowClosing(true)}
-                className="h-auto shrink-0 rounded-full bg-white px-3 py-1.5 text-xs font-medium text-wine ring-1 ring-wing-border hover:bg-white/80"
-              >
-                Wrap up
-              </Button>
-            </div>
-          )}
+        <div className="shrink-0 bg-gradient-to-t from-wing-canvas via-wing-canvas px-6 pb-6 md:px-10">
+          <div className="mx-auto max-w-[720px] space-y-2">
+            {canFinish && (
+              <div className="flex items-center justify-between gap-3 rounded-2xl bg-aqua-light px-4 py-2.5 text-sm text-wine">
+                <span>That's everything I need — keep going if you want, or wrap up.</span>
+                <Button
+                  size="sm"
+                  onClick={() => setShowClosing(true)}
+                  className="h-auto shrink-0 rounded-full bg-white px-3 py-1.5 text-xs font-medium text-wine ring-1 ring-wing-border hover:bg-white/80"
+                >
+                  Wrap up
+                </Button>
+              </div>
+            )}
 
-          <form
-            onSubmit={(e) => {
-              e.preventDefault();
-              submit();
-            }}
-            className="flex items-end gap-3 rounded-3xl bg-white px-4 py-3 shadow-[0_6px_24px_-12px_rgba(42,42,56,0.35)] ring-1 ring-wing-border"
-          >
-            <textarea
-              ref={inputRef}
-              rows={1}
-              value={draft}
-              onChange={(e) => setDraft(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" && !e.shiftKey) {
-                  e.preventDefault();
-                  submit();
-                }
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                submit();
               }}
-              placeholder="Type your answer.."
-              aria-label="Your message"
-              disabled={send.isPending}
-              // text-[16px]: below that, iOS zooms in on focus and never zooms back out.
-              className="min-w-0 flex-1 resize-none overflow-y-auto bg-transparent py-1.5 text-[16px] leading-relaxed text-forest outline-none placeholder:text-plum/60"
-            />
-            <button
-              type="submit"
-              aria-label="Send"
-              disabled={!draft.trim() || send.isPending}
-              className="mb-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-salmon text-white transition-transform hover:scale-105 disabled:opacity-40 disabled:hover:scale-100"
+              className="flex items-end gap-3 rounded-3xl bg-white px-4 py-3 shadow-[0_6px_24px_-12px_rgba(42,42,56,0.35)] ring-1 ring-wing-border"
             >
-              {send.isPending ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <Send className="h-4 w-4" />
-              )}
-            </button>
-          </form>
+              <textarea
+                ref={inputRef}
+                rows={1}
+                value={draft}
+                onChange={(e) => setDraft(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && !e.shiftKey) {
+                    e.preventDefault();
+                    submit();
+                  }
+                }}
+                placeholder="Type your answer.."
+                aria-label="Your message"
+                disabled={send.isPending}
+                // text-[16px]: below that, iOS zooms in on focus and never zooms back out.
+                className="min-w-0 flex-1 resize-none overflow-y-auto bg-transparent py-1.5 text-[16px] leading-relaxed text-forest outline-none placeholder:text-plum/60"
+              />
+              <button
+                type="submit"
+                aria-label="Send"
+                disabled={!draft.trim() || send.isPending}
+                className="mb-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-salmon text-white transition-transform hover:scale-105 disabled:opacity-40 disabled:hover:scale-100"
+              >
+                {send.isPending ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Send className="h-4 w-4" />
+                )}
+              </button>
+            </form>
+          </div>
         </div>
       </div>
-    </div>
+    </IntakeShell>
+  );
+}
+
+/** The gated sidebar has the normal account surface and no module affordances. */
+function IntakeShell({ children }: { children: ReactNode }) {
+  return (
+    <AppShell threads={[]} activeThreadId={null} onOpenExplore={() => {}} accountOnly>
+      {children}
+    </AppShell>
   );
 }
 
