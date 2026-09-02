@@ -6,7 +6,13 @@ import { AppShell, OfflineBanner } from "@/components/wing/AppShell";
 import { ExploreOverlay } from "@/components/wing/ExploreOverlay";
 import { useWingNav } from "@/lib/use-wing-nav";
 import { useAuth } from "@/hooks/use-auth";
-import { addLifeLogEntry, getLifeLog, listThreads, type ApiSession } from "@/lib/wing-api";
+import {
+  addLifeLogEntry,
+  getLifeLog,
+  getRadarSuggestions,
+  listThreads,
+  type ApiSession,
+} from "@/lib/wing-api";
 import { hrefFor, isExternalTarget, reachableRecommendation } from "@/lib/wing-recommendation";
 import type { RecommendationState } from "@shared/recommendation";
 
@@ -29,9 +35,15 @@ import type { RecommendationState } from "@shared/recommendation";
  * has never been called until now; `wing-recommendation.ts` handles the part it cannot
  * know about, which is that six of its eleven destinations were archived with the old UI.
  *
- * ── AND THERE IS NO RADAR CARD ───────────────────────────────────────────
- * The design has one. Radar generates nothing — see `radar.tsx` — and a card teasing a
- * brief that does not exist is worse than the gap.
+ * ── THE RADAR CARD, NOW THAT THERE IS ONE ────────────────────────────────
+ * Baby Radar (H-701) shipped 2 Sep 2026 — see `radar.tsx`'s own header for what it is
+ * and isn't (topic suggestions from positioning, not real headlines). This card only
+ * ever renders once `GET /api/radar-suggestions` reports the student `eligible` (a
+ * Foundation 1 function or an intake Q5.5 topic exists) — an ineligible student sees
+ * nothing here, same principle as before Radar existed: a card teasing a feature with
+ * nothing behind it is worse than no card. Eligible-but-nothing-generated-yet (the
+ * weekly job hasn't reached this student) gets its own honest copy instead of being
+ * folded into the same case as "ineligible."
  *
  * ── CARD STYLING NOW MATCHES wing5, STRUCTURE DOESN'T ────────────────────
  * Every card below borrows wing5's actual visual language — the label sits inside the
@@ -44,12 +56,12 @@ import type { RecommendationState } from "@shared/recommendation";
  * The container is now `max-w-[1180px]`, matching wing5, and Wing's observations /
  * What's happened sit side by side in a `lg:grid-cols-2` row, same as wing5's row 2.
  *
- * Wing recommends spans both columns instead of sharing row 1 with a Wing radar
- * card, because there is no Wing radar card — see above. wing5's own layout only
- * gives recommends the full row when its `empty` persona state is active; here it
- * always gets the full row, since the thing that would occupy the other half never
- * exists in this build. Full width reads as more considered than a half-empty row,
- * and costs nothing real data would have used otherwise.
+ * Wing recommends now shares row 1 with the Radar card, half-and-half, whenever a
+ * student is Radar-eligible — the layout wing5 always intended (recommends only ever
+ * took the full row there when its `empty` persona state was active). For a
+ * Radar-ineligible student it still spans both columns, since there's genuinely
+ * nothing to share the row with — same reasoning as before Radar existed, just
+ * narrower in scope now that Radar sometimes has a real card to show.
  *
  * Still real data, not wing5's canned demo strings: "What's happened" shows the
  * actual latest log entry when there is one, and "This week"'s copy stays accurate
@@ -105,6 +117,12 @@ export default function WingDashboardPage() {
     queryKey: ["/api/wing/observation"],
   });
   const observation = observationData?.observation ?? null;
+  const { data: radarData, isLoading: radarLoading } = useQuery({
+    queryKey: ["wing", "radar"],
+    queryFn: getRadarSuggestions,
+  });
+  const radarEligible = radarData?.eligible === true;
+  const radarSuggestions = radarData?.suggestions ?? [];
 
   const built = sessions.filter(
     (s) => s.status === "completed" || s.status === "ended_early",
@@ -246,11 +264,15 @@ export default function WingDashboardPage() {
           )}
         </section>
 
-        {/* ── The grid: recommends full-width, observations + what's happened side by side ── */}
+        {/* ── The grid: recommends (+ Radar, when eligible) then observations + what's happened ── */}
         <div className="mt-5 grid gap-5 lg:grid-cols-2">
-          {/* One recommendation. Full width — see the file comment on why there's no
-              second card to share the row with. */}
-          <section className="flex h-full flex-col rounded-xl border border-wing-border bg-sand/30 p-5 lg:col-span-2">
+          {/* One recommendation. Full width for a Radar-ineligible student — see the file
+              comment on why there's no second card to share the row with in that case. */}
+          <section
+            className={`flex h-full flex-col rounded-xl border border-wing-border bg-sand/30 p-5 ${
+              radarEligible ? "" : "lg:col-span-2"
+            }`}
+          >
             <p className="label-eyebrow">Wing recommends</p>
             {recommendation ? (
               <>
@@ -302,6 +324,58 @@ export default function WingDashboardPage() {
               </>
             )}
           </section>
+
+          {/*
+            * ── This week's intelligence (Baby Radar, H-701) ────────────
+            * Renders only once `radarEligible` — see the file header. Half the row,
+            * next to Wing recommends, per the layout wing5 always intended.
+            */}
+          {radarEligible && (
+            <section className="flex h-full flex-col rounded-xl border border-wing-border bg-sand/30 p-5">
+              <p className="label-eyebrow">This week&rsquo;s intelligence</p>
+              {radarLoading ? (
+                <Loader2 className="mt-3 h-4 w-4 animate-spin text-plum/50" />
+              ) : radarSuggestions.length > 0 ? (
+                <>
+                  <p className="mt-2 text-[15px] leading-snug text-forest">
+                    {radarSuggestions[0]!.topic}
+                  </p>
+                  <p className="mt-2 text-sm text-plum-body">
+                    {radarSuggestions[0]!.whyRelevant}
+                  </p>
+                  {radarSuggestions.length > 1 && (
+                    <p className="mt-1 text-xs text-plum-label">
+                      +{radarSuggestions.length - 1} more topic
+                      {radarSuggestions.length - 1 === 1 ? "" : "s"} this week
+                    </p>
+                  )}
+                  <div className="mt-auto flex justify-end pt-3.5">
+                    <Link
+                      href="/radar"
+                      className="rounded-full bg-salmon px-5 py-2 text-xs font-semibold uppercase tracking-wider text-white"
+                    >
+                      Take a look
+                    </Link>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <p className="mt-2 text-[15px] leading-snug text-forest">
+                    Nothing yet this week. Radar generates a fresh batch of topic
+                    suggestions on a weekly cadence.
+                  </p>
+                  <div className="mt-auto flex justify-end pt-3.5">
+                    <Link
+                      href="/radar"
+                      className="rounded-full bg-salmon px-5 py-2 text-xs font-semibold uppercase tracking-wider text-white"
+                    >
+                      See Radar
+                    </Link>
+                  </div>
+                </>
+              )}
+            </section>
+          )}
 
           {/*
             * ── Wing's observations ────────────────────────────────────
