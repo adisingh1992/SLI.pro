@@ -309,7 +309,41 @@ export function applicableBeats(population: PopulationTag | null): Beat[] {
 }
 
 /**
- * A beat is satisfied when ANY of its captured fields has a non-empty value.
+ * The code-only fallback field that guarantees a text beat counts as satisfied
+ * once it has been answered, even if the model's structured extraction wrote
+ * nothing usable to any of `beat.captures`.
+ *
+ * ── THE BUG THIS EXISTS TO FIX ────────────────────────────────────────────
+ * Q4 ("where_going") captures `career_focus`, `target_functions`,
+ * `goal_category`, `urgency_level` — all reasonable names, and all of them
+ * a near-miss for an answer like "I'd have a bigger LinkedIn following":
+ * an outcome, not a function or a title. The model, correctly, would not
+ * force that text into any of the four. `isSatisfied` then saw nothing land,
+ * `nextBeatAfter` stepped forward past it — Q5, Q5.5, Q6, Q7, the baselines —
+ * and once every beat AFTER Q4 was satisfied, its forward walk had nothing
+ * left to return, fell back to `nextBeat` (which scans from the START of the
+ * list), and landed right back on Q4. From the outside that read as Wing
+ * asking the same question five and six times over.
+ *
+ * The field-naming problem is real and could recur for any beat — a model
+ * declining to force an answer into a name it does not fit is the CORRECT
+ * behaviour of `sanitiseExtracted`, not a bug to prompt-engineer away. So the
+ * fix is not a better field name; it is a guarantee that answering a beat is
+ * what satisfies it, independent of whether the model found a home for the
+ * content. `<key>_raw` is per-beat (never shared across beats, so answering
+ * one never satisfies another), never listed in any beat's `captures` — so
+ * it is invisible to `KNOWN_FIELDS`/`FIELD_DICTIONARY` and the model can
+ * never target it directly — and only ever written by
+ * `intake-conversation.ts`'s own code, from the student's own words, when a
+ * turn's answered beat would otherwise still read as unsatisfied.
+ */
+export function verbatimFallbackField(beat: Beat): string {
+  return `${beat.key}_raw`;
+}
+
+/**
+ * A beat is satisfied when ANY of its captured fields has a non-empty value —
+ * or its `verbatimFallbackField` does, the code-only guarantee above.
  *
  * Any, not all: several beats capture alternatives — `what_you_do` fills
  * `major` for a student and `current_title` for a professional, and neither
@@ -317,13 +351,16 @@ export function applicableBeats(population: PopulationTag | null): Beat[] {
  * permanently unsatisfied, and the conversation would never advance.
  */
 export function isSatisfied(beat: Beat, captured: Record<string, unknown>): boolean {
-  return beat.captures.some((f) => {
-    const v = captured[f];
+  const hasValue = (v: unknown): boolean => {
     if (v === null || v === undefined) return false;
     if (typeof v === "string") return v.trim() !== "";
     if (Array.isArray(v)) return v.length > 0;
     return true;
-  });
+  };
+  return (
+    beat.captures.some((f) => hasValue(captured[f])) ||
+    hasValue(captured[verbatimFallbackField(beat)])
+  );
 }
 
 /** Beats in one phase, in order. */

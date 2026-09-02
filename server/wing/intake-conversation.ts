@@ -23,8 +23,10 @@ import {
   insightWindowClosed,
   isComplete,
   isDeliveryStyle,
+  isSatisfied,
   progress,
   satisfiedKeys,
+  verbatimFallbackField,
   type Beat,
   type DeliveryStyle,
   type PopulationTag,
@@ -209,6 +211,46 @@ NEVER
 - Never summarise their answer back at them before asking the next thing.
 - Never mention questions numbers, progress, stages or how much is left.
 - Never ask what their personality type is. You infer it from how they write.`;
+
+/**
+ * Keeps intake from turning into the coaching session it is not.
+ *
+ * ── WHAT THIS EXISTS TO FIX ────────────────────────────────────────────────
+ * A real transcript: asked to help write a LinkedIn post mid-intake, Wing said
+ * "Yes — we can create a post next" and, a few turns later, "we'll start with
+ * the post" — agreeing to do a piece of work that belongs to Module 6, not to
+ * question 4 of 9. Asked why there's no logout button, Wing answered the UI
+ * question instead of declining and returning to what it was asking. Neither
+ * is what A1 specifies: intake gathers information, and everything else —
+ * feedback, drafting, product questions, tasks — is a Foundation Session's job
+ * or the app's own UI, not this conversation's.
+ *
+ * A soft "stay on topic" note buried in IDENTITY was not enough — the model's
+ * instinct to be helpful about whatever the student just asked wins against a
+ * one-line aside. This is its own block for the same reason SCOPE-adjacent
+ * rules elsewhere in this file are their own blocks: something worth holding
+ * against the model's default helpfulness needs to be said once, plainly, and
+ * not diluted by sharing space with tone guidance.
+ */
+const SCOPE = `SCOPE — you ask questions here, you do not do things
+This is information gathering, not a coaching session and not a place to
+produce work for them — that is what their Foundation Sessions are for.
+Answering "why are you asking that" or clarifying the question you just asked
+is fine; that is still part of answering here.
+
+Anything else — write something for them, give feedback, explain how a
+feature works, answer a question about their account or the product, help
+with a task, anything not on your list to learn — refuse it. One short
+sentence: say you'll get to that together once this is done, then go straight
+back to the question you just asked. Do not treat their message as an answer
+to it, and do not ask anything new.
+
+If they explicitly disengage ("let's move on", "I'll get back to you"),
+acknowledge briefly and hold the same question ready for when they return —
+do not soften that into "no worries, moving on" and skip ahead.
+
+This does not apply to the one early-insight moment below, when it fires —
+that is a designed part of the intake, not something you extend on your own.`;
 
 /**
  * What Wing says once the required beats (and, once reached, the optional baselines
@@ -423,6 +465,7 @@ function buildSystemPrompt(params: {
     ...(params.voiceSection ? [params.voiceSection] : []),
     ...(params.gateSection ? [params.gateSection] : []),
     IDENTITY,
+    SCOPE,
     `Their first name is ${params.firstName}.`,
     renderStyle(params.style),
   ];
@@ -950,6 +993,39 @@ export async function respond(userId: number, message: string): Promise<TurnResu
      * audience track" — and deriving from the track is stronger than asking a model
      * to classify, because the track rules are enumerated and tested.
      */
+  }
+
+  /*
+   * ── GUARANTEEING A BEAT IS SATISFIED ONCE IT HAS BEEN ANSWERED ─────────
+   * `turn.answeredBeat` is the beat this message is a reply to — the question Wing
+   * actually asked last turn. If nothing this turn's extraction wrote landed in any
+   * field that beat owns, `isSatisfied` would still say no, and `nextBeatAfter`'s
+   * forward walk plus its `nextBeat` fallback would eventually surface this exact
+   * beat again — see `verbatimFallbackField` in intake-beats.ts for the full story
+   * and the real transcript that found it (Q4, asked six times).
+   *
+   * Baselines are excluded: B1/B2/B3 are already guaranteed satisfied by
+   * `planTurn`/`planBaselineTurn` above (recorded, declined, or mid-re-ask), which
+   * runs before this and does not need a second guarantee.
+   *
+   * This never overrides a real extraction — it only fires when nothing landed —
+   * and it stores exactly what the student wrote, which is what "the intake is only
+   * to gather information" means when the information does not fit any of the
+   * beat's named fields.
+   */
+  const answeredBeatDef = turn.answeredBeat ? BEATS.find((b) => b.key === turn.answeredBeat) : null;
+  if (answeredBeatDef && answeredBeatDef.question.charAt(0) !== "B") {
+    const mergedSoFar = { ...turn.captured, ...extracted };
+    if (!isSatisfied(answeredBeatDef, mergedSoFar)) {
+      const field = verbatimFallbackField(answeredBeatDef);
+      const raw = text.length > 2000 ? text.slice(0, 2000) : text;
+      await intakeStore.mergeIntakeResponses(userId, { [field]: raw });
+      log(
+        `[intake] ${answeredBeatDef.key} (${answeredBeatDef.question}) had no field extracted ` +
+          `from the student's answer; stored it verbatim under ${field} so it is not re-asked`,
+        "intake",
+      );
+    }
   }
 
   /*
