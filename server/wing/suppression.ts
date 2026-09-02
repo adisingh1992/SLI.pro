@@ -59,7 +59,18 @@ export type OutboundKind =
   | "email"
   | "sms"
   | "push"
-  | "in_app_nudge";
+  | "in_app_nudge"
+  /**
+   * H-627/IG-M6-02 (2 Sep): a Wing-initiated content suggestion (comment, post,
+   * article, DM or connection-request trigger). IG-M6-02's own words are
+   * unconditional — "If user is in a platform-wide suppression state..., ALL
+   * content suggestions are suppressed. Content suggestions must never fire
+   * during a suppression window" — so this is one more thing that stops,
+   * exactly like Radar was settled to stop rather than continue in the
+   * background. Checked via `maySend`, same as every other kind here; see
+   * `content-trigger-integration.ts`.
+   */
+  | "content_suggestion";
 
 export const OUTBOUND_KINDS: readonly OutboundKind[] = [
   "reveal",
@@ -71,6 +82,7 @@ export const OUTBOUND_KINDS: readonly OutboundKind[] = [
   "sms",
   "push",
   "in_app_nudge",
+  "content_suggestion",
 ];
 
 /** Days. The floor, below which the hold cannot lift whatever the user does. */

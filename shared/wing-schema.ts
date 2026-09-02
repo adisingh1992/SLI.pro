@@ -252,6 +252,24 @@ export const sequenceStatus = wing.enum("sequence_status", [
 ]);
 export const contentDraftType = wing.enum("content_draft_type", ["post", "article"]);
 export const contentStatus = wing.enum("content_status", ["draft", "final", "published"]);
+
+/** Wing_Content_System_v1 (H-620–624). Five trigger types, not the same set as
+ *  contentDraftType (post/article) — comment, DM and connection-request are
+ *  one-off responses that never go through the draft→final→published pipeline
+ *  `content_drafts` models, so they need their own vocabulary. */
+export const contentTriggerType = wing.enum("content_trigger_type", [
+  "comment", "post", "article", "dm", "connection_request",
+]);
+/** What content_activity_log records about one interaction. `coaching_round`
+ *  is what IG-M6-05 counts to enforce its 3-round cap. */
+export const contentActivityEventType = wing.enum("content_activity_event_type", [
+  "trigger_fired", "trigger_declined", "coaching_round", "draft_started",
+  "draft_abandoned", "published",
+]);
+/** H-701 (Baby Radar): what Wing suggests doing with a surfaced topic. */
+export const radarSuggestedAction = wing.enum("radar_suggested_action", [
+  "comment", "post", "save_for_later",
+]);
 export const planAudience = wing.enum("plan_audience", ["institutional", "direct"]);
 export const billingType = wing.enum("billing_type", ["one_time", "subscription", "license"]);
 export const entitlementSource = wing.enum("entitlement_source", [
@@ -1211,9 +1229,23 @@ export const promptLibrary = wing.table(
      *  counts. **This is what currently blocks the Reveal Cycle.** */
     signalCategory: text("signal_category"),
 
-    /** 1, 2 or 3, proposed by `wing:tag-prompts`. Null until she approves the
-     *  tiers, exactly as in prompt_log. */
+    /** The words that decided signalCategory — usually a quote from behavioralSignal.
+     *  Migration 0039. */
+    signalCategoryBecause: text("signal_category_because"),
+
+    /** Same vocabulary as evidenceTierSource, for signalCategory. */
+    signalCategorySource: text("signal_category_source"),
+
+    /** 1, 2 or 3, proposed by `wing:tag-prompts` / `populate-prompt-attributes.ts`.
+     *  Null until a tier is set — by the rule engine, by Claude's review, or by her. */
     evidenceTier: smallint("evidence_tier"),
+
+    /** The words that decided evidenceTier — migration 0039. */
+    evidenceTierBecause: text("evidence_tier_because"),
+
+    /** 'rule_engine' | 'claude_review' | 'danielle'. What produced evidenceTier, not
+     *  whether a person has checked it — see 0039's header. */
+    evidenceTierSource: text("evidence_tier_source"),
 
     /** universal | adapted | specific — her three sections. Works with
      *  populationTags, which already holds the audience. */
@@ -1606,6 +1638,73 @@ export const contentDrafts = wing.table("content_drafts", {
   createdAt: tsNow("created_at"),
   updatedAt: tsNow("updated_at"),
 });
+
+/** Build now · Wing_Content_System_v1 (H-620–627) — behavioral content-interaction
+ *  log, one row per interaction rather than per draft.
+ *
+ *  `content_drafts` already holds the actual post/article text through its
+ *  draft→final→published lifecycle; this records what the student DID around
+ *  that lifecycle, plus the trigger types content_drafts has no room for
+ *  (comment, DM, connection-request are one-off responses, never staged
+ *  drafts). It exists because `behavioral_content_comfort` — Danielle, 2 Sep,
+ *  replacing H-626's original self-reported-B2 gate per IG-U014 ("self-report
+ *  governs institutional reporting only, never coaching decisions") — has to
+ *  be inferred from what a student does across content interactions, not
+ *  asked. There is no comfort column anywhere: `behavioral-content-comfort.ts`
+ *  derives it at read time from this log, the same way `audience-track.ts`
+ *  derives audience_track from professional_status + intake pathway rather
+ *  than storing it. Also the substrate H-626's progression gates and IG-M6-02
+ *  through IG-M6-04's timing/material checks read from. */
+export const contentActivityLog = wing.table("content_activity_log", {
+  id: id(),
+  studentId: fk("student_id").notNull().references(() => students.id),
+  triggerType: contentTriggerType("trigger_type").notNull(),
+  eventType: contentActivityEventType("event_type").notNull(),
+  contentDraftId: fk("content_draft_id").references(() => contentDrafts.id),
+  /** Which of IG-M6-05's 3 coaching rounds this is. Null for every event type
+   *  except coaching_round. */
+  coachingRound: smallint("coaching_round"),
+  /** H-627: what fired the trigger (a Radar topic, a module completion, a
+   *  journal quote, a cadence check) — IG-M6-04 requires every suggestion to
+   *  trace to a named source, so the source is recorded, not just the fact
+   *  that something fired. Free text rather than an enum: the four
+   *  integration sources in H-627 don't reduce to a fixed set of reasons
+   *  without losing the specific reference IG-U006 needs to check against. */
+  triggerSource: text("trigger_source"),
+  sourceType: sourceType("source_type").notNull(),
+  occurredAt: tsNow("occurred_at"),
+}, (t) => ({
+  studentTriggerIdx: index("content_activity_log_student_trigger_idx")
+    .on(t.studentId, t.triggerType, t.occurredAt),
+  studentEventIdx: index("content_activity_log_student_event_idx")
+    .on(t.studentId, t.eventType),
+}));
+
+/**
+ * H-701 (Baby Radar, Wing_Content_System_v1 Spec 2, 2 Sep) — one row per
+ * generated topic suggestion, not one row per weekly batch: `engagedAt` is
+ * H-701's own success_criteria ("user engages with at least one topic
+ * suggestion per month"), and that's a per-topic fact, not a per-week one.
+ * `generatedAt` doubles as the weekly-cadence cursor — `max(generated_at)`
+ * per student is what `isRadarDueThisWeek` reads, the same
+ * derive-from-the-log approach `behavioral_content_comfort` uses rather than
+ * a separate `last_run_at` column that could drift from it.
+ */
+export const radarSuggestions = wing.table("radar_suggestions", {
+  id: id(),
+  studentId: fk("student_id").notNull().references(() => students.id),
+  generatedAt: tsNow("generated_at"),
+  topic: text("topic").notNull(),
+  whyRelevant: text("why_relevant").notNull(),
+  suggestedAction: radarSuggestedAction("suggested_action").notNull(),
+  /** Null until the student acts on this suggestion. */
+  engagedAt: ts("engaged_at"),
+}, (t) => ({
+  studentGeneratedIdx: index("radar_suggestions_student_generated_idx")
+    .on(t.studentId, t.generatedAt),
+  studentEngagedIdx: index("radar_suggestions_student_engaged_idx")
+    .on(t.studentId, t.engagedAt),
+}));
 
 /** Build now · Multi-step freshness analysis, carried forward on new keys. */
 export const freshnessReports = wing.table("freshness_reports", {

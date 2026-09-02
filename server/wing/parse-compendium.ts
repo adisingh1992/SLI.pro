@@ -194,6 +194,24 @@ export const TIER1_INCLUDED: Record<string, string> = {
   "IG-V04": "H-307 encourages voice-to-text in Foundation 3, so voice-originated content exists in Tier 1",
   "IG-V05": "A4 — 360Brew authenticity standard on content output, which ships today",
   "IG-V07": "A4 — 360Brew authenticity standard; this gate IS the AI-speak check",
+  /*
+   * NOT here, deliberately: "H-701" for Baby Radar.
+   *
+   * Danielle's Wing_Content_System_v1 (2 Sep) reuses the code H-701 for Baby Radar Topic
+   * Suggestion — Aditya ruled that card itself is Tier 1 on 2 Sep 2026. But this table is
+   * keyed by bare card code and checked by `isTier1` against ANY ParsedCard with that code,
+   * regardless of which document it came from — and H-701 is already taken. The real master
+   * compendium has its own, unrelated "H-701 Radar weekly brief generation" (the full
+   * Module 7 weekly-brief pipeline, correctly Tier 2). An entry here for "H-701" was tried
+   * first and shipped: it silently promoted the master compendium's card too, and
+   * `npm test` caught it as "54 !== 53" in the Tier 1 count. Fixed by moving the decision
+   * to `CONTENT_SYSTEM_TIER1_INCLUDED` in parse-content-system.ts, which only ever sees
+   * cards parsed from Danielle's content-system document — this table stays scoped to the
+   * master compendium alone, so a code collision across the two documents can never again
+   * cross-contaminate Tier 1 membership. The collision itself (two real, differently-scoped
+   * cards both named H-701) is a numbering problem worth raising with Danielle, not
+   * something to keep routing around in code.
+   */
 };
 
 export function isTier1(card: ParsedCard): boolean {
@@ -315,6 +333,12 @@ export function moduleFromCode(code: string): string {
   if (/^IG-U0*\d+$/.test(code)) return "universal";
   if (/^IG-UX\d+$/.test(code)) return "ux";
   if (/^IG-MJ\d+$/.test(code)) return "micro_journaling";
+  // Wing_Content_System_v1 (2 Sep) — Module 6 content-trigger gates and the image-
+  // generation gates that support H-622's article flow. Checked ahead of the generic
+  // digit extraction below because neither "M6" nor "IMG" is a digit run, so that
+  // path would otherwise return "unknown" for every one of these.
+  if (/^IG-M6-\d+$/.test(code)) return "module_6";
+  if (/^IG-IMG-\d+$/.test(code)) return "image_generation";
 
   // The decimal suffix is H-019.5's: Danielle numbered a card between H-019 and
   // H-020 rather than renumber the fifteen reveal templates that follow it.
@@ -425,23 +449,6 @@ export type Correction =
        * `apply-card-corrections` does: a row renamed once no longer answers to
        * `from`, so without this the script would print "not seeded, nothing to
        * rename" and the rename would silently not happen. Most recent first.
-       *
-       * ── DO NOT WALK THIS BACKWARDS ──────────────────────────────────────
-       * It is safe to ask "which codes has THIS card worn". It is not safe to ask "given
-       * this old code, which card is it now", and the difference has already cost a bug.
-       *
-       * **A superseded code is not free; it can be reissued to a different card.** The
-       * Module 11 trio wore IG-U006–IG-U008 for one morning on 18 August, and those numbers
-       * are her research-derived gates now — IG-U006 is Barnum falsifiability, live and
-       * seeded. IG-U012–IG-U014 are the same story: her platform-wide document reassigns
-       * them to Evidence Grade, Role-Aware Summarization and Evidence Over Self-Rating. A
-       * resolver walking this list backwards would confidently answer that IG-U006 is the
-       * upload-handling gate.
-       *
-       * So code elsewhere that must survive a renumber should be checked against the parsed
-       * corpus, not translated by a lookup. `gate-compiler.test.ts` does exactly that: it
-       * matches each precondition key against the gate's own detection method, which fails
-       * both when a code goes stale and when a precondition lands on the wrong gate.
        */
       supersededFrom?: readonly string[];
       why: string;
@@ -463,50 +470,35 @@ export const CORRECTIONS: readonly Correction[] = [
     kind: "recode",
     from: "IG-U03",
     to: "IG-U018",
-    /*
-     * Third move, and the last: her allocation rule of 25 August ends the collisions by
-     * naming who owns which block. Most recent code first, because the rows in the
-     * database answer to IG-U012 today.
-     */
     supersededFrom: ["IG-U012", "IG-U006"],
     why:
       'Danielle, 18 August, morning: "Renumber the Module 11 universal gates to ' +
-      'IG-U006–IG-U008 so no two IDs are one character apart." Applied that morning, then ' +
-      "superseded the same afternoon: Wing_Research_Derived_Gates takes IG-U006 through " +
-      "IG-U011 for six new universal gates, IG-U006 being Barnum Falsifiability. The later " +
-      "document governs, so the trio moves again. Moved a THIRD and final time on 25 August, " +
-      "when she published an allocation rule to stop this recurring: IG-U006 to IG-U011 " +
-      "reserved for universal research-derived gates, IG-U012 to IG-U017 for platform-wide " +
-      "gates, IG-U018 to IG-U020 for Module 11, future universal gates from IG-U021. " +
-      '"I own all numbering." The trio lands in its own block. Previously — to the first ' +
-      "three free codes above her " +
-      "block, which keeps her numbering intact and ours contiguous. IG-U03/04/05 are the " +
-      "Module 11 trio: they arrive in Part 4 of the Module 11 section, while IG-U003/004/005 " +
-      "were delivered with Module 10, whose own header lists them. Mapped in order.",
+      'IG-U006–IG-U008 so no two IDs are one character apart." Superseded that afternoon: ' +
+      "Wing_Research_Derived_Gates takes IG-U006 through IG-U011 for six new universal " +
+      "gates, IG-U006 being Barnum Falsifiability, so the trio moved to IG-U012–IG-U014 — " +
+      "which collided a second time, with the platform-wide gates published 19 August " +
+      "(IG-U012 evidence grade, IG-U013 role-aware summarization, IG-U014 evidence over " +
+      "self-rating). Her allocation rule of 25 August is the fix and is final: IG-U006–011 " +
+      "reserved for universal research-derived gates, IG-U012–017 for platform-wide gates, " +
+      'IG-U018–020 for Module 11, future universal gates from IG-U021 — "I own all ' +
+      'numbering." See gate-allocation.ts for the authoritative bands and the violation ' +
+      "check. IG-U03/04/05 are the Module 11 trio: they arrive in Part 4 of the Module 11 " +
+      "section, while IG-U003/004/005 were delivered with Module 10, whose own header lists " +
+      "them. Mapped in order.",
   },
   {
     kind: "recode",
     from: "IG-U04",
     to: "IG-U019",
-    /*
-     * Third move, and the last: her allocation rule of 25 August ends the collisions by
-     * naming who owns which block. Most recent code first, because the rows in the
-     * database answer to IG-U013 today.
-     */
     supersededFrom: ["IG-U013", "IG-U007"],
-    why: "Second of the Module 11 trio. Same two rulings.",
+    why: "Second of the Module 11 trio. Same three rulings — see IG-U03's entry.",
   },
   {
     kind: "recode",
     from: "IG-U05",
     to: "IG-U020",
-    /*
-     * Third move, and the last: her allocation rule of 25 August ends the collisions by
-     * naming who owns which block. Most recent code first, because the rows in the
-     * database answer to IG-U014 today.
-     */
     supersededFrom: ["IG-U014", "IG-U008"],
-    why: "Third of the Module 11 trio. Same two rulings.",
+    why: "Third of the Module 11 trio. Same three rulings — see IG-U03's entry.",
   },
   {
     kind: "recode",
@@ -553,7 +545,10 @@ export function correctedInterventionType(cardCode: string): string | null {
   return null;
 }
 
-const CARD_HEADING = /^#{2,3}\s+((?:H|IG|EX)-(?:V|UX|MJ|U)?\d+)\b(.*)$/;
+// The `IG-M6-\d+` / `IG-IMG-\d+` alternatives are Wing_Content_System_v1's gate
+// codes (IG-M6-01..05, IG-IMG-01..03) — a hyphen-before-digits shape none of the
+// other IG prefixes use, so they can't fold into the `(?:V|UX|MJ|U)?\d+` branch.
+const CARD_HEADING = /^#{2,3}\s+((?:H|IG|EX)-(?:V|UX|MJ|U)?\d+|IG-M6-\d+|IG-IMG-\d+)\b(.*)$/;
 const SECTION_HEADING = /^(#{1,2})\s+(.*)$/;
 
 export function parseCompendium(text: string): ParseResult {
