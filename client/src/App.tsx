@@ -25,6 +25,7 @@ import WingFilesPage from "@/pages/wing/files";
 import WingMilestonesPage from "@/pages/wing/milestones";
 import WingProfilePage from "@/pages/wing/profile";
 import WingRadarPage from "@/pages/wing/radar";
+import WriteSomethingPage from "@/pages/wing/write-something";
 import WingSettingsPage from "@/pages/wing/settings";
 import WingLoginPage from "@/pages/wing/login";
 import WingSignupPage from "@/pages/wing/signup";
@@ -61,6 +62,7 @@ function Router() {
       <ProtectedRoute path="/milestones" component={WingMilestonesPage} />
       <ProtectedRoute path="/profile" component={WingProfilePage} />
       <ProtectedRoute path="/radar" component={WingRadarPage} />
+      <ProtectedRoute path="/write-something" component={WriteSomethingPage} />
       <ProtectedRoute path="/settings" component={WingSettingsPage} />
 
       {/* A1: the form-based intake is Wing's conversation. Both paths stay mapped so

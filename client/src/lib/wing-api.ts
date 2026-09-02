@@ -347,6 +347,74 @@ export async function engageRadarSuggestion(id: number): Promise<{ engaged: bool
   return await res.json();
 }
 
+/* ── Content Triggers — H-620–627's student-facing surface ────────────────
+ *
+ * `content-trigger-routes.ts` had no client binding at all until now — the
+ * whole Content Trigger Layer (comment/post/article suggestions) was
+ * backend-only. Deliberately NOT a drafting UI: accepting or requesting a
+ * suggestion seeds a `content_drafts` row with a coaching prompt, never
+ * finished prose (H-615 — Wing coaches, never authors), so what comes back
+ * is something to write FROM, not something to publish as-is. Actually
+ * publishing still goes through the existing
+ * `POST /api/linkedin-content-drafts/:draftId/post`, with whatever text the
+ * student wrote themselves.
+ */
+
+export type ContentTriggerType = "comment" | "post" | "article";
+
+export type ContentTriggerStatus = {
+  fires: boolean;
+  contentType: ContentTriggerType | null;
+  reason: string;
+  signal: string | null;
+  triggerSource: string | null;
+};
+
+export type ContentTriggerAccepted = {
+  recorded: boolean;
+  contentType: ContentTriggerType;
+  draftId: number | null;
+  coachingPrompt: string;
+};
+
+export async function getContentTriggerStatus(): Promise<ContentTriggerStatus> {
+  const res = await apiRequest("GET", "/api/content-triggers");
+  return await res.json();
+}
+
+export async function acceptContentTrigger(contentType: ContentTriggerType): Promise<ContentTriggerAccepted> {
+  const res = await apiRequest("POST", "/api/content-triggers/accept", { contentType });
+  return await res.json();
+}
+
+export async function declineContentTrigger(contentType: ContentTriggerType): Promise<{ recorded: boolean }> {
+  const res = await apiRequest("POST", "/api/content-triggers/decline", { contentType });
+  return await res.json();
+}
+
+/** H-626's explicit-request override — comment isn't accepted; see the route's own note. */
+export async function requestContentTrigger(
+  contentType: "post" | "article",
+): Promise<ContentTriggerAccepted> {
+  const res = await apiRequest("POST", "/api/content-triggers/request", { contentType });
+  return await res.json();
+}
+
+/**
+ * Publishes student-written text to LinkedIn via the existing, unmodified
+ * `POST /api/linkedin-content-drafts/:draftId/post` — the same publish route
+ * the older MVP page uses. That route accepts arbitrary `content` from the
+ * request body independent of the stored draft row, so this never sends
+ * anything Wing generated — only whatever the student typed.
+ */
+export async function postContentDraftToLinkedIn(
+  draftId: number,
+  content: string,
+): Promise<unknown> {
+  const res = await apiRequest("POST", `/api/linkedin-content-drafts/${draftId}/post`, { content });
+  return await res.json();
+}
+
 /* ── Positioning Refresh — a real conversation, but not a Foundation session ──
  *
  * `/api/positioning-refresh/*` (`refresh-routes.ts`) is complete server-side — begin,

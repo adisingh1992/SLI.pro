@@ -168,14 +168,23 @@ export const WING_MODULES: readonly WingModule[] = [
     inPicker: true,
   },
   {
+    /*
+     * H-620–627's student-facing surface (content-trigger-routes.ts), live
+     * for the first time. Kept in the picker, unlike This Week's
+     * Intelligence — a student opens this deliberately ("I want to write
+     * something"), it isn't a passive weekly drop. `href` still wins over
+     * `sessionType` in useWingNav's pickModule, so opening it from the
+     * picker goes straight to the dedicated screen, not a chat thread.
+     */
     slug: "write_something",
     name: "Write Something",
     desc: "Draft in your voice, not the category's voice.",
     group: "Create and publish",
-    status: "not_built",
-    behavior: "unavailable",
+    status: "live",
+    behavior: "surface",
     sessionType: null,
-    methodology: "Module 6 — Writing Coach",
+    methodology: "Module 6 — Writing Coach (H-620–627)",
+    href: "/write-something",
     inPicker: true,
   },
   {
