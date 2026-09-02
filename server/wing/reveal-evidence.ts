@@ -242,6 +242,21 @@ export type PromptLogEntry = PromptDelivery & {
   verbatim: string;
   shape: QuoteShape | null;
   substantiveness: Substantiveness;
+  /**
+   * Whether the turn that produced this response may feed longitudinal analysis —
+   * `transcript_turns.analysis_eligible`, carried through from whatever read the turn
+   * to build this entry. Defaults true so existing callers and tests are unaffected;
+   * a caller wiring the Reveal to real turns must pass it explicitly.
+   *
+   * This is a second gate, not a duplicate of the first. `excludeTurnFromAnalysis` /
+   * `analysisEligible` already stop a crisis or scoped-refusal turn from feeding
+   * `scoring.ts`, `classifier.ts`, `tagging-store.ts` and `evidence-portfolio.ts` — see
+   * provenance.ts. This module has no database access and cannot read that column
+   * itself, so it cannot enforce the exclusion; it can only refuse to manufacture a
+   * Reveal-facing EvidenceEvent from an entry that says it was excluded. See
+   * `eventFrom`.
+   */
+  analysisEligible: boolean;
 };
 
 /**
@@ -252,7 +267,12 @@ export type PromptLogEntry = PromptDelivery & {
  * delivered" (§6, hard filter 0). Delivered-and-ignored and never-delivered look
  * identical in a log that only records responses, and they mean opposite things.
  */
-export function logPrompt(delivery: PromptDelivery, response?: { at: number; text: string }): PromptLogEntry {
+export function logPrompt(
+  delivery: PromptDelivery,
+  response?: { at: number; text: string; analysisEligible?: boolean },
+): PromptLogEntry {
+  const analysisEligible = response?.analysisEligible ?? true;
+
   if (!response || !response.text.trim()) {
     return {
       ...delivery,
@@ -260,6 +280,7 @@ export function logPrompt(delivery: PromptDelivery, response?: { at: number; tex
       verbatim: response ? response.text : "",
       shape: null,
       substantiveness: "no_response",
+      analysisEligible,
     };
   }
 
@@ -270,11 +291,23 @@ export function logPrompt(delivery: PromptDelivery, response?: { at: number; tex
     verbatim: response.text,
     shape,
     substantiveness: isQuoteProductive(shape) ? "substantive" : "thin",
+    analysisEligible,
   };
 }
 
-/** The evidence event a delivered-and-answered prompt produces, or null. */
+/**
+ * The evidence event a delivered-and-answered prompt produces, or null.
+ *
+ * The `analysisEligible` check is the reason this file exists to say anything about
+ * exclusion at all — see `PromptLogEntry.analysisEligible`. It is checked here, at the
+ * one function every Gate 2 count and the escalation logic actually consumes, rather
+ * than in `logPrompt`, so `substantiveness` and `shape` stay an honest classification
+ * of what the text looked like even for an excluded turn — a caller with a legitimate
+ * reason to look at the raw log (an admin audit surface, say) still sees the truth.
+ * Only the Reveal-facing event is withheld.
+ */
 export function eventFrom(entry: PromptLogEntry): EvidenceEvent | null {
+  if (!entry.analysisEligible) return null;
   if (entry.substantiveness === "no_response" || entry.respondedAt === null) return null;
   return {
     channel: entry.channel,

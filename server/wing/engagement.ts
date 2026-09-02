@@ -7,6 +7,8 @@ import { intervalDaysAt } from "./prompt-cadence";
 import { populationTagsFor } from "./population-tags";
 import { LIVE_SLI_STATUSES } from "./sli-store";
 import { renderOpener } from "./opener";
+import { logDelivery, signalCategoryFor } from "./prompt-log-store";
+import type { EvidenceTier } from "./reveal-evidence";
 
 /**
  * Engagement sequences — the triggers behind Feature List B3.
@@ -500,6 +502,30 @@ export async function runDueSequences(now = new Date()): Promise<{ sent: number;
           continue;
         }
         sent++;
+
+        /*
+         * The Reveal Cycle's prompt log — the capture Danielle flagged "cheap at capture,
+         * expensive to backfill" (v4 §13, item 1, her stated highest priority). This is the
+         * only place a library prompt is actually delivered to a student unprompted, so it
+         * is the only place `logDelivery` needs a caller for the outbound half of B2.
+         *
+         * Skipped when `prompt` is null: the send still went out (with the fallback
+         * subject line), but there is no library row to attach a tier or category to, and
+         * a delivery row with both null would be filtered out of `evidenceSince` anyway —
+         * see that function's header.
+         */
+        if (prompt) {
+          // `logDelivery` never throws — see its own header — so this is fire-and-forget
+          // exactly the way `messaging.advanceSequence` below is awaited: a logging
+          // problem must not be able to stall or fail a real send.
+          void logDelivery(db as any, {
+            studentId: item.studentId,
+            promptId: prompt.id,
+            channel: cadenceDays === 7 ? "heartbeat" : "micro_journal",
+            signalCategory: signalCategoryFor(prompt.signalCategory),
+            tier: (prompt.evidenceTier as EvidenceTier | null) ?? null,
+          });
+        }
 
         await messaging.advanceSequence({
           studentId: item.studentId,

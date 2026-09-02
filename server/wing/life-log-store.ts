@@ -15,6 +15,8 @@ import {
   postEntryActions,
 } from "./log-reply";
 import * as messaging from "./messaging-store";
+import { logResponse, signalCategoryFor } from "./prompt-log-store";
+import type { EvidenceTier } from "./reveal-evidence";
 
 /**
  * The career-and-personal life log (Feature List B2).
@@ -255,7 +257,54 @@ export async function createEntry(params: NewEntry) {
     log(`life log background pass failed for entry ${entry.id}: ${(err as Error).message}`, "lifelog");
   });
 
+  /*
+   * The Reveal Cycle's prompt log, response half. Every life-log entry — in-app, voice,
+   * or (once that path is wired) an email/SMS reply — is written through this one
+   * function regardless of `captureSource`, which makes it the single place `logResponse`
+   * needs a caller. Quote-productivity classification (single word / list / prose)
+   * happens inside `logResponse` itself via `reveal-evidence.ts`'s `logPrompt`, so wiring
+   * the call is the whole job — nothing here decides anything.
+   *
+   * Backgrounded like `finishEntry` above: a capture problem must not slow down or lose
+   * the entry that is already saved.
+   */
+  void logPromptResponse(params.studentId, params.promptId ?? null, entry.entryText).catch((err) => {
+    log(`prompt log response failed for entry ${entry.id}: ${(err as Error).message}`, "lifelog");
+  });
+
   return { ...entry, wingResponse: null as string | null };
+}
+
+/**
+ * Looks up the delivered prompt's tier and category (when there is one) and hands off to
+ * `logResponse`. A student who wrote an entry Wing never prompted still gets logged — see
+ * `logResponse`'s own header — with both fields null.
+ */
+async function logPromptResponse(studentId: number, promptId: number | null, text: string): Promise<void> {
+  let signalCategory: ReturnType<typeof signalCategoryFor> = null;
+  let tier: EvidenceTier | null = null;
+
+  if (promptId !== null) {
+    const [row] = await db
+      .select({ signalCategory: promptLibrary.signalCategory, evidenceTier: promptLibrary.evidenceTier })
+      .from(promptLibrary)
+      .where(eq(promptLibrary.id, promptId))
+      .limit(1);
+    if (row) {
+      signalCategory = signalCategoryFor(row.signalCategory);
+      tier = (row.evidenceTier as EvidenceTier | null) ?? null;
+    }
+  }
+
+  await logResponse(db as any, {
+    studentId,
+    promptId,
+    // The log page is the micro-journal surface — see `promptFor`'s own comment.
+    channel: "micro_journal",
+    text,
+    signalCategory,
+    tier,
+  });
 }
 
 /** The judged reply, the safety hold and the dormancy reset — everything `createEntry` no longer waits on. */

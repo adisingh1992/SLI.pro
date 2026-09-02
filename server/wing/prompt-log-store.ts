@@ -18,10 +18,16 @@
  */
 import { sql } from "drizzle-orm";
 import {
+  eventFrom,
   logPrompt,
+  VERBATIM_HORIZON_DAYS,
   type Channel,
+  type EvidenceEvent,
   type EvidenceTier,
+  type PromptLogEntry,
+  type QuoteShape,
   type SignalCategory,
+  type Substantiveness,
 } from "./reveal-evidence";
 
 type Db = { execute: (q: unknown) => Promise<{ rows: Record<string, unknown>[] }> };
@@ -163,4 +169,77 @@ export async function logResponse(
      * wrote. `wing:check-journey` is where a divergence shows up.
      */
   }
+}
+
+/**
+ * The evidence a real student has actually produced since a given moment — Gate 2's
+ * input, and the reason this function exists rather than Gate 2 being handed an empty
+ * array forever. Reads `wing.prompt_log` and reconstructs each row into the
+ * `PromptLogEntry` shape `reveal-evidence.ts`'s `eventFrom` already knows how to turn
+ * into an `EvidenceEvent`, rather than duplicating that judgement here.
+ *
+ * ── WHY A ROW WITH NO TIER OR NO CATEGORY IS SKIPPED ─────────────────────
+ * Both are nullable on the table — `evidence_tier` because the 295 proposed tiers were
+ * with Danielle and unapproved when the table was written, `signal_category` because a
+ * prompt's own category does not always map to one of her eight. `PromptDelivery`
+ * requires both non-null, and a delivery whose grade or category isn't known cannot be
+ * counted toward Gate 2's tier and category-spread conditions without guessing at one —
+ * which is exactly the `signalCategory` population gap `promptLibrary`'s own column
+ * comment names as "what currently blocks the Reveal Cycle." So today, on an unpopulated
+ * library, this correctly returns nothing: Gate 2 sees no evidence and defers, which is
+ * the protected null-Reveal outcome the methodology asks for, not a bug in this reader.
+ *
+ * ── analysisEligible IS ALWAYS true HERE, AND THAT IS A KNOWN GAP ────────
+ * `wing.prompt_log` has no column recording whether the turn that produced a response was
+ * later excluded from analysis (`transcript_turns.analysis_eligible`) — `logResponse`
+ * never learns that either, because nothing calls it with that information yet. So every
+ * event this function returns is `analysisEligible: true`, and `eventFrom`'s guard against
+ * a crisis-excluded turn currently has nothing to catch. See reveal-evidence.ts's own
+ * comment on `PromptLogEntry.analysisEligible` — closing this is future work, not silently
+ * assumed safe.
+ */
+export async function evidenceSince(
+  db: Db,
+  studentId: number,
+  sinceMs: number,
+): Promise<EvidenceEvent[]> {
+  /*
+   * v4 §13's verbatim retention horizon, enforced here rather than left as the
+   * documented-but-uncalled `withinVerbatimHorizon` — a cycle whose origin predates the
+   * horizon (a long-dormant student, a cycle that has run past 60 days without a Reveal)
+   * would otherwise hand Gate 2 verbatim older than the methodology says Wing keeps.
+   * `sinceMs` still wins when it is the tighter bound — this only ever narrows the
+   * window, never widens it past what the caller asked for.
+   */
+  const horizonStart = Date.now() - VERBATIM_HORIZON_DAYS * 24 * 60 * 60 * 1000;
+  const effectiveSince = Math.max(sinceMs, horizonStart);
+
+  const r = await db.execute(sql`
+    SELECT "channel", "signal_category", "evidence_tier", "delivered_at",
+           "responded_at", "verbatim", "quote_shape", "substantiveness"
+    FROM "wing"."prompt_log"
+    WHERE "student_id" = ${studentId}
+      AND "delivered_at" >= ${new Date(effectiveSince).toISOString()}
+      AND "evidence_tier" IS NOT NULL
+      AND "signal_category" IS NOT NULL
+  `);
+
+  const events: EvidenceEvent[] = [];
+  for (const row of r.rows ?? []) {
+    const entry: PromptLogEntry = {
+      promptId: "", // not read back; nothing downstream of EvidenceEvent uses it
+      category: row.signal_category as SignalCategory,
+      tier: Number(row.evidence_tier) as EvidenceTier,
+      channel: row.channel as Channel,
+      deliveredAt: new Date(row.delivered_at as string).getTime(),
+      respondedAt: row.responded_at ? new Date(row.responded_at as string).getTime() : null,
+      verbatim: (row.verbatim as string | null) ?? "",
+      shape: (row.quote_shape as QuoteShape | null) ?? null,
+      substantiveness: row.substantiveness as Substantiveness,
+      analysisEligible: true, // see the function header
+    };
+    const event = eventFrom(entry);
+    if (event) events.push(event);
+  }
+  return events;
 }
