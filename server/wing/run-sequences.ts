@@ -31,6 +31,7 @@ import { initScript, type ScriptDb } from "../script-init";
 const DRY_RUN = process.argv.includes("--dry-run");
 
 let pool: ScriptDb["pool"];
+let db: ScriptDb["db"];
 
 /*
  * ── WHY FAILURES ARE COLLECTED RATHER THAN THROWN ────────────────────────
@@ -54,7 +55,10 @@ function failed(job: string, err: unknown) {
 }
 
 async function main() {
-  ({ pool } = await initScript());
+  // llm: true — Baby Radar's job below calls the orchestrator. Without this,
+  // the run starts happily and fails on its first eligible-and-due student,
+  // which is exactly the failure mode initScript's own header warns about.
+  ({ db, pool } = await initScript({ llm: true }));
 
   const messaging = await import("./messaging-store");
   const engagement = await import("./engagement");
@@ -145,6 +149,46 @@ async function main() {
     );
   } catch (err) {
     failed("soft check-ins", err);
+  }
+
+  /*
+   * The Reveal Cycle's gates, evidence and template selection — wired for the first
+   * time, per claude/REVEAL_CYCLE_PLUMBING_SEP2.md. Rides this runner for the same
+   * reason everything else here does: it asks "who is due" itself (Gate 1's floor,
+   * Gate 3's cadence), so running it hourly costs a query per eligible student and
+   * sends nothing extra. On today's unpopulated prompt library this will defer or wait
+   * for essentially every student — Gate 2 correctly cannot pass without evidence, and
+   * that is the protected null Reveal working as designed, not a fault in the wiring.
+   */
+  try {
+    const reveal = await import("./reveal-cycle");
+    const result = await reveal.runDueRevealCycles();
+    console.log(
+      `[sequences] reveal cycle: ${result.evaluated} evaluated, ${result.fired} fired, ` +
+        `${result.deferred} deferred, ${result.routed} routed.`,
+    );
+  } catch (err) {
+    failed("reveal cycle", err);
+  }
+
+  /*
+   * H-701, Baby Radar. Rides this runner for the same reason as everything else here:
+   * it asks "who is eligible and due" itself (radarEligibility, isRadarDueThisWeek), so
+   * running it hourly against a weekly cadence costs one cheap query per candidate on an
+   * off week and generates nothing extra. Unlike its neighbours on this runner,
+   * baby-radar.ts takes `db` as an explicit argument rather than importing it — every
+   * function in that file already does, for testability (see its own header) — so `db`
+   * is passed in here rather than left to an internal import.
+   */
+  try {
+    const radar = await import("./baby-radar");
+    const result = await radar.runDueRadarSuggestions(db as any);
+    console.log(
+      `[sequences] radar: ${result.candidates} candidate(s), ${result.generated} generated, ` +
+        `${result.skipped} skipped.`,
+    );
+  } catch (err) {
+    failed("baby radar", err);
   }
 
   await pool.end();
