@@ -180,19 +180,22 @@ export const WING_MODULES: readonly WingModule[] = [
   },
   {
     /*
-     * A screen, not a conversation — and currently an empty one. Radar has no
-     * substrate: no web-search-capable model call, no search provider, no weekly
-     * generation job. Kept in the registry so the gap has a name, and out of the
-     * picker so nobody is offered a briefing that does not exist.
+     * A screen, not a conversation. Full Module 7 Wing Radar (web-search-based,
+     * real headlines) still has no substrate — no web-search-capable model
+     * call, no search provider. What's live is Baby Radar (H-701): a smaller
+     * weekly job that suggests 3-5 topic areas from the student's own
+     * positioning, no search involved. Kept out of the picker — it's a
+     * passive weekly surface, not something a student opens a conversation
+     * to start.
      */
     slug: "this_weeks_intelligence",
     name: "This Week's Intelligence",
     desc: "What's moving in your space, filtered to what matters for you.",
     group: "Create and publish",
-    status: "not_built",
+    status: "live",
     behavior: "surface",
     sessionType: null,
-    methodology: "Module 7 — Wing Radar",
+    methodology: "Module 7 — Wing Radar (Baby Radar, H-701)",
     href: "/radar",
     inPicker: false,
   },

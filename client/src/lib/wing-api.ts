@@ -314,6 +314,39 @@ export async function waitForLifeLogResponse(
   return entries.find((e) => e.id === entryId)?.wingResponse ?? null;
 }
 
+/* ── Baby Radar — H-701's weekly topic suggestions ───────────────────────
+ *
+ * Not the same thing as Module 7's full Wing Radar, which the `/radar`
+ * page's own header comment describes as unbuilt (no web search, no weekly
+ * generation job). Baby Radar is a smaller, already-shipped piece: a weekly
+ * cron job (`runDueRadarSuggestions`) generates 3-5 topic suggestions from a
+ * student's positioning, not from any real news or search. This is the
+ * client binding for it.
+ */
+
+export type RadarSuggestion = {
+  id: number;
+  topic: string;
+  whyRelevant: string;
+  suggestedAction: "comment" | "post" | "save_for_later";
+  generatedAt: string;
+  engagedAt: string | null;
+};
+
+export async function getRadarSuggestions(): Promise<{
+  suggestions: RadarSuggestion[];
+  eligible: boolean;
+  reason: string;
+}> {
+  const res = await apiRequest("GET", "/api/radar-suggestions");
+  return await res.json();
+}
+
+export async function engageRadarSuggestion(id: number): Promise<{ engaged: boolean }> {
+  const res = await apiRequest("POST", `/api/radar-suggestions/${id}/engage`);
+  return await res.json();
+}
+
 /* ── Positioning Refresh — a real conversation, but not a Foundation session ──
  *
  * `/api/positioning-refresh/*` (`refresh-routes.ts`) is complete server-side — begin,

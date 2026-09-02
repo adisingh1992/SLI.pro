@@ -187,6 +187,7 @@ console.log("\nEvery live module has a backend path, and every path is claimed o
     refresh_your_positioning: "/api/positioning-refresh/*",
     weekly_check_in: "/api/life-log + /api/life-log/prompt",
     something_else: "routing — asks once; explicit confirmation enters ongoing engagement",
+    this_weeks_intelligence: "GET /api/radar-suggestions + POST /api/radar-suggestions/:id/engage",
   };
 
   const sessionTypes = new Set<string>();
