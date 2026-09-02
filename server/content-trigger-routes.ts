@@ -109,6 +109,58 @@ function isContentType(value: unknown): value is "comment" | "post" | "article" 
   return value === "comment" || value === "post" || value === "article";
 }
 
+/**
+ * Why nothing fired, as a state a client can branch on — added 2 Sep 2026
+ * after `status.reason`/`suppression.why` turned out to be shown to a
+ * student verbatim. Those strings (`content_suggestion held — safety hold,
+ * day 0 of a 7-day minimum`, `progression stage or cadence gate did not
+ * allow this content type`, …) are diagnostic — written for `console.log`
+ * and test assertions, never reviewed as UI copy — and read exactly like it:
+ * internal state-machine language, a countdown that names a safety hold by
+ * name, one case shown twice on the same page (once as a red "error" for a
+ * failed explicit-request POST, once inline for the GET that predicted it).
+ *
+ * `RouteResult` already carries enough to tell the three non-firing cases
+ * apart without parsing `reason`'s text: `cadence` is only ever computed
+ * AFTER the suppression check passes, so `cadence === null` means
+ * suppression blocked it; `cadence.due === false` means the timing gate did;
+ * otherwise cadence and suppression both cleared and nothing had material.
+ */
+type ContentTriggerState = "suppressed" | "not_due" | "no_material" | "ready";
+
+function stateFor(result: RouteResult): ContentTriggerState {
+  if (result.fires) return "ready";
+  if (result.cadence === null) return "suppressed";
+  if (!result.cadence.due) return "not_due";
+  return "no_material";
+}
+
+/**
+ * Student-facing copy for the three non-firing states — deliberately not the
+ * raw `reason`/`why` strings (see `stateFor`'s header). `suppressed` gets no
+ * mention of "safety hold" or a day count: IG-U017 (opportunity over fear)
+ * plus ordinary care around a state that exists because something serious
+ * may be going on — a countdown and a clinical label are the wrong tone for
+ * it. `ready` isn't here: `result.reason` on a firing suggestion is
+ * `detection.reason`, the specific, IG-M6-04-grounded material Wing is
+ * supposed to show ("3+ published posts and a Radar topic…") — that one IS
+ * meant for the student and stays exactly as `routeContentTrigger` builds it.
+ */
+const NOT_FIRING_MESSAGE: Record<Exclude<ContentTriggerState, "ready">, string> = {
+  suppressed: "Content suggestions are paused for you right now — check back later.",
+  not_due: "Nothing new to suggest just yet — Wing paces these out, so check back in a few days.",
+  no_material: "Nothing Wing's noticed to write about right now.",
+};
+
+/** `result.reason` when something fired (the real, IG-M6-04-grounded
+ *  material); the human line above otherwise. A plain function rather than
+ *  a ternary at each call site because narrowing `state` away from "ready"
+ *  needs an actual `if`, not a comparison TS can see through a Record index. */
+function messageFor(result: RouteResult, state: ContentTriggerState): string {
+  if (state === "ready") return result.reason;
+  return NOT_FIRING_MESSAGE[state];
+}
+
 export function registerContentTriggerRoutes(app: Express) {
   /** What's due right now, if anything — no writes. */
   app.get("/api/content-triggers", isAuthenticated, async (req, res, next) => {
@@ -117,10 +169,18 @@ export function registerContentTriggerRoutes(app: Express) {
       if (!studentId) return;
 
       const result = await routeContentTrigger(db as any, studentId);
+      const state = stateFor(result);
       res.json({
         fires: result.fires,
         contentType: result.contentType,
-        reason: result.reason,
+        state,
+        // The real, IG-M6-04-grounded material when something fired; a
+        // human, non-diagnostic line otherwise (see NOT_FIRING_MESSAGE).
+        reason: messageFor(result, state),
+        // "Can an explicit request possibly succeed right now?" — suppressed
+        // and not_due block explicit requests too (see requestContentTrigger),
+        // so the client only offers "help me write" buttons for no_material.
+        canRequest: state === "no_material",
         signal: result.detection?.signal ?? null,
         triggerSource: result.detection?.triggerSource ?? null,
       });
@@ -149,6 +209,7 @@ export function registerContentTriggerRoutes(app: Express) {
       if (!result.fires || result.contentType !== contentType || !result.detection) {
         return res.status(409).json({
           error: "That suggestion is no longer current — check GET /api/content-triggers again.",
+          state: stateFor(result),
         });
       }
 
@@ -198,6 +259,7 @@ export function registerContentTriggerRoutes(app: Express) {
       if (!result.fires || result.contentType !== contentType || !result.detection) {
         return res.status(409).json({
           error: "That suggestion is no longer current — check GET /api/content-triggers again.",
+          state: stateFor(result),
         });
       }
 
@@ -230,7 +292,8 @@ export function registerContentTriggerRoutes(app: Express) {
 
       const result = await requestContentTrigger(db as any, studentId, contentType);
       if (!result.fires || !result.detection) {
-        return res.status(409).json({ error: result.reason });
+        const state = stateFor(result);
+        return res.status(409).json({ error: messageFor(result, state), state });
       }
 
       await recordTriggerFired(db as any, studentId, contentType, result.detection);

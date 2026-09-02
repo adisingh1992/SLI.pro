@@ -368,29 +368,45 @@ export default function WriteSomethingPage() {
             </div>
           </div>
         ) : (
+          /*
+           * Nothing due right now. `canRequest` (added 2 Sep 2026, see
+           * ContentTriggerStatus in wing-api.ts) tells us whether an explicit
+           * "help me write" request would actually succeed:
+           *  - "no_material": Wing just hasn't spotted anything yet — offering
+           *    to write anyway is a reasonable escape hatch, so show the buttons.
+           *  - "suppressed" / "not_due": the server will reject the request
+           *    (409) no matter what the student clicks. Previously the buttons
+           *    showed regardless, which is exactly how a student on a
+           *    suppression hold hit a 409 clicking "Help me write an article."
+           *    `status.reason` is already human copy for these states (the
+           *    server picks it via messageFor()), so it stands on its own with
+           *    no "want to write anyway?" prompt into a dead end.
+           */
           <div className="mt-6">
             <p className="text-[15px] leading-[1.75] text-plum-body">
-              {status?.reason ?? "Nothing Wing's noticed right now."} Want to write something
-              anyway?
+              {status?.reason ?? "Nothing Wing's noticed right now."}
+              {status?.canRequest ? " Want to write something anyway?" : null}
             </p>
-            <div className="mt-6 flex gap-3">
-              <button
-                type="button"
-                disabled={request.isPending}
-                onClick={() => request.mutate("post")}
-                className="rounded-full bg-white px-4 py-2 text-sm font-medium text-forest ring-1 ring-wing-border disabled:opacity-50"
-              >
-                Help me write a post
-              </button>
-              <button
-                type="button"
-                disabled={request.isPending}
-                onClick={() => request.mutate("article")}
-                className="rounded-full bg-white px-4 py-2 text-sm font-medium text-forest ring-1 ring-wing-border disabled:opacity-50"
-              >
-                Help me write an article
-              </button>
-            </div>
+            {status?.canRequest && (
+              <div className="mt-6 flex gap-3">
+                <button
+                  type="button"
+                  disabled={request.isPending}
+                  onClick={() => request.mutate("post")}
+                  className="rounded-full bg-white px-4 py-2 text-sm font-medium text-forest ring-1 ring-wing-border disabled:opacity-50"
+                >
+                  Help me write a post
+                </button>
+                <button
+                  type="button"
+                  disabled={request.isPending}
+                  onClick={() => request.mutate("article")}
+                  className="rounded-full bg-white px-4 py-2 text-sm font-medium text-forest ring-1 ring-wing-border disabled:opacity-50"
+                >
+                  Help me write an article
+                </button>
+              </div>
+            )}
           </div>
         )}
       </div>

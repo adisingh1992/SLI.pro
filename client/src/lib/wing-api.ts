@@ -362,10 +362,26 @@ export async function engageRadarSuggestion(id: number): Promise<{ engaged: bool
 
 export type ContentTriggerType = "comment" | "post" | "article";
 
+/**
+ * `state` and `canRequest` were added 2 Sep 2026 after `reason` turned out to
+ * be shown to a student verbatim in an earlier pass — including, in one real
+ * case, the diagnostic text behind a safety hold ("content_suggestion held —
+ * safety hold, day 0 of a 7-day minimum") with a day count and internal
+ * naming, displayed twice on the same screen. `reason` is human copy now
+ * either way (the server picks it per `state`) — `canRequest` is what the
+ * page uses to decide whether "help me write" buttons should even render:
+ * `suppressed` and `not_due` block an explicit request exactly like they
+ * block an unprompted suggestion, so offering the button in those states
+ * just walks the student into the same 409 this fixes.
+ */
+export type ContentTriggerState = "suppressed" | "not_due" | "no_material" | "ready";
+
 export type ContentTriggerStatus = {
   fires: boolean;
   contentType: ContentTriggerType | null;
+  state: ContentTriggerState;
   reason: string;
+  canRequest: boolean;
   signal: string | null;
   triggerSource: string | null;
 };
