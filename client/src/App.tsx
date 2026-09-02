@@ -47,6 +47,7 @@ import AdminSessionDesignPage from "@/pages/admin/methodology/session-design-pag
 import AdminTaggingPage from "@/pages/admin/tagging/tagging-page";
 import AdminHeuristicDetailPage from "@/pages/admin/heuristic-detail-page";
 import AdminTaggingSessionPage from "@/pages/admin/tagging-session-page";
+import AdminPromptLibraryPage from "@/pages/admin/prompt-library/prompt-library-page";
 import { Redirect, RedirectStudent } from "@/pages/admin/redirect";
 
 function Router() {
@@ -93,7 +94,7 @@ function Router() {
       <Route path="/profile/create">{() => <WouterRedirect to="/profile" />}</Route>
 
       {/* ── Admin — unchanged ───────────────────────────────────────────
-          Seven screens. Tabs are path segments so every URL is linkable and every
+          Eight screens. Tabs are path segments so every URL is linkable and every
           pre-consolidation bookmark can be redirected somewhere exact — see
           pages/admin/redirect.tsx. */}
       <Route path="/admin/login" component={AdminLoginPage} />
@@ -123,6 +124,8 @@ function Router() {
       <Route path="/admin/tagging" component={AdminTaggingPage} />
       <Route path="/admin/tagging/sessions/:id" component={AdminTaggingSessionPage} />
       <Route path="/admin/tagging/:tab" component={AdminTaggingPage} />
+
+      <Route path="/admin/prompt-library" component={AdminPromptLibraryPage} />
 
       {/* ── Retired admin URLs ──────────────────────────────────────── */}
       <Route path="/admin/reports">{() => <Redirect to="/admin/dashboard/exports" />}</Route>

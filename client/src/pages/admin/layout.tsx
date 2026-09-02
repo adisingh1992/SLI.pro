@@ -14,6 +14,7 @@ import {
   Mail,
   Building2,
   ChevronsUpDown,
+  MessagesSquare,
   type LucideIcon,
 } from "lucide-react";
 import {
@@ -183,6 +184,13 @@ const METHODOLOGY: NavItem[] = [
     icon: Tag,
     href: "/admin/tagging",
     description: "Hand-labelled turns, validation and the classifier prompt",
+  },
+  {
+    tone: "deep",
+    title: "Prompt library",
+    icon: MessagesSquare,
+    href: "/admin/prompt-library",
+    description: "Evidence tier and signal category, proposed and waiting on review",
   },
 ];
 

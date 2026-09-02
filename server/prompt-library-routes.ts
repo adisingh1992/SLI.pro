@@ -91,6 +91,24 @@ function promptDraftFrom(body: any): PromptDraft {
   };
 }
 
+/**
+ * Who gets credit for a tier or a category on a successor row.
+ *
+ * A person typed or selected this value into the editor, so a changed field is
+ * `'danielle'` provenance from here on — the review screen exists so an admin's read of a
+ * proposal counts as the review, not as another proposal layered on top of the last one.
+ * An unchanged field carries its provenance forward unexamined: opening the editor and
+ * saving without touching the tier is not the same act as looking at the tier and
+ * agreeing with it, and this file cannot tell those apart, so it does not claim to.
+ */
+function humanProvenance(
+  changed: boolean,
+  carryBecause: string | null,
+  carrySource: string | null,
+): { because: string | null; source: string | null } {
+  return changed ? { because: null, source: "danielle" } : { because: carryBecause, source: carrySource };
+}
+
 function openerDraftFrom(body: any): OpenerDraft {
   const text = String(body?.text ?? "").trim();
   return {
@@ -179,6 +197,21 @@ export function registerPromptLibraryRoutes(app: Express) {
            */
           liveButUnreachable: live.filter((r) => !r.cadence).length,
           eventSensitive: live.filter((r) => r.eventSensitive).length,
+          /*
+           * The review queue. 'rule_engine' and 'claude_review' are proposals —
+           * see migration 0039 — not a person's answer, so a row carrying either
+           * source (or a tier/category with no source at all, from before this pass
+           * existed) still needs a look. 'danielle' means the review screen itself
+           * produced the value, which is the one state that does not need a second
+           * look for the same reason.
+           */
+          tierBySource: tally((r) => (r.evidenceTier === null ? null : r.evidenceTierSource)),
+          categoryBySource: tally((r) => (r.signalCategory === null ? null : r.signalCategorySource)),
+          needsReview: live.filter(
+            (r) =>
+              (r.evidenceTier !== null && r.evidenceTierSource !== "danielle") ||
+              (r.signalCategory !== null && r.signalCategorySource !== "danielle"),
+          ).length,
         },
       });
     } catch (err) {
@@ -259,6 +292,13 @@ export function registerPromptLibraryRoutes(app: Express) {
           behavioralSignal: draft.behavioralSignal,
           signalCategory: draft.signalCategory,
           evidenceTier: draft.evidenceTier,
+          /*
+           * A value entered through this screen is a person's decision, not a proposal —
+           * see `humanProvenance` above. Null when the field was left empty, exactly like
+           * every other optional column here.
+           */
+          evidenceTierSource: draft.evidenceTier === null ? null : "danielle",
+          signalCategorySource: draft.signalCategory === null ? null : "danielle",
           audienceScope: draft.audienceScope,
           cadence: draft.cadence,
           deliveryMarker: draft.deliveryMarker,
@@ -266,7 +306,7 @@ export function registerPromptLibraryRoutes(app: Express) {
           eventSensitive: draft.eventSensitive,
           sourceDocument: "admin editor",
           active: true,
-        })
+        } as any)
         .returning();
 
       log(`prompt ${created.id} created`, "prompts");
@@ -317,6 +357,17 @@ export function registerPromptLibraryRoutes(app: Express) {
         return res.json({ published: false, reason: "unchanged", prompt: current, issues });
       }
 
+      const tierProvenance = humanProvenance(
+        draft.evidenceTier !== current.evidenceTier,
+        current.evidenceTierBecause,
+        current.evidenceTierSource,
+      );
+      const categoryProvenance = humanProvenance(
+        draft.signalCategory !== current.signalCategory,
+        current.signalCategoryBecause,
+        current.signalCategorySource,
+      );
+
       const [created] = await db.transaction(async (tx) => {
         await tx
           .update(promptLibrary)
@@ -333,6 +384,10 @@ export function registerPromptLibraryRoutes(app: Express) {
             behavioralSignal: draft.behavioralSignal,
             signalCategory: draft.signalCategory,
             evidenceTier: draft.evidenceTier,
+            evidenceTierBecause: tierProvenance.because,
+            evidenceTierSource: tierProvenance.source,
+            signalCategoryBecause: categoryProvenance.because,
+            signalCategorySource: categoryProvenance.source,
             audienceScope: draft.audienceScope,
             cadence: draft.cadence,
             deliveryMarker: draft.deliveryMarker,
