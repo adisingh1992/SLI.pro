@@ -1249,8 +1249,8 @@ key is missing the service fails gracefully (logs an error rather than crashing)
 | `AZURE_OPENAI_DEPLOYMENT_FLAGSHIP` | recommended | `orchestrator/` | Falls back to `_MID` |
 | `AZURE_OPENAI_DEPLOYMENT_NANO` | recommended | `orchestrator/` | Falls back to `_MID` |
 | `AZURE_OPENAI_DEPLOYMENT_EMBEDDINGS` | ✅ (vectors) | `orchestrator/` | Memory / journal / drift |
-| `AZURE_OPENAI_DEPLOYMENT_IMAGE` | optional (images) | `orchestrator/` | Article header images (IG-M6-01), MAI-Image-2.5-Flash. Absent = image generation disabled, nothing else affected |
-| `AZURE_OPENAI_IMAGE_SIZE` | optional | `orchestrator/` | "WxH" for generated images; defaults to `1536x1024` (unconfirmed against a real deployment) |
+| `AZURE_OPENAI_DEPLOYMENT_IMAGE` | optional (images) | `orchestrator/` | Article header images (IG-M6-01), MAI-Image-2.5-Flash. Reached via a raw fetch to `{endpoint}mai/v1/images/generations`, NOT the OpenAI SDK client — that endpoint returned `400 Model not supported with Responses API` when tried, confirmed 3 Sep 2026. Absent = image generation disabled, nothing else affected |
+| `AZURE_OPENAI_IMAGE_SIZE` | optional | `orchestrator/` | "WIDTHxHEIGHT" in pixels for generated images; defaults to `1200x800`. MAI-Image-2.5-Flash requires each dimension ≥768 and width×height ≤1,048,576 — confirmed against Microsoft's Foundry docs, 3 Sep 2026 |
 | `FIXED_TEMPERATURE_DEPLOYMENTS` | optional | `orchestrator/` | Escape hatch for a deployment whose name doesn't reveal the model behind it |
 | `AZURE_OPENAI_ENDPOINT_ALT` | ✅ (voice) | `orchestrator/` | Resource hosting the Whisper deployment; falls back to the main endpoint |
 | `AZURE_OPENAI_KEY_ALT` | optional | `orchestrator/` | Key for that resource; omit for managed identity |

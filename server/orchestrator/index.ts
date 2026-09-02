@@ -621,27 +621,41 @@ export async function embed(input: string | string[]): Promise<number[][]> {
  * `wing-content-system-v1.md` specifies "DALL-E on Azure OpenAI" throughout
  * Spec 4 and IG-IMG-01 — written when that was the only image model on this
  * resource. Aditya's direction (2 Sep 2026): use MAI-Image-2.5-Flash instead,
- * "same source as other models being used like sol, terra and luna" — i.e.
- * the same Azure OpenAI resource `getAzureClient()` already talks to, not a
- * second resource the way Whisper needed one. Deployment name lives in
- * `AZURE_OPENAI_DEPLOYMENT_IMAGE`, pointed at whatever MAI-Image-2.5-Flash is
- * named in Azure AI Foundry — the deployment name, not the model name, same
- * convention as every other deployment here. The spec's own safety and
- * approval requirements (IG-IMG-01–03) don't name DALL-E specifically —
- * they're about what any image-generation step must do — so nothing else in
- * Spec 4 changes with the model swapped.
+ * "same source as other models being used like sol, terra and luna." The
+ * spec's own safety and approval requirements (IG-IMG-01–03) don't name
+ * DALL-E specifically — they're about what any image-generation step must
+ * do — so nothing else in Spec 4 changes with the model swapped.
  *
- * ── WHY THE RESPONSE SHAPE ISN'T ASSUMED ──────────────────────────────────
- * DALL-E 3 on Azure returns a `url` by default and accepts an explicit
- * `response_format: "b64_json"`; the newer `gpt-image-1` family always
- * returns `b64_json` and rejects the `response_format` param outright.
- * MAI-Image-2.5-Flash's exact contract hasn't been exercised against a real
- * deployment from this sandbox (no network route to Azure, no deployment
- * configured here) — rather than guess which family it follows, this asks
- * for `b64_json` first, and on an "unrecognized/unsupported parameter" 400
- * for `response_format` specifically, retries without it and accepts
- * whichever field (`b64_json` or `url`) comes back. Needs a real run against
- * the configured deployment to confirm before this ships to students.
+ * ── NOT THE OPENAI SDK, AND NOT THE SAME RESOURCE PATH AS CHAT ────────────
+ * The first version of this function called `getAzureClient().images.generate()`
+ * — the same `AzureOpenAI` SDK client chat/embeddings use — and failed for
+ * real against a configured deployment with `400 Model not supported with
+ * Responses API`. Confirmed against Microsoft's own docs (3 Sep 2026,
+ * "Deploy and use MAI image models in Microsoft Foundry"): MAI image models
+ * are **not** OpenAI-API-compatible at all. They're served from a distinct,
+ * Microsoft-managed Foundry endpoint —
+ *
+ *   POST {endpoint}mai/v1/images/generations
+ *   { "model": "<deployment-name>", "prompt": "...", "width": N, "height": N }
+ *
+ * — reached with a plain HTTP call, not through the `openai` package. Same
+ * resource (`AZURE_OPENAI_ENDPOINT`), same two auth options this file already
+ * supports for the SDK client (`AZURE_OPENAI_KEY`, or a bearer token via
+ * `DefaultAzureCredential` scoped to `cognitiveservices.azure.com`) — just a
+ * different path and a JSON-only content-type, no SDK method for it.
+ *
+ * Dimensions are pixels, not a "WxH" size preset: each of width/height must
+ * be ≥768, and width × height ≤ 1,048,576 (confirmed in the same docs).
+ * `1536x1024` — this function's original guessed default — is 1,572,864px,
+ * over that ceiling; the request would have failed on that basis alone even
+ * with the endpoint fixed. `1200x800` (960,000px, both dimensions ≥768) is
+ * the new default: a landscape article-header shape that clears the limit
+ * with margin.
+ *
+ * The response is always `{ "data": [ { "b64_json": "<png>" } ] }` — no
+ * `url` variant, always PNG — per the same docs, so the old "ask for
+ * b64_json, retry without response_format if that param is rejected, accept
+ * whichever of b64_json/url comes back" hedge is gone; there's one shape.
  *
  * Returns raw image bytes — never a URL to the caller — so a Wing-generated
  * image and a student-provided one (`content-trigger-routes.ts`'s
@@ -657,9 +671,10 @@ export class ImageGenerationBlockedError extends Error {
 
 export interface GenerateImageRequest {
   prompt: string;
-  /** "WxH", e.g. "1536x1024" for a landscape article header. Defaults to
-   *  AZURE_OPENAI_IMAGE_SIZE, or 1536x1024 if that's unset too — a first-pass
-   *  guess at a size MAI-Image-2.5-Flash accepts, not a confirmed value. */
+  /** "WIDTHxHEIGHT" in pixels, e.g. "1200x800". Each dimension must be
+   *  ≥768 and width × height must be ≤1,048,576 — MAI-Image-2.5-Flash's
+   *  documented limits. Defaults to AZURE_OPENAI_IMAGE_SIZE, or "1200x800"
+   *  if that's unset too. */
   size?: string;
 }
 
@@ -668,23 +683,59 @@ export interface GenerateImageResult {
   model: string;
 }
 
-function isUnsupportedParamError(err: any, param: string): boolean {
-  return (
-    err?.status === 400 &&
-    (err?.param === param || new RegExp(param, "i").test(err?.message ?? "")) &&
-    /unsupported|unrecognized|unknown/i.test(err?.message ?? "")
-  );
+const MAI_IMAGE_MIN_DIMENSION = 768;
+const MAI_IMAGE_MAX_PIXELS = 1_048_576;
+
+function parseImageSize(size: string): { width: number; height: number } {
+  const match = /^(\d+)\s*x\s*(\d+)$/i.exec(size.trim());
+  if (!match) {
+    throw new Error(`Invalid image size '${size}' — expected 'WIDTHxHEIGHT', e.g. '1200x800'.`);
+  }
+  const width = Number(match[1]);
+  const height = Number(match[2]);
+  if (width < MAI_IMAGE_MIN_DIMENSION || height < MAI_IMAGE_MIN_DIMENSION) {
+    throw new Error(
+      `Image size ${width}x${height} is below MAI-Image-2.5-Flash's ${MAI_IMAGE_MIN_DIMENSION}px-per-dimension minimum.`,
+    );
+  }
+  if (width * height > MAI_IMAGE_MAX_PIXELS) {
+    throw new Error(
+      `Image size ${width}x${height} (${width * height} px) exceeds MAI-Image-2.5-Flash's ` +
+        `${MAI_IMAGE_MAX_PIXELS}px limit.`,
+    );
+  }
+  return { width, height };
+}
+
+let imageBearerTokenProvider: (() => Promise<string>) | null = null;
+
+/** Same two auth options `getAzureClient()` supports, just producing plain
+ *  fetch headers instead of SDK client options — the `/mai/v1` endpoint
+ *  isn't reached through the SDK at all (see the header above). */
+async function imageAuthHeaders(): Promise<Record<string, string>> {
+  const apiKey = process.env.AZURE_OPENAI_KEY;
+  if (apiKey) return { "api-key": apiKey };
+
+  if (!imageBearerTokenProvider) {
+    const credential = new DefaultAzureCredential({
+      managedIdentityClientId: process.env.AZURE_MANAGED_IDENTITY_CLIENT_ID,
+    });
+    imageBearerTokenProvider = getBearerTokenProvider(
+      credential,
+      "https://cognitiveservices.azure.com/.default",
+    );
+  }
+  const token = await imageBearerTokenProvider();
+  return { Authorization: `Bearer ${token}` };
 }
 
 /** Azure's content filter and MAI-Image's own safety layer both surface as a
- *  400 whose message names the block — matched broadly since the exact
- *  wording isn't confirmed for this model yet (see the header above). */
-function isContentFilterError(err: any): boolean {
+ *  400 whose body names the block — matched broadly since the exact wording
+ *  for this endpoint isn't confirmed (see the header above). */
+function isContentFilterError(status: number, bodyText: string): boolean {
   return (
-    err?.status === 400 &&
-    /content.?polic|content.?filter|safety system|moderation|responsible ai/i.test(
-      err?.message ?? "",
-    )
+    status === 400 &&
+    /content.?polic|content.?filter|safety system|moderation|responsible ai/i.test(bodyText)
   );
 }
 
@@ -712,66 +763,51 @@ export async function generateImage(
     );
   }
 
-  const size = request.size || process.env.AZURE_OPENAI_IMAGE_SIZE || "1536x1024";
-  const client = getAzureClient();
+  const rawEndpoint = process.env.AZURE_OPENAI_ENDPOINT;
+  if (!rawEndpoint) throw new Error("AZURE_OPENAI_ENDPOINT is not set");
+  const endpoint = normaliseEndpoint(rawEndpoint);
 
-  const buildParams = (withResponseFormat: boolean) => ({
-    model,
-    prompt: request.prompt,
-    n: 1,
-    size: size as any,
-    ...(withResponseFormat ? { response_format: "b64_json" as const } : {}),
+  const sizeStr = request.size || process.env.AZURE_OPENAI_IMAGE_SIZE || "1200x800";
+  const { width, height } = parseImageSize(sizeStr);
+
+  const url = `${endpoint}mai/v1/images/generations`;
+  const res = await fetch(url, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      ...(await imageAuthHeaders()),
+    },
+    body: JSON.stringify({ model, prompt: request.prompt, width, height }),
   });
 
-  let response;
-  try {
-    response = await client.images.generate(buildParams(true));
-  } catch (err: any) {
-    if (err?.status === 404 || err?.code === "404") {
+  if (!res.ok) {
+    const bodyText = await res.text().catch(() => "");
+    if (res.status === 404) {
       throw new Error(
-        `Azure OpenAI returned 404 for image generation.\n` +
-          `  endpoint:    ${process.env.AZURE_OPENAI_ENDPOINT}\n` +
-          `  deployment:  ${model}\n` +
-          `  api-version: ${process.env.AZURE_OPENAI_API_VERSION || "2024-10-21"}\n` +
-          `Verify the deployment name matches Azure AI Foundry exactly:\n` +
+        `MAI image generation returned 404.\n` +
+          `  url:        ${url}\n` +
+          `  deployment: ${model}\n` +
+          `Verify the deployment name matches Azure AI Foundry exactly, and that this ` +
+          `resource has a MAI-Image-2.5-Flash deployment — the /mai/v1 endpoint is ` +
+          `Foundry-specific and separate from the classic Azure OpenAI chat deployments:\n` +
           `  az cognitiveservices account deployment list ` +
           `--name <openai-resource> --resource-group <rg> -o table`,
       );
     }
-    if (isContentFilterError(err)) {
-      throw new ImageGenerationBlockedError(err.message ?? "blocked by the content filter");
+    if (isContentFilterError(res.status, bodyText)) {
+      throw new ImageGenerationBlockedError(bodyText || `blocked by the content filter (HTTP ${res.status})`);
     }
-    if (isUnsupportedParamError(err, "response_format")) {
-      response = await client.images.generate(buildParams(false));
-    } else {
-      throw err;
-    }
+    throw new Error(`MAI image generation failed: HTTP ${res.status}${bodyText ? ` — ${bodyText}` : ""}`);
   }
 
-  const datum = response.data?.[0] as { b64_json?: string; url?: string } | undefined;
-  if (!datum) {
+  const json: any = await res.json().catch(() => null);
+  const datum = json?.data?.[0] as { b64_json?: string } | undefined;
+  if (!datum?.b64_json) {
     throw new Error(
-      `Azure OpenAI returned no image data for deployment '${model}' — the request ` +
-        `succeeded but the response had no entries in 'data'.`,
+      `MAI image generation returned no usable image data for deployment '${model}' — ` +
+        `response: ${JSON.stringify(json)}`,
     );
   }
 
-  if (datum.b64_json) {
-    return { imageBuffer: Buffer.from(datum.b64_json, "base64"), model };
-  }
-
-  if (datum.url) {
-    const fetched = await fetch(datum.url);
-    if (!fetched.ok) {
-      throw new Error(
-        `Image was generated but the returned URL could not be fetched (${fetched.status}).`,
-      );
-    }
-    const arrayBuffer = await fetched.arrayBuffer();
-    return { imageBuffer: Buffer.from(arrayBuffer), model };
-  }
-
-  throw new Error(
-    `Azure OpenAI's image response had neither 'b64_json' nor 'url' for deployment '${model}'.`,
-  );
+  return { imageBuffer: Buffer.from(datum.b64_json, "base64"), model };
 }
