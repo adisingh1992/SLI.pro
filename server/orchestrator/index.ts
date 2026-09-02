@@ -646,11 +646,24 @@ export async function embed(input: string | string[]): Promise<number[][]> {
  *
  * Dimensions are pixels, not a "WxH" size preset: each of width/height must
  * be ≥768, and width × height ≤ 1,048,576 (confirmed in the same docs).
- * `1536x1024` — this function's original guessed default — is 1,572,864px,
- * over that ceiling; the request would have failed on that basis alone even
- * with the endpoint fixed. `1200x800` (960,000px, both dimensions ≥768) is
- * the new default: a landscape article-header shape that clears the limit
- * with margin.
+ * `1536x1024` — an early guessed default — is 1,572,864px, over that
+ * ceiling; the request would have failed on that basis alone even with the
+ * endpoint fixed.
+ *
+ * ── WHY THE DEFAULT IS SQUARE, NOT LANDSCAPE ──────────────────────────────
+ * Every image this generates today ends up attached to a LinkedIn post (a
+ * publish, not a print asset or a website banner) — IG-M6-01 only offers
+ * image generation for articles right now, and articles publish through the
+ * same LinkedIn attachment path posts do. LinkedIn's own current feed
+ * guidance (checked 3 Sep 2026, not assumed): a directly-attached feed image
+ * is NOT cropped when it's square or portrait, and gets more on-screen space
+ * on mobile than a landscape one — 1080×1080 is LinkedIn's own recommended
+ * "maximum feed presence" square size. That's 1,166,400px, just over MAI's
+ * ceiling, so the default here is `1024x1024` (1,048,576px — exactly the
+ * limit, still ≥768 per side): the closest fit to LinkedIn's real
+ * recommendation the API's own budget allows, and deliberately not a bigger
+ * landscape banner size that would be wasted resolution for how this image
+ * is actually consumed.
  *
  * The response is always `{ "data": [ { "b64_json": "<png>" } ] }` — no
  * `url` variant, always PNG — per the same docs, so the old "ask for
@@ -671,10 +684,10 @@ export class ImageGenerationBlockedError extends Error {
 
 export interface GenerateImageRequest {
   prompt: string;
-  /** "WIDTHxHEIGHT" in pixels, e.g. "1200x800". Each dimension must be
+  /** "WIDTHxHEIGHT" in pixels, e.g. "1024x1024". Each dimension must be
    *  ≥768 and width × height must be ≤1,048,576 — MAI-Image-2.5-Flash's
-   *  documented limits. Defaults to AZURE_OPENAI_IMAGE_SIZE, or "1200x800"
-   *  if that's unset too. */
+   *  documented limits. Defaults to AZURE_OPENAI_IMAGE_SIZE, or "1024x1024"
+   *  (square — see the header above for why) if that's unset too. */
   size?: string;
 }
 
@@ -689,7 +702,7 @@ const MAI_IMAGE_MAX_PIXELS = 1_048_576;
 function parseImageSize(size: string): { width: number; height: number } {
   const match = /^(\d+)\s*x\s*(\d+)$/i.exec(size.trim());
   if (!match) {
-    throw new Error(`Invalid image size '${size}' — expected 'WIDTHxHEIGHT', e.g. '1200x800'.`);
+    throw new Error(`Invalid image size '${size}' — expected 'WIDTHxHEIGHT', e.g. '1024x1024'.`);
   }
   const width = Number(match[1]);
   const height = Number(match[2]);
@@ -767,7 +780,7 @@ export async function generateImage(
   if (!rawEndpoint) throw new Error("AZURE_OPENAI_ENDPOINT is not set");
   const endpoint = normaliseEndpoint(rawEndpoint);
 
-  const sizeStr = request.size || process.env.AZURE_OPENAI_IMAGE_SIZE || "1200x800";
+  const sizeStr = request.size || process.env.AZURE_OPENAI_IMAGE_SIZE || "1024x1024";
   const { width, height } = parseImageSize(sizeStr);
 
   const url = `${endpoint}mai/v1/images/generations`;
