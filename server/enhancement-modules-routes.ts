@@ -47,6 +47,8 @@ import * as orchestrator from "./orchestrator";
 import * as moduleStore from "./wing/enhancement-store";
 import * as store from "./wing/session-store";
 import type { ArtifactType } from "./wing/session-store";
+import { compileSafety } from "./wing/safety-rules";
+import { checkAndHoldIfCrisis } from "./wing/crisis-hold";
 import * as docStore from "./wing/document-store";
 import { buildStudentContext } from "./wing/student-context";
 import * as intakeStore from "./wing/intake-store";
@@ -199,6 +201,123 @@ ${thirtyDayPlanText}
 Confidence Level: ${completionData.confidence ?? "N/A"}%
 
 CRITICAL: Do not repeat questions about functional identity, network composition, relationship tiering, or outreach strategies, instead mention the answers in the chat and confirm from the user again. Build upon this foundation.
+═══════════════════════════════════════════════════════════════
+`;
+  }
+
+  /*
+   * Module C's shape, from `enhancementModules.completionData`'s type in
+   * `shared/schema.ts` — the "Module C: Career Aspiration Alignment comprehensive
+   * completion criteria" block. Only those fields are read here, matching A and B's own
+   * choice above: neither renders its "legacy fields (backwards compatibility)" either,
+   * so a Module C row that only ever populated `aspirationalGoals` et al. renders the
+   * same "Not established"/"None identified" fallbacks A and B already show for an
+   * absent field, rather than this branch quietly reading a different shape than its
+   * siblings do.
+   */
+  if (moduleCode === "C") {
+    const experienceGapsText =
+      completionData.experienceGaps
+        ?.map((gap: string) => `• ${gap}`)
+        ?.join("\n") ?? "• None identified";
+    const functionalGapsText =
+      completionData.functionalGaps
+        ?.map((gap: string) => `• ${gap}`)
+        ?.join("\n") ?? "• None identified";
+    const scaleGapsText =
+      completionData.scaleGaps
+        ?.map((gap: string) => `• ${gap}`)
+        ?.join("\n") ?? "• None identified";
+    const industryGapsText =
+      completionData.industryGaps
+        ?.map((gap: string) => `• ${gap}`)
+        ?.join("\n") ?? "• None identified";
+    const credibilityExpansionText =
+      completionData.credibilityExpansion
+        ?.map((item: string) => `• ${item}`)
+        ?.join("\n") ?? "• None identified";
+    const networkRepositioningText =
+      completionData.networkRepositioning
+        ?.map((item: string) => `• ${item}`)
+        ?.join("\n") ?? "• None identified";
+    const narrativeReframingText =
+      completionData.narrativeReframing
+        ?.map((item: string) => `• ${item}`)
+        ?.join("\n") ?? "• None identified";
+    const skillGapFillingText =
+      completionData.skillGapFilling
+        ?.map((item: string) => `• ${item}`)
+        ?.join("\n") ?? "• None identified";
+    const thirtyDayActionsText =
+      completionData.thirtyDayActions
+        ?.map((step: string) => `• ${step}`)
+        ?.join("\n") ?? "• No actions defined";
+    const ninetyDayMilestonesText =
+      completionData.ninetyDayMilestones
+        ?.map((step: string) => `• ${step}`)
+        ?.join("\n") ?? "• No milestones defined";
+    const sixMonthMetricsText =
+      completionData.sixMonthMetrics
+        ?.map((metric: string) => `• ${metric}`)
+        ?.join("\n") ?? "• No metrics defined";
+
+    return `
+═══════════════════════════════════════════════════════════════
+PREVIOUS MODULE SUMMARY (Module C: Career Aspiration Alignment)
+═══════════════════════════════════════════════════════════════
+
+Backwards Narrative (25-year aspiration): ${completionData.backwardsNarrative ?? "Not established"}
+
+Current Positioning: ${completionData.currentPositioning ?? "Not established"}
+Target Role: ${completionData.targetRole ?? "Not defined"}
+Advancement Tier: ${completionData.tierClassification ?? "Not classified"}
+
+Gaps:
+  Experience:
+${experienceGapsText}
+
+  Functional:
+${functionalGapsText}
+
+  Scale:
+${scaleGapsText}
+
+  Industry:
+${industryGapsText}
+
+Pathway:
+  Immediate Step (6–12 mo): ${completionData.immediateStep ?? "Not defined"}
+  Intermediate Step (2–3 yr): ${completionData.intermediateStep ?? "Not defined"}
+  Ultimate Goal (5+ yr): ${completionData.ultimateGoal ?? "Not defined"}
+
+Credibility Expansion:
+${credibilityExpansionText}
+
+Network Repositioning:
+${networkRepositioningText}
+
+Narrative Reframing:
+${narrativeReframingText}
+
+Skill Gap Filling:
+${skillGapFillingText}
+
+Alignment Statement: ${completionData.alignmentStatement ?? "Not articulated"}
+Timeline Reality: ${completionData.timelineReality ?? "Not defined"}
+Positioning Score: ${completionData.positioningScore ?? "N/A"}/5
+
+30-Day Actions:
+${thirtyDayActionsText}
+
+90-Day Milestones:
+${ninetyDayMilestonesText}
+
+6-Month Metrics:
+${sixMonthMetricsText}
+
+Confidence Level: ${completionData.confidence ?? "N/A"}%
+
+CRITICAL: Do not repeat questions about career aspiration alignment, target roles, advancement gaps, or positioning pathway, instead mention the answers in the chat and confirm from the user again. Build upon this foundation.
 ═══════════════════════════════════════════════════════════════
 `;
   }
@@ -737,13 +856,24 @@ Value Proposition: ${data.valueProposition ?? "Not articulated"}
 NOTE: User completed Module B. Conversation may reference prior work without repeating it.
 ═══════════════════════════════════════════════════════════════
 `;
+      } else if (m.moduleCode === "C") {
+        context += `
+═══════════════════════════════════════════════════════════════
+BACKGROUND CONTEXT: MODULE C (Career Aspiration Alignment)
+═══════════════════════════════════════════════════════════════
+
+Target Role: ${data.targetRole ?? "Not defined"}
+Advancement Tier: ${data.tierClassification ?? "Not classified"}
+Alignment Statement: ${data.alignmentStatement ?? "Not articulated"}
+
+NOTE: User completed Module C covering career aspiration alignment and advancement pathway. Conversation may build upon this.
+═══════════════════════════════════════════════════════════════
+`;
       } else {
         /*
-         * Module C has no renderer, here or in `formatModuleSummary`, and inventing
-         * one would mean guessing at the shape of its `completionData`. Logged rather
-         * than dropped in silence: a student who finished C and then opened A gets
-         * nothing from it, and that should be visible to whoever reads the log rather
-         * than discovered from a conversation that felt oddly ignorant.
+         * Anything past A/B/C would be a fourth module code the `enhancement_modules`
+         * check constraint doesn't allow, so this is unreachable today — logged rather
+         * than silently dropped in case that constraint ever changes.
          */
         console.warn(
           `[modules] no summary renderer for module ${m.moduleCode}; its outcome is not in the prompt`,
@@ -1097,7 +1227,7 @@ export function setupEnhancementModulesRoutes(app: Express) {
           .join("");
 
         // Generate system prompt based on user's professional status
-        const systemPrompt = getModulePromptSet(req.user!.professionalStatus).getSystemPrompt(moduleCode, {
+        const modulePrompt = getModulePromptSet(req.user!.professionalStatus).getSystemPrompt(moduleCode, {
           // Same row the analysis reads — one definition, two renderings.
           completionCriteria: await resolveModuleCriteria(
             req.user!.professionalStatus,
@@ -1115,6 +1245,17 @@ export function setupEnhancementModulesRoutes(app: Express) {
           previousSummaries,
           userProfile,
         });
+
+        /*
+         * Safety first, same ordering and the same reason as the Foundation Session
+         * route: Danielle's hierarchy is safety > methodology > helpfulness, and the
+         * section says so in its own first line — true only if what it outranks comes
+         * after it. This module set had no `compileSafety()` call at all before this
+         * change, unlike Foundation Sessions, which already had the text (just not the
+         * code-level hold below). `compileSafety()` has no inputs, so this cannot be
+         * absent the way the module prompt legitimately can be for an unpublished set.
+         */
+        const systemPrompt = [compileSafety(), modulePrompt].filter(Boolean).join("\n\n");
 
         try {
           // Enhancement Module coaching conversation -> flagship tier.
@@ -1155,6 +1296,29 @@ export function setupEnhancementModulesRoutes(app: Express) {
           res.write(
             `data: ${JSON.stringify({ type: "complete", messageId: assistantMessage.id })}\n\n`,
           );
+
+          /*
+           * Crisis check — fired here, not awaited, same posture and same reason as
+           * the Foundation Session route: `compileSafety()` above already put IG-S01
+           * in front of the model before this line runs, so nothing here is on the
+           * critical path to a safe reply. What this adds is what a prompt cannot:
+           * opening the safety hold and excluding the turn from analysis. See
+           * crisis-hold.ts for why it fails soft and runs after release.
+           */
+          void store
+            .studentIdFor(userId)
+            .then((studentId) =>
+              checkAndHoldIfCrisis({
+                studentId,
+                humanTurnId: userMessage.id,
+                text: content.trim(),
+                sourceTag: "enhancement_module",
+                note: `enhancement module ${moduleCode}`,
+              }),
+            )
+            .catch((error) =>
+              console.error("[enhancement modules] crisis check failed:", error),
+            );
 
           // Check for automatic completion
           const allMessages = await moduleStore.getEnhancementModuleMessages(

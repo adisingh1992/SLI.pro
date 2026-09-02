@@ -17,6 +17,7 @@ import * as profileStore from "./wing/profile-store";
 import * as engine from "./wing/engine";
 import * as voice from "./wing/voice";
 import { compileSafety, safetyTokenEstimate } from "./wing/safety-rules";
+import { checkAndHoldIfCrisis } from "./wing/crisis-hold";
 import * as scoring from "./wing/scoring";
 import * as classifier from "./wing/classifier";
 import { ensureSliGenerated } from "./sli";
@@ -1391,6 +1392,22 @@ export function registerFoundationSessionsRoutes(app: Express) {
           turnId: aiTurn?.id ?? null,
           reply: assistantContent,
           gates: gateContext,
+        });
+
+        /*
+         * Crisis check — same posture as the audit above: fired here, not awaited on
+         * the turn path, because `compileSafety()` already put IG-S01 in front of the
+         * model before this line runs. What this adds is what a prompt cannot: opening
+         * the safety hold and excluding the turn from analysis, the two actions
+         * `free-chat-store.ts` takes on its own crisis path and this surface has never
+         * taken at all. See crisis-hold.ts for why it fails soft and runs here.
+         */
+        void checkAndHoldIfCrisis({
+          studentId,
+          humanTurnId: humanTurn?.id ?? null,
+          text: content.trim(),
+          sourceTag: "foundation_session",
+          note: `foundation session ${sessionNumber}`,
         });
 
         /*
