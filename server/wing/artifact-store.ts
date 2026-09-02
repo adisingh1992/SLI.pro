@@ -158,6 +158,31 @@ export async function createContentDraft(data: {
   return { ...row, userId: data.userId };
 }
 
+/**
+ * Replaces a draft's `content` jsonb wholesale and bumps `updatedAt`.
+ *
+ * Added for IG-M6-01 (article header-image generation): the generate-image
+ * route needs somewhere to persist `content.image` (the failed-attempt count
+ * IG-IMG-01's "after 2 failed generations" rule needs across separate
+ * requests, and the prompt last used) without inventing a second table for
+ * one small piece of per-draft state. `content` is already documented as
+ * flexible jsonb ("hook/body/closing/hashtags or sections" — see the column's
+ * own comment), so this is a read-modify-write against an existing column,
+ * not a schema change. Callers read the current row first (via
+ * `getContentDraft`) and merge, the same pattern `createLinkedinOptimization`
+ * and every other jsonb writer in this file already uses — there is no
+ * partial-JSON-patch helper here, by design, since Postgres's own `jsonb_set`
+ * would still need the caller to know the current shape to merge correctly.
+ */
+export async function updateContentDraftContent(id: number, content: unknown) {
+  const [row] = await db
+    .update(contentDrafts)
+    .set({ content: content as any, updatedAt: new Date() })
+    .where(eq(contentDrafts.id, id))
+    .returning();
+  return row;
+}
+
 /** Records publication — the trigger for the 90-day launch sequence (S5). */
 export async function markContentPublished(id: number, publishedUrl: string) {
   const [row] = await db

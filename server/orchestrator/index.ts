@@ -32,6 +32,14 @@ import { createReadStream } from "fs";
  * Tiers map to Azure *deployment* names via environment, so which deployment
  * backs which tier stays configuration:
  *   AZURE_OPENAI_DEPLOYMENT_FLAGSHIP / _MID / _NANO
+ *
+ * Image generation (IG-M6-01, Spec 4) is a fourth, separate deployment on the
+ * same resource — `AZURE_OPENAI_DEPLOYMENT_IMAGE`, pointed at MAI-Image-2.5-Flash
+ * rather than DALL-E (Aditya, 2 Sep 2026 — see `generateImage()`'s own header).
+ * It is not a `ModelTier`: images aren't routed by task-complexity the way text
+ * completions are, there's exactly one image deployment, and forcing it into
+ * `complete()`'s tier/text shape would be the wrong abstraction for a call that
+ * returns bytes, not `choices[0].message.content`.
  */
 
 export type ModelTier = "flagship" | "mid" | "nano";
@@ -101,15 +109,33 @@ export function voiceConfiguration(): { endpoint: string | null; deployment: str
   };
 }
 
-/** One line, for a startup log: `flagship=gpt-5.6-sol mid=… nano=… voice=…`. */
+/**
+ * Whether Wing-generated article header images (IG-M6-01) can work, and where.
+ *
+ * Same shape as `voiceConfiguration()`, for the same reason: this is a fourth
+ * deployment on top of the three text tiers, and a missing one should break
+ * only "generate a header image" — not read as the whole orchestrator being
+ * misconfigured.
+ */
+export function imageConfiguration(): { endpoint: string | null; deployment: string | null } {
+  return {
+    endpoint: process.env.AZURE_OPENAI_ENDPOINT ?? null,
+    deployment: process.env.AZURE_OPENAI_DEPLOYMENT_IMAGE ?? null,
+  };
+}
+
+/** One line, for a startup log: `flagship=gpt-5.6-sol mid=… nano=… voice=… image=…`. */
 export function describeModels(): string {
   const { endpoint, deployments } = modelConfiguration();
   if (!endpoint) return "NOT CONFIGURED (AZURE_OPENAI_ENDPOINT is unset)";
   const voice = voiceConfiguration();
+  const image = imageConfiguration();
   return (
     Object.entries(deployments)
       .map(([tier, name]) => `${tier}=${name ?? "(unset → mid)"}`)
-      .join(" ") + ` voice=${voice.deployment ?? "(none)"}`
+      .join(" ") +
+    ` voice=${voice.deployment ?? "(none)"}` +
+    ` image=${image.deployment ?? "(none)"}`
   );
 }
 
@@ -586,4 +612,166 @@ export async function embed(input: string | string[]): Promise<number[][]> {
     input: Array.isArray(input) ? input : [input],
   });
   return response.data.map((d) => d.embedding);
+}
+
+/**
+ * Article header images (IG-M6-01, Spec 4).
+ *
+ * ── MAI-Image-2.5-Flash, NOT DALL-E ───────────────────────────────────────
+ * `wing-content-system-v1.md` specifies "DALL-E on Azure OpenAI" throughout
+ * Spec 4 and IG-IMG-01 — written when that was the only image model on this
+ * resource. Aditya's direction (2 Sep 2026): use MAI-Image-2.5-Flash instead,
+ * "same source as other models being used like sol, terra and luna" — i.e.
+ * the same Azure OpenAI resource `getAzureClient()` already talks to, not a
+ * second resource the way Whisper needed one. Deployment name lives in
+ * `AZURE_OPENAI_DEPLOYMENT_IMAGE`, pointed at whatever MAI-Image-2.5-Flash is
+ * named in Azure AI Foundry — the deployment name, not the model name, same
+ * convention as every other deployment here. The spec's own safety and
+ * approval requirements (IG-IMG-01–03) don't name DALL-E specifically —
+ * they're about what any image-generation step must do — so nothing else in
+ * Spec 4 changes with the model swapped.
+ *
+ * ── WHY THE RESPONSE SHAPE ISN'T ASSUMED ──────────────────────────────────
+ * DALL-E 3 on Azure returns a `url` by default and accepts an explicit
+ * `response_format: "b64_json"`; the newer `gpt-image-1` family always
+ * returns `b64_json` and rejects the `response_format` param outright.
+ * MAI-Image-2.5-Flash's exact contract hasn't been exercised against a real
+ * deployment from this sandbox (no network route to Azure, no deployment
+ * configured here) — rather than guess which family it follows, this asks
+ * for `b64_json` first, and on an "unrecognized/unsupported parameter" 400
+ * for `response_format` specifically, retries without it and accepts
+ * whichever field (`b64_json` or `url`) comes back. Needs a real run against
+ * the configured deployment to confirm before this ships to students.
+ *
+ * Returns raw image bytes — never a URL to the caller — so a Wing-generated
+ * image and a student-provided one (`content-trigger-routes.ts`'s
+ * generate-image route, `linkedin-content-routes.ts`'s publish route) are the
+ * exact same shape from that point on.
+ */
+export class ImageGenerationBlockedError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "ImageGenerationBlockedError";
+  }
+}
+
+export interface GenerateImageRequest {
+  prompt: string;
+  /** "WxH", e.g. "1536x1024" for a landscape article header. Defaults to
+   *  AZURE_OPENAI_IMAGE_SIZE, or 1536x1024 if that's unset too — a first-pass
+   *  guess at a size MAI-Image-2.5-Flash accepts, not a confirmed value. */
+  size?: string;
+}
+
+export interface GenerateImageResult {
+  imageBuffer: Buffer;
+  model: string;
+}
+
+function isUnsupportedParamError(err: any, param: string): boolean {
+  return (
+    err?.status === 400 &&
+    (err?.param === param || new RegExp(param, "i").test(err?.message ?? "")) &&
+    /unsupported|unrecognized|unknown/i.test(err?.message ?? "")
+  );
+}
+
+/** Azure's content filter and MAI-Image's own safety layer both surface as a
+ *  400 whose message names the block — matched broadly since the exact
+ *  wording isn't confirmed for this model yet (see the header above). */
+function isContentFilterError(err: any): boolean {
+  return (
+    err?.status === 400 &&
+    /content.?polic|content.?filter|safety system|moderation|responsible ai/i.test(
+      err?.message ?? "",
+    )
+  );
+}
+
+/**
+ * Generates one image and returns its bytes.
+ *
+ * Throws `ImageGenerationBlockedError` when Azure's content filter (or
+ * MAI-Image's own safety layer) rejected the prompt or the result — the
+ * caller (the generate-image route) is what implements IG-IMG-01's
+ * "after 2 failed generations" fallback message, since that's a per-draft
+ * count this function has no reason to know about. Any other failure
+ * (misconfiguration, a genuine 5xx) throws a plain Error and is not counted
+ * toward that limit — only a content-filter block is "a failed generation"
+ * in the card's sense; a broken deployment is a different problem.
+ */
+export async function generateImage(
+  request: GenerateImageRequest,
+): Promise<GenerateImageResult> {
+  const model = process.env.AZURE_OPENAI_DEPLOYMENT_IMAGE;
+  if (!model) {
+    throw new Error(
+      "No image-generation deployment configured. Set AZURE_OPENAI_DEPLOYMENT_IMAGE " +
+        "to the MAI-Image-2.5-Flash deployment name in Azure AI Foundry (the " +
+        "deployment name, not the model name).",
+    );
+  }
+
+  const size = request.size || process.env.AZURE_OPENAI_IMAGE_SIZE || "1536x1024";
+  const client = getAzureClient();
+
+  const buildParams = (withResponseFormat: boolean) => ({
+    model,
+    prompt: request.prompt,
+    n: 1,
+    size: size as any,
+    ...(withResponseFormat ? { response_format: "b64_json" as const } : {}),
+  });
+
+  let response;
+  try {
+    response = await client.images.generate(buildParams(true));
+  } catch (err: any) {
+    if (err?.status === 404 || err?.code === "404") {
+      throw new Error(
+        `Azure OpenAI returned 404 for image generation.\n` +
+          `  endpoint:    ${process.env.AZURE_OPENAI_ENDPOINT}\n` +
+          `  deployment:  ${model}\n` +
+          `  api-version: ${process.env.AZURE_OPENAI_API_VERSION || "2024-10-21"}\n` +
+          `Verify the deployment name matches Azure AI Foundry exactly:\n` +
+          `  az cognitiveservices account deployment list ` +
+          `--name <openai-resource> --resource-group <rg> -o table`,
+      );
+    }
+    if (isContentFilterError(err)) {
+      throw new ImageGenerationBlockedError(err.message ?? "blocked by the content filter");
+    }
+    if (isUnsupportedParamError(err, "response_format")) {
+      response = await client.images.generate(buildParams(false));
+    } else {
+      throw err;
+    }
+  }
+
+  const datum = response.data?.[0] as { b64_json?: string; url?: string } | undefined;
+  if (!datum) {
+    throw new Error(
+      `Azure OpenAI returned no image data for deployment '${model}' — the request ` +
+        `succeeded but the response had no entries in 'data'.`,
+    );
+  }
+
+  if (datum.b64_json) {
+    return { imageBuffer: Buffer.from(datum.b64_json, "base64"), model };
+  }
+
+  if (datum.url) {
+    const fetched = await fetch(datum.url);
+    if (!fetched.ok) {
+      throw new Error(
+        `Image was generated but the returned URL could not be fetched (${fetched.status}).`,
+      );
+    }
+    const arrayBuffer = await fetched.arrayBuffer();
+    return { imageBuffer: Buffer.from(arrayBuffer), model };
+  }
+
+  throw new Error(
+    `Azure OpenAI's image response had neither 'b64_json' nor 'url' for deployment '${model}'.`,
+  );
 }

@@ -976,6 +976,7 @@ configuration change:
 | `mid` | `AZURE_OPENAI_DEPLOYMENT_MID` | intake, daily prompts, journal/drift, document analysis, content drafts |
 | `nano` | `AZURE_OPENAI_DEPLOYMENT_NANO` | classification, tagging, turn-typing, routing |
 | — | `AZURE_OPENAI_DEPLOYMENT_EMBEDDINGS` | memory / journal / drift vectors |
+| — | `AZURE_OPENAI_DEPLOYMENT_IMAGE` | article header images (IG-M6-01) — MAI-Image-2.5-Flash, same resource as the three tiers above; see `generateImage()`'s own header comment for why it's not a `ModelTier` |
 
 `_MID` is the fallback for any tier left unset, which makes a missing `_NANO`
 survivable and a missing `_MID` fatal. Readiness reflects that distinction
@@ -1248,6 +1249,8 @@ key is missing the service fails gracefully (logs an error rather than crashing)
 | `AZURE_OPENAI_DEPLOYMENT_FLAGSHIP` | recommended | `orchestrator/` | Falls back to `_MID` |
 | `AZURE_OPENAI_DEPLOYMENT_NANO` | recommended | `orchestrator/` | Falls back to `_MID` |
 | `AZURE_OPENAI_DEPLOYMENT_EMBEDDINGS` | ✅ (vectors) | `orchestrator/` | Memory / journal / drift |
+| `AZURE_OPENAI_DEPLOYMENT_IMAGE` | optional (images) | `orchestrator/` | Article header images (IG-M6-01), MAI-Image-2.5-Flash. Absent = image generation disabled, nothing else affected |
+| `AZURE_OPENAI_IMAGE_SIZE` | optional | `orchestrator/` | "WxH" for generated images; defaults to `1536x1024` (unconfirmed against a real deployment) |
 | `FIXED_TEMPERATURE_DEPLOYMENTS` | optional | `orchestrator/` | Escape hatch for a deployment whose name doesn't reveal the model behind it |
 | `AZURE_OPENAI_ENDPOINT_ALT` | ✅ (voice) | `orchestrator/` | Resource hosting the Whisper deployment; falls back to the main endpoint |
 | `AZURE_OPENAI_KEY_ALT` | optional | `orchestrator/` | Key for that resource; omit for managed identity |

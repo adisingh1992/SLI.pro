@@ -406,12 +406,50 @@ export async function requestContentTrigger(
  * the older MVP page uses. That route accepts arbitrary `content` from the
  * request body independent of the stored draft row, so this never sends
  * anything Wing generated — only whatever the student typed.
+ *
+ * `imageBase64` is optional and, per IG-IMG-03, is never sent unless the
+ * caller chose to include it — a Wing-generated image the student approved
+ * (see `generateArticleImage` below), or a student-provided one. There is no
+ * separate "approve the image" call: including it here IS the approval.
  */
 export async function postContentDraftToLinkedIn(
   draftId: number,
   content: string,
+  imageBase64?: string,
 ): Promise<unknown> {
-  const res = await apiRequest("POST", `/api/linkedin-content-drafts/${draftId}/post`, { content });
+  const res = await apiRequest("POST", `/api/linkedin-content-drafts/${draftId}/post`, {
+    content,
+    ...(imageBase64 ? { imageBase64 } : {}),
+  });
+  return await res.json();
+}
+
+/**
+ * IG-M6-01 — a header image for an article draft, via MAI-Image-2.5-Flash.
+ * `draftText` is the student's current textarea contents (this route has no
+ * other way to know the real topic — see `content-trigger-routes.ts`'s own
+ * note on why nothing is persisted server-side until Publish); `direction`
+ * is IG-M6-01's option (b), "more abstract," "cooler colors," etc., on a
+ * regenerate.
+ *
+ * Two response shapes, discriminated on `generated`: a success carries the
+ * image bytes and the prompt used; a content-filter block carries how many
+ * attempts have failed and, from the second failure on, IG-IMG-01's own
+ * scripted fallback line for the caller to show.
+ */
+export type GenerateImageResult =
+  | { generated: true; imageBase64: string; promptUsed: string }
+  | { generated: false; blocked: true; failedAttempts: number; fallbackMessage: string | null };
+
+export async function generateArticleImage(
+  draftId: number,
+  draftText: string,
+  direction?: string,
+): Promise<GenerateImageResult> {
+  const res = await apiRequest("POST", `/api/content-triggers/drafts/${draftId}/generate-image`, {
+    draftText,
+    ...(direction ? { direction } : {}),
+  });
   return await res.json();
 }
 
