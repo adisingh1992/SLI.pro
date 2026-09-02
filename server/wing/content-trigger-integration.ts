@@ -84,8 +84,10 @@ import {
 } from "./content-cadence";
 import { behavioralContentComfort, type BehavioralContentComfort } from "./behavioral-content-comfort";
 import {
+  detectArticleTrigger,
   detectCommentTrigger,
   detectPostTrigger,
+  type ArticleTriggerInput,
   type CommentTriggerInput,
   type PostTriggerInput,
   type TriggerDetection,
@@ -230,11 +232,12 @@ export async function contentSuggestionsSuppressed(
 export type RouteInput = {
   comment?: CommentTriggerInput;
   post?: PostTriggerInput;
+  article?: ArticleTriggerInput;
 };
 
 export type RouteResult = {
   fires: boolean;
-  contentType: "comment" | "post" | null;
+  contentType: "comment" | "post" | "article" | null;
   detection: TriggerDetection | null;
   cadence: CadenceCheckResult | null;
   reason: string;
@@ -243,7 +246,12 @@ export type RouteResult = {
 /**
  * H-627: one call, in provenance order. Suppression first (absolute, IG-M6-02),
  * then cadence (the judgment call above — gates every source, not only H-625's
- * own time-based one), then the two live detectors, post before comment.
+ * own time-based one), then the three live detectors, article before post before
+ * comment — H-622 landed after the post-before-comment reasoning above was
+ * written, and the same logic extends one step further: IG-M6-03 already keeps
+ * a sub-Stage-3 student from ever seeing an article signal, so this ordering
+ * only matters for a Stage-3 student who could plausibly get any of the three,
+ * and article is the rarer, higher-barrier, higher-value ask of the two.
  *
  * Does not write anything — `recordTriggerFired` below is the caller's next
  * step once it has decided to actually present what this returns.
@@ -270,6 +278,11 @@ export async function routeContentTrigger(
   });
   if (!cadence.due) {
     return { fires: false, contentType: null, detection: null, cadence, reason: cadence.reason };
+  }
+
+  const article = await detectArticleTrigger(db, studentId, input.article ?? {});
+  if (article.fires) {
+    return { fires: true, contentType: "article", detection: article, cadence, reason: article.reason };
   }
 
   const post = await detectPostTrigger(db, studentId, input.post ?? {});
@@ -301,7 +314,7 @@ export async function routeContentTrigger(
 export async function recordTriggerFired(
   db: Db,
   studentId: number,
-  contentType: "comment" | "post",
+  contentType: "comment" | "post" | "article",
   detection: TriggerDetection,
 ): Promise<void> {
   const sourceType = detection.signal === "explicit" ? "human_originated" : "ai_generated";

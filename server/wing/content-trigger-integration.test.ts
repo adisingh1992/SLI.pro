@@ -9,8 +9,11 @@
  * every function in the chain — `routeContentTrigger` calls
  * `contentSuggestionsSuppressed` (2 queries), `contentSuggestionCadenceInputs`
  * (5 queries, via Promise.all — see the file header note on why that order is
- * still deterministic), then `detectPostTrigger` and/or `detectCommentTrigger`
- * (each starting with `contentProgressionStage`'s own 2 queries). Getting the
+ * still deterministic), then `detectArticleTrigger`, `detectPostTrigger` and/or
+ * `detectCommentTrigger` in that order (each starting with
+ * `contentProgressionStage`'s own 2 queries — a student below Stage 3/2 gets
+ * turned away after just those 2, so a Stage-1 student's article and post
+ * checks each cost exactly 2 queries before falling through). Getting the
  * call index wrong here fails LOUDLY (a case reads the wrong row and asserts
  * on the wrong thing), which is the same trade `content-trigger-detect.test.ts`
  * itself accepts for the same reason: over-fitting a mock to something more
@@ -77,16 +80,18 @@ console.log("H-625/IG-M6-02: a recent suggestion inside the track's band blocks 
   if (before === failures) ok(`held on cadence — "${r.reason}"`);
 }
 
-console.log("cadence due but no signal anywhere: post is blocked by Stage 1, comment finds nothing");
+console.log("cadence due but no signal anywhere: article and post are blocked by Stage 1, comment finds nothing");
 {
   const before = failures;
   const db = recordingDb((n) => {
     if (n >= 1 && n <= 7) return []; // no hold, no track/pathway, unestablished comfort, no history
-    if (n === 8) return []; // post's contentProgressionStage: published counts — none
-    if (n === 9) return []; // post's contentProgressionStage: comfort — unestablished, stage 1
-    if (n === 10) return []; // comment's contentProgressionStage: published counts — none
-    if (n === 11) return []; // comment's contentProgressionStage: comfort — unestablished, stage 1
-    if (n === 12) return []; // comment's foundationCompletedAt(foundation_1) — never completed
+    if (n === 8) return []; // article's contentProgressionStage: published counts — none
+    if (n === 9) return []; // article's contentProgressionStage: comfort — unestablished, stage 1
+    if (n === 10) return []; // post's contentProgressionStage: published counts — none
+    if (n === 11) return []; // post's contentProgressionStage: comfort — unestablished, stage 1
+    if (n === 12) return []; // comment's contentProgressionStage: published counts — none
+    if (n === 13) return []; // comment's contentProgressionStage: comfort — unestablished, stage 1
+    if (n === 14) return []; // comment's foundationCompletedAt(foundation_1) — never completed
     throw new Error(`unexpected call ${n}`);
   });
   const r = await routeContentTrigger(db, 1);
@@ -95,20 +100,37 @@ console.log("cadence due but no signal anywhere: post is blocked by Stage 1, com
   if (before === failures) ok(`due, but nothing fired — "${r.reason}"`);
 }
 
-console.log("an explicit post request reaches Stage 2 on its own and fires immediately, cadence permitting");
+console.log("an explicit post request reaches Stage 2 on its own and fires immediately, cadence permitting (article checked first, blocked at Stage 1)");
 {
   const before = failures;
   const db = recordingDb((n) => {
     if (n === 3) return [{ professional_status: "early_career", pathway: null }]; // track
     if (n >= 1 && n <= 7) return []; // no hold; unestablished comfort; no prior suggestion/action/streak
-    if (n === 8) return []; // detectPostTrigger's progression: published counts — none
-    if (n === 9) return []; // detectPostTrigger's progression: comfort — unestablished
+    if (n === 8) return []; // detectArticleTrigger's progression: published counts — none
+    if (n === 9) return []; // detectArticleTrigger's progression: comfort — unestablished, stage 1, blocked
+    if (n === 10) return []; // detectPostTrigger's progression: published counts — none
+    if (n === 11) return []; // detectPostTrigger's progression: comfort — unestablished (explicit override still lifts it to Stage 2)
     throw new Error(`unexpected call ${n} — explicit request should fire before any further query`);
   });
   const r = await routeContentTrigger(db, 1, { post: { explicitRequest: true } });
   if (!r.fires || r.contentType !== "post") fail(`expected an explicit post fire, got fires=${r.fires} contentType=${r.contentType}`);
   if (r.detection?.signal !== "explicit") fail(`expected signal "explicit", got ${r.detection?.signal}`);
-  if (before === failures) ok("explicit request fires as a post, after exactly 9 queries");
+  if (before === failures) ok("explicit request fires as a post, after exactly 11 queries (article's 2, then post's 2)");
+}
+
+console.log("an explicit article request reaches Stage 3 on its own and fires immediately, ahead of post/comment");
+{
+  const before = failures;
+  const db = recordingDb((n) => {
+    if (n >= 1 && n <= 7) return []; // no hold; unestablished comfort; no prior suggestion/action/streak
+    if (n === 8) return []; // detectArticleTrigger's progression: published counts — none
+    if (n === 9) return []; // detectArticleTrigger's progression: comfort — unestablished (explicit override still lifts it to Stage 3)
+    throw new Error(`unexpected call ${n} — explicit article request should fire before post or comment are ever checked`);
+  });
+  const r = await routeContentTrigger(db, 1, { article: { explicitRequest: true } });
+  if (!r.fires || r.contentType !== "article") fail(`expected an explicit article fire, got fires=${r.fires} contentType=${r.contentType}`);
+  if (r.detection?.signal !== "explicit") fail(`expected signal "explicit", got ${r.detection?.signal}`);
+  if (before === failures) ok("explicit article request fires immediately, ahead of post/comment, after exactly 9 queries");
 }
 
 console.log("recordTriggerFired writes exactly one row and does not throw");

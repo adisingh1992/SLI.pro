@@ -12,7 +12,7 @@
  * confirm the "not available yet" inputs actually work when a caller does
  * eventually have something to pass.
  */
-import { detectCommentTrigger, detectPostTrigger } from "./content-trigger-detect";
+import { detectArticleTrigger, detectCommentTrigger, detectPostTrigger } from "./content-trigger-detect";
 
 let failures = 0;
 const fail = (msg: string) => {
@@ -165,6 +165,134 @@ console.log("H-621 signal (g): reachable when Stage 3 came from posts, not comme
   const r = await detectPostTrigger(db, 1, { priorPostEngagement: 12 });
   if (!r.fires || r.signal !== "g") fail(`expected signal g, got fires=${r.fires} signal=${r.signal}`);
   if (before === failures) ok("signal (g) fires when Stage 3 was reached without tripping signal (d)");
+}
+
+console.log("H-621 signal (b): falls back to a real Baby Radar 'post' suggestion when no caller override is supplied");
+{
+  const before = failures;
+  const genIso = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString();
+  const db = recordingDb((n) => {
+    if (n === 1) return [{ trigger_type: "post", n: 3 }]; // 0 comments, 3 posts — signal (d)'s commentCount check stays unreached
+    if (n === 2) {
+      return [
+        { trigger_type: "post", event_type: "published", content_draft_id: 1 },
+        { trigger_type: "comment", event_type: "published", content_draft_id: 2 },
+      ]; // -> established comfort -> Stage 3 (allows post) without tripping signal (d)
+    }
+    if (n === 5) return []; // recentTier1JournalQuote — none available
+    if (n === 6) {
+      return [{ topic: "AI in supply chains", why_relevant: "matches your Foundation 1 function", generated_at: genIso }];
+    }
+    return []; // foundation_3, foundation_2 — neither completed
+  });
+  const r = await detectPostTrigger(db, 1);
+  if (!r.fires || r.signal !== "b") fail(`expected signal b (Radar fallback), got fires=${r.fires} signal=${r.signal}`);
+  if (r.fires && !r.triggerSource?.includes("AI in supply chains")) fail(`expected triggerSource to name the Radar topic, got ${r.triggerSource}`);
+  if (before === failures) ok("signal (b) falls back to a real Baby Radar 'post' suggestion");
+}
+
+console.log("H-621: a caller-supplied radarTopicWithAngle still takes priority over the Radar fallback query");
+{
+  const before = failures;
+  const db = recordingDb((n) => {
+    if (n === 1) return [{ trigger_type: "post", n: 3 }];
+    if (n === 2) {
+      return [
+        { trigger_type: "post", event_type: "published", content_draft_id: 1 },
+        { trigger_type: "comment", event_type: "published", content_draft_id: 2 },
+      ];
+    }
+    if (n === 5) return []; // journal — none
+    // n === 6 (recentRadarTopic) should never be reached — the override short-circuits first
+    if (n === 6) throw new Error("recentRadarTopic queried even though a caller override was supplied");
+    return [];
+  });
+  const r = await detectPostTrigger(db, 1, {
+    radarTopicWithAngle: { topic: "climate tech", sessionReference: "session 4" },
+  });
+  if (!r.fires || r.signal !== "b" || !r.triggerSource?.includes("climate tech")) {
+    fail(`expected the supplied override to win, got fires=${r.fires} signal=${r.signal} source=${r.triggerSource}`);
+  }
+  if (before === failures) ok("caller-supplied radarTopicWithAngle still takes priority");
+}
+
+console.log("H-622: article is blocked below Stage 3 (fewer than 3 posts)");
+{
+  const before = failures;
+  const db = recordingDb(() => []); // zero activity -> Stage 1
+  const r = await detectArticleTrigger(db, 1);
+  if (r.fires) fail(`expected no fire below Stage 3, got signal=${r.signal}`);
+  if (before === failures) ok("article correctly blocked below Stage 3");
+}
+
+console.log("H-622: an explicit request reaches Stage 3 and fires on its own, honored regardless of history");
+{
+  const before = failures;
+  const db = recordingDb(() => []); // zero activity — the request itself must carry the student to Stage 3
+  const r = await detectArticleTrigger(db, 1, { explicitRequest: true });
+  if (!r.fires || r.signal !== "explicit") fail(`expected explicit signal, got fires=${r.fires} signal=${r.signal}`);
+  if (before === failures) ok("explicit request reaches Stage 3 and fires on its own");
+}
+
+console.log("H-622 signal (c): topic depth across sessions fires once Stage 3 is reached");
+{
+  const before = failures;
+  const db = recordingDb((n) => {
+    if (n === 1) return [{ trigger_type: "post", n: 3 }];
+    if (n === 2) {
+      return [
+        { trigger_type: "post", event_type: "published", content_draft_id: 1 },
+        { trigger_type: "comment", event_type: "published", content_draft_id: 2 },
+      ]; // -> established comfort -> Stage 3
+    }
+    return [];
+  });
+  const r = await detectArticleTrigger(db, 1, { topicDepthAcrossSessions: true });
+  if (!r.fires || r.signal !== "c") fail(`expected signal c, got fires=${r.fires} signal=${r.signal}`);
+  if (before === failures) ok("signal (c) fires on caller-supplied topic depth, once gated Stage 3 is reached");
+}
+
+console.log("H-622 signal (e): a real Baby Radar 'post' suggestion fires when (c) and (d) are absent");
+{
+  const before = failures;
+  const genIso = new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString();
+  const db = recordingDb((n) => {
+    if (n === 1) return [{ trigger_type: "post", n: 3 }];
+    if (n === 2) {
+      return [
+        { trigger_type: "post", event_type: "published", content_draft_id: 1 },
+        { trigger_type: "comment", event_type: "published", content_draft_id: 2 },
+      ];
+    }
+    if (n === 3) {
+      return [{ topic: "personal branding for founders", why_relevant: "ties to 3 recent sessions", generated_at: genIso }];
+    }
+    return [];
+  });
+  const r = await detectArticleTrigger(db, 1);
+  if (!r.fires || r.signal !== "e") fail(`expected signal e, got fires=${r.fires} signal=${r.signal}`);
+  if (r.fires && !r.triggerSource?.includes("personal branding for founders")) {
+    fail(`expected triggerSource to name the Radar topic, got ${r.triggerSource}`);
+  }
+  if (before === failures) ok("signal (e) fires from a real Baby Radar 'post' suggestion");
+}
+
+console.log("H-622: nothing fires at Stage 3 when no signal is present");
+{
+  const before = failures;
+  const db = recordingDb((n) => {
+    if (n === 1) return [{ trigger_type: "post", n: 3 }];
+    if (n === 2) {
+      return [
+        { trigger_type: "post", event_type: "published", content_draft_id: 1 },
+        { trigger_type: "comment", event_type: "published", content_draft_id: 2 },
+      ];
+    }
+    return []; // recentRadarTopic — nothing available either
+  });
+  const r = await detectArticleTrigger(db, 1);
+  if (r.fires) fail(`expected no signal, got fires=true signal=${r.signal}`);
+  if (before === failures) ok("no false positive at Stage 3 when nothing qualifies");
 }
 
 console.log(`\n${failures} failures\n`);

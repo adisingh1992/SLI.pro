@@ -1,30 +1,41 @@
 /**
- * H-620 (Comment Trigger) and H-621 (Post Trigger) detection.
+ * H-620 (Comment Trigger), H-621 (Post Trigger), H-622 (Article Trigger)
+ * detection. H-623 (DM) and H-624 (Connection Request) are not here — see
+ * their own scoping note, kept separately since it's a product decision, not
+ * an engineering gap this file can close.
  *
- * ── WHY ONLY TWO OF THE FIVE TRIGGERS ────────────────────────────────────
- * H-622 (Article), H-623 (DM) and H-624 (Connection Request) all lean on data
- * this platform doesn't produce yet: H-622 needs post-engagement numbers
- * (content_drafts tracks `shareCount` — how many times WING shared it — not
- * engagement received), and H-623/H-624 need Module 11 (Network Intelligence),
- * which — per this session's own compendium-parser check — exists nowhere as
- * runtime logic, only as a numbering label. Building detectors for those now
- * would mean inventing the very data they're supposed to detect against.
- * H-620 and H-621 are the two triggers where enough of the signal set is
- * already real: Foundation completion (`wing.sessions`), content activity
- * (`wing.content_activity_log`, this session's own addition), and Tier 1
- * micro-journal entries (`wing.prompt_log`, wired earlier this session).
+ * ── CORRECTION (2 Sep 2026): H-622 was never blocked by engagement numbers ──
+ * This header used to say H-622 needed "post-engagement numbers." That was a
+ * misreading, caught re-checking the real card text in
+ * `methodology/wing-content-system-v1.md`: post-engagement is H-621's signal
+ * (g) ("user's prior post received engagement") — H-622's own signal list
+ * (3+ posts, comfort, then any of topic depth / a framework / Radar+angle /
+ * Module 8 insight) never mentions engagement at all. H-622 is built below.
+ *
+ * ── WHY H-623/H-624 STILL AREN'T ──────────────────────────────────────────
+ * Both need either Module 11 (Network Intelligence) — confirmed, by this
+ * session's own compendium-parser check, to exist nowhere as runtime logic,
+ * only as a numbering label — or a "contacts" data model (identified
+ * contacts, last-interaction timestamps) that doesn't exist at all, in any
+ * form. Building detectors for those now would mean inventing the data
+ * they're supposed to detect against.
  *
  * ── WHY EVERY SIGNAL THAT ISN'T GROUNDED SAYS SO, RATHER THAN GUESSING ────
- * H-620's signal (a) and H-621's signals (b), (e), (g) depend on Radar,
- * Module 8/9 completion events, and post-engagement numbers respectively —
- * none of which exist. Rather than silently omitting them (which would make
- * the detector look complete when it isn't) each takes an explicit,
- * optional, typed input the caller must supply from wherever that signal
- * eventually comes from, defaulting to "not available" when omitted. A
- * detector that always returns false for a signal nothing can supply yet is
- * honest; one that pretends the signal doesn't exist is not.
+ * H-620's signal (a) and H-621's signal (g) depend on Radar (third-party
+ * content discovery) and post-engagement numbers respectively — neither
+ * exists. Rather than silently omitting them (which would make the detector
+ * look complete when it isn't) each takes an explicit, optional, typed input
+ * the caller must supply from wherever that signal eventually comes from,
+ * defaulting to "not available" when omitted. A detector that always returns
+ * false for a signal nothing can supply yet is honest; one that pretends the
+ * signal doesn't exist is not. H-621's signal (b) and H-622's signal (e) —
+ * both a *topic* Radar surfaces, not third-party content — are different:
+ * Baby Radar (H-701) genuinely produces this now, so both are real queries
+ * below, not caller-supplied stubs. Module 8/9 completion (H-621's other
+ * half of signal (e), H-622's signal (f)) stays a stub either way — there is
+ * no `modules`/`module_completions` table yet.
  *
- * Both detectors gate through `content-progression.ts` (IG-M6-03) and
+ * All three detectors gate through `content-progression.ts` (IG-M6-03) and
  * `content-cadence.ts` (IG-M6-02, H-625) FIRST — a signal firing doesn't mean
  * a suggestion goes out; H-627's failure_path is explicit that a fired
  * integration event whose destination gate fails is logged and does not
@@ -117,6 +128,39 @@ async function recentTier1JournalQuote(
   };
 }
 
+/** Signal source for H-621's signal (b) and H-622's signal (e): a Baby Radar
+ *  (H-701) topic suggestion Radar itself tagged `suggestedAction: "post"` —
+ *  its own judgment that a topic is "worth writing about," not just
+ *  commenting on or filing away. Unlike `radarContentMatch` (third-party
+ *  content, H-620's signal (a) — no data source), this is real: Baby Radar's
+ *  `whyRelevant` is generated from the student's own Foundation 1 function
+ *  and intake Q5.5 topic area (see `baby-radar.ts`), which is exactly the
+ *  "longitudinal session data provides a unique angle" both cards ask for —
+ *  not a generic trending topic, one already tied to this student's data. */
+async function recentRadarTopic(
+  db: Db,
+  studentId: number,
+  withinDays: number,
+): Promise<{ topic: string; whyRelevant: string; generatedAt: number } | null> {
+  const since = new Date(Date.now() - withinDays * 24 * 60 * 60 * 1000).toISOString();
+  const r = await db.execute(sql`
+    SELECT "topic", "why_relevant", "generated_at"
+    FROM "wing"."radar_suggestions"
+    WHERE "student_id" = ${studentId}
+      AND "suggested_action" = 'post'
+      AND "generated_at" >= ${since}
+    ORDER BY "generated_at" DESC
+    LIMIT 1
+  `);
+  const row = r.rows?.[0];
+  if (!row) return null;
+  return {
+    topic: row.topic as string,
+    whyRelevant: row.why_relevant as string,
+    generatedAt: new Date(row.generated_at as string).getTime(),
+  };
+}
+
 /* ── H-620 — Comment Trigger ────────────────────────────────────────────── */
 
 export type CommentTriggerInput = {
@@ -193,7 +237,12 @@ export async function detectCommentTrigger(
 /* ── H-621 — Post Trigger ───────────────────────────────────────────────── */
 
 export type PostTriggerInput = {
-  /** Signal (b): Radar trending topic + a unique angle from prior sessions. */
+  /** Signal (b): Radar trending topic + a unique angle from prior sessions.
+   *  Optional override — when supplied (e.g. Wing's coaching turn already
+   *  tied a specific Radar topic to a specific session reference), it takes
+   *  priority. When omitted, `detectPostTrigger` falls back to
+   *  `recentRadarTopic`, a real query against Baby Radar's own `post`-tagged
+   *  suggestions — this signal is no longer a pure stub. */
   radarTopicWithAngle?: { topic: string; sessionReference: string } | null;
   /** Signal (e): Module 8 (competency) or Module 9 (power insight) completion.
    *  Always `null` — there is no `modules`/`module_completions` table yet
@@ -326,7 +375,9 @@ export async function detectPostTrigger(
     };
   }
 
-  // Signal (b): Radar topic + unique angle — supplied by the caller.
+  // Signal (b): Radar topic + unique angle. A caller-supplied override takes
+  // priority (it can name a specific session reference); otherwise fall back
+  // to Baby Radar's own most recent "worth writing about" topic suggestion.
   if (input.radarTopicWithAngle) {
     const { topic, sessionReference } = input.radarTopicWithAngle;
     return {
@@ -334,6 +385,15 @@ export async function detectPostTrigger(
       signal: "b",
       reason: `Radar topic "${topic}" matched with a session reference`,
       triggerSource: `radar_topic:${topic}:${sessionReference}`,
+    };
+  }
+  const radarTopicForPost = await recentRadarTopic(db, studentId, 14);
+  if (radarTopicForPost) {
+    return {
+      fires: true,
+      signal: "b",
+      reason: `Baby Radar surfaced "${radarTopicForPost.topic}" as worth writing about: ${radarTopicForPost.whyRelevant}`,
+      triggerSource: `radar_suggestion_topic:${radarTopicForPost.topic}`,
     };
   }
 
@@ -346,4 +406,101 @@ export async function detectPostTrigger(
   // a suggestion is due rather than a separate code path.
 
   return { fires: false, signal: null, reason: "no post-trigger signal fired", triggerSource: null };
+}
+
+/* ── H-622 — Article Trigger ────────────────────────────────────────────── */
+
+export type ArticleTriggerInput = {
+  /** Signal (c): deep topic expertise demonstrated across multiple sessions
+   *  — not a single data point. Whether a given student's session history
+   *  clears that bar is a judgment call (how deep, how many sessions, on the
+   *  same topic) this file doesn't attempt; supplied by the caller once
+   *  something upstream (Wing's coaching turn, eventually a real analysis
+   *  pass) has made that call. */
+  topicDepthAcrossSessions?: boolean;
+  /** Signal (d): the user has a framework, methodology, or contrarian take
+   *  that exceeds post length. Same reasoning as above — recognizing "this
+   *  is bigger than a post" is a judgment this file doesn't make itself. */
+  frameworkOrContrarianTake?: boolean;
+  /** Signal (f): Module 8 (competency framework) reveals a publishable
+   *  insight. Always `null` unless supplied — same as `PostTriggerInput
+   *  .module8Or9CompletedAt`, there is no `modules`/`module_completions`
+   *  table yet. Kept as its own field (not reused from PostTriggerInput)
+   *  because H-622's signal (f) is Module 8 specifically, not "8 or 9." */
+  module8CompletedAt?: number | null;
+  /** Same override semantics as H-626's post override — see
+   *  `PostTriggerInput.explicitRequest`. */
+  explicitRequest?: boolean;
+};
+
+export async function detectArticleTrigger(
+  db: Db,
+  studentId: number,
+  input: ArticleTriggerInput = {},
+): Promise<TriggerDetection> {
+  // Gate: (a) 3+ published posts AND (b) comfort demonstrated. This is
+  // exactly Stage 3 in content-progression.ts (publishedPostCount >= 3 &&
+  // comfortDemonstrated, where comfortDemonstrated reads the
+  // behavioral_content_comfort replacement for B2 ≥ 4, per IG-U014) — no
+  // separate gate check needed here, same pattern as H-620/H-621.
+  const progression = await contentProgressionStage(db, studentId, {
+    explicitlyRequestedType: input.explicitRequest ? "article" : undefined,
+  });
+  if (!contentTypeAllowed(progression, "article")) return NOT_DUE;
+
+  if (input.explicitRequest) {
+    return {
+      fires: true,
+      signal: "explicit",
+      reason: "user explicitly asked to write an article",
+      triggerSource: "explicit_request:article",
+    };
+  }
+
+  // Signal (c): topic depth across sessions — supplied by the caller.
+  if (input.topicDepthAcrossSessions) {
+    return {
+      fires: true,
+      signal: "c",
+      reason: "deep topic expertise demonstrated across multiple sessions",
+      triggerSource: "topic_depth_across_sessions",
+    };
+  }
+
+  // Signal (d): a framework, methodology, or contrarian take — supplied by
+  // the caller.
+  if (input.frameworkOrContrarianTake) {
+    return {
+      fires: true,
+      signal: "d",
+      reason: "user has a framework, methodology, or contrarian take that exceeds post length",
+      triggerSource: "framework_or_contrarian_take",
+    };
+  }
+
+  // Signal (e): Radar surfaces a substantial topic where the user's
+  // longitudinal session data provides a unique angle. Real as of Baby
+  // Radar (H-701) — see recentRadarTopic's doc comment.
+  const radarTopicForArticle = await recentRadarTopic(db, studentId, 14);
+  if (radarTopicForArticle) {
+    return {
+      fires: true,
+      signal: "e",
+      reason: `Baby Radar surfaced "${radarTopicForArticle.topic}" as worth writing about, with a longitudinal angle: ${radarTopicForArticle.whyRelevant}`,
+      triggerSource: `radar_suggestion_topic:${radarTopicForArticle.topic}`,
+    };
+  }
+
+  // Signal (f): Module 8 competency framework reveals a publishable insight
+  // — supplied by the caller (no modules/module_completions table yet).
+  if (input.module8CompletedAt && hoursAgo(input.module8CompletedAt) <= 48) {
+    return {
+      fires: true,
+      signal: "f",
+      reason: "Module 8 completion supplied by caller reveals a publishable insight",
+      triggerSource: `module_8_completion:${new Date(input.module8CompletedAt).toISOString()}`,
+    };
+  }
+
+  return { fires: false, signal: null, reason: "no article-trigger signal fired", triggerSource: null };
 }
