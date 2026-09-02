@@ -35,6 +35,14 @@ const SECRET_MAP: Record<string, string> = {
   "AZURE-OPENAI-DEPLOYMENT-EMBEDDINGS": "AZURE_OPENAI_DEPLOYMENT_EMBEDDINGS",
   "AZURE-OPENAI-DEPLOYMENT-TRANSCRIBE": "AZURE_OPENAI_DEPLOYMENT_TRANSCRIBE",
   /*
+   * Article header images (IG-M6-01) — MAI-Image-2.5-Flash, same resource as
+   * FLAGSHIP/MID/NANO above (not a second endpoint/key the way Whisper below
+   * needs). AZURE_OPENAI_IMAGE_SIZE is deliberately NOT here: it's a plain
+   * size string ("1536x1024"), not a secret, same reasoning that keeps
+   * AZURE_OPENAI_API_VERSION out of this map too.
+   */
+  "AZURE-OPENAI-DEPLOYMENT-IMAGE": "AZURE_OPENAI_DEPLOYMENT_IMAGE",
+  /*
    * Speech-to-text, on its own Azure resource.
    *
    * Whisper has much narrower regional availability than the chat models, so
@@ -113,6 +121,7 @@ export const LLM_SECRETS = [
   "AZURE_OPENAI_DEPLOYMENT_MID",
   "AZURE_OPENAI_DEPLOYMENT_NANO",
   "AZURE_OPENAI_DEPLOYMENT_EMBEDDINGS",
+  "AZURE_OPENAI_DEPLOYMENT_IMAGE",
   "AZURE_OPENAI_ENDPOINT_ALT",
   "AZURE_OPENAI_KEY_ALT",
   "AZURE_OPENAI_DEPLOYMENT_WHISPER",
