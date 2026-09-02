@@ -381,14 +381,21 @@ export default function WriteSomethingPage() {
            *    `status.reason` is already human copy for these states (the
            *    server picks it via messageFor()), so it stands on its own with
            *    no "want to write anyway?" prompt into a dead end.
+           *
+           * Wrapped in the same empty-state card convention `files.tsx` uses
+           * for "no documents uploaded yet" (`rounded-xl bg-white ... ring-1
+           * ring-wing-border`, centered). A bare, unboxed sentence in a
+           * max-w-2xl column reads as debris floating in a mostly-empty page,
+           * especially for suppressed/not_due where there's nothing below it
+           * at all — a bounded, centered card gives it visual weight instead.
            */
-          <div className="mt-6">
+          <div className="mt-6 rounded-xl bg-white px-6 py-12 text-center ring-1 ring-wing-border">
             <p className="text-[15px] leading-[1.75] text-plum-body">
               {status?.reason ?? "Nothing Wing's noticed right now."}
               {status?.canRequest ? " Want to write something anyway?" : null}
             </p>
             {status?.canRequest && (
-              <div className="mt-6 flex gap-3">
+              <div className="mt-6 flex justify-center gap-3">
                 <button
                   type="button"
                   disabled={request.isPending}
