@@ -267,6 +267,27 @@
       "when": 1788249892906,
       "tag": "0037_wing_state_timestamps",
       "breakpoints": true
+    },
+    {
+      "idx": 38,
+      "version": "7",
+      "when": 1788340000000,
+      "tag": "0038_reveal_cycles",
+      "breakpoints": true
+    },
+    {
+      "idx": 39,
+      "version": "7",
+      "when": 1788430000000,
+      "tag": "0039_prompt_attribute_provenance",
+      "breakpoints": true
+    },
+    {
+      "idx": 40,
+      "version": "7",
+      "when": 1788516400000,
+      "tag": "0040_giant_wolf_cub",
+      "breakpoints": true
     }
   ]
 }
