@@ -288,6 +288,13 @@
       "when": 1788516400000,
       "tag": "0040_giant_wolf_cub",
       "breakpoints": true
+    },
+    {
+      "idx": 41,
+      "version": "7",
+      "when": 1788602800000,
+      "tag": "0041_signal_category_multi",
+      "breakpoints": true
     }
   ]
 }

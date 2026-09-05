@@ -1,4 +1,4 @@
-import { and, eq, isNull, or } from "drizzle-orm";
+import { and, eq, isNull, or, sql } from "drizzle-orm";
 import { initScript, type ScriptDb } from "../script-init";
 import { promptLibrary } from "@shared/wing-schema";
 import { classifyPromptTier } from "./prompt-tiers";
@@ -71,7 +71,11 @@ async function main() {
     .where(
       and(
         eq(promptLibrary.active, true),
-        or(isNull(promptLibrary.evidenceTier), isNull(promptLibrary.signalCategory)),
+        or(
+        isNull(promptLibrary.evidenceTier),
+        // An uncategorised row is an empty set, not NULL, since 0041.
+        sql`cardinality(${promptLibrary.signalCategory}) = 0`,
+      ),
       ),
     );
 
@@ -101,14 +105,20 @@ async function main() {
       }
     }
 
-    if (row.signalCategory !== null) {
+    if ((row.signalCategory ?? []).length > 0) {
       categoryAlready++;
     } else {
       const category = classifySignalCategory(row.promptText, row.behavioralSignal);
       if (category.category === null) {
         categoryUncalled++;
       } else {
-        update.signalCategory = category.category;
+        /*
+         * A one-element set. The rule engine proposes the single dominant category it can
+         * defend from her own definitions; a second one would be this file guessing, which
+         * is the thing its header says it does not do. She adds the others in the review
+         * screen, where the set exists precisely so she can.
+         */
+        update.signalCategory = [category.category];
         update.signalCategoryBecause = category.because;
         update.signalCategorySource = "claude_review";
         categorySet++;

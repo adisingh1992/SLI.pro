@@ -648,19 +648,20 @@ export async function nextLibraryPrompt(
     const sentToday = sent.some((r) => r.sentAt !== null && r.sentAt >= dayStart);
 
     /*
-     * The categories of what was sent recently, newest first, for the rotation. Every one
-     * is null until Danielle assigns them, so this is an empty list today and the rotation
-     * reports itself inactive rather than pretending.
+     * The categories of what was sent recently, newest send first, for the rotation. One
+     * entry per send holding that prompt's whole set — see `SelectionContext.recentCategories`
+     * for why it is not flattened. Every set is empty until Danielle assigns categories, so
+     * this is a list of empty lists today and the rotation reports itself inactive rather
+     * than pretending.
      */
-    const recentCategories: string[] = [];
+    const recentCategories: string[][] = [];
     if (recentPromptIds.length) {
       const rows = await db
         .select({ id: promptLibrary.id, signalCategory: promptLibrary.signalCategory })
         .from(promptLibrary);
-      const byId = new Map<number, string | null>(rows.map((r) => [r.id, r.signalCategory]));
+      const byId = new Map<number, string[]>(rows.map((r) => [r.id, r.signalCategory ?? []]));
       for (const id of recentPromptIds) {
-        const cat = byId.get(id);
-        if (cat) recentCategories.push(cat);
+        recentCategories.push(byId.get(id) ?? []);
       }
     }
 

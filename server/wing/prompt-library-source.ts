@@ -21,7 +21,8 @@
  * 1. `signalCategory`. Her eight categories govern Gate 2, and not one prompt carries one.
  *    The `*Signal:*` lines are analysis ("tacit knowledge. Intuitive expertise that exists
  *    beyond explicit instruction.") and the block headings mix theme with style — "The
- *    Playful Ones" is not one of her eight. Every row is seeded null.
+ *    Playful Ones" is not one of her eight. Every row is seeded with the empty set — the
+ *    column has held a set since 0041, and empty is how it spells "none assigned".
  *
  * 2. `evidenceTier`. Proposed by `wing:tag-prompts` for her to correct, and null until she
  *    does, exactly as in `prompt_log`.
@@ -45,8 +46,8 @@ export type PromptRow = {
   promptCode: string;
   promptText: string;
   behavioralSignal: string | null;
-  /** Always null on seed. Hers to assign — see above. */
-  signalCategory: null;
+  /** Always empty on seed. Hers to assign — see above. */
+  signalCategory: readonly never[];
   /** Always null on seed. Proposed separately for her review. */
   evidenceTier: null;
   audienceScope: AudienceScope | null;
@@ -176,7 +177,7 @@ export function toRow(p: ParsedPrompt, document: string): PromptRow {
     promptCode: p.id,
     promptText: p.text,
     behavioralSignal: p.signal,
-    signalCategory: null,
+    signalCategory: [],
     evidenceTier: null,
     audienceScope: scope,
     /*

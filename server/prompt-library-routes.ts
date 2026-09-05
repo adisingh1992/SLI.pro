@@ -15,6 +15,7 @@ import {
   OPENER_POOLS,
   SIGNAL_CATEGORIES,
   STUDENT_SHAPES,
+  canonicalCategories,
   type OpenerDraft,
   type PromptDraft,
 } from "./wing/prompt-library-edit";
@@ -81,7 +82,21 @@ function promptDraftFrom(body: any): PromptDraft {
     populationTags: strArray(body?.populationTags),
     promptCode: str(body?.promptCode),
     behavioralSignal: str(body?.behavioralSignal),
-    signalCategory: str(body?.signalCategory),
+    /*
+     * A string is accepted as a one-element set, not just an array.
+     *
+     * This function reads two different things: a request body from the editor, which
+     * sends the array, and a `prompt_library` row, which holds one since 0041. A client
+     * that has not been redeployed — or a saved request, or a script — still sends the
+     * scalar the API took until now, and silently reading that as "no categories" would
+     * quietly clear a field it meant to keep. Normalised through `canonicalCategories`
+     * either way, so equality below compares one spelling of a set.
+     */
+    signalCategory: canonicalCategories(
+      typeof body?.signalCategory === "string"
+        ? [body.signalCategory]
+        : strArray(body?.signalCategory),
+    ),
     evidenceTier: Number.isFinite(tier) && tier > 0 ? tier : null,
     audienceScope: str(body?.audienceScope),
     cadence: str(body?.cadence),
@@ -181,6 +196,22 @@ export function registerPromptLibraryRoutes(app: Express) {
         return out;
       };
 
+      /*
+       * For a column holding a set. A prompt in two categories counts once in each, so
+       * these totals exceed the prompt count — which is what "how much of the library
+       * touches energy" needs, and is why it is a separate helper rather than `tally`
+       * given a first element.
+       */
+      const tallyEach = (pick: (r: (typeof rows)[number]) => readonly string[]) => {
+        const out: Record<string, number> = {};
+        for (const r of live) {
+          const values = pick(r);
+          if (!values.length) out["(none)"] = (out["(none)"] ?? 0) + 1;
+          for (const v of values) out[v] = (out[v] ?? 0) + 1;
+        }
+        return out;
+      };
+
       res.json({
         prompts: rows,
         counts: {
@@ -189,7 +220,7 @@ export function registerPromptLibraryRoutes(app: Express) {
           byCadence: tally((r) => r.cadence),
           byLibrary: tally((r) => r.library),
           byAudienceScope: tally((r) => r.audienceScope),
-          bySignalCategory: tally((r) => r.signalCategory),
+          bySignalCategory: tallyEach((r) => r.signalCategory ?? []),
           /*
            * The one that is a problem rather than a statistic. A live prompt with no
            * cadence is in no pool; `reachability` says so per prompt, and this says how
@@ -206,11 +237,13 @@ export function registerPromptLibraryRoutes(app: Express) {
            * look for the same reason.
            */
           tierBySource: tally((r) => (r.evidenceTier === null ? null : r.evidenceTierSource)),
-          categoryBySource: tally((r) => (r.signalCategory === null ? null : r.signalCategorySource)),
+          categoryBySource: tally((r) =>
+            (r.signalCategory ?? []).length === 0 ? null : r.signalCategorySource,
+          ),
           needsReview: live.filter(
             (r) =>
               (r.evidenceTier !== null && r.evidenceTierSource !== "danielle") ||
-              (r.signalCategory !== null && r.signalCategorySource !== "danielle"),
+              ((r.signalCategory ?? []).length > 0 && r.signalCategorySource !== "danielle"),
           ).length,
         },
       });
@@ -290,7 +323,7 @@ export function registerPromptLibraryRoutes(app: Express) {
           populationTags: draft.populationTags as string[],
           promptCode: draft.promptCode,
           behavioralSignal: draft.behavioralSignal,
-          signalCategory: draft.signalCategory,
+          signalCategory: draft.signalCategory as string[],
           evidenceTier: draft.evidenceTier,
           /*
            * A value entered through this screen is a person's decision, not a proposal —
@@ -298,7 +331,7 @@ export function registerPromptLibraryRoutes(app: Express) {
            * every other optional column here.
            */
           evidenceTierSource: draft.evidenceTier === null ? null : "danielle",
-          signalCategorySource: draft.signalCategory === null ? null : "danielle",
+          signalCategorySource: draft.signalCategory.length === 0 ? null : "danielle",
           audienceScope: draft.audienceScope,
           cadence: draft.cadence,
           deliveryMarker: draft.deliveryMarker,
@@ -363,7 +396,11 @@ export function registerPromptLibraryRoutes(app: Express) {
         current.evidenceTierSource,
       );
       const categoryProvenance = humanProvenance(
-        draft.signalCategory !== current.signalCategory,
+        /*
+         * Both sides are canonical — `promptDraftFrom` normalises whichever it was given,
+         * and it is what read `current` too — so this compares sets, not orderings.
+         */
+        JSON.stringify(draft.signalCategory) !== JSON.stringify(before.signalCategory),
         current.signalCategoryBecause,
         current.signalCategorySource,
       );
@@ -382,7 +419,7 @@ export function registerPromptLibraryRoutes(app: Express) {
             populationTags: draft.populationTags as string[],
             promptCode: draft.promptCode,
             behavioralSignal: draft.behavioralSignal,
-            signalCategory: draft.signalCategory,
+            signalCategory: draft.signalCategory as string[],
             evidenceTier: draft.evidenceTier,
             evidenceTierBecause: tierProvenance.because,
             evidenceTierSource: tierProvenance.source,
@@ -512,7 +549,7 @@ export function registerPromptLibraryRoutes(app: Express) {
               populationTags: old.populationTags,
               promptCode: old.promptCode,
               behavioralSignal: old.behavioralSignal,
-              signalCategory: old.signalCategory,
+              signalCategory: draft.signalCategory as string[],
               evidenceTier: old.evidenceTier,
               audienceScope: old.audienceScope,
               cadence: old.cadence,

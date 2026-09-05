@@ -31,7 +31,7 @@ const c = (over: Partial<Candidate> = {}): Candidate => ({
   populationTags: null,
   cadence: "micro_journal",
   library: "approachable",
-  signalCategory: null,
+  signalCategory: [],
   eventSensitive: false,
   ...over,
 });
@@ -204,9 +204,10 @@ console.log("\nA prompt with no pool still gets drawn");
  * ───────────────────────────────────────────────────────────────────────── */
 console.log("\nCategory rotation is implemented, and reports that it is inert today");
 {
-  const fresh = c({ signalCategory: "energy" });
-  const stale = c({ signalCategory: "language" });
-  const recent = ["language", "decision", "career"];
+  const fresh = c({ signalCategory: ["energy"] });
+  const stale = c({ signalCategory: ["language"] });
+  /* One entry per send, newest first — see SelectionContext.recentCategories. */
+  const recent = [["language"], ["decision"], ["career"]];
 
   const bad: string[] = [];
   if (weightOf(stale, recent) !== 1) bad.push(`a recently used category weighs ${weightOf(stale, recent)}, expected halved`);
@@ -216,16 +217,73 @@ console.log("\nCategory rotation is implemented, and reports that it is inert to
   if (!withCategories.categoryRotationActive) bad.push("rotation ran but reported inactive");
 
   /* The library as it stands today: every category null. */
-  const uncategorised = [c({ signalCategory: null }), c({ signalCategory: null })];
+  const uncategorised = [c({ signalCategory: [] }), c({ signalCategory: [] })];
   const asSeeded = selectPrompt(uncategorised, ctx({ recentCategories: recent }), seq([0]));
   if (asSeeded.categoryRotationActive) bad.push("rotation reported active on a library with no categories");
   if (asSeeded.promptId === null) bad.push("an uncategorised library selected nothing");
 
   /* A category she has not used recently is never penalised, however long the history. */
-  const longHistory = ["language", "decision", "career", "energy", "industry"];
+  const longHistory = [["language"], ["decision"], ["career"], ["energy"], ["industry"]];
   if (weightOf(fresh, longHistory) !== 2) bad.push("the rotation window is not bounded — an old category still penalises");
 
   check("rotation", bad.length === 0, bad.length === 0 ? "halves a recent category, bounded at 3, and reports inactive on today's library" : bad.join("; "));
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+ * 6b. A prompt carrying several categories (0041).
+ *
+ * Two rules, and both are decisions rather than consequences of the data shape, so both
+ * are pinned here rather than left to be inferred from the implementation:
+ *
+ *   ANY, not ALL — a prompt is stale when any one of its categories was covered. Under
+ *   ALL, the more categories a prompt carried the harder it would be to make stale, so
+ *   broadly-tagged prompts would quietly win more draws than narrow ones.
+ *
+ *   The window counts SENDS, not category mentions. A flattened list sliced at three
+ *   would let one three-category send fill the window on its own and stop the two sends
+ *   before it counting as recent — a change to her rule produced by a data shape.
+ * ───────────────────────────────────────────────────────────────────────── */
+console.log("\nA prompt with several categories is stale if any of them was covered");
+{
+  const bad: string[] = [];
+
+  const both = c({ signalCategory: ["energy", "career"] });
+  const oneCovered = [["career"], ["decision"], ["industry"]];
+  if (weightOf(both, oneCovered) !== 1) {
+    bad.push(`one covered category of two did not halve: ${weightOf(both, oneCovered)}`);
+  }
+
+  const noneCovered = [["language"], ["decision"], ["industry"]];
+  if (weightOf(both, noneCovered) !== 2) {
+    bad.push(`neither category covered but still halved: ${weightOf(both, noneCovered)}`);
+  }
+
+  /*
+   * The window is three SENDS. `industry` is in the fourth, so it must not penalise —
+   * even though a flattened reading would have it inside the first three mentions.
+   */
+  const wide = c({ signalCategory: ["industry"] });
+  const bySend = [["energy", "career"], ["language"], ["decision"], ["industry"]];
+  if (weightOf(wide, bySend) !== 2) {
+    bad.push("a category four sends back still penalises — the window is counting mentions, not sends");
+  }
+  const inWindow = c({ signalCategory: ["career"] });
+  if (weightOf(inWindow, bySend) !== 1) {
+    bad.push("a category in the newest send's set did not halve");
+  }
+
+  /* An uncategorised prompt is never stale, however much history there is. */
+  if (weightOf(c({ signalCategory: [] }), bySend) !== 2) {
+    bad.push("an uncategorised prompt was penalised by the rotation");
+  }
+
+  check(
+    "multi-category rotation",
+    bad.length === 0,
+    bad.length === 0
+      ? "any-not-all, and the window is bounded at 3 sends rather than 3 mentions"
+      : bad.join("; "),
+  );
 }
 
 /* ─────────────────────────────────────────────────────────────────────────
@@ -241,7 +299,7 @@ console.log("\nEvery eligible prompt is reachable, and none is drawn when it sho
     c({ library: "approachable" }),
     c({ library: "reflective" }),
     c({ library: null }),
-    c({ library: "approachable", signalCategory: "energy" }),
+    c({ library: "approachable", signalCategory: ["energy"] }),
   ];
   const hit = new Map<number, number>();
   const N = 2000;

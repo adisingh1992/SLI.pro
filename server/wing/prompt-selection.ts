@@ -52,7 +52,8 @@ export type Candidate = {
   populationTags: readonly string[] | null;
   cadence: string | null;
   library: string | null;
-  signalCategory: string | null;
+  /** Zero or more of her eight — a set since 0041. Empty means uncategorised. */
+  signalCategory: readonly string[] | null;
   eventSensitive: boolean;
 };
 
@@ -63,8 +64,19 @@ export type SelectionContext = {
   cadence: "micro_journal" | "heartbeat" | "synthesis_cycle";
   /** Prompt ids delivered to this student inside the no-repeat window. */
   recentPromptIds: readonly number[];
-  /** Signal categories delivered recently, newest first. Empty until she assigns them. */
-  recentCategories: readonly string[];
+  /**
+   * The signal categories of the recent sends, newest send first — one entry per SEND,
+   * each holding that prompt's categories.
+   *
+   * Nested rather than flattened, because `CATEGORY_WINDOW` counts sends. Flattening
+   * would make the window mean "the last three category mentions", so a single prompt
+   * carrying three categories would fill it on its own and the two sends before it would
+   * stop counting as recent — a quiet change to a rule of hers, produced by a data-shape
+   * decision rather than by anybody deciding it.
+   *
+   * Empty until she assigns categories.
+   */
+  recentCategories: readonly (readonly string[])[];
   /** True when a prompt has already gone out to this student today — IG-MJ05. */
   sentToday: boolean;
   /**
@@ -147,7 +159,7 @@ export function eligible(
  */
 export function weightOf(
   c: Candidate,
-  recentCategories: readonly string[],
+  recentCategories: readonly (readonly string[])[],
 ): number {
   const pool = POOL_WEIGHT[c.library ?? ""] ?? DEFAULT_WEIGHT;
 
@@ -157,8 +169,26 @@ export function weightOf(
    * excluding it would make the rotation a hard cycle, and with eight categories and one
    * prompt a day that becomes predictable inside a fortnight.
    */
-  const covered = recentCategories.slice(0, CATEGORY_WINDOW);
-  const stale = c.signalCategory !== null && covered.indexOf(c.signalCategory) >= 0;
+  const covered: string[] = [];
+  for (const send of recentCategories.slice(0, CATEGORY_WINDOW)) {
+    for (const cat of send) if (covered.indexOf(cat) < 0) covered.push(cat);
+  }
+
+  /*
+   * ── ANY, NOT ALL, NOW THAT A PROMPT CARRIES SEVERAL ──────────────────────
+   * A prompt tagged energy + career is treated as recently covered if EITHER was seen,
+   * which is the reading that keeps the rotation pushing toward ground that has not
+   * been covered. The alternative — stale only when every one of its categories was
+   * covered — makes a broadly tagged prompt harder to make stale than a narrow one, so
+   * the more categories a prompt carried the more often it would win the draw. That
+   * would be a selection bias toward multi-tagged prompts invented here, and nobody has
+   * ruled on one.
+   *
+   * For a prompt carrying exactly one category this is the same arithmetic as before.
+   */
+  const cats = c.signalCategory ?? [];
+  let stale = false;
+  for (const cat of cats) if (covered.indexOf(cat) >= 0) stale = true;
 
   return stale ? pool / 2 : pool;
 }

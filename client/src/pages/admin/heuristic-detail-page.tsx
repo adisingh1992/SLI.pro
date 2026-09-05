@@ -90,6 +90,157 @@ const KIND_META = {
   },
 } as const;
 
+/**
+ * What the field components read and call. Passed as one object rather than a dozen
+ * props, because it is one thing: the page's editing state and the handlers that change
+ * it.
+ *
+ * ── WHY THESE TWO COMPONENTS ARE OUT HERE AND MUST STAY OUT ──────────────
+ * They used to be declared inside `AdminHeuristicDetailPage`, closing over its state
+ * directly, which cost a character of typing per click.
+ *
+ * A function declared in a render body is a NEW function on every render, and React
+ * identifies a component by that function reference. Typing one character called
+ * `setDrafts`, which re-rendered the page, which produced a different `FieldRow` — so
+ * React saw a different component type in that position, unmounted the subtree, and
+ * mounted a fresh one. The textarea it destroyed was the focused element, so focus went
+ * with it and every keystroke needed another click.
+ *
+ * The fix is placement, not memoisation: at module scope the reference is stable, React
+ * reconciles the same component, and the DOM node — with its selection and focus —
+ * survives. `ctx` being a fresh object each render is fine; that re-renders these, which
+ * is all it should ever have done.
+ */
+type FieldCtx = {
+  currentFor: (type: ComponentType) => ComponentRow | undefined;
+  historyFor: (type: ComponentType) => ComponentRow[];
+  valueFor: (type: ComponentType) => string;
+  isDirty: (type: ComponentType) => boolean;
+  editing: Record<string, boolean>;
+  openHistory: Record<string, boolean>;
+  /** The field currently being saved, or null. */
+  savingType: ComponentType | null;
+  startEdit: (type: ComponentType) => void;
+  cancelEdit: (type: ComponentType) => void;
+  setDraft: (type: ComponentType, value: string) => void;
+  save: (type: ComponentType) => void;
+  toggleHistory: (type: ComponentType) => void;
+};
+
+/* ── One field, read or editing ───────────────────────────────────────── */
+function FieldRow({ type, ctx }: { type: ComponentType; ctx: FieldCtx }) {
+  const spec = COMPONENT_SPECS[type];
+  const existing = ctx.currentFor(type);
+  const history = ctx.historyFor(type);
+  const isEditing = !!ctx.editing[type];
+  const saving = ctx.savingType === type;
+
+  return (
+    <div className="border-t px-5 py-4 first:border-t-0">
+      <div className="mb-2 flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <div className="flex flex-wrap items-center gap-2">
+            <h3 className="text-sm font-medium">{spec.label}</h3>
+            <EngineUseBadge type={type} />
+          </div>
+          <p className="mt-0.5 text-xs text-muted-foreground">
+            {existing
+              ? `Version ${existing.versionNumber}${
+                  history.length ? ` · ${history.length} earlier` : ""
+                }`
+              : "Not written yet"}
+          </p>
+        </div>
+
+        {!isEditing && (
+          <Button variant="ghost" size="sm" onClick={() => ctx.startEdit(type)}>
+            <Pencil className="mr-1.5 h-3.5 w-3.5" />
+            {existing ? "Edit" : "Write"}
+          </Button>
+        )}
+      </div>
+
+      {isEditing ? (
+        <div className="space-y-3">
+          <ComponentField
+            type={type}
+            value={ctx.valueFor(type)}
+            onChange={(v) => ctx.setDraft(type, v)}
+            rows={type === "notes" ? 6 : 5}
+          />
+          <div className="flex items-center gap-2">
+            <Button
+              size="sm"
+              disabled={!ctx.isDirty(type) || saving}
+              onClick={() => ctx.save(type)}
+            >
+              {saving && <Loader2 className="mr-2 h-3 w-3 animate-spin" />}
+              Save new version
+            </Button>
+            <Button variant="ghost" size="sm" onClick={() => ctx.cancelEdit(type)} disabled={saving}>
+              <X className="mr-1.5 h-3.5 w-3.5" />
+              Cancel
+            </Button>
+            {ctx.isDirty(type) && (
+              <span className="text-xs text-muted-foreground">
+                The current version is kept, not overwritten.
+              </span>
+            )}
+          </div>
+        </div>
+      ) : (
+        <ComponentReadout type={type} content={existing?.content ?? null} />
+      )}
+
+      {history.length > 0 && !isEditing && (
+        <div className="mt-3">
+          <button
+            type="button"
+            onClick={() => ctx.toggleHistory(type)}
+            className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
+          >
+            <History className="h-3 w-3" />
+            {ctx.openHistory[type] ? "Hide" : "Show"} {history.length} earlier version
+            {history.length === 1 ? "" : "s"}
+            <ChevronDown
+              className={`h-3 w-3 transition-transform ${ctx.openHistory[type] ? "rotate-180" : ""}`}
+            />
+          </button>
+          {ctx.openHistory[type] && (
+            <div className="mt-2 space-y-2 rounded-md border bg-muted/30 p-3">
+              {history.map((h) => (
+                <div key={h.id} className="border-l-2 pl-3 text-xs">
+                  <p className="text-muted-foreground">
+                    v{h.versionNumber} · {new Date(h.createdAt).toLocaleDateString()}
+                  </p>
+                  <p className="mt-0.5 whitespace-pre-wrap">{h.content}</p>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function FieldGroupCard({ group, ctx }: { group: FieldGroup; ctx: FieldCtx }) {
+  return (
+    <div>
+      <h2 className="mb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+        {GROUP_LABELS[group]}
+      </h2>
+      <Card className="overflow-hidden">
+        <CardContent className="p-0">
+          {fieldsIn(group).map((type) => (
+            <FieldRow key={type} type={type} ctx={ctx} />
+          ))}
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
 export default function AdminHeuristicDetailPage() {
   const { id } = useParams<{ id: string }>();
   const [, navigate] = useLocation();
@@ -224,6 +375,28 @@ export default function AdminHeuristicDetailPage() {
     setEditing((e) => ({ ...e, [type]: false }));
   };
 
+  /*
+   * Everything the field components read or call, in one object. Rebuilt each render,
+   * which is correct: it re-renders them, where the old nested-function arrangement
+   * remounted them. See `FieldCtx` above.
+   */
+  const fieldCtx: FieldCtx = {
+    currentFor,
+    historyFor,
+    valueFor,
+    isDirty,
+    editing,
+    openHistory,
+    savingType: reviseMutation.isPending
+      ? (reviseMutation.variables?.type ?? null)
+      : null,
+    startEdit,
+    cancelEdit,
+    setDraft: (type, value) => setDrafts((d) => ({ ...d, [type]: value })),
+    save: (type) => reviseMutation.mutate({ type, content: drafts[type] ?? "" }),
+    toggleHistory: (type) => setOpenHistory((h) => ({ ...h, [type]: !h[type] })),
+  };
+
   const kind = KIND_META[(card.cardKind ?? "coaching_card") as keyof typeof KIND_META];
   const KindIcon = kind.icon;
 
@@ -232,120 +405,6 @@ export default function AdminHeuristicDetailPage() {
 
   const enoughEvidence =
     (performance?.totalSessionsApplied ?? 0) >= 10 && (performance?.meanComposite ?? 0) > 0;
-
-  /* ── One field, read or editing ───────────────────────────────────────── */
-  function FieldRow({ type }: { type: ComponentType }) {
-    const spec = COMPONENT_SPECS[type];
-    const existing = currentFor(type);
-    const history = historyFor(type);
-    const isEditing = !!editing[type];
-    const saving = reviseMutation.isPending && reviseMutation.variables?.type === type;
-
-    return (
-      <div className="border-t px-5 py-4 first:border-t-0">
-        <div className="mb-2 flex items-start justify-between gap-3">
-          <div className="min-w-0">
-            <div className="flex flex-wrap items-center gap-2">
-              <h3 className="text-sm font-medium">{spec.label}</h3>
-              <EngineUseBadge type={type} />
-            </div>
-            <p className="mt-0.5 text-xs text-muted-foreground">
-              {existing
-                ? `Version ${existing.versionNumber}${
-                    history.length ? ` · ${history.length} earlier` : ""
-                  }`
-                : "Not written yet"}
-            </p>
-          </div>
-
-          {!isEditing && (
-            <Button variant="ghost" size="sm" onClick={() => startEdit(type)}>
-              <Pencil className="mr-1.5 h-3.5 w-3.5" />
-              {existing ? "Edit" : "Write"}
-            </Button>
-          )}
-        </div>
-
-        {isEditing ? (
-          <div className="space-y-3">
-            <ComponentField
-              type={type}
-              value={valueFor(type)}
-              onChange={(v) => setDrafts((d) => ({ ...d, [type]: v }))}
-              rows={type === "notes" ? 6 : 5}
-            />
-            <div className="flex items-center gap-2">
-              <Button
-                size="sm"
-                disabled={!isDirty(type) || saving}
-                onClick={() => reviseMutation.mutate({ type, content: drafts[type] ?? "" })}
-              >
-                {saving && <Loader2 className="mr-2 h-3 w-3 animate-spin" />}
-                Save new version
-              </Button>
-              <Button variant="ghost" size="sm" onClick={() => cancelEdit(type)} disabled={saving}>
-                <X className="mr-1.5 h-3.5 w-3.5" />
-                Cancel
-              </Button>
-              {isDirty(type) && (
-                <span className="text-xs text-muted-foreground">
-                  The current version is kept, not overwritten.
-                </span>
-              )}
-            </div>
-          </div>
-        ) : (
-          <ComponentReadout type={type} content={existing?.content ?? null} />
-        )}
-
-        {history.length > 0 && !isEditing && (
-          <div className="mt-3">
-            <button
-              type="button"
-              onClick={() => setOpenHistory((h) => ({ ...h, [type]: !h[type] }))}
-              className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
-            >
-              <History className="h-3 w-3" />
-              {openHistory[type] ? "Hide" : "Show"} {history.length} earlier version
-              {history.length === 1 ? "" : "s"}
-              <ChevronDown
-                className={`h-3 w-3 transition-transform ${openHistory[type] ? "rotate-180" : ""}`}
-              />
-            </button>
-            {openHistory[type] && (
-              <div className="mt-2 space-y-2 rounded-md border bg-muted/30 p-3">
-                {history.map((h) => (
-                  <div key={h.id} className="border-l-2 pl-3 text-xs">
-                    <p className="text-muted-foreground">
-                      v{h.versionNumber} · {new Date(h.createdAt).toLocaleDateString()}
-                    </p>
-                    <p className="mt-0.5 whitespace-pre-wrap">{h.content}</p>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
-      </div>
-    );
-  }
-
-  function FieldGroupCard({ group }: { group: FieldGroup }) {
-    return (
-      <div>
-        <h2 className="mb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
-          {GROUP_LABELS[group]}
-        </h2>
-        <Card className="overflow-hidden">
-          <CardContent className="p-0">
-            {fieldsIn(group).map((type) => (
-              <FieldRow key={type} type={type} />
-            ))}
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
 
   return (
     <AdminLayout>
@@ -427,8 +486,8 @@ export default function AdminHeuristicDetailPage() {
               </p>
             )}
 
-            <FieldGroupCard group="core" />
-            <FieldGroupCard group="reference" />
+            <FieldGroupCard group="core" ctx={fieldCtx} />
+            <FieldGroupCard group="reference" ctx={fieldCtx} />
 
             {/* Pre-v2 fields, collapsed. A v2 card leaves all three empty and
                 that is correct, so they are not shown as gaps by default. */}
@@ -453,7 +512,7 @@ export default function AdminHeuristicDetailPage() {
                   <Card className="overflow-hidden">
                     <CardContent className="p-0">
                       {fieldsIn("legacy").map((type) => (
-                        <FieldRow key={type} type={type} />
+                        <FieldRow key={type} type={type} ctx={fieldCtx} />
                       ))}
                     </CardContent>
                   </Card>

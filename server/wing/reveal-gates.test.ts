@@ -21,6 +21,7 @@
 import {
   type EvidenceEvent,
   type PromptDelivery,
+  type SignalCategory,
   categoryWasDelivered,
   classifyShape,
   eventFrom,
@@ -54,13 +55,18 @@ const DAY = 24 * 60 * 60 * 1000;
 const NOW = 1_780_000_000_000;
 
 let seq = 0;
-function ev(p: Partial<EvidenceEvent>): EvidenceEvent {
+/*
+ * `category` is accepted as a convenience alongside `categories` (a set since 0041), so
+ * the single-category cases below still read as one category each — which is what they
+ * are about. Multi-category cases pass `categories` directly.
+ */
+function ev(p: Partial<EvidenceEvent> & { category?: SignalCategory }): EvidenceEvent {
   seq++;
   return {
     channel: p.channel ?? "micro_journal",
     at: p.at ?? NOW - 20 * DAY,
     tier: p.tier ?? 1,
-    category: p.category ?? "energy",
+    categories: p.categories ?? [p.category ?? "energy"],
     shape: p.shape ?? "prose",
     verbatim: p.verbatim ?? `event ${seq}`,
   };
@@ -137,7 +143,7 @@ console.log("\nThe prompt log tells ignored apart from answered thinly");
   const before = failures;
   const delivery: PromptDelivery = {
     promptId: "U30",
-    category: "achievement",
+    categories: ["achievement"],
     tier: 1,
     channel: "micro_journal",
     deliveredAt: NOW - 10 * DAY,
@@ -285,7 +291,7 @@ console.log("\nGate 2 — every condition can fail on its own");
   const noProse = gate2(drop((e) => ({ ...e, shape: "single_word" })), NOW);
   if (noProse.failed.indexOf("quote_productive") < 0) fail("no prose must fail quote productivity");
 
-  const oneCategory = gate2(drop((e) => ({ ...e, category: "energy" })), NOW);
+  const oneCategory = gate2(drop((e) => ({ ...e, categories: ["energy"] as const })), NOW);
   if (oneCategory.failed.indexOf("category_spread") < 0) {
     fail("eight energy responses are a mood log — category spread must fail");
   }
@@ -446,6 +452,97 @@ console.log("\nVerbatim retention, and the two things outside it");
    * requirements true at once.
    */
   if (failures === before) ok("60-day horizon, with self-descriptions and baselines held apart from it");
+}
+
+console.log("\nAn event carrying several categories counts each one toward the spread");
+{
+  const before = failures;
+
+  /*
+   * 0041 and Aditya's call to log every category. The loosening is deliberate and is
+   * pinned here rather than left implicit, because it is the one behavioural consequence
+   * of the change that a reader of the migration alone would not see the size of: three
+   * responses used to be the floor for `distinctCategories`, and one multi-category
+   * response now clears it.
+   *
+   * Everything else about Gate 2 must be untouched by that — the same events still have
+   * to fail the conditions they always failed — so this builds a set that passes the
+   * spread and nothing else, and checks both halves.
+   */
+  const multi = [
+    ev({ tier: 3, categories: ["energy", "relationship", "career"], shape: "single_word", at: NOW - 5 * DAY }),
+  ];
+  const one = gate2(multi, NOW);
+  if (one.failed.indexOf("category_spread") >= 0) {
+    fail("one event in three categories must satisfy the spread — that is what logging every category means");
+  }
+  if (one.failed.indexOf("tier_1_events") < 0 || one.failed.indexOf("quote_productive") < 0) {
+    fail("the other conditions must be unaffected by the category set");
+  }
+
+  /* Two categories is still two, and the floor is three. */
+  const short = gate2(
+    [ev({ categories: ["energy", "relationship"], at: NOW - 5 * DAY })],
+    NOW,
+  );
+  if (short.failed.indexOf("category_spread") < 0) {
+    fail("two categories must not satisfy a three-category floor");
+  }
+
+  /* The same category twice across two events is one category, not two. */
+  const repeated = gate2(
+    [
+      ev({ categories: ["energy", "career"], at: NOW - 6 * DAY }),
+      ev({ categories: ["career", "energy"], at: NOW - 5 * DAY }),
+    ],
+    NOW,
+  );
+  if (repeated.failed.indexOf("category_spread") < 0) {
+    fail("the spread counts DISTINCT categories — repeating a set must not manufacture more");
+  }
+
+  /*
+   * An event with no categories at all is legitimate (its prompt carried none) and must
+   * still count toward every condition that has nothing to do with categories.
+   */
+  const uncategorised = gate2(
+    [
+      ev({ tier: 1, categories: [], shape: "prose", channel: "radar", at: NOW - 4 * DAY }),
+      ev({ tier: 1, categories: [], shape: "prose", channel: "heartbeat", at: NOW - 3 * DAY }),
+    ],
+    NOW,
+  );
+  if (uncategorised.failed.indexOf("category_spread") < 0) {
+    fail("no categories cannot satisfy the spread");
+  }
+  const detail = uncategorised.conditions.find((c) => c.name === "quote_productive")?.detail ?? "";
+  if (!detail.startsWith("2 of ")) {
+    fail(`uncategorised events must still be counted by the other conditions — got "${detail}"`);
+  }
+
+  /* IG-RC10's delivery audit reads the set, not a single value. */
+  const log = [
+    logPrompt(
+      {
+        promptId: "U31",
+        categories: ["energy", "achievement"],
+        tier: 1,
+        channel: "micro_journal",
+        deliveredAt: NOW - 10 * DAY,
+      },
+      { at: NOW - 9 * DAY, text: "I ran the retro myself and it went fine" },
+    ),
+  ];
+  if (!categoryWasDelivered(log, "achievement", NOW - 30 * DAY, NOW)) {
+    fail("a category in the delivered set must count as delivered, even when it is not the first");
+  }
+  if (categoryWasDelivered(log, "influence", NOW - 30 * DAY, NOW)) {
+    fail("a category outside the delivered set must still report none");
+  }
+
+  if (failures === before) {
+    ok("each category counts once toward the spread, empties still count elsewhere, and the audit reads the set");
+  }
 }
 
 console.log(failures ? `\n${failures} failure(s)\n` : "\nall passed\n");

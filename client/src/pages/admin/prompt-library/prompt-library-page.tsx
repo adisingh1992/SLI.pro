@@ -1,6 +1,6 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { Loader2 } from "lucide-react";
+import { ChevronDown, Loader2 } from "lucide-react";
 import AdminLayout from "../layout";
 import { RequirePlatformAdmin } from "../require-platform-admin";
 import { PageShell, PageHeader } from "@/components/admin/page";
@@ -25,6 +25,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  DropdownMenu,
+  DropdownMenuCheckboxItem,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 /**
  * Reviewing the tier and category proposals `populate-prompt-attributes.ts` wrote.
@@ -38,6 +46,16 @@ import {
  * different value in either dropdown below is what turns it into a person's answer.
  * Changing nothing leaves the proposal exactly as it was, visible in the "needs review"
  * filter for as long as nobody has looked at it.
+ *
+ * ── SIGNAL CATEGORY IS A SET, EVIDENCE TIER IS NOT ────────────────────────
+ * Since 0041 a prompt carries zero or more of her eight — "a single prompt response
+ * could contain both an energy signal and a relationship signal" (her Sept 4 pre-read,
+ * §7e). So the two controls in this table are deliberately different shapes: the tier is
+ * still one value from a Select, and the category is a checkbox menu that commits when it
+ * closes. `SignalCategoryPicker` below says why the commit is deferred.
+ *
+ * `signalCategoryBecause` and `signalCategorySource` still describe the whole set rather
+ * than one member of it — there is one review decision per prompt, not one per category.
  *
  * ── WHY A CHANGE HERE RETIRES A ROW INSTEAD OF UPDATING ONE ───────────────
  * `/api/admin/prompt-library/:id` (see prompt-library-routes.ts) never updates a live
@@ -55,7 +73,7 @@ type PromptRow = {
   populationTags: string[];
   promptCode: string | null;
   behavioralSignal: string | null;
-  signalCategory: string | null;
+  signalCategory: string[];
   signalCategoryBecause: string | null;
   signalCategorySource: string | null;
   evidenceTier: number | null;
@@ -93,6 +111,20 @@ const CATEGORY_OPTIONS = [
 
 const CLEAR = "__clear__";
 
+/**
+ * The categories in CATEGORY_OPTIONS order, deduplicated — the client half of
+ * `canonicalCategories` on the server.
+ *
+ * Both halves exist because both questions are real. The server needs it so a save is
+ * stored in one spelling; this needs it so "did she actually change anything" can be a
+ * string comparison, and ticking energy-then-career does not count as a different answer
+ * from ticking career-then-energy. Every change here retires a row and inserts a
+ * successor (see the header), so a spurious "changed" is a spurious version.
+ */
+function canonical(values: readonly string[]): string[] {
+  return CATEGORY_OPTIONS.filter((c) => values.includes(c));
+}
+
 function sourceLabel(source: string | null): string {
   if (source === "rule_engine") return "rule engine";
   if (source === "claude_review") return "Claude's first pass";
@@ -123,6 +155,112 @@ function draftFrom(row: PromptRow, override: Partial<PromptRow>) {
     library: merged.library,
     eventSensitive: merged.eventSensitive,
   };
+}
+
+/**
+ * The signal-category picker — several of her eight, not one.
+ *
+ * ── WHY IT SAVES ON CLOSE AND NOT ON EACH TICK ────────────────────────────
+ * The tier dropdown next to it saves on change, which is right for a control where one
+ * click IS the whole answer. This one is not: "energy and relationship" takes two clicks,
+ * and saving each of them would retire a live row and insert a successor per tick — so a
+ * three-category prompt would leave four rows in its own lineage, three of which are
+ * states she passed through rather than answers she gave. The lineage is meant to read as
+ * the history of the prompt, and `/api/admin/prompt-library/:id` walks it on every open.
+ *
+ * So the menu holds a draft, and closing it is what commits — and only when the set
+ * actually differs, because the route treats an identical save as a no-op but the round
+ * trip is still a round trip.
+ */
+function SignalCategoryPicker({
+  value,
+  disabled,
+  onCommit,
+}: {
+  value: readonly string[];
+  disabled: boolean;
+  onCommit: (next: string[]) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [draft, setDraft] = useState<string[]>(() => canonical(value));
+
+  /*
+   * Reseed only when the row's own value actually changes, keyed on the content rather
+   * than the array identity — the list re-renders on every query settle and hands down a
+   * new array each time, so a `[value]` dependency would fire constantly.
+   *
+   * Not on close, which is the version that looks right and is not: closing commits, and
+   * the save takes a round trip, so resetting there would show the old set for as long as
+   * the request took and then flip to the new one. Leaving the draft alone means the menu
+   * keeps showing what she picked until the saved row replaces it. It is also what she
+   * wants when a save FAILS — the list is not invalidated on error, so her selection
+   * survives for a retry instead of silently reverting.
+   */
+  const valueKey = canonical(value).join(",");
+  useEffect(() => {
+    setDraft(canonical(value));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [valueKey]);
+
+  const commit = (next: string[]) => {
+    const before = canonical(value);
+    const after = canonical(next);
+    if (JSON.stringify(before) !== JSON.stringify(after)) onCommit(after);
+  };
+
+  return (
+    <DropdownMenu
+      open={open}
+      onOpenChange={(next) => {
+        setOpen(next);
+        if (!next) commit(draft);
+      }}
+    >
+      <DropdownMenuTrigger asChild disabled={disabled}>
+        <Button
+          variant="outline"
+          size="sm"
+          className="h-8 w-44 justify-between font-normal"
+        >
+          <span className="truncate">
+            {draft.length ? (
+              /* Two names and a count: eight names in a table cell is an ellipsis. */
+              <>
+                {draft.slice(0, 2).join(", ")}
+                {draft.length > 2 ? ` +${draft.length - 2}` : ""}
+              </>
+            ) : (
+              <span className="text-muted-foreground">unset</span>
+            )}
+          </span>
+          <ChevronDown className="h-3.5 w-3.5 shrink-0 opacity-50" />
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="start" className="w-44">
+        {CATEGORY_OPTIONS.map((c) => (
+          <DropdownMenuCheckboxItem
+            key={c}
+            checked={draft.includes(c)}
+            /*
+             * Ticking one must not close the menu — picking several is the entire point
+             * of the control, and the default select-then-close would make each extra
+             * category a separate save.
+             */
+            onSelect={(e) => e.preventDefault()}
+            onCheckedChange={(checked) =>
+              setDraft((d) => canonical(checked ? [...d, c] : d.filter((x) => x !== c)))
+            }
+          >
+            {c}
+          </DropdownMenuCheckboxItem>
+        ))}
+        <DropdownMenuSeparator />
+        <DropdownMenuItem onSelect={(e) => { e.preventDefault(); setDraft([]); }}>
+          clear
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
 }
 
 export default function AdminPromptLibraryPage() {
@@ -165,7 +303,8 @@ export default function AdminPromptLibraryPage() {
       if (!r.active) return false;
       if (needsReviewOnly) {
         const tierReviewed = r.evidenceTier === null || r.evidenceTierSource === "danielle";
-        const categoryReviewed = r.signalCategory === null || r.signalCategorySource === "danielle";
+        const categoryReviewed =
+          r.signalCategory.length === 0 || r.signalCategorySource === "danielle";
         if (tierReviewed && categoryReviewed) return false;
       }
       if (q && !r.promptText.toLowerCase().includes(q)) return false;
@@ -302,33 +441,27 @@ export default function AdminPromptLibraryPage() {
 
                         <TableCell className="align-top">
                           <div className="flex items-center gap-2">
-                            <Select
-                              value={row.signalCategory ?? undefined}
-                              onValueChange={(v) =>
+                            <SignalCategoryPicker
+                              value={row.signalCategory}
+                              disabled={savingId === row.id && saveMutation.isPending}
+                              onCommit={(next) =>
                                 saveMutation.mutate({
                                   id: row.id,
-                                  override: { signalCategory: v === CLEAR ? null : v },
+                                  override: { signalCategory: next },
                                 })
                               }
-                            >
-                              <SelectTrigger className="h-8 w-36">
-                                <SelectValue placeholder="unset" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {CATEGORY_OPTIONS.map((c) => (
-                                  <SelectItem key={c} value={c}>
-                                    {c}
-                                  </SelectItem>
-                                ))}
-                                <SelectItem value={CLEAR}>clear</SelectItem>
-                              </SelectContent>
-                            </Select>
+                            />
+                            {savingId === row.id && saveMutation.isPending && (
+                              <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />
+                            )}
                           </div>
                           <Badge
                             variant={sourceVariant(row.signalCategorySource)}
                             className="mt-1.5 text-[10px]"
                           >
-                            {row.signalCategory === null ? "unset" : sourceLabel(row.signalCategorySource)}
+                            {row.signalCategory.length === 0
+                              ? "unset"
+                              : sourceLabel(row.signalCategorySource)}
                           </Badge>
                           {row.signalCategoryBecause && (
                             <p className="mt-1 text-xs text-muted-foreground">{row.signalCategoryBecause}</p>

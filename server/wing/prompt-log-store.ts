@@ -37,8 +37,11 @@ export type DeliveryRecord = {
   /** The library row, so tier and category can be backfilled against what was sent. */
   promptId: number | null;
   channel: Channel;
-  /** Null where the prompt's own category does not map to one of her eight. */
-  signalCategory: SignalCategory | null;
+  /**
+   * Every one of her eight the prompt carried. Empty where it carried none, or where
+   * none of its own categories map — see `signalCategoriesFor`.
+   */
+  signalCategories: readonly SignalCategory[];
   /** Null until she approves the tiers; `promptId` is what makes the backfill possible. */
   tier: EvidenceTier | null;
 };
@@ -70,6 +73,29 @@ export function signalCategoryFor(libraryCategory: string | null | undefined): S
 }
 
 /**
+ * The same mapping over the set a library row now carries (0041).
+ *
+ * Unmapped entries are dropped rather than recorded as null, for `CATEGORY_MAP`'s own
+ * reason one comment up: a wrong category is worse than a missing one. Dropping one of
+ * three leaves the other two counting correctly; recording a null alongside them would
+ * put a non-category into a column whose whole job is distinctness. Duplicates are
+ * collapsed, because Gate 2 counts DISTINCT categories and a row that said
+ * `{energy, energy}` would be claiming a spread it does not have.
+ */
+export function signalCategoriesFor(
+  libraryCategories: readonly string[] | string | null | undefined,
+): SignalCategory[] {
+  if (!libraryCategories) return [];
+  const list = typeof libraryCategories === "string" ? [libraryCategories] : libraryCategories;
+  const out: SignalCategory[] = [];
+  for (const raw of list) {
+    const mapped = signalCategoryFor(raw);
+    if (mapped !== null && out.indexOf(mapped) < 0) out.push(mapped);
+  }
+  return out;
+}
+
+/**
  * Records that Wing asked. Call at the moment the prompt is shown or sent.
  *
  * Returns the row id so a caller that already knows the response can close it, and null
@@ -82,7 +108,8 @@ export async function logDelivery(db: Db, d: DeliveryRecord): Promise<number | n
     const r = await db.execute(sql`
       INSERT INTO "wing"."prompt_log"
         ("student_id", "prompt_id", "channel", "signal_category", "evidence_tier")
-      VALUES (${d.studentId}, ${d.promptId}, ${d.channel}, ${d.signalCategory}, ${d.tier})
+      VALUES (${d.studentId}, ${d.promptId}, ${d.channel},
+              ${d.signalCategories as string[]}::text[], ${d.tier})
       RETURNING "id"
     `);
     const id = r.rows?.[0]?.id;
@@ -112,7 +139,7 @@ export async function logResponse(
     channel: Channel;
     text: string;
     at?: Date;
-    signalCategory?: SignalCategory | null;
+    signalCategories?: readonly SignalCategory[];
     tier?: EvidenceTier | null;
   },
 ): Promise<void> {
@@ -125,7 +152,7 @@ export async function logResponse(
   const entry = logPrompt(
     {
       promptId: String(params.promptId ?? ""),
-      category: params.signalCategory ?? "language",
+      categories: params.signalCategories ?? [],
       tier: params.tier ?? 1,
       channel: params.channel,
       deliveredAt: at.getTime(),
@@ -157,7 +184,7 @@ export async function logResponse(
         ("student_id", "prompt_id", "channel", "signal_category", "evidence_tier",
          "delivered_at", "responded_at", "verbatim", "quote_shape", "substantiveness")
       VALUES (${params.studentId}, ${params.promptId}, ${params.channel},
-              ${params.signalCategory ?? null}, ${params.tier ?? null},
+              ${(params.signalCategories ?? []) as string[]}::text[], ${params.tier ?? null},
               ${at.toISOString()}, ${at.toISOString()}, ${params.text},
               ${entry.shape}, ${entry.substantiveness})
     `);
@@ -178,16 +205,21 @@ export async function logResponse(
  * `PromptLogEntry` shape `reveal-evidence.ts`'s `eventFrom` already knows how to turn
  * into an `EvidenceEvent`, rather than duplicating that judgement here.
  *
- * ── WHY A ROW WITH NO TIER OR NO CATEGORY IS SKIPPED ─────────────────────
- * Both are nullable on the table — `evidence_tier` because the 295 proposed tiers were
- * with Danielle and unapproved when the table was written, `signal_category` because a
- * prompt's own category does not always map to one of her eight. `PromptDelivery`
- * requires both non-null, and a delivery whose grade or category isn't known cannot be
- * counted toward Gate 2's tier and category-spread conditions without guessing at one —
- * which is exactly the `signalCategory` population gap `promptLibrary`'s own column
- * comment names as "what currently blocks the Reveal Cycle." So today, on an unpopulated
- * library, this correctly returns nothing: Gate 2 sees no evidence and defers, which is
- * the protected null-Reveal outcome the methodology asks for, not a bug in this reader.
+ * ── WHY A ROW WITH NO TIER IS SKIPPED, AND WHY AN UNCATEGORISED ONE IS NOT ──
+ * `evidence_tier` is nullable because the 295 proposed tiers were with Danielle and
+ * unapproved when the table was written. `PromptDelivery` requires a tier, and a
+ * delivery whose grade isn't known cannot be counted toward Gate 2's tier conditions
+ * without guessing at it, so those rows are still skipped. On a library with no approved
+ * tiers this correctly returns nothing: Gate 2 sees no evidence and defers, which is the
+ * protected null-Reveal outcome the methodology asks for, not a bug in this reader.
+ *
+ * The category condition used to work the same way and no longer does. Since 0041 the
+ * column is a set, and an empty set is a real answer — "this prompt carried none of her
+ * eight" — rather than a missing one. Such a row is still a delivered, answered,
+ * tier-graded event, and dropping it would have quietly undercounted Gate 2's total,
+ * quote-productive, channel and recency conditions to protect a category condition it
+ * contributes nothing to either way. So it is read, with an empty category set, and only
+ * the spread condition ignores it.
  *
  * ── analysisEligible IS ALWAYS true HERE, AND THAT IS A KNOWN GAP ────────
  * `wing.prompt_log` has no column recording whether the turn that produced a response was
@@ -221,14 +253,20 @@ export async function evidenceSince(
     WHERE "student_id" = ${studentId}
       AND "delivered_at" >= ${new Date(effectiveSince).toISOString()}
       AND "evidence_tier" IS NOT NULL
-      AND "signal_category" IS NOT NULL
   `);
 
   const events: EvidenceEvent[] = [];
   for (const row of r.rows ?? []) {
     const entry: PromptLogEntry = {
       promptId: "", // not read back; nothing downstream of EvidenceEvent uses it
-      category: row.signal_category as SignalCategory,
+      /*
+       * `signalCategoriesFor` rather than a bare cast. The column is guarded by a CHECK
+       * against her eight, so in a healthy database the cast would be right — but this
+       * reader is what feeds a threshold, and a row written before the guard (or by a
+       * hand-run UPDATE) reaching Gate 2 as a category it does not recognise is the one
+       * failure mode worth spending a map lookup on. Anything unrecognised is dropped.
+       */
+      categories: signalCategoriesFor(row.signal_category as string[] | null),
       tier: Number(row.evidence_tier) as EvidenceTier,
       channel: row.channel as Channel,
       deliveredAt: new Date(row.delivered_at as string).getTime(),

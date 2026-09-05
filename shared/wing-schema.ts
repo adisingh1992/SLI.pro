@@ -1222,15 +1222,21 @@ export const promptLibrary = wing.table(
      *  informative for the current user." — her Integration Notes. */
     behavioralSignal: text("behavioral_signal"),
 
-    /** One of her eight: language, energy, decision, relationship, industry,
-     *  career, influence, achievement. NULL on every seeded row until she
-     *  assigns them — the library carries analytical prose, not categories, and
-     *  a guess would either manufacture or collapse the distinctness Gate 2
-     *  counts. **This is what currently blocks the Reveal Cycle.** */
-    signalCategory: text("signal_category"),
+    /** Zero or more of her eight: language, energy, decision, relationship,
+     *  industry, career, influence, achievement. Empty on every seeded row until
+     *  she assigns them — the library carries analytical prose, not categories,
+     *  and a guess would either manufacture or collapse the distinctness Gate 2
+     *  counts. **This is what currently blocks the Reveal Cycle.**
+     *
+     *  A set rather than one value since 0041: "a single prompt response could
+     *  contain both an energy signal and a relationship signal" (her Sept 4
+     *  pre-read, §7e). Empty is the only "uncategorised" — like `populationTags`
+     *  above there is no NULL state, so nothing has to decide whether NULL and
+     *  `{}` mean different things. */
+    signalCategory: text("signal_category").array().notNull().default(sql`'{}'`),
 
     /** The words that decided signalCategory — usually a quote from behavioralSignal.
-     *  Migration 0039. */
+     *  Migration 0039. Describes the set as a whole, not one element of it. */
     signalCategoryBecause: text("signal_category_because"),
 
     /** Same vocabulary as evidenceTierSource, for signalCategory. */

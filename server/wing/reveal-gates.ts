@@ -143,7 +143,15 @@ export function gate2(events: readonly EvidenceEvent[], now: number): GateVerdic
   for (const e of events) {
     if (e.tier === 1) tier1++;
     if (isQuoteProductive(e.shape)) quotable++;
-    if (categories.indexOf(e.category) < 0) categories.push(e.category);
+    /*
+     * Every category the event carries, not one — an event has held a set since 0041.
+     * The consequence is stated in that migration and is worth repeating where the
+     * threshold is actually applied: one response tagged energy + relationship + career
+     * now satisfies `distinctCategories` alone, where before it took three separately
+     * categorised responses. If that reads as too loose, the number below is the knob,
+     * not this loop.
+     */
+    for (const c of e.categories) if (categories.indexOf(c) < 0) categories.push(c);
     if (channels.indexOf(e.channel) < 0) channels.push(e.channel);
     if (e.at >= cutoff) {
       recent++;

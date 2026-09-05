@@ -97,8 +97,16 @@ export type EvidenceEvent = {
   at: number;
   /** From the prompt, never computed from the text. */
   tier: EvidenceTier;
-  /** From the prompt. */
-  category: SignalCategory;
+  /**
+   * From the prompt. Zero or more since 0041 — a prompt may carry several of her
+   * eight, and Gate 2 counts the distinct categories across every event, so each
+   * one an event carries counts separately toward that condition.
+   *
+   * Empty is legitimate and means the prompt had none, not that the event is
+   * malformed: it still counts toward the tier, quote-productivity, total and
+   * channel conditions, and contributes nothing to the category spread.
+   */
+  categories: readonly SignalCategory[];
   /** Classified at capture. Null for an event with no user text at all. */
   shape: QuoteShape | null;
   /** The user's words. IG-U010 cannot quote what was never stored. */
@@ -230,7 +238,7 @@ export type Substantiveness = "no_response" | "thin" | "substantive";
 export type PromptDelivery = {
   /** The prompt as it exists in the library — tier and category come from it. */
   promptId: string;
-  category: SignalCategory;
+  categories: readonly SignalCategory[];
   tier: EvidenceTier;
   channel: Channel;
   deliveredAt: number;
@@ -313,7 +321,7 @@ export function eventFrom(entry: PromptLogEntry): EvidenceEvent | null {
     channel: entry.channel,
     at: entry.respondedAt,
     tier: entry.tier,
-    category: entry.category,
+    categories: entry.categories,
     shape: entry.shape,
     verbatim: entry.verbatim,
   };
@@ -332,7 +340,9 @@ export function categoryWasDelivered(
   until: number,
 ): boolean {
   for (const e of log) {
-    if (e.category === category && e.deliveredAt >= since && e.deliveredAt <= until) return true;
+    if (e.categories.indexOf(category) >= 0 && e.deliveredAt >= since && e.deliveredAt <= until) {
+      return true;
+    }
   }
   return false;
 }

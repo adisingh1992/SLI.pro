@@ -20,11 +20,13 @@
  */
 import {
   blocking,
+  canonicalCategories,
   placeholdersIn,
   reachability,
   validateOpener,
   validatePrompt,
   CADENCES,
+  SIGNAL_CATEGORIES,
   type OpenerDraft,
   type PromptDraft,
 } from "./prompt-library-edit";
@@ -47,7 +49,7 @@ const prompt = (over: Partial<PromptDraft> = {}): PromptDraft => ({
   populationTags: [],
   promptCode: null,
   behavioralSignal: null,
-  signalCategory: null,
+  signalCategory: [],
   evidenceTier: null,
   audienceScope: "universal",
   cadence: "micro_journal",
@@ -365,7 +367,9 @@ console.log("\nEvery vocabulary is closed, and everything inside it is accepted"
     ["cadence", CADENCES, "weekly"],
     ["library", ["approachable", "reflective"], "serious"],
     ["audienceScope", ["universal", "adapted", "specific"], "everyone"],
-    ["signalCategory", ["language", "energy", "decision", "relationship", "industry", "career", "influence", "achievement"], "vibes"],
+    /* A set since 0041, so each legal value is a one-element set and the illegal one is
+     * an illegal MEMBER — the field itself no longer has a scalar form to reject. */
+    ["signalCategory", [["language"], ["energy"], ["decision"], ["relationship"], ["industry"], ["career"], ["influence"], ["achievement"]], ["vibes"]],
     ["evidenceTier", [1, 2, 3], 4],
   ];
 
@@ -391,6 +395,65 @@ console.log("\nEvery vocabulary is closed, and everything inside it is accepted"
 
   check("vocabularies", bad.length === 0, bad.length === 0
     ? `${cases.length} prompt fields plus the opener pool, closed in both directions`
+    : bad.join("; "));
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+ * 9. Signal category is a set, and the set is normalised before it is stored (0041).
+ *
+ * Canonicalisation is not cosmetic here. Every save on the review screen retires the live
+ * row and inserts a successor, and "did this change" is a comparison of these arrays — so
+ * if {energy, career} and {career, energy} are different values, ticking two boxes in the
+ * other order manufactures a version of a prompt nobody edited.
+ * ───────────────────────────────────────────────────────────────────────── */
+console.log("\nSignal category is a normalised set, and every member is checked");
+{
+  const bad: string[] = [];
+
+  const order = canonicalCategories(["career", "energy"]);
+  if (JSON.stringify(order) !== JSON.stringify(canonicalCategories(["energy", "career"]))) {
+    bad.push(`order is not canonical: ${JSON.stringify(order)}`);
+  }
+  if (JSON.stringify(order) !== JSON.stringify(["energy", "career"])) {
+    bad.push(`not in her order: ${JSON.stringify(order)} — SIGNAL_CATEGORIES puts energy before career`);
+  }
+  if (JSON.stringify(canonicalCategories(["energy", "energy"])) !== JSON.stringify(["energy"])) {
+    bad.push("duplicates survive canonicalisation");
+  }
+  if (canonicalCategories([]).length !== 0 || canonicalCategories(null).length !== 0) {
+    bad.push("empty and null do not both canonicalise to the empty set");
+  }
+
+  /*
+   * An unknown value is KEPT by canonicalisation and refused by the validator. Dropping
+   * it silently would mean a save succeeded with a category quietly discarded, which is
+   * the one outcome worse than refusing.
+   */
+  if (!canonicalCategories(["vibes"]).includes("vibes")) {
+    bad.push("canonicalCategories dropped an unknown value instead of leaving it for the validator");
+  }
+
+  /* A legitimate multi-category prompt saves. */
+  if (errorsOn(validatePrompt(prompt({ signalCategory: ["energy", "relationship"] })), "signalCategory").length) {
+    bad.push("a prompt in two of her eight was refused");
+  }
+
+  /* Every member is checked, not just the first — and all bad ones are named at once. */
+  const mixed = errorsOn(validatePrompt(prompt({ signalCategory: ["energy", "vibes"] })), "signalCategory");
+  if (!mixed.length) bad.push("an unknown category hiding behind a legal one was accepted");
+
+  const twoBad = errorsOn(validatePrompt(prompt({ signalCategory: ["vibes", "mood"] })), "signalCategory");
+  if (twoBad.length && !(twoBad[0].message.includes("vibes") && twoBad[0].message.includes("mood"))) {
+    bad.push(`only one of two bad categories was reported: ${twoBad[0].message}`);
+  }
+
+  /* The whole vocabulary at once is legal — nothing caps how many she may assign. */
+  if (errorsOn(validatePrompt(prompt({ signalCategory: [...SIGNAL_CATEGORIES] })), "signalCategory").length) {
+    bad.push("all eight at once was refused, and no rule anywhere caps the count");
+  }
+
+  check("category set", bad.length === 0, bad.length === 0
+    ? "canonical order, deduplicated, every member checked, one to eight all legal"
     : bad.join("; "));
 }
 

@@ -15,7 +15,7 @@ import {
   postEntryActions,
 } from "./log-reply";
 import * as messaging from "./messaging-store";
-import { logResponse, signalCategoryFor } from "./prompt-log-store";
+import { logResponse, signalCategoriesFor } from "./prompt-log-store";
 import type { EvidenceTier } from "./reveal-evidence";
 
 /**
@@ -281,7 +281,7 @@ export async function createEntry(params: NewEntry) {
  * `logResponse`'s own header — with both fields null.
  */
 async function logPromptResponse(studentId: number, promptId: number | null, text: string): Promise<void> {
-  let signalCategory: ReturnType<typeof signalCategoryFor> = null;
+  let signalCategories: ReturnType<typeof signalCategoriesFor> = [];
   let tier: EvidenceTier | null = null;
 
   if (promptId !== null) {
@@ -291,7 +291,7 @@ async function logPromptResponse(studentId: number, promptId: number | null, tex
       .where(eq(promptLibrary.id, promptId))
       .limit(1);
     if (row) {
-      signalCategory = signalCategoryFor(row.signalCategory);
+      signalCategories = signalCategoriesFor(row.signalCategory);
       tier = (row.evidenceTier as EvidenceTier | null) ?? null;
     }
   }
@@ -302,7 +302,7 @@ async function logPromptResponse(studentId: number, promptId: number | null, tex
     // The log page is the micro-journal surface — see `promptFor`'s own comment.
     channel: "micro_journal",
     text,
-    signalCategory,
+    signalCategories,
     tier,
   });
 }

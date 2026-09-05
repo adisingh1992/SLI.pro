@@ -7,7 +7,7 @@ import { intervalDaysAt } from "./prompt-cadence";
 import { populationTagsFor } from "./population-tags";
 import { LIVE_SLI_STATUSES } from "./sli-store";
 import { renderOpener } from "./opener";
-import { logDelivery, signalCategoryFor } from "./prompt-log-store";
+import { logDelivery, signalCategoriesFor } from "./prompt-log-store";
 import type { EvidenceTier } from "./reveal-evidence";
 
 /**
@@ -522,7 +522,7 @@ export async function runDueSequences(now = new Date()): Promise<{ sent: number;
             studentId: item.studentId,
             promptId: prompt.id,
             channel: cadenceDays === 7 ? "heartbeat" : "micro_journal",
-            signalCategory: signalCategoryFor(prompt.signalCategory),
+            signalCategories: signalCategoriesFor(prompt.signalCategory),
             tier: (prompt.evidenceTier as EvidenceTier | null) ?? null,
           });
         }

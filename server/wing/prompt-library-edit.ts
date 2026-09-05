@@ -52,6 +52,36 @@ export const SIGNAL_CATEGORIES = [
   "industry", "career", "influence", "achievement",
 ] as const;
 
+/**
+ * A prompt's categories in her order, deduplicated — the one spelling of a given set.
+ *
+ * Every write goes through this, so "did the category change" and "is this save a no-op"
+ * can both be plain equality checks. Without it `{energy, career}` and `{career, energy}`
+ * are different strings, and the edit route would retire a live row and insert a
+ * successor because somebody clicked two checkboxes in the other order.
+ *
+ * Unknown values are kept rather than dropped, because dropping them here would mean
+ * `validatePrompt` never sees the ninth category somebody tried to write and the save
+ * would succeed with it silently discarded. It is the validator's job to refuse them.
+ */
+export function canonicalCategories(values: readonly string[] | null | undefined): string[] {
+  const seen = new Set<string>();
+  const known: string[] = [];
+  const unknown: string[] = [];
+  for (const v of values ?? []) {
+    const t = (v ?? "").trim();
+    if (!t || seen.has(t)) continue;
+    seen.add(t);
+    ((SIGNAL_CATEGORIES as readonly string[]).includes(t) ? known : unknown).push(t);
+  }
+  known.sort(
+    (a, b) =>
+      (SIGNAL_CATEGORIES as readonly string[]).indexOf(a) -
+      (SIGNAL_CATEGORIES as readonly string[]).indexOf(b),
+  );
+  return [...known, ...unknown];
+}
+
 /** The three rhythms. A prompt with no cadence is drawn by nothing. */
 export const CADENCES = ["micro_journal", "heartbeat", "synthesis_cycle"] as const;
 
@@ -74,7 +104,8 @@ export type PromptDraft = {
   populationTags: readonly string[];
   promptCode: string | null;
   behavioralSignal: string | null;
-  signalCategory: string | null;
+  /** Zero or more of her eight, in her order — see `canonicalCategories`. */
+  signalCategory: readonly string[];
   evidenceTier: number | null;
   audienceScope: string | null;
   cadence: string | null;
@@ -131,10 +162,20 @@ export function validatePrompt(draft: PromptDraft): Issue[] {
     );
   }
 
-  if (!inVocab(draft.signalCategory, SIGNAL_CATEGORIES as unknown as string[])) {
+  /*
+   * Elementwise, and reported all at once. A prompt carries a set since 0041, and a
+   * validator that stopped at the first bad element would make fixing three typos three
+   * round trips.
+   */
+  const badCategories = (draft.signalCategory ?? []).filter(
+    (c) => !(SIGNAL_CATEGORIES as readonly string[]).includes(c),
+  );
+  if (badCategories.length) {
     err(
       "signalCategory",
-      `"${draft.signalCategory}" is not one of the eight: ${SIGNAL_CATEGORIES.join(", ")}.`,
+      `${badCategories.map((c) => `"${c}"`).join(", ")} ` +
+        `${badCategories.length > 1 ? "are not" : "is not"} one of the eight: ` +
+        `${SIGNAL_CATEGORIES.join(", ")}.`,
     );
   }
   if (!inVocab(draft.cadence, CADENCES as unknown as string[])) {
@@ -281,7 +322,7 @@ export function reachability(draft: PromptDraft, active = true): Reach {
     populationTags: draft.populationTags ?? [],
     cadence: draft.cadence,
     library: draft.library,
-    signalCategory: draft.signalCategory,
+    signalCategory: draft.signalCategory ?? [],
     eventSensitive: draft.eventSensitive,
   };
 

@@ -106,7 +106,7 @@ async function seedPrompts(db: ScriptDb["db"], rows: readonly PromptRow[]) {
         promptText: r.promptText,
         promptCode: r.promptCode,
         behavioralSignal: r.behavioralSignal,
-        signalCategory: null,
+        signalCategory: [],
         evidenceTier: null,
         audienceScope: r.audienceScope,
         cadence: r.cadence,
@@ -222,7 +222,7 @@ async function main() {
   const [{ total, categorised, tiered }] = (await db
     .select({
       total: sql<number>`count(*)::int`,
-      categorised: sql<number>`count(${promptLibrary.signalCategory})::int`,
+      categorised: sql<number>`count(*) filter (where cardinality(${promptLibrary.signalCategory}) > 0)::int`,
       tiered: sql<number>`count(${promptLibrary.evidenceTier})::int`,
     })
     .from(promptLibrary)

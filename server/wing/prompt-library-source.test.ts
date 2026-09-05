@@ -319,12 +319,14 @@ console.log("\nEvent-sensitivity is hers, and it is four prompts");
  * 7. The two refusals are structural, not incidental.
  *
  * `signalCategory` is what Gate 2 counts and no prompt carries one; `evidenceTier` waits
- * on her approval. Both are typed `null`, so this test can only fail if someone widens the
- * type — which is the point at which the decision should be revisited deliberately.
+ * on her approval. `evidenceTier` is typed `null` and `signalCategory` is typed as the
+ * empty set (0041 made it a set, and empty is how a set spells "none"), so this test can
+ * only fail if someone widens either type — which is the point at which the decision
+ * should be revisited deliberately.
  * ───────────────────────────────────────────────────────────────────────── */
 console.log("\nNo signal category and no tier is assigned by this file");
 {
-  const categorised = rows.filter((r) => r.signalCategory !== null).length;
+  const categorised = rows.filter((r) => r.signalCategory.length > 0).length;
   const tiered = rows.filter((r) => r.evidenceTier !== null).length;
   check(
     "refusals",
