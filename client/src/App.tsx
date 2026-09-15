@@ -45,6 +45,7 @@ import AdminAttributionPage from "@/pages/admin/attribution-page";
 import AdminMessagesPage from "@/pages/admin/messages/messages-page";
 import AdminMethodologyPage from "@/pages/admin/methodology/methodology-page";
 import AdminSessionDesignPage from "@/pages/admin/methodology/session-design-page";
+import AdminTestingPage from "@/pages/admin/testing/testing-page";
 import AdminTaggingPage from "@/pages/admin/tagging/tagging-page";
 import AdminHeuristicDetailPage from "@/pages/admin/heuristic-detail-page";
 import AdminTaggingSessionPage from "@/pages/admin/tagging-session-page";
@@ -122,6 +123,14 @@ function Router() {
 
       <Route path="/admin/session-design" component={AdminSessionDesignPage} />
       <Route path="/admin/session-design/:tab" component={AdminSessionDesignPage} />
+
+      <Route path="/admin/testing" component={AdminTestingPage} />
+      <Route path="/admin/testing/:tab" component={AdminTestingPage} />
+
+      {/* Retired: Simulations moved out of Methodology into its own module. */}
+      <Route path="/admin/methodology/simulations">
+        {() => <Redirect to="/admin/testing/simulations" />}
+      </Route>
 
       <Route path="/admin/tagging" component={AdminTaggingPage} />
       <Route path="/admin/tagging/sessions/:id" component={AdminTaggingSessionPage} />

@@ -356,7 +356,7 @@ NOTE: The user has already established their credibility position in Session 2.
  * a returning user whose prior data cannot be reached, and this is that condition as the
  * platform can actually observe it: the row says done, the content says nothing.
  */
-async function buildWingKnows(studentId: number, legacyUserId: number): Promise<WingKnows> {
+export async function buildWingKnows(studentId: number, legacyUserId: number): Promise<WingKnows> {
   const rows = await store.listSessions(studentId, store.FOUNDATION_TYPES);
   const completed: number[] = [];
   const facts: Pick<WingKnows, "fn" | "evidence" | "story"> = { fn: null, evidence: null, story: null };
@@ -648,6 +648,333 @@ export async function checkSessionCompletion(
  * nothing reads, to the next person, as the place where access is decided.
  */
 
+/*
+ * ── EXTRACTED FOR P3 (THE TEST HARNESS'S PERSONA SIMULATOR) ────────────────
+ *
+ * The three functions below are the real Foundation Session lifecycle —
+ * starting a session, assembling one turn's prompt, and finalizing one
+ * turn's reply — pulled out of the route handlers that used to have them
+ * inline, so `server/wing/test-run-engine.ts` (a persona-driven test run)
+ * calls the EXACT SAME functions a real student's browser drives, not a
+ * second, hand-written copy that can silently drift from what real students
+ * actually get.
+ *
+ * This was a deliberate, reviewed decision (Aditya, 11 Sep 2026: "extract a
+ * shared core function... one implementation, not two that can drift"),
+ * made because the alternative — a parallel implementation for the test
+ * runner only — would mean a methodology finding is no longer provably
+ * about the same conversation logic a real session runs.
+ *
+ * WHAT DID NOT CHANGE: every route below still does exactly what it did
+ * before, in the same order, with the same side effects, for a real
+ * student — these three functions ARE that logic, not a reimplementation of
+ * it. The one visible difference is in the streaming route's own timing
+ * log: `context`, `assembled` and `engine wait` now land within
+ * microseconds of each other (all three used to measure different, now-
+ * merged phases of `assembleFoundationTurnPrompt`) rather than being spread
+ * across the handler — a debug-log granularity change, not a behavior one.
+ *
+ * WHAT DID NOT MOVE HERE: pattern classification, scoring, SLI generation,
+ * and the completion email — those stay in the streaming route only,
+ * exactly where they were, and `finalizeFoundationTurn` never calls them.
+ * A synthetic persona's session completing has no business sending a real
+ * email or feeding the real pattern-detection pipeline the same way a real
+ * student's does; see `test-run-engine.ts`'s own doc comment for the full
+ * reasoning.
+ */
+
+/**
+ * Provisions (or re-opens) a Foundation session and seeds its opening turn —
+ * exactly what `POST /api/foundation-sessions/:n/start` always did inline.
+ * Takes `studentId`/`legacyUserId` as plain values rather than `req.user` so
+ * a non-HTTP caller (the persona simulator) can drive it identically.
+ */
+export async function ensureFoundationSessionStarted(
+  studentId: number,
+  legacyUserId: number,
+  sessionNumber: number,
+): Promise<{ ok: true; session: any } | { ok: false; error: "session_not_found" }> {
+  await store.ensureFoundationArc(studentId);
+  const session = await store.getSession(studentId, sessionTypeFor(sessionNumber));
+  if (!session) return { ok: false, error: "session_not_found" };
+
+  // A finished session is not restarted — see the route's own long-standing
+  // comment on why re-running startSession unconditionally would be a bug,
+  // not a no-op.
+  const updated = session.status === "completed" ? session : await store.startSession(session.id);
+
+  if ((await store.countTurns(session.id)) === 0) {
+    const promptSet = getPromptSet(await profileStore.getProfessionalStatus(legacyUserId));
+    const initialMessage = promptSet.getInitialGuidanceMessage(sessionNumber);
+    const opening = isFoundationNumber(sessionNumber)
+      ? foundationOpening(sessionNumber, await buildWingKnows(studentId, legacyUserId), initialMessage)
+      : (initialMessage ?? "");
+    if (opening) await store.addAiTurn(session.id, opening);
+  }
+
+  return { ok: true, session: updated };
+}
+
+export type AssembledFoundationTurn = {
+  professionalStatus: string | null | undefined;
+  systemPrompt: string;
+  gateContext: engine.GateContext | null;
+  /** `voice.ts`'s resolved audience/register for this turn's reply -- see
+   *  `transcript_turns.delivery_audience`/`.delivery_register`. */
+  deliveryAudience: string | null;
+  deliveryRegister: string | null;
+};
+
+/**
+ * Starts the three context reads (`professionalStatus`, prior sessions, the
+ * A2 student-context bundle) as early as their inputs allow — none of them
+ * need the turn write or the transcript read that normally follow.
+ *
+ * A real turn on the streaming route calls this BEFORE writing the human
+ * turn, so the reads overlap that write and the transcript read instead of
+ * queuing behind them (see the route's own timing-history comment; this used
+ * to cost `turns 3.0s | context 7.2s` run strictly in series). Split out as
+ * its own function, rather than folded into `assembleFoundationTurnPrompt`,
+ * specifically so the route can start it at that earlier point and hand the
+ * already-running promise in — `assembleFoundationTurnPrompt` only needs to
+ * know how to start one when nobody has already.
+ */
+function startFoundationTurnContext(
+  legacyUserId: number,
+  studentId: number,
+  sessionNumber: number,
+) {
+  const contextPromise = Promise.all([
+    profileStore.getProfessionalStatus(legacyUserId),
+    buildPriorSessionContexts(studentId, sessionNumber),
+    buildStudentContext(legacyUserId),
+  ]);
+  // Handled the moment it is created — see the route's own comment on why an
+  // unawaited rejection here must never become an unhandled one.
+  contextPromise.catch(() => {});
+  return contextPromise;
+}
+
+/**
+ * Everything from "a turn has just been recorded" through "the system
+ * prompt Wing's reply should be generated against" — the exact assembly
+ * `POST .../messages/stream` always ran inline: context reads, the engine's
+ * signal detection and integrity gates, the voice section, and the prompt
+ * they combine into. `conversation` must already include the turn just
+ * written (same requirement the inline version had); `content` is that
+ * turn's own text, passed separately because the engine scores it
+ * specifically, not merely "whatever the last message happens to be".
+ *
+ * `contextPromise` is optional and exists for exactly one caller: the
+ * streaming route, which starts it earlier (via `startFoundationTurnContext`,
+ * before the human turn write) to preserve that overlap. Any other caller —
+ * chiefly the persona simulator, which has no equivalent earlier point worth
+ * racing against — can omit it and one is started here, at the same point in
+ * the assembly either way.
+ */
+export async function assembleFoundationTurnPrompt(params: {
+  legacyUserId: number;
+  studentId: number;
+  sessionId: number;
+  sessionNumber: number;
+  content: string;
+  humanTurnId: number | null;
+  conversation: { role: "user" | "assistant"; content: string }[];
+  contextPromise?: ReturnType<typeof startFoundationTurnContext>;
+}): Promise<AssembledFoundationTurn> {
+  const { legacyUserId, studentId, sessionId, sessionNumber, content, humanTurnId, conversation } = params;
+
+  const contextPromise =
+    params.contextPromise ?? startFoundationTurnContext(legacyUserId, studentId, sessionNumber);
+
+  const guidancePromise = engine.evaluateTurn({
+    studentId,
+    sessionId,
+    content,
+    turnId: humanTurnId,
+    recentTurns: conversation,
+  });
+
+  const gatesPromise = engine.loadTurnGates({ studentId, sessionId });
+
+  const voicePromise = voice.voiceSectionFor({
+    studentId,
+    sessionType: sessionTypeFor(sessionNumber),
+    studentTurns: conversation.filter((m) => m.role === "user").map((m) => m.content),
+  });
+
+  const [professionalStatus, priorSessions, studentContext] = await contextPromise;
+
+  const promptSet = getPromptSet(professionalStatus);
+  const resumeSummary = studentContext.text;
+
+  if (studentContext.included.length) {
+    console.log(
+      `[foundation] session ${sessionNumber}: context — ` +
+        `${studentContext.included.join(", ")} (${studentContext.chars} chars)`,
+    );
+  }
+
+  const conversationCriteria = await resolveCompletionCriteria(professionalStatus, sessionNumber, "conversation");
+
+  const basePrompt = promptSet.getSystemPrompt({
+    sessionNumber,
+    resumeSummary,
+    priorSessions: priorSessions.length > 0 ? priorSessions : undefined,
+    completionCriteria: conversationCriteria,
+  });
+
+  const guidance = await guidancePromise;
+
+  const gateContext = engine.compileTurnGates(await gatesPromise, {
+    hasUploadedDocument: studentContext.included.some((name) => UPLOADED_SECTIONS.indexOf(name) >= 0),
+  });
+  const gateSection = gateContext?.section ?? null;
+
+  const safetySection = compileSafety();
+  console.log(
+    `[foundation] safety rules: ${4} (${safetyTokenEstimate(safetySection)} tokens, always on)`,
+  );
+
+  const voiceContext = await voicePromise;
+  if (voiceContext.section) {
+    console.log(
+      `[foundation] voice profile #${voiceContext.profileId}` +
+        ` (${voiceContext.tokens} tokens, ` +
+        (voiceContext.register
+          ? `${voiceContext.register} register`
+          : voiceContext.audience
+            ? `${voiceContext.audience} resolved but this profile has no register for it`
+            : "no register") +
+        `${voiceContext.doorway ? `, doorway ${voiceContext.doorway}` : ", no doorway"})`,
+    );
+  }
+
+  const systemPrompt = [
+    safetySection,
+    voiceContext.section,
+    gateSection,
+    basePrompt,
+    guidance?.systemPromptFragment,
+  ]
+    .filter(Boolean)
+    .join("\n\n");
+
+  return {
+    professionalStatus,
+    systemPrompt,
+    gateContext,
+    deliveryAudience: voiceContext.audience,
+    deliveryRegister: voiceContext.register,
+  };
+}
+
+export type FinalizedFoundationTurn = {
+  shouldComplete: boolean;
+  completionData?: any;
+  /**
+   * Whether the crisis check fired on this turn's human content — set only
+   * when `awaitCrisisCheck` was passed, since that's the only situation in
+   * which this function actually waits to find out. `undefined` for the real
+   * streaming route, which fires the check void and never learns the answer
+   * (nor needs to).
+   */
+  crisisDetected?: boolean;
+};
+
+/**
+ * Everything after Wing's reply text exists: the gate audit and crisis
+ * check (both fire-and-forget by default, exactly as the streaming route
+ * always ran them — the student, or in a test run the persona, is not
+ * waiting on either), then the completion check, and — only when it says
+ * so — writing the session artifact and completing the session. The two
+ * always travel together, in that order; see "PATCH /api/foundation-sessions/:n
+ * IS GONE" below for why that pairing is load-bearing.
+ *
+ * The route still writes the AI turn and the `turn_complete` SSE event
+ * itself, BEFORE calling this — that ordering (release the UI, then run the
+ * slower checks) is exactly what made this surface fast, and collapsing it
+ * into this function would quietly reintroduce the latency this file's own
+ * history describes chasing out.
+ */
+export async function finalizeFoundationTurn(params: {
+  studentId: number;
+  sessionId: number;
+  sessionNumber: number;
+  legacyUserId: number;
+  humanTurnId: number | null;
+  humanContent: string;
+  aiTurnId: number | null;
+  assistantContent: string;
+  gateContext: engine.GateContext | null;
+  professionalStatus: string | null | undefined;
+  allMessages: { role: "user" | "assistant"; content: string }[];
+  /**
+   * When true, await the crisis check and report whether it fired in the
+   * returned `crisisDetected`, instead of firing it void. Exists for exactly
+   * one caller — `test-run-engine.ts`'s persona simulator, which needs to
+   * know within the same turn whether to end a test run early (Aditya, 11
+   * Sep 2026: "treat hold as success"). Left `undefined`/`false` for every
+   * other caller, above all the real streaming route below, which must never
+   * wait on this: see the file header on why the gate audit and crisis check
+   * run fire-and-forget on that surface, and the route's own comment at the
+   * point it used to fire this inline. Omitting it reproduces the exact
+   * timing that already existed — this parameter widens what's possible, it
+   * changes nothing for a caller that doesn't pass it.
+   */
+  awaitCrisisCheck?: boolean;
+}): Promise<FinalizedFoundationTurn> {
+  void engine.auditDeliveredReply({
+    studentId: params.studentId,
+    sessionId: params.sessionId,
+    turnId: params.aiTurnId,
+    reply: params.assistantContent,
+    gates: params.gateContext,
+  });
+
+  const crisisCheck = checkAndHoldIfCrisis({
+    studentId: params.studentId,
+    humanTurnId: params.humanTurnId,
+    text: params.humanContent,
+    sourceTag: "foundation_session",
+    note: `foundation session ${params.sessionNumber}`,
+  });
+
+  let crisisDetected: boolean | undefined;
+  if (params.awaitCrisisCheck) {
+    crisisDetected = (await crisisCheck).crisisDetected;
+  } else {
+    // Fire-and-forget, exactly as before this parameter existed — the
+    // promise is already running; not awaiting it here is what keeps this
+    // off the real student's clock.
+    void crisisCheck;
+  }
+
+  const completionCheck = await checkSessionCompletion(
+    params.legacyUserId,
+    params.studentId,
+    params.sessionNumber,
+    params.allMessages,
+    params.professionalStatus,
+  );
+
+  if (completionCheck.shouldComplete) {
+    await store.putArtifact({
+      sessionId: params.sessionId,
+      artifactType: ARTIFACT_FOR_SESSION[params.sessionNumber],
+      content: completionCheck.completionData,
+      sourceType: "ai_generated",
+    });
+    await store.completeSession(params.sessionId);
+  }
+
+  return {
+    shouldComplete: completionCheck.shouldComplete,
+    completionData: completionCheck.completionData,
+    crisisDetected,
+  };
+}
+
 /* ── Routes ────────────────────────────────────────────────────────────── */
 
 export function registerFoundationSessionsRoutes(app: Express) {
@@ -733,66 +1060,16 @@ export function registerFoundationSessionsRoutes(app: Express) {
 
         const legacyUserId = req.user!.id;
         const studentId = await store.studentIdFor(req.user as any);
-        await store.ensureFoundationArc(studentId);
 
-        const session = await store.getSession(studentId, sessionTypeFor(sessionNumber));
-        if (!session) return res.status(404).json({ error: "Session not found" });
+        // No PREREQUISITE check (ruling 1 / IG-UX01 — any session is enterable at
+        // any time) and a finished session is not restarted. Both rules, and the
+        // opening-turn seeding below, now live in one place —
+        // `ensureFoundationSessionStarted` — so the persona simulator's runs start
+        // a session exactly the way a real student's browser does.
+        const result = await ensureFoundationSessionStarted(studentId, legacyUserId, sessionNumber);
+        if (!result.ok) return res.status(404).json({ error: "Session not found" });
 
-        /*
-         * No PREREQUISITE check. This answered `403 "Complete the previous session
-         * first"`, which was both the C1 violation ruling 1 resolved and — in its own
-         * error string — an IG-UX03 one. Any session is enterable at any time.
-         *
-         * ── BUT A FINISHED SESSION IS NOT RESTARTED ───────────────────────────
-         * `startSession` unconditionally sets `in_progress` and a fresh `startedAt`,
-         * so with no guard at all, reopening a completed session demoted it. That is
-         * not a cosmetic status change: `buildWingKnows` and `buildPriorSessionContexts`
-         * both key on `status === "completed"`, so the next session would open having
-         * silently forgotten the one the student had just re-read.
-         *
-         * A2 asks for exactly this — "students who have completed a session should be
-         * able to revisit it without losing progress" — and the revisit is what was
-         * losing it. Reading a finished session is not starting it; the turn route
-         * already admits `completed` sessions, so a student can still add to one.
-         */
-        const updated =
-          session.status === "completed" ? session : await store.startSession(session.id);
-
-        // Opening guidance is Wing's first turn — captured as ai_prompt.
-        if ((await store.countTurns(session.id)) === 0) {
-          const promptSet = getPromptSet(
-            await profileStore.getProfessionalStatus(legacyUserId),
-          );
-          const initialMessage = promptSet.getInitialGuidanceMessage(sessionNumber);
-
-          /*
-           * "Prerequisites are communicated inside the module, never on the navigation."
-           * Entering out of order is allowed and is not silent: one sentence naming what
-           * Wing does not have, offering the earlier session and never redirecting to it.
-           *
-           * Appended to the opening rather than sent as its own turn, so the student reads
-           * one message and the transcript carries one `ai_prompt`. IG-UX06 replaces the
-           * whole opening; this is the floor until then.
-           */
-          /*
-           * IG-UX06: the opening reads what Wing already holds. This used to be the
-           * population's static string alone, so a student who had finished two sessions
-           * was greeted by copy written for someone Wing had never met.
-           */
-          const opening = isFoundationNumber(sessionNumber)
-            ? foundationOpening(
-                sessionNumber,
-                await buildWingKnows(studentId, legacyUserId),
-                initialMessage,
-              )
-            : (initialMessage ?? "");
-
-          if (opening) {
-            await store.addAiTurn(session.id, opening);
-          }
-        }
-
-        res.json(toApiSession(updated));
+        res.json(toApiSession(result.session));
       } catch (error) {
         console.error("Error starting foundation session:", error);
         next(error);
@@ -995,33 +1272,10 @@ export function registerFoundationSessionsRoutes(app: Express) {
          * it would take the coaching backwards to asking for things already in
          * the database. Overlapping it is the available win, not removing it.
          */
-        const contextPromise = Promise.all([
-          profileStore.getProfessionalStatus(legacyUserId),
-          buildPriorSessionContexts(studentId, sessionNumber),
-          /*
-           * A2: everything Wing already knows, in the CONVERSATION prompt.
-           *
-           * This used to be `formatResumeSummary`, which filtered on
-           * type === "resume" — so the LinkedIn PDF was uploaded, extracted,
-           * stored, and never shown to Wing. Sessions then asked for the
-           * headline that was sitting in the database, which is the exact
-           * complaint A2 names.
-           *
-           * Worse, the intake answers reached only the ANALYSIS prompt. Live,
-           * Wing knew nothing the student had already said, so it asked again.
-           */
-          buildStudentContext(legacyUserId),
-        ]);
-
-        /*
-         * Marked handled the moment it is created. If `addHumanTurn` throws on
-         * the next line, nothing would ever await this promise, and an
-         * unhandled rejection terminates the process under Node's default
-         * policy — a database blip on one turn taking down every session on the
-         * replica. The `await` below still sees the rejection; this only tells
-         * Node someone is listening.
-         */
-        contextPromise.catch(() => {});
+        // Started before the turn write, not after — see
+        // `startFoundationTurnContext`'s own comment for why that ordering is
+        // the point.
+        const contextPromise = startFoundationTurnContext(legacyUserId, studentId, sessionNumber);
 
         // Human turn — provenance assigned at capture by the deterministic rule.
         const humanTurn = await store.addHumanTurn(session.id, content.trim());
@@ -1030,240 +1284,29 @@ export function registerFoundationSessionsRoutes(app: Express) {
         mark("turns");
 
         /*
-         * ── THE ENGINE STARTS HERE, AS EARLY AS IT POSSIBLY CAN ──────────────
-         * `evaluateTurn` makes a nano-tier model call to decide whether a
-         * coaching signal fired. Its arguments are the four lines below and
-         * nothing else — all of them are in hand the moment the transcript
-         * read returns.
-         *
-         * This used to start after the context reads, one line below a comment
-         * of mine asserting it depended only on things "already in hand".
-         * Which was true, and it was still started three seconds later than it
-         * needed to be. The timing line is what caught it:
-         *
-         *   turns 2.9s | context 6.0s | prompt 11.2s | first token 14.1s
-         *
-         * The 5.2s "prompt" phase was not prompt assembly. Completion criteria
-         * are cached, so almost all of that was this one model call, which had
-         * only been running since 6.0s. Started here it overlaps the context
-         * reads as well, and the phase collapses to whatever is left over.
-         *
-         * A promise created and awaited later is only a win if it is created
-         * at the earliest point its inputs exist. Otherwise it is a serial
-         * call wearing a parallel shape — and it reads as parallel in review,
-         * which is why the measurement mattered.
-         *
-         * Never rejects: it returns null on any failure by design, so a
-         * detection problem cannot take down a live session and this promise
-         * cannot go unhandled.
+         * ── PROMPT ASSEMBLY, EXTRACTED ────────────────────────────────────────
+         * `assembleFoundationTurnPrompt` (defined above `registerFoundationSessionsRoutes`)
+         * is this exact block, moved out so `test-run-engine.ts`'s persona
+         * simulator runs the identical context-read / engine-detection / gate /
+         * voice / prompt assembly a real student's turn does. See that
+         * function's own doc comment for what used to be here and why the
+         * timing marks below now land closer together than they once did.
          */
-        const guidancePromise = engine.evaluateTurn({
+        const assembled = await assembleFoundationTurnPrompt({
+          legacyUserId,
           studentId,
           sessionId: session.id,
+          sessionNumber,
           content: content.trim(),
-          turnId: humanTurn?.id ?? null,
-          recentTurns: conversation,
+          humanTurnId: humanTurn?.id ?? null,
+          conversation,
+          contextPromise,
         });
-
-        /*
-         * The integrity gates for this session, started alongside the detector so
-         * the two DB reads overlap rather than queue.
-         *
-         * Separate from `guidancePromise` deliberately: gates govern every reply
-         * Wing makes, and `evaluateTurn` returns null on the majority of turns
-         * because most turns contain no signal. Attaching the rules to its result
-         * would drop them on exactly those turns.
-         *
-         * Also never rejects — null on any failure, logged inside.
-         */
-        const gatesPromise = engine.loadTurnGates({
-          studentId,
-          sessionId: session.id,
-        });
-
-        /*
-         * The voice section (T5), started here for the same reason as the gates:
-         * its inputs are the student and the transcript, both already in hand.
-         *
-         * Its doorway choice reads the student's own turns and nothing else — no
-         * persisted personality estimate, deliberately, so a bad early read
-         * cannot follow somebody through every future session.
-         *
-         * Never rejects. A cohort with no published voice profile, or a failure
-         * reading one, yields null and the prompt is exactly what it was before
-         * this existed.
-         */
-        const voicePromise = voice.voiceSectionFor({
-          studentId,
-          sessionType: sessionTypeFor(sessionNumber),
-          studentTurns: conversation
-            .filter((m: { role: string }) => m.role === "user")
-            .map((m: { content: string }) => m.content),
-        });
-
-        /*
-         * Collected, not started, here.
-         *
-         * `professionalStatus` is one column. It was `getUserProfile()`, which
-         * returns every document with its full extracted text and every session
-         * with its artifact jsonb — and the only field ever read from it, here
-         * and everywhere below, is this one enum.
-         */
-        const [professionalStatus, priorSessions, studentContext] = await contextPromise;
+        const { professionalStatus, systemPrompt, gateContext, deliveryAudience, deliveryRegister } = assembled;
 
         mark("context");
-
-        const promptSet = getPromptSet(professionalStatus);
-        const resumeSummary = studentContext.text;
-
-        if (studentContext.included.length) {
-          console.log(
-            `[foundation] session ${sessionNumber}: context — ` +
-              `${studentContext.included.join(", ")} (${studentContext.chars} chars)`,
-          );
-        }
-
-        const conversationCriteria = await resolveCompletionCriteria(
-          professionalStatus,
-          sessionNumber,
-          "conversation",
-        );
-
-        /*
-         * One prompt path, not two.
-         *
-         * There used to be a `buildObjectivePrompt` call in front of this,
-         * assembling the prompt from a published objective set for populations
-         * named in `OBJECTIVE_RENDERER_POPULATIONS`. That allowlist was never
-         * set, so the branch never once ran for a student, and it was retired in
-         * Tier 1 part 4 along with the objective sets themselves (migration
-         * 0032). The comparison it existed to make — a focused ~1,500-character
-         * prompt against the 22,000-character file — is the same comparison the
-         * v2 Foundation cards make, and those are the ones that have been built
-         * and audited.
-         *
-         * Left as one expression on purpose. A `?? legacy` fallback whose left
-         * side is never non-null reads, in review, exactly like a live A/B.
-         */
-        const basePrompt = promptSet.getSystemPrompt({
-          sessionNumber,
-          resumeSummary,
-          priorSessions: priorSessions.length > 0 ? priorSessions : undefined,
-          // Same row the analysis reads, rendered for the conversation. This
-          // pairing is the whole point: one definition, two renderings.
-          completionCriteria: conversationCriteria,
-        });
-
-        // Everything up to here is prompt assembly proper. Marked separately
-        // from the engine wait below so the two are never confused again — the
-        // last round of this work attributed five seconds of model call to
-        // "prompt", and optimised the wrong thing as a result.
         mark("assembled");
-
-        /*
-         * The real-time engine loop (spec §6): the turn is evaluated against
-         * the student's active heuristic sequence before Wing replies, so an
-         * intervention lands on the turn that triggered it. Started as early as
-         * its inputs allow — see above the context reads — and collected here,
-         * the first point the answer is actually needed.
-         *
-         * If `engine wait` is consistently near zero, the overlap is doing its
-         * job. If it is not, this call is the critical path and the next move
-         * is to make the intervention arrive on the following turn rather than
-         * to hold this one.
-         */
-        const guidance = await guidancePromise;
         mark("engine wait");
-
-        /*
-         * Gates first, then the base prompt, then this turn's coaching guidance.
-         *
-         * Order is deliberate. The gates are constraints on every reply and the
-         * guidance is an instruction for this one, so the guidance must be the
-         * last thing the model reads — a constraint stated after the instruction
-         * it constrains reads as an afterthought.
-         *
-         * Today this is a no-op: no cycle points at a sequence containing the v2
-         * cards, so `gateSection` is null and the prompt is byte-identical to what
-         * it was. It becomes live the moment a sequence is published, which is the
-         * intended risk profile — the wiring lands and is exercised before the
-         * methodology behind it does.
-         */
-        /*
-         * Compiled here rather than inside the load because two gates only apply
-         * when a fact about this turn holds, and one of those facts — whether
-         * anything the student uploaded is in this turn's context — is not known
-         * until `studentContext` returns above. The database read still overlaps
-         * the detector; only the rendering waits.
-         */
-        const gateContext = engine.compileTurnGates(await gatesPromise, {
-          hasUploadedDocument: studentContext.included.some(
-            (name) => UPLOADED_SECTIONS.indexOf(name) >= 0,
-          ),
-        });
-        const gateSection = gateContext?.section ?? null;
-
-        // Built once, logged and used. Pure and cheap, but calling it twice invited
-        // the reader to wonder whether the two calls could differ.
-        const safetySection = compileSafety();
-        console.log(
-          `[foundation] safety rules: ${4} (${safetyTokenEstimate(safetySection)} tokens, always on)`,
-        );
-
-        const voiceContext = await voicePromise;
-        if (voiceContext.section) {
-          console.log(
-            `[foundation] voice profile #${voiceContext.profileId}` +
-              ` (${voiceContext.tokens} tokens, ` +
-              /*
-               * The register that is in the prompt — not the population that was
-               * resolved. When a population resolves and the profile carries no
-               * register for it, that is worth saying out loud rather than
-               * printing a register nobody was given.
-               */
-              (voiceContext.register
-                ? `${voiceContext.register} register`
-                : voiceContext.audience
-                  ? `${voiceContext.audience} resolved but this profile has no register for it`
-                  : "no register") +
-              `${voiceContext.doorway ? `, doorway ${voiceContext.doorway}` : ", no doorway"})`,
-          );
-        }
-
-        /*
-         * Identity, then constraints, then the task, then this turn.
-         *
-         * The voice section goes FIRST, ahead of the gates, on the personality
-         * directive's own reasoning: "The personality directive is the SYSTEM
-         * PROMPT. The gates are the QUALITY CHECKS... If the directive is strong,
-         * the gates fire rarely. If the directive is weak, the gates fire
-         * constantly — they're doing the personality's job, which they're not
-         * designed for." A model told what it must never say before it is told
-         * who it is will produce careful, characterless coaching.
-         */
-        /*
-         * Safety, then identity, then constraints, then the task, then this turn.
-         *
-         * The safety section is a module constant with no inputs — see
-         * `safety-rules.ts`. Everything else here can legitimately be absent: the
-         * voice section needs a cohort pointed at a published profile, the gate
-         * section needs a published sequence, and both correctly render nothing
-         * otherwise. Safety must not be capable of that, so it is not fetched, not
-         * conditional, and not filtered.
-         *
-         * It goes first because Danielle's hierarchy is safety > methodology >
-         * helpfulness, and because the section says so in its own first line — a
-         * claim that only holds if the rules it outranks come after it.
-         */
-        const systemPrompt = [
-          safetySection,
-          voiceContext.section,
-          gateSection,
-          basePrompt,
-          guidance?.systemPromptFragment,
-        ]
-          .filter(Boolean)
-          .join("\n\n");
 
         res.setHeader("Content-Type", "text/event-stream");
         res.setHeader("Cache-Control", "no-cache");
@@ -1344,7 +1387,10 @@ export function registerFoundationSessionsRoutes(app: Express) {
         mark("stream done");
 
         // Wing's turn: ai_prompt, or ai_adapted if it follows a correction.
-        const aiTurn = await store.addAiTurn(session.id, assistantContent);
+        const aiTurn = await store.addAiTurn(session.id, assistantContent, {
+          deliveryAudience,
+          deliveryRegister,
+        });
 
         /*
          * ── THE TURN IS OVER HERE ────────────────────────────────────────────
@@ -1373,42 +1419,16 @@ export function registerFoundationSessionsRoutes(app: Express) {
         );
 
         /*
-         * The gate audit — deliberately here, after `turn_complete` has released
-         * the UI.
-         *
-         * Thirteen gates ask to inspect Wing's output BEFORE delivery, and this
-         * path streams, so the choice was between not streaming and measuring
-         * afterwards. Measuring afterwards is what makes "did the rule hold?"
-         * answerable at all, and it is the evidence that decides whether any gate
-         * earns the latency of buffering the stream. Placed after the release so
-         * it cannot cost the student a millisecond either way.
-         *
-         * Not awaited for its result and never throws — findings are written to
-         * gate_audit_findings for review, and a failure costs a log line.
+         * The gate audit and the crisis check both used to be fired here,
+         * directly — after `turn_complete` released the UI, void, never
+         * awaited. They now run inside `finalizeFoundationTurn` (defined above
+         * `registerFoundationSessionsRoutes`) instead, alongside the completion
+         * check they always ran next to, so the test runner's persona
+         * simulator gets the identical post-reply behavior a real turn gets —
+         * one implementation, not two that can drift. `finalizeFoundationTurn`
+         * still fires them as void, fire-and-forget calls internally, so this
+         * line is not on the student's clock any more than it was before.
          */
-        void engine.auditDeliveredReply({
-          studentId,
-          sessionId: session.id,
-          turnId: aiTurn?.id ?? null,
-          reply: assistantContent,
-          gates: gateContext,
-        });
-
-        /*
-         * Crisis check — same posture as the audit above: fired here, not awaited on
-         * the turn path, because `compileSafety()` already put IG-S01 in front of the
-         * model before this line runs. What this adds is what a prompt cannot: opening
-         * the safety hold and excluding the turn from analysis, the two actions
-         * `free-chat-store.ts` takes on its own crisis path and this surface has never
-         * taken at all. See crisis-hold.ts for why it fails soft and runs here.
-         */
-        void checkAndHoldIfCrisis({
-          studentId,
-          humanTurnId: humanTurn?.id ?? null,
-          text: content.trim(),
-          sourceTag: "foundation_session",
-          note: `foundation session ${sessionNumber}`,
-        });
 
         /*
          * The full turn list, assembled rather than re-queried.
@@ -1442,25 +1462,34 @@ export function registerFoundationSessionsRoutes(app: Express) {
          * equivalent is `gate_audit_findings`, which is populated and reviewed.
          */
 
-        const completionCheck = await checkSessionCompletion(
-          legacyUserId,
+        /*
+         * ── AUDIT / CRISIS / COMPLETION, EXTRACTED ───────────────────────────
+         * `finalizeFoundationTurn` (defined above `registerFoundationSessionsRoutes`)
+         * is the gate audit, the crisis check, and `checkSessionCompletion` +
+         * the paired `putArtifact`/`completeSession` write, moved out together
+         * so the test runner drives the identical post-reply behavior a real
+         * turn gets. What stays here, deliberately: the AI turn write and the
+         * `turn_complete` SSE write above (already sent — this call cannot
+         * delay them), and everything below that is specific to a real HTTP
+         * response (the SSE `session_completed` event, and the classifier /
+         * scoring / SLI / completion-email work after `res.end()`, none of
+         * which a synthetic run should ever trigger).
+         */
+        const completionCheck = await finalizeFoundationTurn({
           studentId,
+          sessionId: session.id,
           sessionNumber,
-          allMessages,
+          legacyUserId,
+          humanTurnId: humanTurn?.id ?? null,
+          humanContent: content.trim(),
+          aiTurnId: aiTurn?.id ?? null,
+          assistantContent,
+          gateContext,
           professionalStatus,
-        );
+          allMessages,
+        });
 
         if (completionCheck.shouldComplete) {
-          // completionData becomes a typed artifact, not a JSON blob column.
-          await store.putArtifact({
-            sessionId: session.id,
-            artifactType: ARTIFACT_FOR_SESSION[sessionNumber],
-            content: completionCheck.completionData,
-            sourceType: "ai_generated",
-          });
-
-          await store.completeSession(session.id);
-
           res.write(
             `data: ${JSON.stringify({
               type: "session_completed",

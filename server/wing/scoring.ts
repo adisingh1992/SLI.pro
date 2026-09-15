@@ -11,6 +11,7 @@ import * as orchestrator from "../orchestrator";
 import { parseJsonResponse } from "../json-response";
 import { log } from "../logger";
 import * as store from "./heuristics-store";
+import { TEST_USER_SKIP, isTestSession } from "./test-user";
 import { aggregateOutcomes, type OutcomeSignal } from "./engine-rules";
 
 /**
@@ -216,6 +217,22 @@ async function recomputeScore(studentId: number, heuristicId: number, cycleId: n
  */
 export async function scoreSession(sessionId: number): Promise<void> {
   try {
+    /*
+     * A test account's session is never scored. `user_heuristic_scores` exists
+     * to decide which methodology earns promotion, and a persona's outcomes
+     * are not evidence about a coaching card — they are evidence about the
+     * persona. The harness reports on its own runs rather than borrowing this
+     * table, precisely so the two never mix.
+     *
+     * Checked before any other work so a skip costs one query, and before
+     * `setApplicationOutcome`, which would otherwise stamp outcome signals on
+     * the persona's application rows.
+     */
+    if (await isTestSession(sessionId)) {
+      log(`scoreSession(${sessionId}) ${TEST_USER_SKIP}`, "scoring");
+      return;
+    }
+
     const applications = await store.listApplicationsForSession(sessionId);
     if (!applications.length) return;
 

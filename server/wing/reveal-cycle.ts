@@ -202,6 +202,20 @@ async function pickTemplate(
   return { templateCode: null, templateBand: null, selectionWhy: selection.because };
 }
 
+/**
+ * Recent Reveal Cycle history for one student, newest first -- the admin/harness
+ * read surface `reveal-cycle-store.ts`'s own `historyFor` doc comment already
+ * anticipated but nothing ever called outside this file. Thin passthrough so
+ * callers (route files) never need `../db` or `reveal-cycle-store.ts`
+ * themselves -- same shape as everything else this file already wraps.
+ */
+export async function revealCycleHistory(
+  studentId: number,
+  limit = 20,
+): Promise<Record<string, unknown>[]> {
+  return cycleStore.historyFor(db as any, studentId, limit);
+}
+
 export type RunResult = {
   evaluated: number;
   fired: number;

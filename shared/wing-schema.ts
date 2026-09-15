@@ -325,6 +325,14 @@ export const users = wing.table("users", {
   // IANA zone; drives per-user scheduling (daily prompt at 8:00 local)
   timezone: text("timezone").notNull().default("America/New_York"),
   isTestUser: boolean("is_test_user").notNull().default(false),
+  /** Lets an account use `applyCheckpoint` (`checkpoint-store.ts`) WITHOUT
+   *  being excluded from the real behavioral corpus the way `isTestUser`
+   *  is — for a real staff account (Danielle's own) that wants the
+   *  fast-forward convenience on itself without opting its own real
+   *  coaching data out of analysis. Independent of `isTestUser`: a seeded
+   *  persona never needs this (it already has `isTestUser`), and a real
+   *  student never gets it. See `checkpoint-store.ts`'s own doc comment. */
+  allowManualCheckpoints: boolean("allow_manual_checkpoints").notNull().default(false),
   status: userStatus("status").notNull().default("active"),
   lastLoginAt: ts("last_login_at"),
   createdAt: tsNow("created_at"),
@@ -829,6 +837,21 @@ export const transcriptTurns = wing.table("transcript_turns", {
   provenanceTag: provenanceTag("provenance_tag").notNull(),
   activeHeuristicId: fk("active_heuristic_id").references(() => heuristics.id),
   signalDetected: boolean("signal_detected").notNull().default(false),
+  /**
+   * Which audience population `voice.ts` resolved this turn against, and
+   * which register (if any) actually rendered -- `VoiceContextResult.audience`
+   * / `.register`, persisted for the first time as of this column (this
+   * session, 15 Sep 2026, resolving Danielle's "output requirements" doc's
+   * #1/#6/#10: `test-run-export.ts` previously had to name "audience
+   * adaptation" as `notReconstructed` because nothing captured which
+   * register was in force when a past turn happened, only which one today's
+   * config would resolve to). Written only on Wing's own turns
+   * (`recordAiTurn`) -- a student/persona turn has no delivery register of
+   * its own. Null on every turn recorded before this column existed, and on
+   * any turn where voice resolved nothing (no profile, no population match).
+   */
+  deliveryAudience: text("delivery_audience"),
+  deliveryRegister: text("delivery_register"),
   channel: captureChannel("channel").notNull().default("in_app"),
   classificationStatus: classificationStatus("classification_status").notNull().default("provisional"),
   classifiedBy: classifierActor("classified_by"),
@@ -1846,3 +1869,183 @@ export const adminAuditLog = wing.table("admin_audit_log", {
   entityIdx: index("admin_audit_log_entity_idx").on(t.entityType, t.entityId),
   actorIdx: index("admin_audit_log_actor_idx").on(t.actorUserId, t.occurredAt),
 }));
+
+/* ══════════════════════════════════════════════════════════════════════════
+ * TEST HARNESS — added 10 Sep 2026. Not part of the July 2026 spec above.
+ *
+ * `wing.harness_personas` is authored data for the test harness only: nothing
+ * in the live methodology ever reads it. It replaces file-based
+ * `methodology/personas/*.md` specs for anyone who isn't running commands —
+ * Danielle authors a persona here, from the Admin panel, and "activating" one
+ * runs the same account-creation logic `server/wing/seed-personas.ts` already
+ * runs from the CLI (a `wing.users` + `wing.students` + `wing.intake_records`
+ * row, `is_test_user = true`). See `claude/HARNESS_PERSONA_UI_AND_DOC_REVIEW_SEP10.md`.
+ * ══════════════════════════════════════════════════════════════════════════ */
+
+/** Build now (harness) · One persona spec, draft through seeded. */
+export const harnessPersonas = wing.table("harness_personas", {
+  id: id(),
+  /**
+   * Stable slug — the same identity rule `parse-persona.ts`'s file-based `id`
+   * uses, so both authoring paths (file or UI) key on the same thing and a
+   * persona's email (`persona+<key>@sli-harness.invalid`) never changes under
+   * an edit.
+   */
+  personaKey: text("persona_key").notNull().unique(),
+  name: text("name").notNull(),
+  /**
+   * Nullable at the column level — a draft may be saved before either is
+   * filled in. NOT nullable in practice past 'draft': the API refuses to mark
+   * a persona 'ready' or to activate it without both, the same refusal
+   * `parse-persona.ts` already makes for the file format, for the same reason
+   * (§2 of HARNESS_BUILD_STEP4_SEP9.md — without them every audience-specific
+   * card looks like dead weight in the Unfired Cards report).
+   */
+  professionalStatus: professionalStatus("professional_status"),
+  pathway: careerPathway("pathway"),
+  /**
+   * Danielle's deterministic-marker vocabulary — optional, and distinct from
+   * `whatThisTests` below, which is qualitative and read by a person via the
+   * Simulations trace, not counted by the (not yet built) Stage 1 counters.
+   */
+  expectedMarkers: text("expected_markers").array().notNull().default(sql`'{}'`),
+  /**
+   * Which Azure OpenAI deployment tier plays this persona's side of the
+   * conversation by default — Danielle's own choice from the admin panel
+   * (Aditya, 11 Sep 2026: "provide a dropdown in the admin panel for
+   * danielle to select a model for persona. The current list should have
+   * the existing deployments."), consulted by `claimTestRun`
+   * (`test-run-engine.ts`) before it falls back to the platform-wide
+   * default. Nullable, and validated against `model-tier.ts`'s
+   * `PERSONA_TIERS` rather than typed as its own enum — a three-value flag
+   * with no other consumer, same reasoning as `status` below. Null means
+   * "use the platform default", not "nano" baked into every existing row.
+   */
+  defaultModelTier: text("default_model_tier"),
+  /**
+   * The eight sections Danielle's own sample document actually contains —
+   * exposed as their own fields rather than one blob, so she is never asked
+   * to paste in a document or depend on anything parsing one (Aditya, 10 Sep
+   * 2026). Each is kept verbatim, the same "never reflowed, never summarised"
+   * guarantee `parse-persona.ts` gives the file-based body — just split at
+   * the seams she already writes at. `composeSpecPrompt()` below concatenates
+   * them, in this fixed order, into the one text a future runner injects.
+   */
+  quickReference: text("quick_reference").notNull().default(""),
+  readinessByBehavior: text("readiness_by_behavior").notNull().default(""),
+  interactionPolicy: text("interaction_policy").notNull().default(""),
+  voiceSample: text("voice_sample").notNull().default(""),
+  diamond: text("diamond").notNull().default(""),
+  coldStartNote: text("cold_start_note").notNull().default(""),
+  systemPromptSummary: text("system_prompt_summary").notNull().default(""),
+  whatThisTests: text("what_this_tests").notNull().default(""),
+  /** 'draft' | 'ready' | 'seeded' — plain text + CHECK, not a new enum type,
+   *  for a three-value flag with no other consumer. */
+  status: text("status").notNull().default("draft"),
+  /**
+   * Set once activated. Mirrors `seed-personas.ts`: activating is idempotent
+   * by `persona_key`, and an already-seeded persona is refused rather than
+   * silently repointed to a different account.
+   */
+  seededStudentId: fk("seeded_student_id").references(() => students.id),
+  seededCycleId: fk("seeded_cycle_id").references(() => schoolCycles.id),
+  createdByAdminId: fk("created_by_admin_id").references(() => users.id),
+  createdAt: tsNow("created_at"),
+  updatedAt: tsNow("updated_at"),
+});
+
+/**
+ * P3 (the runner) — one row per attempt to run a persona through the real
+ * conversation engine. `claude/TEST_HARNESS_PLAN_SEP9.md`, P3.3: "a finding
+ * must be able to name the exact persona version and sequence version that
+ * produced it" — recorded here at the moment a run starts, not
+ * reconstructed afterward from whatever session rows happen to exist.
+ *
+ * `spec_hash` rather than a live join to `harness_personas`: the persona row
+ * can be edited after a run started, and the run has to keep pointing at the
+ * wording that actually produced it. `checkpoint`/`fidelity` mirror
+ * `checkpoint-store.ts`'s vocabulary as plain text (not a shared enum) so
+ * that file stays the one place the checkpoint list is defined — this table
+ * only ever labels a run with whichever value that file already validated.
+ */
+export const testRuns = wing.table("test_runs", {
+  id: id(),
+  personaId: fk("persona_id").notNull().references(() => harnessPersonas.id),
+  specHash: text("spec_hash").notNull(),
+  /** The published `heuristic_sequences` row in force when the run started —
+   *  nullable at the column level, though `activatePersona`/`applyCheckpoint`
+   *  already refuse a cycle that publishes nothing, so this should always be
+   *  set in practice. */
+  sequenceId: fk("sequence_id").references(() => heuristicSequences.id),
+  /** One of `checkpoint-store.ts`'s four checkpoint values. Plain text, not
+   *  this table's own enum — see the file doc comment above. */
+  checkpoint: text("checkpoint").notNull(),
+  /** 'marked_complete' | 'replayed' — see `ApplyCheckpointResult`. A finding
+   *  read off the wrong fidelity is exactly the failure mode this column
+   *  exists to prevent. */
+  fidelity: text("fidelity").notNull().default("marked_complete"),
+  turnCeiling: integer("turn_ceiling").notNull().default(12),
+  /**
+   * P3.1's spend/latency guards, added alongside `turn_ceiling` rather than
+   * replacing it — `turn_ceiling` bounds how many exchanges happen,
+   * `token_budget` bounds what they cost (a turn's own `maxTokens` caps one
+   * call; nothing before this capped the sum across a whole run), and
+   * `max_wall_clock_seconds` bounds how long a stuck or slow run is allowed
+   * to keep going. `tokens_used` is the running total `test-run-engine.ts`
+   * updates every turn — cumulative input+output tokens across both the
+   * persona's and Wing's calls, so a run that goes over gets caught between
+   * turns rather than only after the fact.
+   */
+  tokenBudget: integer("token_budget").notNull().default(300000),
+  tokensUsed: integer("tokens_used").notNull().default(0),
+  maxWallClockSeconds: integer("max_wall_clock_seconds").notNull().default(900),
+  /** Which Azure OpenAI deployment tier played the persona's side of the
+   *  conversation. Null until the run actually starts driving turns (P3.1) —
+   *  a provisioned-but-not-yet-run record hasn't chosen one yet. */
+  modelDeployment: text("model_deployment"),
+  /** 'provisioned' | 'running' | 'completed' | 'aborted'. */
+  status: text("status").notNull().default("provisioned"),
+  abortReason: text("abort_reason"),
+  /**
+   * Set only when `status` is 'completed', to distinguish HOW a run
+   * completed. Today's one value: 'crisis_hold_asserted' — the persona's own
+   * turn tripped IG-S01 mid-run and the run was deliberately ended rather
+   * than continuing to drive turns against a student now under a safety
+   * hold (Aditya, 11 Sep 2026: "treat hold as success" — `test-run-engine.ts`'s
+   * own doc comment has the full reasoning). Null on every ordinary
+   * completion, which reads as "completed the normal way, via
+   * `finalizeFoundationTurn`'s own `shouldComplete`" — this column adds a
+   * reason, it never replaces `status` itself.
+   */
+  completionReason: text("completion_reason"),
+  startedAt: ts("started_at"),
+  finishedAt: ts("finished_at"),
+  createdAt: tsNow("created_at"),
+  updatedAt: tsNow("updated_at"),
+}, (t) => ({
+  personaIdx: index("test_runs_persona_idx").on(t.personaId),
+  statusIdx: index("test_runs_status_idx").on(t.status),
+}));
+
+/**
+ * One row per Foundation session a run actually drives turns against. Today
+ * that's always exactly one row (the run's single target session) — kept as
+ * its own table rather than a column on `test_runs` so a later run driving
+ * several sessions back to back doesn't need a schema change to add.
+ */
+export const testRunSessions = wing.table("test_run_sessions", {
+  id: id(),
+  testRunId: fk("test_run_id").notNull().references(() => testRuns.id),
+  sessionId: fk("session_id").notNull().references(() => sessions.id),
+  /** Denormalized from `sessions.session_type` — cheap, and lets a run's
+   *  session list be read without a join for the common case. */
+  sessionType: sessionType("session_type").notNull(),
+  turnCount: integer("turn_count").notNull().default(0),
+  /** 'pending' | 'in_progress' | 'completed' | 'aborted'. */
+  status: text("status").notNull().default("pending"),
+  createdAt: tsNow("created_at"),
+  updatedAt: tsNow("updated_at"),
+}, (t) => ({
+  runIdx: index("test_run_sessions_run_idx").on(t.testRunId),
+}));
+

@@ -51,6 +51,7 @@ export type AuthUser = {
   discoverySourceOther: string | null;
   timezone: string;
   isTestUser: boolean;
+  allowManualCheckpoints: boolean;
   status: "active" | "suspended" | "closed";
   lastLoginAt: Date | null;
   createdAt: Date;
@@ -79,6 +80,7 @@ function toAuthUser(row: any): AuthUser {
     discoverySourceOther: row.discoverySourceOther ?? null,
     timezone: row.timezone,
     isTestUser: row.isTestUser,
+    allowManualCheckpoints: row.allowManualCheckpoints ?? false,
     status: row.status,
     lastLoginAt: row.lastLoginAt ?? null,
     createdAt: row.createdAt,
@@ -123,6 +125,11 @@ export function publicUser(u: AuthUser) {
     discoverySourceOther: u.discoverySourceOther,
     timezone: u.timezone,
     isTestUser: u.isTestUser,
+    // claude/HARNESS_GAP_ANALYSIS_SEP15.md §1a — independent of isTestUser,
+    // lets a real staff account (Danielle's own) use checkpoint-store.ts's
+    // applyCheckpoint on itself without opting its real coaching data out of
+    // the behavioral corpus the way isTestUser would.
+    allowManualCheckpoints: u.allowManualCheckpoints,
     status: u.status,
     lastLoginAt: u.lastLoginAt,
     createdAt: u.createdAt,

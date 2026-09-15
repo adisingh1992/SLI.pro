@@ -15,6 +15,7 @@ import {
   Building2,
   ChevronsUpDown,
   MessagesSquare,
+  FlaskConical,
   type LucideIcon,
 } from "lucide-react";
 import {
@@ -194,6 +195,22 @@ const METHODOLOGY: NavItem[] = [
   },
 ];
 
+/**
+ * The test harness. platform_admin only, and deliberately its own group —
+ * not filed under Methodology, per Aditya's request that these screens not
+ * get mixed up with the current ones. Persona accounts and the selection
+ * trace are test data and test tooling, never a live methodology surface.
+ */
+const TESTING: NavItem[] = [
+  {
+    tone: "warn",
+    title: "Test Harness",
+    icon: FlaskConical,
+    href: "/admin/testing",
+    description: "Persona accounts and the selection trace behind them",
+  },
+];
+
 /** Longest match wins, so /admin/users/12 highlights Students, not Overview. */
 function matches(item: NavItem, location: string): boolean {
   return [item.href, ...(item.alsoMatches ?? [])].some(
@@ -258,7 +275,7 @@ function NavGroup({
  * the whole point of a breadcrumb.
  */
 function Crumbs({ location, tail }: { location: string; tail?: ReactNode }) {
-  const all = [...OPERATIONS, ...PLATFORM_OPERATIONS, ...METHODOLOGY];
+  const all = [...OPERATIONS, ...PLATFORM_OPERATIONS, ...METHODOLOGY, ...TESTING];
   const section = all.find((i) => matches(i, location));
 
   return (
@@ -364,6 +381,7 @@ export default function AdminLayout({
             <>
               <NavGroup label="Platform" items={PLATFORM_OPERATIONS} location={location} />
               <NavGroup label="Methodology" items={METHODOLOGY} location={location} />
+              <NavGroup label="Testing" items={TESTING} location={location} />
             </>
           )}
         </SidebarContent>

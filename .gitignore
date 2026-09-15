@@ -65,3 +65,7 @@ extracted-heuristics.json
 
 # Replit upload folder
 attached_assets/
+
+# Editor/agent scratch
+.claude/
+Claude outputs/

@@ -45,6 +45,13 @@ export type FoundationSession = {
 
 export type StudentRecord = {
   id: number;
+  /**
+   * `students.id` — separate from `id` above (`users.id`). Needed by any
+   * student-scoped harness route, e.g. the allow-manual-checkpoints toggle
+   * (`POST /api/admin/harness/checkpoints/:studentId/allow-manual`). `null`
+   * for a user with no `students` row.
+   */
+  studentId?: number | null;
   email: string;
   firstName?: string | null;
   lastName?: string | null;
@@ -52,6 +59,13 @@ export type StudentRecord = {
   role?: string | null;
   isAdmin?: boolean;
   isTestUser?: boolean;
+  /**
+   * Lets this account use checkpoint-store.ts's applyCheckpoint on itself
+   * without being flagged isTestUser (which would exclude its real coaching
+   * data from the behavioral corpus). See migration 0047 and
+   * claude/HARNESS_GAP_ANALYSIS_SEP15.md §1a.
+   */
+  allowManualCheckpoints?: boolean;
   status?: string | null;
   linkedinConnected?: boolean;
   professionalStatus?: string | null;

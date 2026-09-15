@@ -36,6 +36,14 @@ import { documents, intakeRecords, sessions, students } from "@shared/wing-schem
  */
 
 export type StudentRecordData = {
+  /**
+   * `students.id` — distinct from the `users.id` this endpoint is keyed by.
+   * Exposed so the admin UI can address student-scoped routes (e.g.
+   * `checkpoint-store.ts`'s `applyCheckpoint`/`setAllowManualCheckpoints`,
+   * both keyed by `students.id`, not `users.id`) without a second round trip.
+   * `null` only for a user with no `students` row at all.
+   */
+  studentId: number | null;
   documents: {
     id: number;
     name: string;
@@ -113,7 +121,13 @@ export async function studentRecord(
     .limit(1);
 
   if (!student) {
-    return { documents: [], brandingIntake: null, questionnaire: null, foundationSessions: [] };
+    return {
+      studentId: null,
+      documents: [],
+      brandingIntake: null,
+      questionnaire: null,
+      foundationSessions: [],
+    };
   }
 
   /*
@@ -181,6 +195,7 @@ export async function studentRecord(
   const branding = structured.brandingIntake;
 
   return {
+    studentId: student.id,
     documents: docs as StudentRecordData["documents"],
 
     brandingIntake: branding

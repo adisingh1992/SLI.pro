@@ -8,6 +8,7 @@ import { compileSafety } from "./safety-rules";
 import { LIVE_SLI_STATUSES } from "./sli-store";
 import { populationTagsFor } from "./population-tags";
 import { openHold } from "./safety-hold-store";
+import { isTestStudent } from "./test-user";
 import {
   IG_MJ04_REGISTER,
   LOG_REPLY_CONTRACT,
@@ -281,6 +282,13 @@ export async function createEntry(params: NewEntry) {
  * `logResponse`'s own header — with both fields null.
  */
 async function logPromptResponse(studentId: number, promptId: number | null, text: string): Promise<void> {
+  /*
+   * A test account writes nothing to the prompt log — see `engagement.ts`'s
+   * delivery-side guard for why, and for why this is not inside `logResponse`.
+   * Backgrounded by the caller, so an early return here loses nothing.
+   */
+  if (await isTestStudent(studentId)) return;
+
   let signalCategories: ReturnType<typeof signalCategoriesFor> = [];
   let tier: EvidenceTier | null = null;
 

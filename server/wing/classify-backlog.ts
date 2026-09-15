@@ -1,7 +1,7 @@
 import "dotenv/config";
 import { and, eq, lt, ne, sql } from "drizzle-orm";
 import { initScript, type ScriptDb } from "../script-init";
-import { transcripts, transcriptTurns, sessions } from "@shared/wing-schema";
+import { students, transcripts, transcriptTurns, sessions, users } from "@shared/wing-schema";
 
 /**
  * Sweeps sessions whose turns are still provisionally typed.
@@ -58,13 +58,23 @@ async function main() {
 
   // Legacy imports are excluded: their provenance is unknown by definition and
   // the migration rules forbid inventing any retroactively.
+  //
+  // Test accounts are excluded here rather than inside the loop, and the
+  // difference matters for a sweep that runs hourly forever: classifySession()
+  // also refuses a test session, so filtering only there would leave every
+  // persona session in this result set on every run — a query per persona per
+  // hour, and a session count in the log that never goes down. A persona's
+  // turns resting at `provisional` is the intended end state, not a backlog.
   const rows = await db
     .selectDistinct({ sessionId: sessions.id })
     .from(transcriptTurns)
     .innerJoin(transcripts, eq(transcripts.id, transcriptTurns.transcriptId))
     .innerJoin(sessions, eq(sessions.id, transcripts.sessionId))
+    .innerJoin(students, eq(students.id, sessions.studentId))
+    .innerJoin(users, eq(users.id, students.userId))
     .where(
       and(
+        eq(users.isTestUser, false),
         eq(transcriptTurns.classificationStatus, "provisional"),
         eq(transcriptTurns.analysisEligible, true),
         ne(transcriptTurns.provenanceTag, "provenance_unknown"),

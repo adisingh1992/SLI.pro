@@ -242,6 +242,8 @@ export async function sendMessage(userId: number, content: string) {
       : replyGenerated
         ? null
         : "free_chat_response_failure",
+    deliveryAudience: voiceContext.audience,
+    deliveryRegister: voiceContext.register,
   });
 
   void engine.auditDeliveredReply({

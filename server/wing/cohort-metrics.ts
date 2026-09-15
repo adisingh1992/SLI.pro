@@ -117,7 +117,35 @@ function completionStatusClause(status: CompletionStatus): SQL {
 
 /** The student-scoped WHERE clause shared by every query below. */
 function studentFilter(f: MetricsFilter): SQL | undefined {
-  const parts: SQL[] = [];
+  const parts: SQL[] = [
+    /*
+     * ── SEEDED PERSONAS NEVER COUNT HERE ──────────────────────────────────
+     * Unconditional, not gated by any MetricsFilter field: a director does not
+     * ask to exclude test accounts, the same way they never ask to exclude
+     * deleted rows. `activatePersona` (harness-persona-store.ts) can create a
+     * persona against ANY school cycle an admin picks when activating it —
+     * there is no sandbox-only restriction — so without this, a persona
+     * activated against a real institution's cycle would inflate that
+     * institution's own board-reporting numbers and CSV export.
+     * claude/HARNESS_GAP_ANALYSIS_SEP15.md §1b.
+     *
+     * A correlated NOT EXISTS against students.userId, not eq(users.isTestUser,
+     * false) against an outer-joined users row: every query below has
+     * `students` in its FROM/JOIN, but perStudent, bySession, sli, and appts do
+     * NOT join `users` — they never needed its columns before this filter
+     * existed. The first version of this fix used eq(users.isTestUser, ...)
+     * and broke every one of those four with "missing FROM-clause entry for
+     * table users" the first time this actually ran against a real database
+     * (2026-09-15) — caught only by that real run, not by tsc or the boundary
+     * test, which is exactly the class of gap this whole engagement exists to
+     * close. A subquery needs nothing from the outer query but
+     * students.userId, which every one of these queries already has.
+     */
+    sql`not exists (
+      select 1 from ${users}
+      where ${users.id} = ${students.userId} and ${users.isTestUser} = true
+    )`,
+  ];
   if (f.institutionId) parts.push(eq(students.institutionId, f.institutionId));
   if (f.cycleId) parts.push(eq(students.cycleId, f.cycleId));
   if (f.from) parts.push(gte(students.createdAt, new Date(f.from)));

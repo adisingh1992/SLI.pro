@@ -189,6 +189,8 @@ export async function getTurns(sessionId: number) {
       content: transcriptTurns.content,
       signalDetected: transcriptTurns.signalDetected,
       activeHeuristicId: transcriptTurns.activeHeuristicId,
+      deliveryAudience: transcriptTurns.deliveryAudience,
+      deliveryRegister: transcriptTurns.deliveryRegister,
       classificationStatus: transcriptTurns.classificationStatus,
       analysisEligible: transcriptTurns.analysisEligible,
       analysisExclusionReason: transcriptTurns.analysisExclusionReason,

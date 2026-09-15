@@ -59,6 +59,13 @@ export interface RecordTurnParams {
   activeHeuristicId?: number | null;
   signalDetected?: boolean;
   /**
+   * `voice.ts`'s `VoiceContextResult.audience` / `.register` for this turn --
+   * only ever meaningful on an AI turn (`recordAiTurn`); a caller recording a
+   * human turn has no reason to pass either.
+   */
+  deliveryAudience?: string | null;
+  deliveryRegister?: string | null;
+  /**
    * Explicit override for cases the deterministic rule cannot infer —
    * principally `human_correction`. Provenance is derived from it.
    */
@@ -101,6 +108,8 @@ export async function recordTurn(params: RecordTurnParams) {
     channel = "in_app",
     activeHeuristicId = null,
     signalDetected = false,
+    deliveryAudience = null,
+    deliveryRegister = null,
   } = params;
 
   return db.transaction(async (tx) => {
@@ -148,6 +157,8 @@ export async function recordTurn(params: RecordTurnParams) {
         provenanceTag: provenanceForTurnType(turnType),
         activeHeuristicId,
         signalDetected,
+        deliveryAudience,
+        deliveryRegister,
         channel,
         // Provisional until the Nano classifier settles it. An explicit
         // caller-supplied type is a rule-based decision, not a classification.

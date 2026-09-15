@@ -13,6 +13,7 @@ import * as orchestrator from "../orchestrator";
 import { parseJsonResponse } from "../json-response";
 import { log } from "../logger";
 import { provenanceForTurnType, type TurnTypeValue } from "./turn-type";
+import { TEST_USER_SKIP, isTestSession } from "./test-user";
 import { interpretClassification, type ClassifiedType } from "./classifier-rules";
 
 /**
@@ -291,6 +292,26 @@ async function markFollowingAiTurnAdapted(transcriptId: number, position: number
  */
 export async function classifySession(sessionId: number): Promise<void> {
   try {
+    /*
+     * A test account's turns keep their provisional labels.
+     *
+     * Two reasons, and the second is the one that matters. The cheap one is
+     * cost: this is a Nano call per turn, and 20 personas x 30 turns is a real
+     * bill for labels nobody reads. The real one is that `classified_by: nano`
+     * rows are what `tagging-store.runValidation` measures the classifier
+     * against, using the hand-tagged sessions as the gold standard. Synthetic
+     * turns in that comparison would move the classifier's own accuracy number
+     * without anyone choosing to.
+     *
+     * `classify-backlog.ts` filters test sessions out of its sweep for the same
+     * reason, so these turns are not re-found hourly forever. Provisional is
+     * the correct resting state for a persona's turn.
+     */
+    if (await isTestSession(sessionId)) {
+      log(`classifySession(${sessionId}) ${TEST_USER_SKIP}`, "classifier");
+      return;
+    }
+
     const [session] = await db
       .select({ studentId: sessions.studentId })
       .from(sessions)

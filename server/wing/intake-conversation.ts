@@ -1160,7 +1160,11 @@ export async function respond(userId: number, message: string): Promise<TurnResu
    * someone read a reveal back and found the deepening question before the observation.
    */
   for (const chunk of plan.chunks) {
-    await recordAiTurn(before.sessionId, chunk.text, { channel: "in_app" });
+    await recordAiTurn(before.sessionId, chunk.text, {
+      channel: "in_app",
+      deliveryAudience: voiceContext.audience,
+      deliveryRegister: voiceContext.register,
+    });
   }
 
   /*

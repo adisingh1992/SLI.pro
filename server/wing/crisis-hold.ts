@@ -87,6 +87,14 @@ export async function detectCrisis(text: string): Promise<boolean> {
  *
  * `humanTurnId` may be null (a turn write that itself failed): the hold still opens,
  * because a lost turn write must not also lose the hold it should have triggered.
+ *
+ * Returns whether a crisis was detected and whether the hold actually opened, rather
+ * than `void` — added for exactly one caller, `test-run-engine.ts`'s persona simulator
+ * (Aditya, 11 Sep 2026: "treat hold as success"), which needs to know within the same
+ * turn whether to end a run early. Every existing caller (`foundation-sessions-routes.ts`'s
+ * real streaming route, fire-and-forget via `void checkAndHoldIfCrisis(...)`) already
+ * discards whatever this returns, so this is a backward-compatible widening, not a
+ * behavior change for anyone who doesn't read the result.
  */
 export async function checkAndHoldIfCrisis(params: {
   studentId: number;
@@ -96,11 +104,11 @@ export async function checkAndHoldIfCrisis(params: {
   sourceTag: string;
   /** Human-readable, for the hold's own note — e.g. "foundation session 2". */
   note: string;
-}): Promise<void> {
+}): Promise<{ crisisDetected: boolean; holdOpened: boolean }> {
   const { studentId, humanTurnId, text, sourceTag, note } = params;
 
   const crisis = await detectCrisis(text);
-  if (!crisis) return;
+  if (!crisis) return { crisisDetected: false, holdOpened: false };
 
   if (humanTurnId !== null) {
     try {
@@ -110,9 +118,13 @@ export async function checkAndHoldIfCrisis(params: {
     }
   }
 
+  let holdOpened = false;
   try {
     await openHold(db as any, studentId, note);
+    holdOpened = true;
   } catch (error) {
     log(`safety hold failed (${note}): ${(error as Error).message}`, "crisis-hold");
   }
+
+  return { crisisDetected: true, holdOpened };
 }

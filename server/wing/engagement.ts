@@ -8,6 +8,7 @@ import { populationTagsFor } from "./population-tags";
 import { LIVE_SLI_STATUSES } from "./sli-store";
 import { renderOpener } from "./opener";
 import { logDelivery, signalCategoriesFor } from "./prompt-log-store";
+import { isTestStudent } from "./test-user";
 import type { EvidenceTier } from "./reveal-evidence";
 
 /**
@@ -514,7 +515,21 @@ export async function runDueSequences(now = new Date()): Promise<{ sent: number;
          * a delivery row with both null would be filtered out of `evidenceSince` anyway —
          * see that function's header.
          */
-        if (prompt) {
+        /*
+         * A test account writes nothing to the prompt log.
+         *
+         * `prompt_log` is the Reveal Cycle's evidence, and IG-RC10's hard filter 0 turns
+         * on it: an absence claim "dies unless prompts in that signal category were
+         * actually delivered". So a persona's deliveries would not merely sit in a table
+         * — once the cycle is wired they would license or refuse a reveal about a real
+         * student's silence.
+         *
+         * Guarded here rather than inside `logDelivery` on purpose: that function takes an
+         * injected db and its test asserts the exact statements it emits, so an extra
+         * query inside it changes a tested contract. `test-user-scope.test.ts` is what
+         * stops a future caller forgetting this.
+         */
+        if (prompt && !(await isTestStudent(item.studentId))) {
           // `logDelivery` never throws — see its own header — so this is fire-and-forget
           // exactly the way `messaging.advanceSequence` below is awaited: a logging
           // problem must not be able to stall or fail a real send.

@@ -295,6 +295,55 @@
       "when": 1788602800000,
       "tag": "0041_signal_category_multi",
       "breakpoints": true
+    },
+    {
+      "idx": 42,
+      "version": "7",
+      "when": 1789039438000,
+      "tag": "0042_harness_personas",
+      "breakpoints": true
+    },
+    {
+      "idx": 43,
+      "version": "7",
+      "when": 1789044552000,
+      "tag": "0043_harness_personas_content_fields",
+      "breakpoints": true
+    },
+    {
+      "idx": 44,
+      "version": "7",
+      "when": 1789122000000,
+      "tag": "0044_test_runs",
+      "breakpoints": true
+    },
+    {
+      "idx": 45,
+      "version": "7",
+      "when": 1789131000000,
+      "tag": "0045_test_run_guards",
+      "breakpoints": true
+    },
+    {
+      "idx": 46,
+      "version": "7",
+      "when": 1789140000000,
+      "tag": "0046_persona_tier_and_completion_reason",
+      "breakpoints": true
+    },
+    {
+      "idx": 47,
+      "version": "7",
+      "when": 1789140009000,
+      "tag": "0047_allow_manual_checkpoints",
+      "breakpoints": true
+    },
+    {
+      "idx": 48,
+      "version": "7",
+      "when": 1789140010000,
+      "tag": "0048_delivery_register_capture",
+      "breakpoints": true
     }
   ]
 }

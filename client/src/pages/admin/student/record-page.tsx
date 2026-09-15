@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { Link, useLocation, useParams } from "wouter";
 import {
   ArrowLeft,
@@ -9,13 +9,15 @@ import {
   Star,
   UserCircle,
 } from "lucide-react";
-import { getQueryFn } from "@/lib/queryClient";
+import { apiFetch, getQueryFn, queryClient } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
 import AdminLayout from "../layout";
 import { PageShell, PageHeader } from "@/components/admin/page";
 import { ErrorState } from "@/components/admin/states";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 import { OverviewPanel } from "./overview-panel";
@@ -91,6 +93,42 @@ export default function StudentRecordPage() {
     enabled: !!userId,
   });
 
+  const { toast } = useToast();
+
+  /**
+   * `allow_manual_checkpoints` (migration 0047,
+   * claude/HARNESS_GAP_ANALYSIS_SEP15.md §1a) — lets THIS account use the
+   * test harness's checkpoint fast-forward on itself without being flagged
+   * is_test_user, which would exclude its real coaching data from the
+   * behavioral corpus. Keyed by students.id, not users.id, hence
+   * student.data?.studentId rather than userId.
+   */
+  const allowManualCheckpointsMutation = useMutation({
+    mutationFn: async (allow: boolean) => {
+      const studentId = student.data?.studentId;
+      if (!studentId) throw new Error("This user has no student record");
+      const res = await apiFetch<{ error?: string }>(
+        "POST",
+        `/api/admin/harness/checkpoints/${studentId}/allow-manual`,
+        { allow },
+      );
+      if (!res.ok) throw new Error(res.data?.error ?? "Could not update");
+      return allow;
+    },
+    onSuccess: (allow) => {
+      queryClient.invalidateQueries({ queryKey: [`/api/admin/users/${userId}`] });
+      toast({
+        title: allow ? "Manual checkpoints enabled" : "Manual checkpoints disabled",
+        description: allow
+          ? "This account can now apply test-harness checkpoints to itself."
+          : "This account can no longer apply test-harness checkpoints to itself.",
+      });
+    },
+    onError: (error: Error) => {
+      toast({ title: "Could not update", description: error.message, variant: "destructive" });
+    },
+  });
+
   const name = student.data
     ? `${student.data.firstName ?? ""} ${student.data.lastName ?? ""}`.trim() ||
       student.data.email
@@ -134,6 +172,23 @@ export default function StudentRecordPage() {
                     <Badge variant="destructive" className="text-[10px]">
                       {student.data.status}
                     </Badge>
+                  )}
+                  {student.data?.studentId != null && !student.data?.isTestUser && (
+                    <label className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
+                      <Switch
+                        checked={
+                          allowManualCheckpointsMutation.isPending
+                            ? allowManualCheckpointsMutation.variables
+                            : !!student.data?.allowManualCheckpoints
+                        }
+                        onCheckedChange={(checked) =>
+                          allowManualCheckpointsMutation.mutate(checked)
+                        }
+                        disabled={allowManualCheckpointsMutation.isPending}
+                        className="scale-75"
+                      />
+                      allow manual checkpoints
+                    </label>
                   )}
                 </span>
               }
