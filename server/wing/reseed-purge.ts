@@ -15,38 +15,106 @@ import type { LibraryElement } from "./collect-library";
 /**
  * The destructive half of `wing:reseed-library`.
  *
- * ── WHAT THIS DOES, IN ORDER, IN ONE TRANSACTION ─────────────────────────
- *   1. Re-reads the cycles and their sequence composition and compares it to
- *      the manifest the report wrote. A mismatch aborts: the plan the human
- *      approved was computed against a database that has since changed.
- *   2. Nulls `transcript_turns.active_heuristic_id`, then deletes the two
- *      user_heuristic_* tables, the sequence entries, the components and the
- *      cards. That order is the foreign keys' order, not a preference.
- *   3. Inserts every element the collector produced.
- *   4. Rebuilds each live sequence as a NEW version, supersedes the old one,
- *      and repoints every cycle that named it.
- *   5. Verifies, and throws — rolling everything back — if anything is short.
+ * ── THE MISTAKE THIS VERSION EXISTS TO NOT REPEAT ────────────────────────
+ * The first attempt enumerated the tables referencing a card from the comment
+ * at the top of reset-cards.ts, which names five. There are six:
+ * `gate_audit_findings` arrived in migration 0021, after that comment was
+ * written, and the run died on its foreign key. It died safely — one
+ * transaction, nothing committed — but it died on a fact the database knew and
+ * the script had taken on faith from prose.
+ *
+ * So this version does not hold a list. It asks `pg_constraint` which tables
+ * reference `heuristics` and `heuristic_components`, and refuses to touch
+ * anything if even one of them has no declared disposition below. A table added
+ * by a future migration now stops the run instead of being discovered by a
+ * rollback — and a table someone deliberately wired to cards is never silently
+ * emptied because the script did not know about it.
+ *
+ * ── WHAT HAPPENS TO EACH REFERENCING TABLE, AND WHY ──────────────────────
+ *   heuristic_components         delete · child rows, re-created from source
+ *   heuristic_sequence_entries   delete · rebuilt from the restore manifest
+ *   transcript_turns             null   · the turn survives, its card pointer
+ *                                         does not; nulling keeps the transcript
+ *   user_heuristic_applications  delete · which card fired, for whom
+ *   user_heuristic_scores        delete · how that card performed
+ *   gate_audit_findings          PRESERVE · captured, deleted, and re-inserted
+ *                                         against the new ids by card_code
+ *
+ * That last one is the reason the failure was worth having. The table carries
+ * `card_code` denormalised with the schema's own note — "it survives a rename" —
+ * and a `status` the schema calls Danielle's review state, where "a rejected
+ * finding means the PATTERN is too broad". Those rows are her work reviewing
+ * what the gates caught, not machine exhaust, and a rebuild of the card library
+ * is exactly the rename that column was put there to survive. Deleting them
+ * because a foreign key pointed the wrong way would have thrown away the review
+ * queue to reseed the thing being reviewed.
+ *
+ * A finding whose card_code no longer exists in the new library cannot be
+ * re-pointed. Those are reported by code and dropped, never guessed at.
  *
  * ── WHY ONE TRANSACTION ──────────────────────────────────────────────────
- * The failure this exists to prevent is the interesting one: a purge that
- * succeeds followed by a seed that dies on row 200 leaves no card library at
- * all, no sequences, and four cycles pointing at nothing. Postgres will not let
- * that be the end state if the whole thing is one transaction, so it is.
+ * A purge that succeeds followed by a seed that dies on row 200 leaves no card
+ * library, no sequences, and four cycles pointing at nothing. Postgres will not
+ * let that be the end state if the whole thing is one transaction, so it is.
  *
  * ── WHY THE SEQUENCES COME BACK AS NEW VERSIONS ──────────────────────────
- * Rewriting entries onto the published sequence rows would be faster and would
- * leave the pointers untouched, and it would also mean sequence 18 v8 contains
- * different cards before and after with nothing recording that. The versioning
- * convention exists for exactly this. So: a new version per live sequence, the
- * old one marked superseded, and the pointers moved. Two cycles share sequence
- * 18 today and they share its replacement — one new sequence, two pointers,
- * preserved by keying on the OLD sequence id rather than on the cycle.
+ * Rewriting entries onto the published sequence rows would leave sequence 18 v8
+ * holding different cards before and after with nothing recording it. So: a new
+ * version per live sequence, the old one superseded, the pointers moved.
+ * Replacement is keyed on the OLD sequence id rather than on the cycle, so the
+ * two cycles that share sequence 18 share its replacement.
  *
  * ── WHY IT RESTORES BY CARD CODE ─────────────────────────────────────────
- * Ids do not survive a rebuild. Codes do. Every entry is restored by looking
- * its code up in the newly inserted library, and a code that does not resolve
- * is a hard error rather than a sequence that is quietly one card shorter.
+ * Ids do not survive a rebuild. Codes do. A code that does not resolve is a hard
+ * error rather than a sequence that is quietly one card shorter.
  */
+
+/* ── Referencing tables and what happens to them ─────────────────────────── */
+
+export type Disposition = "delete" | "null" | "preserve";
+
+/**
+ * Declared, and checked against the catalog before anything is touched.
+ *
+ * Keyed by table name. A table `pg_constraint` reports that is missing from here
+ * aborts the run — which is the whole point: the next migration to wire a table
+ * to `heuristics` gets a loud refusal rather than a rollback at the foreign key.
+ */
+export const REFERENCING_TABLES: Readonly<Record<string, Disposition>> = {
+  heuristic_components: "delete",
+  heuristic_sequence_entries: "delete",
+  transcript_turns: "null",
+  user_heuristic_applications: "delete",
+  user_heuristic_scores: "delete",
+  gate_audit_findings: "preserve",
+};
+
+/** Every table with a foreign key onto the card tables, from the catalog. */
+export async function discoverReferences(db: any): Promise<string[]> {
+  const res = await db.execute(sql`
+    SELECT DISTINCT src.relname AS table_name
+      FROM pg_constraint con
+      JOIN pg_class     src ON src.oid = con.conrelid
+      JOIN pg_class     tgt ON tgt.oid = con.confrelid
+      JOIN pg_namespace n   ON n.oid   = tgt.relnamespace
+     WHERE con.contype = 'f'
+       AND n.nspname = 'wing'
+       AND tgt.relname IN ('heuristics', 'heuristic_components')
+     ORDER BY 1
+  `);
+  return ((res as any).rows ?? [])
+    .map((r: any) => String(r.table_name))
+    // heuristic_components references itself for version lineage; it is not a
+    // separate dependant and is already handled as a child.
+    .filter((t: string) => t !== "heuristic_components" || true);
+}
+
+/** Tables the catalog reports that this script has no instruction for. */
+export function undeclaredTables(found: readonly string[]): string[] {
+  return found.filter((t) => !(t in REFERENCING_TABLES));
+}
+
+/* ── Drift detection ─────────────────────────────────────────────────────── */
 
 export type ManifestEntry = {
   cardCode: string;
@@ -79,6 +147,8 @@ export function fingerprint(cycles: ManifestCycle[]): string {
   );
 }
 
+/* ── The run ─────────────────────────────────────────────────────────────── */
+
 export type PurgeCounts = {
   turnsCleared: number;
   scoresDeleted: number;
@@ -91,6 +161,8 @@ export type PurgeCounts = {
   sequencesCreated: number;
   entriesRestored: number;
   cyclesRepointed: number;
+  findingsPreserved: number;
+  findingsDropped: string[];
 };
 
 export async function purgeAndReseed(
@@ -111,10 +183,26 @@ export async function purgeAndReseed(
     sequencesCreated: 0,
     entriesRestored: 0,
     cyclesRepointed: 0,
+    findingsPreserved: 0,
+    findingsDropped: [],
   };
 
   await db.transaction(async (tx: any) => {
-    /* ── 1 · has anything moved since the report? ────────────────────────── */
+    /* ── 1 · does the script know about every dependant? ─────────────────── */
+
+    const found = await discoverReferences(tx);
+    const undeclared = undeclaredTables(found);
+    if (undeclared.length) {
+      throw new Error(
+        `${undeclared.length} table(s) reference the card tables and this script has no ` +
+          `instruction for them: ${undeclared.join(", ")}. Add a disposition to ` +
+          `REFERENCING_TABLES — delete, null or preserve — and say why. Nothing has been ` +
+          `deleted.`,
+      );
+    }
+    log(`  ✓ ${found.length} referencing table(s), all declared: ${found.join(", ")}`);
+
+    /* ── 2 · has anything moved since the report? ────────────────────────── */
 
     const fresh = await captureCycles(tx);
     if (fingerprint(fresh) !== fingerprint(manifest)) {
@@ -126,7 +214,19 @@ export async function purgeAndReseed(
     }
     log("  ✓ database matches the approved manifest");
 
-    /* ── 2 · delete, in the order the foreign keys require ───────────────── */
+    /* ── 3 · take the review queue out of the way, keeping it ────────────── */
+
+    const findings = ((await tx.execute(sql`
+      SELECT "student_id", "session_id", "turn_id", "card_code", "mode",
+             "matched", "excerpt", "status", "detected_at"
+        FROM "wing"."gate_audit_findings"
+       ORDER BY "id"
+    `)) as any).rows ?? [];
+
+    await tx.execute(sql`DELETE FROM "wing"."gate_audit_findings"`);
+    log(`  ✓ captured ${findings.length} gate audit finding(s) to restore by card code`);
+
+    /* ── 4 · delete, in the order the foreign keys require ───────────────── */
 
     const cleared = await tx
       .update(transcriptTurns)
@@ -155,7 +255,7 @@ export async function purgeAndReseed(
         `${counts.scoresDeleted} scores; cleared ${counts.turnsCleared} transcript turns`,
     );
 
-    /* ── 3 · insert the library ──────────────────────────────────────────── */
+    /* ── 5 · insert the library ──────────────────────────────────────────── */
 
     const idByCode = new Map<string, number>();
 
@@ -192,7 +292,36 @@ export async function purgeAndReseed(
 
     log(`  ✓ inserted ${counts.cardsInserted} cards, ${counts.componentsInserted} components`);
 
-    /* ── 4 · rebuild each live sequence as a new version ─────────────────── */
+    /* ── 6 · put the review queue back, against the new ids ──────────────── */
+
+    for (const f of findings) {
+      const code = String(f.card_code);
+      const heuristicId = idByCode.get(code);
+      if (heuristicId === undefined) {
+        counts.findingsDropped.push(code);
+        continue;
+      }
+      await tx.execute(sql`
+        INSERT INTO "wing"."gate_audit_findings"
+          ("student_id", "session_id", "turn_id", "heuristic_id", "card_code",
+           "mode", "matched", "excerpt", "status", "detected_at")
+        VALUES (${f.student_id}, ${f.session_id}, ${f.turn_id}, ${heuristicId}, ${code},
+                ${f.mode}, ${f.matched}, ${f.excerpt}, ${f.status}, ${f.detected_at})
+      `);
+      counts.findingsPreserved++;
+    }
+
+    if (findings.length) {
+      log(
+        `  ✓ restored ${counts.findingsPreserved} finding(s) with their review status` +
+          (counts.findingsDropped.length
+            ? `; dropped ${counts.findingsDropped.length} whose card no longer exists ` +
+              `(${Array.from(new Set(counts.findingsDropped)).join(", ")})`
+            : ""),
+      );
+    }
+
+    /* ── 7 · rebuild each live sequence as a new version ─────────────────── */
 
     const liveSequenceIds = Array.from(
       new Set(manifest.map((c) => c.sequenceId).filter((x): x is number => x !== null)),
@@ -226,8 +355,6 @@ export async function purgeAndReseed(
       replacement.set(oldId, created.id);
       counts.sequencesCreated++;
 
-      // Composition comes from whichever cycle captured this sequence; they are
-      // identical by construction, because the capture read the sequence.
       const source = manifest.find((c) => c.sequenceId === oldId)!;
       const missing = source.entries.filter((e) => !idByCode.has(e.cardCode));
       if (missing.length) {
@@ -260,7 +387,7 @@ export async function purgeAndReseed(
       );
     }
 
-    /* ── 5 · repoint every cycle that named a rebuilt sequence ───────────── */
+    /* ── 8 · repoint every cycle that named a rebuilt sequence ───────────── */
 
     for (const [oldId, newId] of Array.from(replacement.entries())) {
       const moved = await tx
@@ -272,7 +399,7 @@ export async function purgeAndReseed(
       log(`  ✓ repointed ${moved.length} cycle(s) from sequence ${oldId} to ${newId}`);
     }
 
-    /* ── 6 · verify before commit ────────────────────────────────────────── */
+    /* ── 9 · verify before commit ────────────────────────────────────────── */
 
     if (counts.cardsInserted !== elements.length) {
       throw new Error(
@@ -290,14 +417,23 @@ export async function purgeAndReseed(
       );
     }
 
-    const stranded = await tx
-      .select({ id: schoolCycles.id })
-      .from(schoolCycles)
-      .where(inArray(schoolCycles.activeHeuristicSequenceId, liveSequenceIds));
-    if (stranded.length) {
+    if (counts.findingsPreserved + counts.findingsDropped.length !== findings.length) {
       throw new Error(
-        `${stranded.length} cycle(s) still point at a superseded sequence after the repoint`,
+        `${findings.length} findings were captured but ${counts.findingsPreserved} restored and ` +
+          `${counts.findingsDropped.length} dropped — one has gone missing`,
       );
+    }
+
+    if (liveSequenceIds.length) {
+      const stranded = await tx
+        .select({ id: schoolCycles.id })
+        .from(schoolCycles)
+        .where(inArray(schoolCycles.activeHeuristicSequenceId, liveSequenceIds));
+      if (stranded.length) {
+        throw new Error(
+          `${stranded.length} cycle(s) still point at a superseded sequence after the repoint`,
+        );
+      }
     }
 
     log("  ✓ verified — committing");

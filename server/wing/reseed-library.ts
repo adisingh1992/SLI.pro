@@ -5,7 +5,12 @@ import { type ScriptDb } from "../script-init";
 import { startScript } from "./script-start";
 import { collectLibrary } from "./collect-library";
 import { interventionTypes, missingTypes } from "./seed-preflight";
-import { captureCycles, purgeAndReseed, type ManifestCycle } from "./reseed-purge";
+import {
+  discoverReferences,
+  purgeAndReseed,
+  undeclaredTables,
+  type ManifestCycle,
+} from "./reseed-purge";
 
 /**
  * `npm run wing:reseed-library`
@@ -149,7 +154,10 @@ async function main() {
       (SELECT count(*) FROM "wing"."user_heuristic_applications")               AS applications,
       (SELECT count(*) FROM "wing"."user_heuristic_scores")                     AS scores,
       (SELECT count(*) FROM "wing"."transcript_turns"
-        WHERE "active_heuristic_id" IS NOT NULL)                                AS turns_naming_a_card
+        WHERE "active_heuristic_id" IS NOT NULL)                                AS turns_naming_a_card,
+      (SELECT count(*) FROM "wing"."gate_audit_findings")                       AS findings,
+      (SELECT count(*) FROM "wing"."gate_audit_findings"
+        WHERE "status" <> 'pending_review')                                     AS findings_reviewed
   `);
   const c = counts[0] ?? {};
   for (const [label, key] of [
@@ -165,6 +173,23 @@ async function main() {
   console.log(
     `  ${"heuristic_sequences (kept, re-entried)".padEnd(38)} ${String(n(c.sequences)).padStart(7)}`,
   );
+  console.log(
+    `  ${"gate_audit_findings (PRESERVED)".padEnd(38)} ${String(n(c.findings)).padStart(7)}` +
+      (n(c.findings_reviewed) > 0 ? `   ${n(c.findings_reviewed)} already reviewed` : ""),
+  );
+
+  const found = await discoverReferences(db);
+  const undeclared = undeclaredTables(found);
+  console.log(
+    `\n  ${found.length} table(s) reference the card tables, per pg_constraint:\n` +
+      `  ${found.join(", ")}`,
+  );
+  if (undeclared.length) {
+    console.log(
+      `\n  \x1b[31m\u2717 no disposition declared for: ${undeclared.join(", ")}\x1b[0m\n` +
+        "  The run is blocked. Add each to REFERENCING_TABLES in reseed-purge.ts.",
+    );
+  }
 
   const studentData = n(c.applications) + n(c.scores) + n(c.turns_naming_a_card);
   if (studentData > 0) {
@@ -314,6 +339,9 @@ async function main() {
 
   const blockers: string[] = [];
   if (missing.length) blockers.push(`heuristic_intervention_type is missing ${missing.join(", ")}`);
+  if (undeclared.length) {
+    blockers.push(`no disposition declared for ${undeclared.join(", ")}`);
+  }
   if (library.elements.length === 0) blockers.push("the collector produced no rows");
 
   if (blockers.length) {
@@ -368,6 +396,10 @@ async function main() {
   );
   console.log(`  Would insert  ${String(library.elements.length).padStart(5)} cards`);
   console.log(
+    `  Would PRESERVE ${String(n(c.findings)).padStart(4)} gate audit finding(s), re-pointed ` +
+      `by card code with their review status intact`,
+  );
+  console.log(
     `  Would rebuild ${String(liveSequenceIds.size).padStart(5)} ` +
       `live sequence(s) as new versions, and repoint the cycles that name them`,
   );
@@ -401,7 +433,15 @@ async function main() {
   console.log(`  cycles       ${done.cyclesRepointed} repointed`);
   console.log(
     `  student data ${done.applicationsDeleted} applications, ${done.scoresDeleted} scores ` +
-      `deleted; ${done.turnsCleared} transcript turns cleared\n`,
+      `deleted; ${done.turnsCleared} transcript turns cleared`,
+  );
+  console.log(
+    `  findings     ${done.findingsPreserved} preserved with review status` +
+      (done.findingsDropped.length
+        ? `, ${done.findingsDropped.length} dropped (card gone: ` +
+          `${Array.from(new Set(done.findingsDropped)).join(", ")})`
+        : "") +
+      "\n",
   );
 
   await pool.end();

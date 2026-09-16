@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { fingerprint, type ManifestCycle } from "./reseed-purge";
+import { REFERENCING_TABLES, fingerprint, undeclaredTables, type ManifestCycle } from "./reseed-purge";
 
 /**
  * Tests for the drift check that guards the purge.
@@ -109,6 +109,48 @@ test("a weight change is deliberately NOT drift", () => {
   const reweighted = clone();
   reweighted[0].entries[0].weight = 2.0;
   assert.equal(fingerprint(base), fingerprint(reweighted));
+});
+
+/* ── The catalog check ───────────────────────────────────────────────────── */
+
+/*
+ * The first attempt at this script enumerated the tables referencing a card
+ * from a comment in reset-cards.ts, which names five. There are six —
+ * gate_audit_findings arrived in migration 0021, after that comment was written
+ * — and the run died on its foreign key. These cases are why the list is now
+ * checked against pg_constraint instead of trusted.
+ */
+
+test("every table the schema wires to a card has a declared disposition", () => {
+  // The six that exist today, from shared/wing-schema.ts.
+  const inSchema = [
+    "heuristic_components",
+    "heuristic_sequence_entries",
+    "transcript_turns",
+    "user_heuristic_applications",
+    "user_heuristic_scores",
+    "gate_audit_findings",
+  ];
+  assert.deepEqual(undeclaredTables(inSchema), []);
+  assert.deepEqual(Object.keys(REFERENCING_TABLES).sort(), inSchema.slice().sort());
+});
+
+test("a table added by a future migration blocks the run rather than rolling it back", () => {
+  const withNewOne = ["heuristic_components", "card_review_assignments"];
+  assert.deepEqual(undeclaredTables(withNewOne), ["card_review_assignments"]);
+});
+
+test("the review queue is preserved, and nothing else is", () => {
+  assert.equal(REFERENCING_TABLES.gate_audit_findings, "preserve");
+  assert.equal(REFERENCING_TABLES.transcript_turns, "null");
+  for (const t of [
+    "heuristic_components",
+    "heuristic_sequence_entries",
+    "user_heuristic_applications",
+    "user_heuristic_scores",
+  ]) {
+    assert.equal(REFERENCING_TABLES[t], "delete", `${t} should be deleted`);
+  }
 });
 
 console.log(`\n${failures} failures\n`);
