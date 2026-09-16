@@ -371,4 +371,37 @@ export function compareCodes(a: string, b: string): number {
   return Number(pa[2]) - Number(pb[2]);
 }
 
+/* ── Codes that exist to hold a number ───────────────────────────────────── */
+
+/**
+ * Elements the registry names that no document will ever specify, because the
+ * whole point of them is that they are not in use.
+ *
+ * These are declared rather than derived because they are decisions, not text.
+ * A parser cannot find a card that was deliberately not written; it can only
+ * report a hole where one should be. Without this table the coverage report
+ * would show four permanent unsourced codes and whoever read it would go
+ * looking for four documents that do not exist.
+ *
+ * They still become rows. A retired card that vanishes from the library is a
+ * number free to be reused, and reuse is how RT-14's Barnum failure would come
+ * back under a different name.
+ */
+export const RETIRED_CODES: Readonly<Record<string, string>> = {
+  "H-033": "RT-14 Clean Slate. Retired v1.7 for a Barnum failure under IG-U006 — the template survived the substitution test, which is exactly what it must not do. Doc 1 strikes it through in the reveal-template inventory.",
+  "IG-RC12": "Attachment Pacing. Folded into IG-S03, number retained. Reveal Cycle v4 carries it as an open question; Doc 1 records the resolution. A gate duplicating IG-S03 would fire twice on one signal.",
+};
+
+/**
+ * Numbers held open for work that is planned and not yet written.
+ *
+ * Doc 2 §3 lists these under "Intentional gaps", which is the distinction that
+ * matters: an intentional gap is not a missing card, and a coverage report that
+ * cannot tell the two apart will keep reporting the same two holes forever.
+ */
+export const RESERVED_CODES: Readonly<Record<string, string>> = {
+  "H-706": "Reserved for Module 7 expansion. Doc 2 §3, intentional gaps. Resolved flag 13, 25 August.",
+  "H-707": "Reserved for Module 7 expansion. Doc 2 §3, intentional gaps. Resolved flag 13, 25 August.",
+};
+
 export const REGISTRY_SOURCE = "methodology/wing-sot-doc2-architecture-governance.md";

@@ -330,6 +330,11 @@ export function moduleFromCode(code: string): string {
   if (code === "H-900") return "universal";
   if (/^IG-V\d+$/.test(code)) return "voice";
   if (/^IG-INT\d+$/.test(code)) return "intake";
+  // The safety gates. Seven of the ten are constants in safety-rules.ts rather
+  // than rows, on Danielle's instruction of 18 August; all ten still need a
+  // module so the registry and the panel can group them. "IG-S01" is not a
+  // digit run, so without this the generic extraction below returns "unknown".
+  if (/^IG-S\d+$/.test(code)) return "safety";
   if (/^IG-U0*\d+$/.test(code)) return "universal";
   if (/^IG-UX\d+$/.test(code)) return "ux";
   if (/^IG-MJ\d+$/.test(code)) return "micro_journaling";
