@@ -61,6 +61,7 @@
     "wing:registry": "tsx server/wing/check-registry.ts",
     "wing:reseed-library": "tsx server/wing/reseed-library.ts",
     "wing:build-full-sequences": "tsx server/wing/build-full-sequences.ts",
+    "wing:fix-sequence-ownership": "tsx server/wing/fix-sequence-ownership.ts",
     "wing:seed-personas": "tsx server/wing/seed-personas.ts",
     "wing:create-sandbox": "tsx server/wing/create-sandbox-cycle.ts",
     "harness:trace": "tsx server/harness/trace-report.ts"

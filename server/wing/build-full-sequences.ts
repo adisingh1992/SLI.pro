@@ -231,13 +231,35 @@ async function main() {
       const oldId = cy.sequence_id === null ? null : n(cy.sequence_id);
 
       /*
-       * A sequence belongs to its cycle. Where one exists we continue its
-       * version lineage; where a cycle has none — Berkeley and Vanderbilt did,
-       * before the rebuild — we start one owned by the cycle.
+       * ── OWNERSHIP IS THE CYCLE'S, ALWAYS ────────────────────────────────
+       * An earlier version of this script inherited owner_type/owner_id from
+       * the sequence the cycle happened to be pointing at, and that was wrong
+       * in a way the entries never showed. The version-history panel selects on
+       * `owner_type = 'school_cycle' AND owner_id = <cycle>`, so inheriting a
+       * shared sequence's owner filed BOTH new sequences under one cycle: that
+       * cycle listed two Version 10s and the other listed none, while both were
+       * serving 325 entries perfectly well.
+       *
+       * A sequence built for a cycle belongs to that cycle. Nothing is
+       * inherited.
        */
-      const ownerType = oldId === null ? "school_cycle" : String(cy.owner_type);
-      const ownerId = oldId === null ? cycleId : n(cy.owner_id);
-      const version = oldId === null ? 1 : n(cy.version_number) + 1;
+      const ownerType = "school_cycle";
+      const ownerId = cycleId;
+
+      /*
+       * And the version is this CYCLE'S next version, not one more than
+       * whatever the pointed-at sequence happened to be. Two cycles sharing a
+       * v9 both produced a v10 under the old rule.
+       */
+      const [{ next }] = await tx
+        .select({
+          next: sql<number>`COALESCE(MAX(${heuristicSequences.versionNumber}), 0) + 1`,
+        })
+        .from(heuristicSequences)
+        .where(
+          sql`${heuristicSequences.ownerType} = 'school_cycle' AND ${heuristicSequences.ownerId} = ${cycleId}`,
+        );
+      const version = Number(next);
 
       const [created] = await tx
         .insert(heuristicSequences)
