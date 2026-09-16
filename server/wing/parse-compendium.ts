@@ -340,6 +340,13 @@ export function moduleFromCode(code: string): string {
   if (/^IG-M6-\d+$/.test(code)) return "module_6";
   if (/^IG-IMG-\d+$/.test(code)) return "image_generation";
 
+  // Wing_Reveal_Cycle_v4_CANONICAL (18 Aug) — the system event's own namespace.
+  // Both prefixes are checked here rather than below because "RC01" is not a
+  // digit run, so the generic extraction returns "unknown" for all 26 of them.
+  // Cards and gates share the prefix pair; card_kind, not module, tells them
+  // apart.
+  if (/^(?:H|IG)-RC\d+$/.test(code)) return "reveal_cycle";
+
   // The decimal suffix is H-019.5's: Danielle numbered a card between H-019 and
   // H-020 rather than renumber the fifteen reveal templates that follow it.
   const m = /^(?:H|IG|EX)-(\d+)(?:\.\d+)?$/.exec(code);
@@ -383,6 +390,10 @@ export function moduleFromCode(code: string): string {
     case 9: return "module_9";
     case 10: return "module_10";
     case 11: return "module_11";
+    // 12 is deliberately absent: reserved and unassigned, the number skipped
+    // when Module 13 was named. A code in that range is a mistake, and
+    // "unknown" is the loud answer.
+    case 13: return "module_13";
     default: return "unknown";
   }
 }

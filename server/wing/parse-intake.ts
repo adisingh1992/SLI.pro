@@ -85,6 +85,17 @@ import { METHODOLOGY_POPULATIONS } from "./population-tags";
 export const INTAKE_SOURCE = "methodology/wing-intake-heuristic-cards-v1.8.md";
 
 /**
+ * Module 13, which this parser reads because it is written in this grammar.
+ *
+ * Doc 1 and Doc 2 both file Module 13 as its own module with its own numbering
+ * band, and it is — but a module is a methodology fact, not a file format. The
+ * v1.2 document is byte-for-byte the intake document's shape, so it is read by
+ * the intake parser with `expectedModule: "module_13"` and nothing else.
+ */
+export const MODULE13_SOURCE = "methodology/wing-module13-heuristic-cards-v1.2.md";
+export const MODULE13_MODULE = "module_13";
+
+/**
  * Every version this one supersedes, newest first.
  *
  * "Build from v1.7, discard the v1.1 I sent on the 18th" — Danielle, 19 August. Discarded
@@ -173,7 +184,7 @@ export type IntakeParseResult = {
    * would hide a methodology change inside a parse.
    */
   unresolvableTags: string[];
-  /** Cards whose module does not derive to `intake`. Should always be empty. */
+  /** Cards whose module does not derive to the expected one. Should always be empty. */
   misfiled: Array<{ cardCode: string; module: string }>;
 };
 
@@ -190,7 +201,19 @@ function opensBlock(next: string): "card" | "gate" | null {
   return null;
 }
 
-export function parseIntake(text: string): IntakeParseResult {
+/**
+ * @param options.expectedModule the module every code in this document must
+ *   derive to. Defaults to `intake`, so every existing caller is unchanged.
+ *   Module 13's document uses this identical grammar — same `name:` /
+ *   `description:` / `populationTags:` preamble, same seven-row component
+ *   table, same `gate_type:` / `Rule:` gates — so it is parsed here rather
+ *   than by a second copy of a grammar that would then have to be fixed twice.
+ */
+export function parseIntake(
+  text: string,
+  options: { expectedModule?: string } = {},
+): IntakeParseResult {
+  const expectedModule = options.expectedModule ?? "intake";
   const lines = text.split("\n");
 
   const cards: ParsedCard[] = [];
@@ -301,7 +324,7 @@ export function parseIntake(text: string): IntakeParseResult {
     if (missing.length) incomplete.push({ cardCode, missing: missing.slice() });
 
     const module = moduleFromCode(cardCode);
-    if (module !== "intake") misfiled.push({ cardCode, module });
+    if (module !== expectedModule) misfiled.push({ cardCode, module });
 
     cards.push({
       cardCode,
@@ -323,7 +346,7 @@ export function parseIntake(text: string): IntakeParseResult {
 
   for (const g of gates) {
     const module = moduleFromCode(g.cardCode);
-    if (module !== "intake") misfiled.push({ cardCode: g.cardCode, module });
+    if (module !== expectedModule) misfiled.push({ cardCode: g.cardCode, module });
   }
 
   return {

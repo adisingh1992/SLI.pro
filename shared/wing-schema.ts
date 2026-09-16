@@ -133,6 +133,12 @@ export const heuristicInterventionType = wing.enum("heuristic_intervention_type"
   // ENCOURAGING and CURIOUS and does not coach, which is the difference between
   // this module and the 18-question assessment it replaces. Migration 0022.
   "ELICIT", "OBSERVE",
+  // EDUCATE (Module 13's diagnostic layer) and SAFETY_OVERRIDE (IG-RC01, the
+  // Reveal Cycle's safety pre-pass) arrived with the 16 September parse of those
+  // two documents. Migration 0049. SAFETY_OVERRIDE normalises the document's
+  // "SAFETY OVERRIDE" — the only value here whose token is not verbatim, and the
+  // parser keeps the original.
+  "EDUCATE", "SAFETY_OVERRIDE",
 ]);
 
 /**

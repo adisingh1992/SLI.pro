@@ -1,7 +1,9 @@
 import { readFileSync } from "node:fs";
 import { REGISTRY_SOURCE, compareCodes, parseRegistry } from "./parse-registry";
 import { parseCompendium } from "./parse-compendium";
-import { INTAKE_SOURCE, parseIntake } from "./parse-intake";
+import { INTAKE_SOURCE, MODULE13_SOURCE, parseIntake } from "./parse-intake";
+import { REVEAL_CYCLE_SOURCE, parseRevealCycle } from "./parse-reveal-cycle";
+import { PLATFORM_UPDATES_SOURCE, parsePlatformUpdates } from "./parse-platform-updates";
 import { RESEARCH_GATES_SOURCE, parseResearchGates } from "./parse-research-gates";
 import { parseContentSystem } from "./parse-content-system";
 
@@ -41,6 +43,11 @@ const compendium = parseCompendium(readFileSync(COMPENDIUM_SOURCE, "utf8"));
 const intake = parseIntake(readFileSync(INTAKE_SOURCE, "utf8"));
 const research = parseResearchGates(readFileSync(RESEARCH_GATES_SOURCE, "utf8"));
 const content = parseContentSystem(readFileSync(CONTENT_SYSTEM_SOURCE, "utf8"));
+const module13 = parseIntake(readFileSync(MODULE13_SOURCE, "utf8"), {
+  expectedModule: "module_13",
+});
+const reveal = parseRevealCycle(readFileSync(REVEAL_CYCLE_SOURCE, "utf8"));
+const platform = parsePlatformUpdates(readFileSync(PLATFORM_UPDATES_SOURCE, "utf8"));
 
 /** code → the parser that produces a spec for it. First writer wins, and the
  *  order is deliberate: a module document is a better source than the master
@@ -56,6 +63,15 @@ offer(research.universalGates.map((g) => g.cardCode), "research-derived gates");
 offer(research.moduleGates.map((g) => g.cardCode), "research-derived gates");
 offer(content.cards.map((c) => c.cardCode), "content system v1");
 offer(content.gates.map((g) => g.cardCode), "content system v1");
+offer(module13.cards.map((c) => c.cardCode), "module 13 v1.2");
+offer(module13.gates.map((g) => g.cardCode), "module 13 v1.2");
+offer(reveal.cards.map((c) => c.cardCode), "reveal cycle v4");
+offer(platform.gates.map((g) => g.cardCode), "platform updates");
+// Named by their document but carrying no component table — IG-RC11 (non-firing
+// standing rule) and IG-RC12 (retired into IG-S03, number retained). Offered so
+// the coverage report does not call them unsourced, tagged so nothing mistakes
+// them for full specifications.
+offer(reveal.specified, "reveal cycle v4 (code only)");
 offer(compendium.cards.map((c) => c.cardCode), "compendium v2");
 
 /* ── Report ──────────────────────────────────────────────────────────────── */

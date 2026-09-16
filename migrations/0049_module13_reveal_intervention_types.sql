@@ -1,0 +1,36 @@
+-- Two more intervention types, from Module 13 and the Reveal Cycle.
+--
+-- WHY: `heuristic_intervention_type` was built from the six values the MVP prompt
+-- files used, gained GATE when parse-compendium.ts found 19 cards declaring it,
+-- and gained ELICIT and OBSERVE in 0022 when the intake module arrived. The two
+-- documents parsed on 16 September declare two more:
+--
+--   EDUCATE          3 cards. H-1301, H-1302, H-1303 — Module 13's diagnostic
+--                    layer. Deliberately not COACH: the layer's job is to teach
+--                    how AI-mediated evaluation works before any coaching move
+--                    is offered, and Doc 1 names the module's lead traits as
+--                    EDUCATING + CHALLENGING. A module that opens by coaching is
+--                    the module Danielle replaced.
+--   SAFETY_OVERRIDE  1 gate. IG-RC01, the Reveal Cycle's safety pre-pass. Not
+--                    GATE, because the ordering is the rule: "the safety pass
+--                    runs BEFORE synthesis, never after", at weight 3.0, and it
+--                    can suppress a Reveal outright. A gate that can cancel the
+--                    event it guards is doing something the other gates do not.
+--
+-- ONE NORMALISATION, STATED RATHER THAN HIDDEN: the Reveal Cycle document writes
+-- the token as `SAFETY OVERRIDE`, with a space. Every other value in this enum is
+-- a single word, so the underscore is ours. The parser keeps the document's
+-- verbatim token and the seeder records it in the card's notes, so the change is
+-- recoverable and visible to the methodology owner rather than silent.
+--
+-- WHY IT IS A MIGRATION AND NOT A MAPPING: same reason as 0022. Folding EDUCATE
+-- into COACH would make Module 13's diagnostic layer indistinguishable from
+-- Foundation coaching, and folding SAFETY_OVERRIDE into GATE would make the one
+-- gate that outranks synthesis look like the eleven that do not. A lossy seed is
+-- a methodology decision taken by an engineer.
+--
+-- ADD VALUE IF NOT EXISTS so re-running is safe. Postgres 12+ permits this inside
+-- a transaction as long as the new value is not used in the same transaction, and
+-- nothing here inserts.
+ALTER TYPE "wing"."heuristic_intervention_type" ADD VALUE IF NOT EXISTS 'EDUCATE';--> statement-breakpoint
+ALTER TYPE "wing"."heuristic_intervention_type" ADD VALUE IF NOT EXISTS 'SAFETY_OVERRIDE';

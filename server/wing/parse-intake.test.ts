@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
-import { INTAKE_SOURCE, parseIntake } from "./parse-intake";
+import { INTAKE_SOURCE, MODULE13_SOURCE, parseIntake } from "./parse-intake";
 import { TEMPLATES } from "./reveal-select";
 import {
   COMPONENT_KEYS,
@@ -314,6 +314,53 @@ test("no card names a reveal template that is not in the selectable set", () => 
       `${entry} is baselined but no longer present — she has reissued. Delete the entry.`,
     );
   }
+});
+
+/* ── The same grammar, a different module ────────────────────────────────── */
+
+/*
+ * Module 13's document is written in this document's format, so it is parsed by
+ * this parser with `expectedModule: "module_13"`. These cases live here rather
+ * than in a file of their own because what they actually guard is THIS parser's
+ * new option: that passing it changes only the module assertion, and that
+ * omitting it leaves every existing caller exactly where it was.
+ */
+const m13 = parseIntake(readFileSync(MODULE13_SOURCE, "utf8"), {
+  expectedModule: "module_13",
+});
+
+test("module 13 · ten cards and seven gates, from the intake grammar", () => {
+  assert.equal(m13.cards.length, 10);
+  assert.equal(m13.gates.length, 7);
+  assert.deepEqual(
+    m13.cards.map((c) => c.cardCode),
+    ["H-1301", "H-1302", "H-1303", "H-1304", "H-1305",
+     "H-1306", "H-1307", "H-1308", "H-1309", "H-1310"],
+  );
+});
+
+test("module 13 · every card carries all seven components, no collisions", () => {
+  assert.deepEqual(m13.incomplete, []);
+  assert.deepEqual(m13.collisions, []);
+});
+
+test("module 13 · nothing is misfiled once moduleFromCode knows the 13xx band", () => {
+  assert.deepEqual(m13.misfiled, []);
+  assert.ok(m13.cards.every((c) => c.module === "module_13"));
+});
+
+test("module 13 · EDUCATE is recorded, not folded into COACH", () => {
+  assert.equal(m13.interventionTypes["EDUCATE"], 3);
+});
+
+test("expectedModule defaults to intake, so every existing caller is unchanged", () => {
+  const byDefault = parseIntake(readFileSync(INTAKE_SOURCE, "utf8"));
+  const explicit = parseIntake(readFileSync(INTAKE_SOURCE, "utf8"), { expectedModule: "intake" });
+  assert.deepEqual(byDefault.misfiled, explicit.misfiled);
+  assert.deepEqual(byDefault.misfiled, []);
+  // And a wrong expectation is loud rather than silent.
+  const wrong = parseIntake(readFileSync(INTAKE_SOURCE, "utf8"), { expectedModule: "module_13" });
+  assert.equal(wrong.misfiled.length, wrong.cards.length + wrong.gates.length);
 });
 
 if (failures) {
