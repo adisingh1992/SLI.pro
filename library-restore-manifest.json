@@ -1,0 +1,1934 @@
+{
+  "capturedAt": "2026-09-16T08:34:18.423Z",
+  "note": "Composition is recorded BY CARD CODE, not by heuristic id. A rebuild mints new ids, so codes are the only thing that survives it.",
+  "cycles": [
+    {
+      "cycleId": 1,
+      "institution": "SLI.pro Direct",
+      "label": "Direct 2026",
+      "cycleYear": 2026,
+      "status": "active",
+      "sequenceId": 18,
+      "versionNumber": 8,
+      "supersededAt": null,
+      "students": 2,
+      "entries": [
+        {
+          "cardCode": "H-001",
+          "position": 1,
+          "weight": 1,
+          "appliesToSession": null
+        },
+        {
+          "cardCode": "H-002",
+          "position": 2,
+          "weight": 1,
+          "appliesToSession": null
+        },
+        {
+          "cardCode": "H-003",
+          "position": 3,
+          "weight": 1,
+          "appliesToSession": null
+        },
+        {
+          "cardCode": "H-004",
+          "position": 4,
+          "weight": 1,
+          "appliesToSession": null
+        },
+        {
+          "cardCode": "H-005",
+          "position": 5,
+          "weight": 1,
+          "appliesToSession": null
+        },
+        {
+          "cardCode": "H-007",
+          "position": 6,
+          "weight": 1,
+          "appliesToSession": null
+        },
+        {
+          "cardCode": "H-900",
+          "position": 7,
+          "weight": 1,
+          "appliesToSession": null
+        },
+        {
+          "cardCode": "IG-U003",
+          "position": 8,
+          "weight": 1,
+          "appliesToSession": null
+        },
+        {
+          "cardCode": "IG-U004",
+          "position": 9,
+          "weight": 1,
+          "appliesToSession": null
+        },
+        {
+          "cardCode": "IG-U005",
+          "position": 10,
+          "weight": 1,
+          "appliesToSession": null
+        },
+        {
+          "cardCode": "IG-U006",
+          "position": 11,
+          "weight": 1,
+          "appliesToSession": null
+        },
+        {
+          "cardCode": "IG-U007",
+          "position": 12,
+          "weight": 1,
+          "appliesToSession": null
+        },
+        {
+          "cardCode": "IG-U008",
+          "position": 13,
+          "weight": 1,
+          "appliesToSession": null
+        },
+        {
+          "cardCode": "IG-U009",
+          "position": 14,
+          "weight": 1,
+          "appliesToSession": null
+        },
+        {
+          "cardCode": "IG-U010",
+          "position": 15,
+          "weight": 1,
+          "appliesToSession": null
+        },
+        {
+          "cardCode": "IG-U011",
+          "position": 16,
+          "weight": 1,
+          "appliesToSession": null
+        },
+        {
+          "cardCode": "IG-U018",
+          "position": 17,
+          "weight": 1,
+          "appliesToSession": null
+        },
+        {
+          "cardCode": "IG-U019",
+          "position": 18,
+          "weight": 1,
+          "appliesToSession": null
+        },
+        {
+          "cardCode": "IG-U020",
+          "position": 19,
+          "weight": 1,
+          "appliesToSession": null
+        },
+        {
+          "cardCode": "IG-V01",
+          "position": 20,
+          "weight": 1,
+          "appliesToSession": null
+        },
+        {
+          "cardCode": "IG-V02",
+          "position": 21,
+          "weight": 1,
+          "appliesToSession": null
+        },
+        {
+          "cardCode": "IG-V03",
+          "position": 22,
+          "weight": 1,
+          "appliesToSession": null
+        },
+        {
+          "cardCode": "IG-V04",
+          "position": 23,
+          "weight": 1,
+          "appliesToSession": null
+        },
+        {
+          "cardCode": "IG-V05",
+          "position": 24,
+          "weight": 1,
+          "appliesToSession": null
+        },
+        {
+          "cardCode": "IG-V07",
+          "position": 25,
+          "weight": 1,
+          "appliesToSession": null
+        },
+        {
+          "cardCode": "H-010",
+          "position": 26,
+          "weight": 1,
+          "appliesToSession": "intake"
+        },
+        {
+          "cardCode": "H-011",
+          "position": 27,
+          "weight": 1,
+          "appliesToSession": "intake"
+        },
+        {
+          "cardCode": "H-012",
+          "position": 28,
+          "weight": 1,
+          "appliesToSession": "intake"
+        },
+        {
+          "cardCode": "H-013",
+          "position": 29,
+          "weight": 1,
+          "appliesToSession": "intake"
+        },
+        {
+          "cardCode": "H-014",
+          "position": 30,
+          "weight": 1,
+          "appliesToSession": "intake"
+        },
+        {
+          "cardCode": "H-015",
+          "position": 31,
+          "weight": 1,
+          "appliesToSession": "intake"
+        },
+        {
+          "cardCode": "H-016",
+          "position": 32,
+          "weight": 1,
+          "appliesToSession": "intake"
+        },
+        {
+          "cardCode": "H-017",
+          "position": 33,
+          "weight": 1,
+          "appliesToSession": "intake"
+        },
+        {
+          "cardCode": "H-018",
+          "position": 34,
+          "weight": 1,
+          "appliesToSession": "intake"
+        },
+        {
+          "cardCode": "H-019",
+          "position": 35,
+          "weight": 1,
+          "appliesToSession": "intake"
+        },
+        {
+          "cardCode": "H-020",
+          "position": 36,
+          "weight": 2,
+          "appliesToSession": "intake"
+        },
+        {
+          "cardCode": "H-021",
+          "position": 37,
+          "weight": 1,
+          "appliesToSession": "intake"
+        },
+        {
+          "cardCode": "H-022",
+          "position": 38,
+          "weight": 1.5,
+          "appliesToSession": "intake"
+        },
+        {
+          "cardCode": "H-023",
+          "position": 39,
+          "weight": 1,
+          "appliesToSession": "intake"
+        },
+        {
+          "cardCode": "H-024",
+          "position": 40,
+          "weight": 1,
+          "appliesToSession": "intake"
+        },
+        {
+          "cardCode": "H-025",
+          "position": 41,
+          "weight": 1,
+          "appliesToSession": "intake"
+        },
+        {
+          "cardCode": "H-026",
+          "position": 42,
+          "weight": 1,
+          "appliesToSession": "intake"
+        },
+        {
+          "cardCode": "H-027",
+          "position": 43,
+          "weight": 2,
+          "appliesToSession": "intake"
+        },
+        {
+          "cardCode": "H-028",
+          "position": 44,
+          "weight": 1,
+          "appliesToSession": "intake"
+        },
+        {
+          "cardCode": "H-029",
+          "position": 45,
+          "weight": 1,
+          "appliesToSession": "intake"
+        },
+        {
+          "cardCode": "H-030",
+          "position": 46,
+          "weight": 1,
+          "appliesToSession": "intake"
+        },
+        {
+          "cardCode": "H-031",
+          "position": 47,
+          "weight": 1,
+          "appliesToSession": "intake"
+        },
+        {
+          "cardCode": "H-032",
+          "position": 48,
+          "weight": 1,
+          "appliesToSession": "intake"
+        },
+        {
+          "cardCode": "H-034",
+          "position": 49,
+          "weight": 1,
+          "appliesToSession": "intake"
+        },
+        {
+          "cardCode": "H-035",
+          "position": 50,
+          "weight": 1,
+          "appliesToSession": "intake"
+        },
+        {
+          "cardCode": "H-036",
+          "position": 51,
+          "weight": 1,
+          "appliesToSession": "intake"
+        },
+        {
+          "cardCode": "H-037",
+          "position": 52,
+          "weight": 1,
+          "appliesToSession": "intake"
+        },
+        {
+          "cardCode": "H-019.5",
+          "position": 53,
+          "weight": 2,
+          "appliesToSession": "intake"
+        },
+        {
+          "cardCode": "IG-INT01",
+          "position": 54,
+          "weight": 1,
+          "appliesToSession": "intake"
+        },
+        {
+          "cardCode": "IG-INT02",
+          "position": 55,
+          "weight": 1,
+          "appliesToSession": "intake"
+        },
+        {
+          "cardCode": "IG-INT03",
+          "position": 56,
+          "weight": 1,
+          "appliesToSession": "intake"
+        },
+        {
+          "cardCode": "IG-INT04",
+          "position": 57,
+          "weight": 1,
+          "appliesToSession": "intake"
+        },
+        {
+          "cardCode": "IG-INT05",
+          "position": 58,
+          "weight": 1,
+          "appliesToSession": "intake"
+        },
+        {
+          "cardCode": "IG-INT06",
+          "position": 59,
+          "weight": 1,
+          "appliesToSession": "intake"
+        },
+        {
+          "cardCode": "IG-INT07",
+          "position": 60,
+          "weight": 1,
+          "appliesToSession": "intake"
+        },
+        {
+          "cardCode": "IG-INT08",
+          "position": 61,
+          "weight": 1,
+          "appliesToSession": "intake"
+        },
+        {
+          "cardCode": "IG-INT09",
+          "position": 62,
+          "weight": 1,
+          "appliesToSession": "intake"
+        },
+        {
+          "cardCode": "IG-INT10",
+          "position": 63,
+          "weight": 1,
+          "appliesToSession": "intake"
+        },
+        {
+          "cardCode": "IG-INT11",
+          "position": 64,
+          "weight": 1,
+          "appliesToSession": "intake"
+        },
+        {
+          "cardCode": "IG-INT12",
+          "position": 65,
+          "weight": 1,
+          "appliesToSession": "intake"
+        },
+        {
+          "cardCode": "IG-INT13",
+          "position": 66,
+          "weight": 1,
+          "appliesToSession": "intake"
+        },
+        {
+          "cardCode": "H-101",
+          "position": 67,
+          "weight": 1.5,
+          "appliesToSession": "foundation_1"
+        },
+        {
+          "cardCode": "H-102",
+          "position": 68,
+          "weight": 1,
+          "appliesToSession": "foundation_1"
+        },
+        {
+          "cardCode": "H-103",
+          "position": 69,
+          "weight": 2,
+          "appliesToSession": "foundation_1"
+        },
+        {
+          "cardCode": "H-104",
+          "position": 70,
+          "weight": 1,
+          "appliesToSession": "foundation_1"
+        },
+        {
+          "cardCode": "H-105",
+          "position": 71,
+          "weight": 1,
+          "appliesToSession": "foundation_1"
+        },
+        {
+          "cardCode": "H-106",
+          "position": 72,
+          "weight": 1.5,
+          "appliesToSession": "foundation_1"
+        },
+        {
+          "cardCode": "H-107",
+          "position": 73,
+          "weight": 1,
+          "appliesToSession": "foundation_1"
+        },
+        {
+          "cardCode": "H-108",
+          "position": 74,
+          "weight": 1,
+          "appliesToSession": "foundation_1"
+        },
+        {
+          "cardCode": "H-109",
+          "position": 75,
+          "weight": 1,
+          "appliesToSession": "foundation_1"
+        },
+        {
+          "cardCode": "H-110",
+          "position": 76,
+          "weight": 1,
+          "appliesToSession": "foundation_1"
+        },
+        {
+          "cardCode": "H-111",
+          "position": 77,
+          "weight": 1,
+          "appliesToSession": "foundation_1"
+        },
+        {
+          "cardCode": "H-201",
+          "position": 78,
+          "weight": 2,
+          "appliesToSession": "foundation_2"
+        },
+        {
+          "cardCode": "H-202",
+          "position": 79,
+          "weight": 1.5,
+          "appliesToSession": "foundation_2"
+        },
+        {
+          "cardCode": "H-203",
+          "position": 80,
+          "weight": 1,
+          "appliesToSession": "foundation_2"
+        },
+        {
+          "cardCode": "H-204",
+          "position": 81,
+          "weight": 1,
+          "appliesToSession": "foundation_2"
+        },
+        {
+          "cardCode": "H-205",
+          "position": 82,
+          "weight": 1.5,
+          "appliesToSession": "foundation_2"
+        },
+        {
+          "cardCode": "H-206",
+          "position": 83,
+          "weight": 1,
+          "appliesToSession": "foundation_2"
+        },
+        {
+          "cardCode": "H-207",
+          "position": 84,
+          "weight": 1.5,
+          "appliesToSession": "foundation_2"
+        },
+        {
+          "cardCode": "H-208",
+          "position": 85,
+          "weight": 1,
+          "appliesToSession": "foundation_2"
+        },
+        {
+          "cardCode": "H-209",
+          "position": 86,
+          "weight": 1,
+          "appliesToSession": "foundation_2"
+        },
+        {
+          "cardCode": "H-210",
+          "position": 87,
+          "weight": 1,
+          "appliesToSession": "foundation_2"
+        },
+        {
+          "cardCode": "H-211",
+          "position": 88,
+          "weight": 1,
+          "appliesToSession": "foundation_2"
+        },
+        {
+          "cardCode": "H-212",
+          "position": 89,
+          "weight": 1,
+          "appliesToSession": "foundation_2"
+        },
+        {
+          "cardCode": "H-301",
+          "position": 90,
+          "weight": 2,
+          "appliesToSession": "foundation_3"
+        },
+        {
+          "cardCode": "H-302",
+          "position": 91,
+          "weight": 1.5,
+          "appliesToSession": "foundation_3"
+        },
+        {
+          "cardCode": "H-303",
+          "position": 92,
+          "weight": 1,
+          "appliesToSession": "foundation_3"
+        },
+        {
+          "cardCode": "H-304",
+          "position": 93,
+          "weight": 1,
+          "appliesToSession": "foundation_3"
+        },
+        {
+          "cardCode": "H-305",
+          "position": 94,
+          "weight": 1.5,
+          "appliesToSession": "foundation_3"
+        },
+        {
+          "cardCode": "H-306",
+          "position": 95,
+          "weight": 1,
+          "appliesToSession": "foundation_3"
+        },
+        {
+          "cardCode": "H-307",
+          "position": 96,
+          "weight": 1,
+          "appliesToSession": "foundation_3"
+        },
+        {
+          "cardCode": "H-309",
+          "position": 97,
+          "weight": 2,
+          "appliesToSession": "foundation_3"
+        },
+        {
+          "cardCode": "H-310",
+          "position": 98,
+          "weight": 1,
+          "appliesToSession": "foundation_3"
+        },
+        {
+          "cardCode": "H-311",
+          "position": 99,
+          "weight": 1,
+          "appliesToSession": "foundation_3"
+        },
+        {
+          "cardCode": "H-312",
+          "position": 100,
+          "weight": 1,
+          "appliesToSession": "foundation_3"
+        },
+        {
+          "cardCode": "H-313",
+          "position": 101,
+          "weight": 1,
+          "appliesToSession": "foundation_3"
+        },
+        {
+          "cardCode": "H-314",
+          "position": 102,
+          "weight": 1,
+          "appliesToSession": "foundation_3"
+        },
+        {
+          "cardCode": "H-315",
+          "position": 103,
+          "weight": 1,
+          "appliesToSession": "foundation_3"
+        }
+      ],
+      "unrestorable": []
+    },
+    {
+      "cycleId": 4,
+      "institution": "SLI Test Harness (Sandbox)",
+      "label": "Harness Sandbox",
+      "cycleYear": 2026,
+      "status": "active",
+      "sequenceId": 18,
+      "versionNumber": 8,
+      "supersededAt": null,
+      "students": 1,
+      "entries": [
+        {
+          "cardCode": "H-001",
+          "position": 1,
+          "weight": 1,
+          "appliesToSession": null
+        },
+        {
+          "cardCode": "H-002",
+          "position": 2,
+          "weight": 1,
+          "appliesToSession": null
+        },
+        {
+          "cardCode": "H-003",
+          "position": 3,
+          "weight": 1,
+          "appliesToSession": null
+        },
+        {
+          "cardCode": "H-004",
+          "position": 4,
+          "weight": 1,
+          "appliesToSession": null
+        },
+        {
+          "cardCode": "H-005",
+          "position": 5,
+          "weight": 1,
+          "appliesToSession": null
+        },
+        {
+          "cardCode": "H-007",
+          "position": 6,
+          "weight": 1,
+          "appliesToSession": null
+        },
+        {
+          "cardCode": "H-900",
+          "position": 7,
+          "weight": 1,
+          "appliesToSession": null
+        },
+        {
+          "cardCode": "IG-U003",
+          "position": 8,
+          "weight": 1,
+          "appliesToSession": null
+        },
+        {
+          "cardCode": "IG-U004",
+          "position": 9,
+          "weight": 1,
+          "appliesToSession": null
+        },
+        {
+          "cardCode": "IG-U005",
+          "position": 10,
+          "weight": 1,
+          "appliesToSession": null
+        },
+        {
+          "cardCode": "IG-U006",
+          "position": 11,
+          "weight": 1,
+          "appliesToSession": null
+        },
+        {
+          "cardCode": "IG-U007",
+          "position": 12,
+          "weight": 1,
+          "appliesToSession": null
+        },
+        {
+          "cardCode": "IG-U008",
+          "position": 13,
+          "weight": 1,
+          "appliesToSession": null
+        },
+        {
+          "cardCode": "IG-U009",
+          "position": 14,
+          "weight": 1,
+          "appliesToSession": null
+        },
+        {
+          "cardCode": "IG-U010",
+          "position": 15,
+          "weight": 1,
+          "appliesToSession": null
+        },
+        {
+          "cardCode": "IG-U011",
+          "position": 16,
+          "weight": 1,
+          "appliesToSession": null
+        },
+        {
+          "cardCode": "IG-U018",
+          "position": 17,
+          "weight": 1,
+          "appliesToSession": null
+        },
+        {
+          "cardCode": "IG-U019",
+          "position": 18,
+          "weight": 1,
+          "appliesToSession": null
+        },
+        {
+          "cardCode": "IG-U020",
+          "position": 19,
+          "weight": 1,
+          "appliesToSession": null
+        },
+        {
+          "cardCode": "IG-V01",
+          "position": 20,
+          "weight": 1,
+          "appliesToSession": null
+        },
+        {
+          "cardCode": "IG-V02",
+          "position": 21,
+          "weight": 1,
+          "appliesToSession": null
+        },
+        {
+          "cardCode": "IG-V03",
+          "position": 22,
+          "weight": 1,
+          "appliesToSession": null
+        },
+        {
+          "cardCode": "IG-V04",
+          "position": 23,
+          "weight": 1,
+          "appliesToSession": null
+        },
+        {
+          "cardCode": "IG-V05",
+          "position": 24,
+          "weight": 1,
+          "appliesToSession": null
+        },
+        {
+          "cardCode": "IG-V07",
+          "position": 25,
+          "weight": 1,
+          "appliesToSession": null
+        },
+        {
+          "cardCode": "H-010",
+          "position": 26,
+          "weight": 1,
+          "appliesToSession": "intake"
+        },
+        {
+          "cardCode": "H-011",
+          "position": 27,
+          "weight": 1,
+          "appliesToSession": "intake"
+        },
+        {
+          "cardCode": "H-012",
+          "position": 28,
+          "weight": 1,
+          "appliesToSession": "intake"
+        },
+        {
+          "cardCode": "H-013",
+          "position": 29,
+          "weight": 1,
+          "appliesToSession": "intake"
+        },
+        {
+          "cardCode": "H-014",
+          "position": 30,
+          "weight": 1,
+          "appliesToSession": "intake"
+        },
+        {
+          "cardCode": "H-015",
+          "position": 31,
+          "weight": 1,
+          "appliesToSession": "intake"
+        },
+        {
+          "cardCode": "H-016",
+          "position": 32,
+          "weight": 1,
+          "appliesToSession": "intake"
+        },
+        {
+          "cardCode": "H-017",
+          "position": 33,
+          "weight": 1,
+          "appliesToSession": "intake"
+        },
+        {
+          "cardCode": "H-018",
+          "position": 34,
+          "weight": 1,
+          "appliesToSession": "intake"
+        },
+        {
+          "cardCode": "H-019",
+          "position": 35,
+          "weight": 1,
+          "appliesToSession": "intake"
+        },
+        {
+          "cardCode": "H-020",
+          "position": 36,
+          "weight": 2,
+          "appliesToSession": "intake"
+        },
+        {
+          "cardCode": "H-021",
+          "position": 37,
+          "weight": 1,
+          "appliesToSession": "intake"
+        },
+        {
+          "cardCode": "H-022",
+          "position": 38,
+          "weight": 1.5,
+          "appliesToSession": "intake"
+        },
+        {
+          "cardCode": "H-023",
+          "position": 39,
+          "weight": 1,
+          "appliesToSession": "intake"
+        },
+        {
+          "cardCode": "H-024",
+          "position": 40,
+          "weight": 1,
+          "appliesToSession": "intake"
+        },
+        {
+          "cardCode": "H-025",
+          "position": 41,
+          "weight": 1,
+          "appliesToSession": "intake"
+        },
+        {
+          "cardCode": "H-026",
+          "position": 42,
+          "weight": 1,
+          "appliesToSession": "intake"
+        },
+        {
+          "cardCode": "H-027",
+          "position": 43,
+          "weight": 2,
+          "appliesToSession": "intake"
+        },
+        {
+          "cardCode": "H-028",
+          "position": 44,
+          "weight": 1,
+          "appliesToSession": "intake"
+        },
+        {
+          "cardCode": "H-029",
+          "position": 45,
+          "weight": 1,
+          "appliesToSession": "intake"
+        },
+        {
+          "cardCode": "H-030",
+          "position": 46,
+          "weight": 1,
+          "appliesToSession": "intake"
+        },
+        {
+          "cardCode": "H-031",
+          "position": 47,
+          "weight": 1,
+          "appliesToSession": "intake"
+        },
+        {
+          "cardCode": "H-032",
+          "position": 48,
+          "weight": 1,
+          "appliesToSession": "intake"
+        },
+        {
+          "cardCode": "H-034",
+          "position": 49,
+          "weight": 1,
+          "appliesToSession": "intake"
+        },
+        {
+          "cardCode": "H-035",
+          "position": 50,
+          "weight": 1,
+          "appliesToSession": "intake"
+        },
+        {
+          "cardCode": "H-036",
+          "position": 51,
+          "weight": 1,
+          "appliesToSession": "intake"
+        },
+        {
+          "cardCode": "H-037",
+          "position": 52,
+          "weight": 1,
+          "appliesToSession": "intake"
+        },
+        {
+          "cardCode": "H-019.5",
+          "position": 53,
+          "weight": 2,
+          "appliesToSession": "intake"
+        },
+        {
+          "cardCode": "IG-INT01",
+          "position": 54,
+          "weight": 1,
+          "appliesToSession": "intake"
+        },
+        {
+          "cardCode": "IG-INT02",
+          "position": 55,
+          "weight": 1,
+          "appliesToSession": "intake"
+        },
+        {
+          "cardCode": "IG-INT03",
+          "position": 56,
+          "weight": 1,
+          "appliesToSession": "intake"
+        },
+        {
+          "cardCode": "IG-INT04",
+          "position": 57,
+          "weight": 1,
+          "appliesToSession": "intake"
+        },
+        {
+          "cardCode": "IG-INT05",
+          "position": 58,
+          "weight": 1,
+          "appliesToSession": "intake"
+        },
+        {
+          "cardCode": "IG-INT06",
+          "position": 59,
+          "weight": 1,
+          "appliesToSession": "intake"
+        },
+        {
+          "cardCode": "IG-INT07",
+          "position": 60,
+          "weight": 1,
+          "appliesToSession": "intake"
+        },
+        {
+          "cardCode": "IG-INT08",
+          "position": 61,
+          "weight": 1,
+          "appliesToSession": "intake"
+        },
+        {
+          "cardCode": "IG-INT09",
+          "position": 62,
+          "weight": 1,
+          "appliesToSession": "intake"
+        },
+        {
+          "cardCode": "IG-INT10",
+          "position": 63,
+          "weight": 1,
+          "appliesToSession": "intake"
+        },
+        {
+          "cardCode": "IG-INT11",
+          "position": 64,
+          "weight": 1,
+          "appliesToSession": "intake"
+        },
+        {
+          "cardCode": "IG-INT12",
+          "position": 65,
+          "weight": 1,
+          "appliesToSession": "intake"
+        },
+        {
+          "cardCode": "IG-INT13",
+          "position": 66,
+          "weight": 1,
+          "appliesToSession": "intake"
+        },
+        {
+          "cardCode": "H-101",
+          "position": 67,
+          "weight": 1.5,
+          "appliesToSession": "foundation_1"
+        },
+        {
+          "cardCode": "H-102",
+          "position": 68,
+          "weight": 1,
+          "appliesToSession": "foundation_1"
+        },
+        {
+          "cardCode": "H-103",
+          "position": 69,
+          "weight": 2,
+          "appliesToSession": "foundation_1"
+        },
+        {
+          "cardCode": "H-104",
+          "position": 70,
+          "weight": 1,
+          "appliesToSession": "foundation_1"
+        },
+        {
+          "cardCode": "H-105",
+          "position": 71,
+          "weight": 1,
+          "appliesToSession": "foundation_1"
+        },
+        {
+          "cardCode": "H-106",
+          "position": 72,
+          "weight": 1.5,
+          "appliesToSession": "foundation_1"
+        },
+        {
+          "cardCode": "H-107",
+          "position": 73,
+          "weight": 1,
+          "appliesToSession": "foundation_1"
+        },
+        {
+          "cardCode": "H-108",
+          "position": 74,
+          "weight": 1,
+          "appliesToSession": "foundation_1"
+        },
+        {
+          "cardCode": "H-109",
+          "position": 75,
+          "weight": 1,
+          "appliesToSession": "foundation_1"
+        },
+        {
+          "cardCode": "H-110",
+          "position": 76,
+          "weight": 1,
+          "appliesToSession": "foundation_1"
+        },
+        {
+          "cardCode": "H-111",
+          "position": 77,
+          "weight": 1,
+          "appliesToSession": "foundation_1"
+        },
+        {
+          "cardCode": "H-201",
+          "position": 78,
+          "weight": 2,
+          "appliesToSession": "foundation_2"
+        },
+        {
+          "cardCode": "H-202",
+          "position": 79,
+          "weight": 1.5,
+          "appliesToSession": "foundation_2"
+        },
+        {
+          "cardCode": "H-203",
+          "position": 80,
+          "weight": 1,
+          "appliesToSession": "foundation_2"
+        },
+        {
+          "cardCode": "H-204",
+          "position": 81,
+          "weight": 1,
+          "appliesToSession": "foundation_2"
+        },
+        {
+          "cardCode": "H-205",
+          "position": 82,
+          "weight": 1.5,
+          "appliesToSession": "foundation_2"
+        },
+        {
+          "cardCode": "H-206",
+          "position": 83,
+          "weight": 1,
+          "appliesToSession": "foundation_2"
+        },
+        {
+          "cardCode": "H-207",
+          "position": 84,
+          "weight": 1.5,
+          "appliesToSession": "foundation_2"
+        },
+        {
+          "cardCode": "H-208",
+          "position": 85,
+          "weight": 1,
+          "appliesToSession": "foundation_2"
+        },
+        {
+          "cardCode": "H-209",
+          "position": 86,
+          "weight": 1,
+          "appliesToSession": "foundation_2"
+        },
+        {
+          "cardCode": "H-210",
+          "position": 87,
+          "weight": 1,
+          "appliesToSession": "foundation_2"
+        },
+        {
+          "cardCode": "H-211",
+          "position": 88,
+          "weight": 1,
+          "appliesToSession": "foundation_2"
+        },
+        {
+          "cardCode": "H-212",
+          "position": 89,
+          "weight": 1,
+          "appliesToSession": "foundation_2"
+        },
+        {
+          "cardCode": "H-301",
+          "position": 90,
+          "weight": 2,
+          "appliesToSession": "foundation_3"
+        },
+        {
+          "cardCode": "H-302",
+          "position": 91,
+          "weight": 1.5,
+          "appliesToSession": "foundation_3"
+        },
+        {
+          "cardCode": "H-303",
+          "position": 92,
+          "weight": 1,
+          "appliesToSession": "foundation_3"
+        },
+        {
+          "cardCode": "H-304",
+          "position": 93,
+          "weight": 1,
+          "appliesToSession": "foundation_3"
+        },
+        {
+          "cardCode": "H-305",
+          "position": 94,
+          "weight": 1.5,
+          "appliesToSession": "foundation_3"
+        },
+        {
+          "cardCode": "H-306",
+          "position": 95,
+          "weight": 1,
+          "appliesToSession": "foundation_3"
+        },
+        {
+          "cardCode": "H-307",
+          "position": 96,
+          "weight": 1,
+          "appliesToSession": "foundation_3"
+        },
+        {
+          "cardCode": "H-309",
+          "position": 97,
+          "weight": 2,
+          "appliesToSession": "foundation_3"
+        },
+        {
+          "cardCode": "H-310",
+          "position": 98,
+          "weight": 1,
+          "appliesToSession": "foundation_3"
+        },
+        {
+          "cardCode": "H-311",
+          "position": 99,
+          "weight": 1,
+          "appliesToSession": "foundation_3"
+        },
+        {
+          "cardCode": "H-312",
+          "position": 100,
+          "weight": 1,
+          "appliesToSession": "foundation_3"
+        },
+        {
+          "cardCode": "H-313",
+          "position": 101,
+          "weight": 1,
+          "appliesToSession": "foundation_3"
+        },
+        {
+          "cardCode": "H-314",
+          "position": 102,
+          "weight": 1,
+          "appliesToSession": "foundation_3"
+        },
+        {
+          "cardCode": "H-315",
+          "position": 103,
+          "weight": 1,
+          "appliesToSession": "foundation_3"
+        }
+      ],
+      "unrestorable": []
+    },
+    {
+      "cycleId": 2,
+      "institution": "University of California, Berkeley",
+      "label": "Berkeley AY 2026–27",
+      "cycleYear": 2026,
+      "status": "active",
+      "sequenceId": 13,
+      "versionNumber": 4,
+      "supersededAt": null,
+      "students": 0,
+      "entries": [
+        {
+          "cardCode": "H-001",
+          "position": 1,
+          "weight": 1,
+          "appliesToSession": null
+        },
+        {
+          "cardCode": "H-002",
+          "position": 2,
+          "weight": 1,
+          "appliesToSession": null
+        },
+        {
+          "cardCode": "H-003",
+          "position": 3,
+          "weight": 1,
+          "appliesToSession": null
+        },
+        {
+          "cardCode": "H-004",
+          "position": 4,
+          "weight": 1,
+          "appliesToSession": null
+        },
+        {
+          "cardCode": "H-005",
+          "position": 5,
+          "weight": 1,
+          "appliesToSession": null
+        },
+        {
+          "cardCode": "H-007",
+          "position": 6,
+          "weight": 1,
+          "appliesToSession": null
+        },
+        {
+          "cardCode": "H-900",
+          "position": 7,
+          "weight": 1,
+          "appliesToSession": null
+        },
+        {
+          "cardCode": "IG-U003",
+          "position": 8,
+          "weight": 1,
+          "appliesToSession": null
+        },
+        {
+          "cardCode": "IG-U004",
+          "position": 9,
+          "weight": 1,
+          "appliesToSession": null
+        },
+        {
+          "cardCode": "IG-U005",
+          "position": 10,
+          "weight": 1,
+          "appliesToSession": null
+        },
+        {
+          "cardCode": "IG-U018",
+          "position": 11,
+          "weight": 1,
+          "appliesToSession": null
+        },
+        {
+          "cardCode": "IG-U019",
+          "position": 12,
+          "weight": 1,
+          "appliesToSession": null
+        },
+        {
+          "cardCode": "IG-U020",
+          "position": 13,
+          "weight": 1,
+          "appliesToSession": null
+        },
+        {
+          "cardCode": "IG-V01",
+          "position": 14,
+          "weight": 1,
+          "appliesToSession": null
+        },
+        {
+          "cardCode": "IG-V02",
+          "position": 15,
+          "weight": 1,
+          "appliesToSession": null
+        },
+        {
+          "cardCode": "IG-V03",
+          "position": 16,
+          "weight": 1,
+          "appliesToSession": null
+        },
+        {
+          "cardCode": "IG-V04",
+          "position": 17,
+          "weight": 1,
+          "appliesToSession": null
+        },
+        {
+          "cardCode": "IG-V05",
+          "position": 18,
+          "weight": 1,
+          "appliesToSession": null
+        },
+        {
+          "cardCode": "IG-V07",
+          "position": 19,
+          "weight": 1,
+          "appliesToSession": null
+        },
+        {
+          "cardCode": "H-101",
+          "position": 20,
+          "weight": 1.5,
+          "appliesToSession": "foundation_1"
+        },
+        {
+          "cardCode": "H-102",
+          "position": 21,
+          "weight": 1,
+          "appliesToSession": "foundation_1"
+        },
+        {
+          "cardCode": "H-103",
+          "position": 22,
+          "weight": 2,
+          "appliesToSession": "foundation_1"
+        },
+        {
+          "cardCode": "H-104",
+          "position": 23,
+          "weight": 1,
+          "appliesToSession": "foundation_1"
+        },
+        {
+          "cardCode": "H-105",
+          "position": 24,
+          "weight": 1,
+          "appliesToSession": "foundation_1"
+        },
+        {
+          "cardCode": "H-106",
+          "position": 25,
+          "weight": 1.5,
+          "appliesToSession": "foundation_1"
+        },
+        {
+          "cardCode": "H-107",
+          "position": 26,
+          "weight": 1,
+          "appliesToSession": "foundation_1"
+        },
+        {
+          "cardCode": "H-108",
+          "position": 27,
+          "weight": 1,
+          "appliesToSession": "foundation_1"
+        },
+        {
+          "cardCode": "H-109",
+          "position": 28,
+          "weight": 1,
+          "appliesToSession": "foundation_1"
+        },
+        {
+          "cardCode": "H-110",
+          "position": 29,
+          "weight": 1,
+          "appliesToSession": "foundation_1"
+        },
+        {
+          "cardCode": "H-201",
+          "position": 30,
+          "weight": 2,
+          "appliesToSession": "foundation_2"
+        },
+        {
+          "cardCode": "H-202",
+          "position": 31,
+          "weight": 1.5,
+          "appliesToSession": "foundation_2"
+        },
+        {
+          "cardCode": "H-203",
+          "position": 32,
+          "weight": 1,
+          "appliesToSession": "foundation_2"
+        },
+        {
+          "cardCode": "H-204",
+          "position": 33,
+          "weight": 1,
+          "appliesToSession": "foundation_2"
+        },
+        {
+          "cardCode": "H-205",
+          "position": 34,
+          "weight": 1.5,
+          "appliesToSession": "foundation_2"
+        },
+        {
+          "cardCode": "H-206",
+          "position": 35,
+          "weight": 1,
+          "appliesToSession": "foundation_2"
+        },
+        {
+          "cardCode": "H-207",
+          "position": 36,
+          "weight": 1.5,
+          "appliesToSession": "foundation_2"
+        },
+        {
+          "cardCode": "H-208",
+          "position": 37,
+          "weight": 1,
+          "appliesToSession": "foundation_2"
+        },
+        {
+          "cardCode": "H-209",
+          "position": 38,
+          "weight": 1,
+          "appliesToSession": "foundation_2"
+        },
+        {
+          "cardCode": "H-211",
+          "position": 39,
+          "weight": 1,
+          "appliesToSession": "foundation_2"
+        },
+        {
+          "cardCode": "H-212",
+          "position": 40,
+          "weight": 1,
+          "appliesToSession": "foundation_2"
+        },
+        {
+          "cardCode": "H-301",
+          "position": 41,
+          "weight": 2,
+          "appliesToSession": "foundation_3"
+        },
+        {
+          "cardCode": "H-302",
+          "position": 42,
+          "weight": 1.5,
+          "appliesToSession": "foundation_3"
+        },
+        {
+          "cardCode": "H-303",
+          "position": 43,
+          "weight": 1,
+          "appliesToSession": "foundation_3"
+        },
+        {
+          "cardCode": "H-304",
+          "position": 44,
+          "weight": 1,
+          "appliesToSession": "foundation_3"
+        },
+        {
+          "cardCode": "H-305",
+          "position": 45,
+          "weight": 1.5,
+          "appliesToSession": "foundation_3"
+        },
+        {
+          "cardCode": "H-306",
+          "position": 46,
+          "weight": 1,
+          "appliesToSession": "foundation_3"
+        },
+        {
+          "cardCode": "H-307",
+          "position": 47,
+          "weight": 1,
+          "appliesToSession": "foundation_3"
+        },
+        {
+          "cardCode": "H-309",
+          "position": 48,
+          "weight": 2,
+          "appliesToSession": "foundation_3"
+        },
+        {
+          "cardCode": "H-310",
+          "position": 49,
+          "weight": 1,
+          "appliesToSession": "foundation_3"
+        },
+        {
+          "cardCode": "H-311",
+          "position": 50,
+          "weight": 1,
+          "appliesToSession": "foundation_3"
+        },
+        {
+          "cardCode": "H-312",
+          "position": 51,
+          "weight": 1,
+          "appliesToSession": "foundation_3"
+        },
+        {
+          "cardCode": "H-313",
+          "position": 52,
+          "weight": 1,
+          "appliesToSession": "foundation_3"
+        },
+        {
+          "cardCode": "H-314",
+          "position": 53,
+          "weight": 1,
+          "appliesToSession": "foundation_3"
+        }
+      ],
+      "unrestorable": []
+    },
+    {
+      "cycleId": 3,
+      "institution": "Vanderbilt University",
+      "label": "Vanderbilt AY 2026–27",
+      "cycleYear": 2026,
+      "status": "active",
+      "sequenceId": 14,
+      "versionNumber": 4,
+      "supersededAt": null,
+      "students": 0,
+      "entries": [
+        {
+          "cardCode": "H-001",
+          "position": 1,
+          "weight": 1,
+          "appliesToSession": null
+        },
+        {
+          "cardCode": "H-002",
+          "position": 2,
+          "weight": 1,
+          "appliesToSession": null
+        },
+        {
+          "cardCode": "H-003",
+          "position": 3,
+          "weight": 1,
+          "appliesToSession": null
+        },
+        {
+          "cardCode": "H-004",
+          "position": 4,
+          "weight": 1,
+          "appliesToSession": null
+        },
+        {
+          "cardCode": "H-005",
+          "position": 5,
+          "weight": 1,
+          "appliesToSession": null
+        },
+        {
+          "cardCode": "H-007",
+          "position": 6,
+          "weight": 1,
+          "appliesToSession": null
+        },
+        {
+          "cardCode": "H-900",
+          "position": 7,
+          "weight": 1,
+          "appliesToSession": null
+        },
+        {
+          "cardCode": "IG-U003",
+          "position": 8,
+          "weight": 1,
+          "appliesToSession": null
+        },
+        {
+          "cardCode": "IG-U004",
+          "position": 9,
+          "weight": 1,
+          "appliesToSession": null
+        },
+        {
+          "cardCode": "IG-U005",
+          "position": 10,
+          "weight": 1,
+          "appliesToSession": null
+        },
+        {
+          "cardCode": "IG-U018",
+          "position": 11,
+          "weight": 1,
+          "appliesToSession": null
+        },
+        {
+          "cardCode": "IG-U019",
+          "position": 12,
+          "weight": 1,
+          "appliesToSession": null
+        },
+        {
+          "cardCode": "IG-U020",
+          "position": 13,
+          "weight": 1,
+          "appliesToSession": null
+        },
+        {
+          "cardCode": "IG-V01",
+          "position": 14,
+          "weight": 1,
+          "appliesToSession": null
+        },
+        {
+          "cardCode": "IG-V02",
+          "position": 15,
+          "weight": 1,
+          "appliesToSession": null
+        },
+        {
+          "cardCode": "IG-V03",
+          "position": 16,
+          "weight": 1,
+          "appliesToSession": null
+        },
+        {
+          "cardCode": "IG-V04",
+          "position": 17,
+          "weight": 1,
+          "appliesToSession": null
+        },
+        {
+          "cardCode": "IG-V05",
+          "position": 18,
+          "weight": 1,
+          "appliesToSession": null
+        },
+        {
+          "cardCode": "IG-V07",
+          "position": 19,
+          "weight": 1,
+          "appliesToSession": null
+        },
+        {
+          "cardCode": "H-101",
+          "position": 20,
+          "weight": 1.5,
+          "appliesToSession": "foundation_1"
+        },
+        {
+          "cardCode": "H-102",
+          "position": 21,
+          "weight": 1,
+          "appliesToSession": "foundation_1"
+        },
+        {
+          "cardCode": "H-103",
+          "position": 22,
+          "weight": 2,
+          "appliesToSession": "foundation_1"
+        },
+        {
+          "cardCode": "H-104",
+          "position": 23,
+          "weight": 1,
+          "appliesToSession": "foundation_1"
+        },
+        {
+          "cardCode": "H-105",
+          "position": 24,
+          "weight": 1,
+          "appliesToSession": "foundation_1"
+        },
+        {
+          "cardCode": "H-106",
+          "position": 25,
+          "weight": 1.5,
+          "appliesToSession": "foundation_1"
+        },
+        {
+          "cardCode": "H-107",
+          "position": 26,
+          "weight": 1,
+          "appliesToSession": "foundation_1"
+        },
+        {
+          "cardCode": "H-108",
+          "position": 27,
+          "weight": 1,
+          "appliesToSession": "foundation_1"
+        },
+        {
+          "cardCode": "H-109",
+          "position": 28,
+          "weight": 1,
+          "appliesToSession": "foundation_1"
+        },
+        {
+          "cardCode": "H-110",
+          "position": 29,
+          "weight": 1,
+          "appliesToSession": "foundation_1"
+        },
+        {
+          "cardCode": "H-201",
+          "position": 30,
+          "weight": 2,
+          "appliesToSession": "foundation_2"
+        },
+        {
+          "cardCode": "H-202",
+          "position": 31,
+          "weight": 1.5,
+          "appliesToSession": "foundation_2"
+        },
+        {
+          "cardCode": "H-203",
+          "position": 32,
+          "weight": 1,
+          "appliesToSession": "foundation_2"
+        },
+        {
+          "cardCode": "H-204",
+          "position": 33,
+          "weight": 1,
+          "appliesToSession": "foundation_2"
+        },
+        {
+          "cardCode": "H-205",
+          "position": 34,
+          "weight": 1.5,
+          "appliesToSession": "foundation_2"
+        },
+        {
+          "cardCode": "H-206",
+          "position": 35,
+          "weight": 1,
+          "appliesToSession": "foundation_2"
+        },
+        {
+          "cardCode": "H-207",
+          "position": 36,
+          "weight": 1.5,
+          "appliesToSession": "foundation_2"
+        },
+        {
+          "cardCode": "H-208",
+          "position": 37,
+          "weight": 1,
+          "appliesToSession": "foundation_2"
+        },
+        {
+          "cardCode": "H-209",
+          "position": 38,
+          "weight": 1,
+          "appliesToSession": "foundation_2"
+        },
+        {
+          "cardCode": "H-211",
+          "position": 39,
+          "weight": 1,
+          "appliesToSession": "foundation_2"
+        },
+        {
+          "cardCode": "H-212",
+          "position": 40,
+          "weight": 1,
+          "appliesToSession": "foundation_2"
+        },
+        {
+          "cardCode": "H-301",
+          "position": 41,
+          "weight": 2,
+          "appliesToSession": "foundation_3"
+        },
+        {
+          "cardCode": "H-302",
+          "position": 42,
+          "weight": 1.5,
+          "appliesToSession": "foundation_3"
+        },
+        {
+          "cardCode": "H-303",
+          "position": 43,
+          "weight": 1,
+          "appliesToSession": "foundation_3"
+        },
+        {
+          "cardCode": "H-304",
+          "position": 44,
+          "weight": 1,
+          "appliesToSession": "foundation_3"
+        },
+        {
+          "cardCode": "H-305",
+          "position": 45,
+          "weight": 1.5,
+          "appliesToSession": "foundation_3"
+        },
+        {
+          "cardCode": "H-306",
+          "position": 46,
+          "weight": 1,
+          "appliesToSession": "foundation_3"
+        },
+        {
+          "cardCode": "H-307",
+          "position": 47,
+          "weight": 1,
+          "appliesToSession": "foundation_3"
+        },
+        {
+          "cardCode": "H-309",
+          "position": 48,
+          "weight": 2,
+          "appliesToSession": "foundation_3"
+        },
+        {
+          "cardCode": "H-310",
+          "position": 49,
+          "weight": 1,
+          "appliesToSession": "foundation_3"
+        },
+        {
+          "cardCode": "H-311",
+          "position": 50,
+          "weight": 1,
+          "appliesToSession": "foundation_3"
+        },
+        {
+          "cardCode": "H-312",
+          "position": 51,
+          "weight": 1,
+          "appliesToSession": "foundation_3"
+        },
+        {
+          "cardCode": "H-313",
+          "position": 52,
+          "weight": 1,
+          "appliesToSession": "foundation_3"
+        },
+        {
+          "cardCode": "H-314",
+          "position": 53,
+          "weight": 1,
+          "appliesToSession": "foundation_3"
+        }
+      ],
+      "unrestorable": []
+    }
+  ]
+}

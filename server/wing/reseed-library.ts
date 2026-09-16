@@ -5,6 +5,7 @@ import { type ScriptDb } from "../script-init";
 import { startScript } from "./script-start";
 import { collectLibrary } from "./collect-library";
 import { interventionTypes, missingTypes } from "./seed-preflight";
+import { captureCycles, purgeAndReseed, type ManifestCycle } from "./reseed-purge";
 
 /**
  * `npm run wing:reseed-library`
@@ -47,6 +48,17 @@ import { interventionTypes, missingTypes } from "./seed-preflight";
  */
 
 const MANIFEST = "library-restore-manifest.json";
+
+/*
+ * Three independent things must be true before a row is deleted, and they are
+ * deliberately awkward. --purge says what you want, the long flag says you know
+ * what it costs, and --confirm is given only after the plan has been printed
+ * with the database's own name on it. A single flag would be one shell-history
+ * arrow-up away from destroying the wrong environment.
+ */
+const PURGE = process.argv.includes("--purge");
+const ACKNOWLEDGED = process.argv.includes("--i-understand-this-deletes-student-data");
+const CONFIRM = process.argv.includes("--confirm");
 
 let db: ScriptDb["db"];
 let pool: ScriptDb["pool"];
@@ -283,6 +295,16 @@ async function main() {
     });
   }
 
+  const liveSequenceIds = new Set(
+    cycles.map((cy) => cy.sequence_id).filter((x) => x !== null).map((x) => n(x)),
+  );
+  const totalLiveEntries = Array.from(liveSequenceIds).reduce((sum, id) => {
+    const cy = (manifest.cycles as Array<{ sequenceId: number | null; entries: unknown[] }>).find(
+      (x) => x.sequenceId === id,
+    );
+    return sum + (cy ? cy.entries.length : 0);
+  }, 0);
+
   writeFileSync(MANIFEST, JSON.stringify(manifest, null, 2) + "\n");
   console.log(`\n  Restore manifest written to ${MANIFEST}`);
 
@@ -302,9 +324,84 @@ async function main() {
   }
 
   console.log("  ✓ sources complete, enum ready, manifest captured.");
+
+  if (!PURGE) {
+    console.log(
+      "\n  Nothing has been changed. Send this output back before the destructive run —\n" +
+        "  the numbers above are what it will do.\n",
+    );
+    await pool.end();
+    return;
+  }
+
+  /* ── 7 · the destructive path ──────────────────────────────────────────── */
+
+  heading("Destructive run");
+
+  if (!ACKNOWLEDGED) {
+    console.log(
+      "  \x1b[31m✗ --purge given without --i-understand-this-deletes-student-data\x1b[0m\n" +
+        `  This run would delete ${studentData} row(s) of student data permanently:\n` +
+        "  which card fired, for whom, on which turn, and how it performed. There is no\n" +
+        "  Trash and no undo. Add the flag if that is what you mean.\n",
+    );
+    await pool.end();
+    process.exit(1);
+  }
+
+  const where = await rows(sql`
+    SELECT current_database() AS db,
+           current_user       AS usr,
+           inet_server_addr()::text AS addr
+  `);
+  const w = where[0] ?? {};
+  console.log(`  database   ${s(w.db)}`);
+  console.log(`  user       ${s(w.usr)}`);
+  console.log(`  server     ${s(w.addr)}`);
+  console.log(`  students   ${cycles.reduce((t, cy) => t + n(cy.students), 0)} across ${cycles.length} cycle(s)`);
+
   console.log(
-    "\n  Nothing has been changed. Send this output back before the destructive run —\n" +
-      "  the numbers above are what it will do.\n",
+    `\n  Would delete  ${String(n(c.heuristics)).padStart(5)} cards, ` +
+      `${n(c.components)} components, ${n(c.sequence_entries)} sequence entries,\n` +
+      `                ${n(c.applications)} applications, ${n(c.scores)} scores, ` +
+      `${n(c.turns_naming_a_card)} transcript turn references`,
+  );
+  console.log(`  Would insert  ${String(library.elements.length).padStart(5)} cards`);
+  console.log(
+    `  Would rebuild ${String(liveSequenceIds.size).padStart(5)} ` +
+      `live sequence(s) as new versions, and repoint the cycles that name them`,
+  );
+  console.log(
+    `  Would NOT restore ${Math.max(0, n(c.sequence_entries) - totalLiveEntries)} entries ` +
+      `belonging to sequences no cycle points at.`,
+  );
+
+  if (!CONFIRM) {
+    console.log(
+      "\n  \x1b[33mStopping here. Nothing has been changed.\x1b[0m\n" +
+        "  Read the three lines above. If that is the right database, re-run with --confirm:\n\n" +
+        "    npm run wing:reseed-library -- --purge " +
+        "--i-understand-this-deletes-student-data --confirm\n",
+    );
+    await pool.end();
+    return;
+  }
+
+  const done = await purgeAndReseed(
+    db,
+    library.elements,
+    manifest.cycles as ManifestCycle[],
+    (line) => console.log(line),
+  );
+
+  heading("Done");
+  console.log(`  cards        ${done.cardsDeleted} deleted → ${done.cardsInserted} inserted`);
+  console.log(`  components   ${done.componentsDeleted} deleted → ${done.componentsInserted} inserted`);
+  console.log(`  sequences    ${done.sequencesCreated} new version(s), ${done.entriesRestored} entries restored`);
+  console.log(`  cycles       ${done.cyclesRepointed} repointed`);
+  console.log(
+    `  student data ${done.applicationsDeleted} applications, ${done.scoresDeleted} scores ` +
+      `deleted; ${done.turnsCleared} transcript turns cleared\n`,
   );
 
   await pool.end();

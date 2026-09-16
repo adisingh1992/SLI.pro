@@ -73,11 +73,41 @@ export const CODE_ENFORCED_NOTE =
   "Per Danielle, 18 August: these are system prompt rules for the first release, not cards " +
   "in the card editor. To change the behaviour, change the constant and ship it.";
 
-/** Codes Doc 2 lists that no document or constant in this repo supplies. */
-export const SAFETY_GATES_WITHOUT_SOURCE: Readonly<Record<string, string>> = {
-  "IG-S04": "Obsessive Engagement Detection — card-library gate. Text only in Wing_Safety_Architecture.md, which this repo does not have.",
-  "IG-S05": "Power Coaching Scope Limitation (Module 9 only) — card-library gate. Text only in Wing_Safety_Architecture.md, which this repo does not have.",
-  "IG-S10": "Backlash-Aware Coaching — card-library gate, fires in M6/M9/M10 visibility coaching. Text only in Wing_Safety_Architecture.md, which this repo does not have.",
+/**
+ * Codes Doc 2 §5 lists that no document or constant in this repo supplies.
+ *
+ * The name is Doc 2's own, and it is the ONLY thing we know about these three.
+ * They seed as placeholder rows carrying the name and this reason and nothing
+ * else — no rule, no components — so the panel shows all ten safety gates and
+ * shows plainly which three it cannot state. A placeholder with no text cannot
+ * compile into a prompt, and none of them is in a sequence, so the row is inert
+ * in every direction that matters.
+ */
+export const SAFETY_GATES_WITHOUT_SOURCE: Readonly<
+  Record<string, { name: string; why: string }>
+> = {
+  "IG-S04": {
+    name: "Obsessive Engagement Detection",
+    why:
+      "Card-library gate, priority 1.5, marked DELIVERED in Doc 2 §5. Its text exists only " +
+      "in Wing_Safety_Architecture.md, which this repo does not hold and the project does " +
+      "not carry. Nothing here can state what this gate does.",
+  },
+  "IG-S05": {
+    name: "Power Coaching Scope Limitation",
+    why:
+      "Card-library gate, priority 1.5, Module 9 only, marked DELIVERED in Doc 2 §5. Its " +
+      "text exists only in Wing_Safety_Architecture.md, which this repo does not hold and " +
+      "the project does not carry.",
+  },
+  "IG-S10": {
+    name: "Backlash-Aware Coaching",
+    why:
+      "Card-library gate, priority 1.5, marked DELIVERED in Doc 2 §5. Not active during " +
+      "intake; fires in M6/M9/M10 visibility coaching, and Doc 2 requires a tactic menu for " +
+      "all assertiveness coaching. Its text exists only in Wing_Safety_Architecture.md, " +
+      "which this repo does not hold and the project does not carry.",
+  },
 };
 
 export function deriveSafetyGates(): DerivedGate[] {

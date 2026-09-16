@@ -104,8 +104,8 @@ offer(reveal.specified, "reveal cycle v4 (code only)");
 const declared = new Map<string, string>();
 for (const [code, why] of Object.entries(RETIRED_CODES)) declared.set(code, `retired · ${why}`);
 for (const [code, why] of Object.entries(RESERVED_CODES)) declared.set(code, `reserved · ${why}`);
-for (const [code, why] of Object.entries(SAFETY_GATES_WITHOUT_SOURCE)) {
-  declared.set(code, `no source · ${why}`);
+for (const [code, entry] of Object.entries(SAFETY_GATES_WITHOUT_SOURCE)) {
+  declared.set(code, `no source · ${entry.name} — ${entry.why}`);
 }
 
 /* ── Report ──────────────────────────────────────────────────────────────── */

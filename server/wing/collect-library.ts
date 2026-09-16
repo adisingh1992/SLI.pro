@@ -275,6 +275,41 @@ function heldCodeToSeed(cardCode: string, why: string, kind: "retired" | "reserv
   };
 }
 
+/**
+ * A gate Doc 2 lists, that this repo cannot state.
+ *
+ * Carries the name and the reason and nothing else. Not `retired` — these three
+ * are live gates by Doc 2 §5, marked DELIVERED, and filing them as withdrawn
+ * would be a worse lie than filing them as empty. They hold no components, so
+ * nothing can compile them into a prompt, and they are in no sequence, so
+ * nothing can fire them. The row exists to be visible and to be filled in.
+ */
+function placeholderToSeed(cardCode: string, name: string, why: string): SeedCard {
+  return {
+    cardCode,
+    name: `${cardCode} ${name}`,
+    description: name,
+    populationTags: [],
+    components: {},
+    moduleMapping: null,
+    cardKind: "integrity_gate",
+    interventionType: null,
+    notes: [
+      "── TEXT NOT AVAILABLE ──",
+      why,
+      "",
+      "This row carries NO rule and NO components. It is a placeholder so that the ten " +
+        "safety gates of Doc 2 §5 are all visible here and it is obvious which three cannot " +
+        "be stated, rather than three codes silently missing from a library that looks " +
+        "complete.",
+      "",
+      "Nothing can act on this row: an empty gate compiles to nothing, and it belongs to no " +
+        "sequence. Send Wing_Safety_Architecture.md and it becomes a real gate on the next " +
+        "seed.",
+    ].join("\n"),
+  };
+}
+
 /* ── Collection ──────────────────────────────────────────────────────────── */
 
 export function collectLibrary(): CollectResult {
@@ -411,6 +446,10 @@ export function collectLibrary(): CollectResult {
       }),
       "safety-rules.ts (code)",
     );
+  }
+
+  for (const [code, entry] of Object.entries(SAFETY_GATES_WITHOUT_SOURCE)) {
+    add(placeholderToSeed(code, entry.name, entry.why), "declared · text not available");
   }
 
   for (const c of ux.uxGates.cards) {

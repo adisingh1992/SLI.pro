@@ -34,10 +34,17 @@ test("every code appears exactly once", () => {
   assert.equal(new Set(codes).size, codes.length);
 });
 
-test("the three gates no document supplies are absent, not invented", () => {
-  assert.deepEqual(result.unsourced, ["IG-S04", "IG-S05", "IG-S10"]);
-  for (const code of result.unsourced) {
-    assert.ok(!byCode.has(code), `${code} has no text anywhere and must not be seeded`);
+test("the three gates no document supplies are placeholders, with no rule invented", () => {
+  assert.deepEqual(result.unsourced, [], "they are seeded, so nothing is unsourced now");
+  for (const code of ["IG-S04", "IG-S05", "IG-S10"]) {
+    const e = byCode.get(code);
+    assert.ok(e, `${code} should be visible in the panel`);
+    assert.deepEqual(e!.seed.components, {}, `${code} must carry no rule — we do not have one`);
+    assert.equal(e!.seed.cardKind, "integrity_gate");
+    assert.ok(/TEXT NOT AVAILABLE/.test(e!.seed.notes));
+    assert.ok(/Safety_Architecture/.test(e!.seed.notes));
+    // Not retired: Doc 2 §5 marks all three DELIVERED. Empty is honest; withdrawn is not.
+    assert.equal(e!.status, "candidate");
   }
 });
 

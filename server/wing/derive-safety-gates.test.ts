@@ -45,9 +45,10 @@ test("the seven in the system prompt are exactly these", () => {
 
 test("the three Doc 2 lists and this repo cannot supply are declared, with reasons", () => {
   assert.deepEqual(Object.keys(SAFETY_GATES_WITHOUT_SOURCE).sort(), ["IG-S04", "IG-S05", "IG-S10"]);
-  for (const [code, why] of Object.entries(SAFETY_GATES_WITHOUT_SOURCE)) {
-    assert.ok(why.length > 40, `${code}'s reason is too short to be a reason`);
-    assert.ok(/Safety_Architecture/.test(why), `${code} should name the document it needs`);
+  for (const [code, entry] of Object.entries(SAFETY_GATES_WITHOUT_SOURCE)) {
+    assert.ok(entry.name.length > 5, `${code} needs Doc 2's name for it`);
+    assert.ok(entry.why.length > 40, `${code}'s reason is too short to be a reason`);
+    assert.ok(/Safety_Architecture/.test(entry.why), `${code} should name the document it needs`);
   }
 });
 
