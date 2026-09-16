@@ -13,6 +13,7 @@ import { parseContentSystem } from "./parse-content-system";
 import { REVEAL_CYCLE_SOURCE, parseRevealCycle } from "./parse-reveal-cycle";
 import { PLATFORM_UPDATES_SOURCE, parsePlatformUpdates } from "./parse-platform-updates";
 import { SAFETY_GATES_WITHOUT_SOURCE, deriveSafetyGates } from "./derive-safety-gates";
+import { UX_ADDENDUM_SOURCE, UX_RECOMMENDATION_SOURCE, parseUxGates } from "./parse-ux-gates";
 
 /**
  * Derives the expected element checklist from Doc 2, and says what supplies it.
@@ -66,6 +67,10 @@ const module13 = parseIntake(readFileSync(MODULE13_SOURCE, "utf8"), {
 const reveal = parseRevealCycle(readFileSync(REVEAL_CYCLE_SOURCE, "utf8"));
 const platform = parsePlatformUpdates(readFileSync(PLATFORM_UPDATES_SOURCE, "utf8"));
 const safety = deriveSafetyGates();
+const ux = parseUxGates(
+  readFileSync(UX_RECOMMENDATION_SOURCE, "utf8"),
+  readFileSync(UX_ADDENDUM_SOURCE, "utf8"),
+);
 
 /**
  * code → what supplies it. First writer wins, and the order is deliberate: a
@@ -88,6 +93,8 @@ offer(research.moduleGates.map((g) => g.cardCode), "research-derived gates");
 offer(content.cards.map((c) => c.cardCode), "content system v1");
 offer(content.gates.map((g) => g.cardCode), "content system v1");
 offer(safety.map((g) => g.cardCode), "safety-rules.ts (code)");
+offer(ux.uxGates.cards.map((c) => c.cardCode), "UX recommendation pt 8");
+offer(ux.mjGates.map((g) => g.cardCode), "UX addendum (rule only)");
 offer(compendium.cards.map((c) => c.cardCode), "compendium v2");
 // Named by their document but carrying no component table — IG-RC11 (non-firing
 // standing rule) and IG-RC12 (retired into IG-S03, number retained).
