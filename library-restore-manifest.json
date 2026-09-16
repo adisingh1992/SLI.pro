@@ -1,5 +1,5 @@
 {
-  "capturedAt": "2026-09-16T08:34:18.423Z",
+  "capturedAt": "2026-09-16T09:21:52.056Z",
   "note": "Composition is recorded BY CARD CODE, not by heuristic id. A rebuild mints new ids, so codes are the only thing that survives it.",
   "cycles": [
     {
