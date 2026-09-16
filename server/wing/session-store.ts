@@ -38,7 +38,21 @@ import { isAiTurn } from "./turn-type";
 export type WingSessionType =
   | "intake" | "foundation_1" | "foundation_2" | "foundation_3"
   | "enhancement_a" | "enhancement_b" | "enhancement_c"
-  | "ongoing_engagement" | "career_event_review" | "module_run";
+  | "ongoing_engagement" | "career_event_review" | "module_run"
+  /*
+   * Migration 0050. These exist today as SEQUENCE SCOPES rather than as
+   * sessions anyone creates: `heuristic_sequence_entries.applies_to_session`
+   * reuses `wing.session_type`, and a scope per module is what keeps Module 9's
+   * power cards out of a Module 4 session's detector catalogue.
+   *
+   * They are here because this union is the TypeScript mirror of that enum, and
+   * a mirror that omits values makes every read of `sessions.session_type`
+   * unassignable to it. Nothing switches exhaustively on this type — its two
+   * consumers hold arrays — so widening costs nothing, and when Modules 4–13
+   * are built as real sessions the values are already the right ones.
+   */
+  | "module_4" | "module_5" | "module_6" | "module_7" | "module_8" | "module_9"
+  | "module_10" | "module_11" | "module_13" | "reveal_cycle";
 
 export type WingSessionStatus =
   | "locked" | "available" | "in_progress" | "completed" | "ended_early";

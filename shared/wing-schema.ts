@@ -186,6 +186,21 @@ export const sessionType = wing.enum("session_type", [
   "intake", "foundation_1", "foundation_2", "foundation_3",
   "enhancement_a", "enhancement_b", "enhancement_c",
   "ongoing_engagement", "career_event_review", "module_run",
+  /*
+   * One value per module, and one for the Reveal Cycle — migration 0050.
+   *
+   * `applies_to_session` on a sequence entry reuses this enum, and until now
+   * every module from 4 to 13 shared `module_run`. That was survivable while
+   * only Foundation was deployed; with 105 coaching cards across those modules
+   * it would put Module 9's power cards and Module 10's interview cards in
+   * front of the detector during a Module 4 session, at a peak load of 105
+   * against a hard limit of 40.
+   *
+   * `module_12` is absent on purpose — reserved and unassigned. `module_run`
+   * stays because `sessions.session_type` stores it on real rows.
+   */
+  "module_4", "module_5", "module_6", "module_7", "module_8", "module_9",
+  "module_10", "module_11", "module_13", "reveal_cycle",
 ]);
 export const sessionStatus = wing.enum("session_status", [
   "locked", "available", "in_progress", "completed", "ended_early",

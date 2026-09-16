@@ -81,6 +81,16 @@ export type LibraryElement = {
   status: ElementStatus;
   /** Which document or module supplied it, for the report. */
   source: string;
+  /**
+   * The document's stated sequence weight, or null where it states none.
+   *
+   * Weight is a property of a card's MEMBERSHIP of a sequence, not of the card,
+   * so it is carried here rather than stored on the row — the sequence builder
+   * is the only consumer. Null is not 1.0: 69 cards state no weight at all, and
+   * defaulting them silently would invent a precedence decision the methodology
+   * never made. The builder writes 1.0 and says how many it had to.
+   */
+  weight: number | null;
 };
 
 export type CollectResult = {
@@ -339,7 +349,12 @@ export function collectLibrary(): CollectResult {
   const bySource = new Map<string, string[]>();
 
   /** First writer wins. The order below IS the precedence. */
-  function add(seed: SeedCard, source: string, status: ElementStatus = "candidate") {
+  function add(
+    seed: SeedCard,
+    source: string,
+    status: ElementStatus = "candidate",
+    weight: number | null = null,
+  ) {
     if (elements.has(seed.cardCode)) return;
     seed.interventionType = normaliseType(seed.cardCode, seed.interventionType, normalisedTypes);
     // Centrally, so no individual mapping can forget it and hand the seeder a
@@ -348,7 +363,7 @@ export function collectLibrary(): CollectResult {
       seed.description = seed.name;
       descriptionFromName.push(seed.cardCode);
     }
-    elements.set(seed.cardCode, { seed, status, source });
+    elements.set(seed.cardCode, { seed, status, source, weight });
     (bySource.get(source) ?? bySource.set(source, []).get(source)!).push(seed.cardCode);
   }
 
@@ -362,13 +377,17 @@ export function collectLibrary(): CollectResult {
   }
 
   // 2 · Module documents, newest first.
-  for (const c of intake.cards) add(intakeCardToSeed(c), "intake v1.8");
+  for (const c of intake.cards) add(intakeCardToSeed(c), "intake v1.8", "candidate", c.weight);
   for (const g of intake.gates) add(intakeGateToSeed(g), "intake v1.8");
 
-  for (const c of module13.cards) add(intakeCardToSeed(c, MODULE13_SOURCE), "module 13 v1.2");
+  for (const c of module13.cards) {
+    add(intakeCardToSeed(c, MODULE13_SOURCE), "module 13 v1.2", "candidate", c.weight);
+  }
   for (const g of module13.gates) add(intakeGateToSeed(g, MODULE13_SOURCE), "module 13 v1.2");
 
-  for (const c of reveal.cards) add(componentCardToSeed(c, REVEAL_CYCLE_SOURCE), "reveal cycle v4");
+  for (const c of reveal.cards) {
+    add(componentCardToSeed(c, REVEAL_CYCLE_SOURCE), "reveal cycle v4", "candidate", c.weight);
+  }
   for (const code of reveal.specified) {
     if (elements.has(code)) continue;
     add(
@@ -453,14 +472,14 @@ export function collectLibrary(): CollectResult {
   }
 
   for (const c of ux.uxGates.cards) {
-    add(componentCardToSeed(c, UX_RECOMMENDATION_SOURCE), "UX recommendation pt 8");
+    add(componentCardToSeed(c, UX_RECOMMENDATION_SOURCE), "UX recommendation pt 8", "candidate", c.weight);
   }
   for (const g of ux.mjGates) add(mjGateToSeed(g), "UX addendum (rule only)");
 
   // 3 · The master compendium last: every code above that also appears there is
   //     governed by the newer document.
   for (const c of compendium.cards) {
-    add(compendiumCardToSeed(c, compendiumSource), "compendium v2");
+    add(compendiumCardToSeed(c, compendiumSource), "compendium v2", "candidate", c.weight);
   }
 
   const expected = new Set(registry.elements.map((e) => e.code));

@@ -351,6 +351,13 @@
       "when": 1789140011000,
       "tag": "0049_module13_reveal_intervention_types",
       "breakpoints": true
+    },
+    {
+      "idx": 50,
+      "version": "7",
+      "when": 1789140012000,
+      "tag": "0050_per_module_session_scope",
+      "breakpoints": true
     }
   ]
 }
