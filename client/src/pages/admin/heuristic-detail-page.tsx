@@ -18,6 +18,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import AdminLayout from "./layout";
 import { StatusBadge, type Heuristic } from "./methodology/heuristic";
+import { AdvisoryBanner, CardDetailsEditor } from "./methodology/card-details";
 import {
   ComponentField, ComponentReadout, EngineUseBadge, COMPONENT_SPECS,
   GROUP_LABELS, fieldsIn, type ComponentType, type FieldGroup,
@@ -419,6 +420,13 @@ export default function AdminHeuristicDetailPage() {
           Methodology
         </Button>
 
+        {/*
+          * Read before editing. Derived by the server from the declared
+          * registries, never from this card's notes — the notes are editable
+          * and a warning that can be tidied away is not a warning.
+          */}
+        <AdvisoryBanner advisory={card.advisory} />
+
         {/* ── Identity ───────────────────────────────────────────────────── */}
         <Card>
           <CardContent className="pt-6">
@@ -434,7 +442,10 @@ export default function AdminHeuristicDetailPage() {
                 </div>
                 <p className="mt-1.5 text-sm text-muted-foreground">{card.description}</p>
               </div>
-              <StatusBadge status={card.status} />
+              <div className="flex shrink-0 items-center gap-2">
+                <CardDetailsEditor card={card} />
+                <StatusBadge status={card.status} />
+              </div>
             </div>
 
             <div className="mt-4 flex flex-wrap items-center gap-x-5 gap-y-2 border-t pt-4 text-xs">

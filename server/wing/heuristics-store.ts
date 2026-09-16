@@ -445,27 +445,51 @@ export async function listApplicationsForSession(sessionId: number) {
 
 /* ── Authoring ──────────────────────────────────────────────────────────── */
 
+/**
+ * The six components that make up a card's specification.
+ *
+ * `intervention_type` is the seventh in the methodology and a column here.
+ * `module_mapping` and `notes` are bookkeeping, not specification.
+ */
+const SPEC_COMPONENTS = [
+  "signal", "detection_method", "coaching_move",
+  "delivery_adaptation", "success_criteria", "failure_path",
+] as const;
+
 export async function listHeuristics(includeRetired = false) {
   const rows = includeRetired
     ? await db.select().from(heuristics)
     : await db.select().from(heuristics).where(ne(heuristics.status, "retired"));
 
   /*
-   * How many of the seven a card actually has, counted once here rather than by
-   * the panel opening 325 cards to find out. `is_current` matters: a revised
-   * component leaves its predecessor behind, and counting both would report a
-   * card as over-complete the first time anyone edits it.
+   * How much of its specification a card actually has, counted once here rather
+   * than by the panel opening 325 cards to find out.
+   *
+   * SIX, not seven and not "all components". The methodology's seventh,
+   * intervention_type, is a column rather than a component row, and
+   * module_mapping and notes are bookkeeping every seeded card carries — so
+   * counting every row would report a rule-only gate as 3/8 and a complete card
+   * as 8/8, and neither number would mean anything to the person reading it.
+   *
+   * `is_current` matters too: a revised component leaves its predecessor behind,
+   * and counting both would report a card as over-complete the first time
+   * anyone edits it.
    */
   const counts = await db
     .select({
       heuristicId: heuristicComponents.heuristicId,
-      componentCount: count(),
+      specComponentCount: count(),
     })
     .from(heuristicComponents)
-    .where(eq(heuristicComponents.isCurrent, true))
+    .where(
+      and(
+        eq(heuristicComponents.isCurrent, true),
+        inArray(heuristicComponents.componentType, SPEC_COMPONENTS as never),
+      ),
+    )
     .groupBy(heuristicComponents.heuristicId);
 
-  const byId = new Map(counts.map((c) => [c.heuristicId, Number(c.componentCount)]));
+  const byId = new Map(counts.map((c) => [c.heuristicId, Number(c.specComponentCount)]));
 
   /*
    * ORDER BY name puts H-1301 between H-130 and H-131 and scatters the fifteen
@@ -474,7 +498,7 @@ export async function listHeuristics(includeRetired = false) {
    * because SQL cannot express it without a functional index nobody needs.
    */
   return rows
-    .map((r) => ({ ...r, componentCount: byId.get(r.id) ?? 0 }))
+    .map((r) => ({ ...r, specComponentCount: byId.get(r.id) ?? 0 }))
     .sort((a, b) =>
       a.cardCode && b.cardCode
         ? compareCardCodes(a.cardCode, b.cardCode)
