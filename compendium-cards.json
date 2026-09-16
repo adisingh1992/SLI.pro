@@ -1,6 +1,6 @@
 {
   "source": "methodology/wing-master-module-compendium-v2.md",
-  "parsedCards": 182,
+  "parsedCards": 183,
   "tier1Cards": 53,
   "cards": [
     {
@@ -753,8 +753,8 @@
       "tier1": true
     },
     {
-      "cardCode": "H-308",
-      "name": "H-308 Wing chunked messaging",
+      "cardCode": "H-007",
+      "name": "H-007 Wing chunked messaging",
       "description": "Module openings should be delivered in small messages, not paragraphs.",
       "populationTags": [
         "undergraduate",
@@ -775,7 +775,7 @@
       "moduleMapping": "All modules",
       "notes": "August 8 workshop bookmark. Cross-module delivery rule. Consider implementing as system-level behavior rather than per-card heuristic. Sequence weight: 1.0.",
       "weight": 1,
-      "module": "foundation_3",
+      "module": "universal",
       "heading": "Foundation 3 — Story Development",
       "line": 531,
       "bodyHash": "c49c29b37a706f4f",
@@ -2375,6 +2375,31 @@
       "tier1": false
     },
     {
+      "cardCode": "H-711",
+      "name": "H-711 Wing Radar Content Seed Alignment (Module 7)",
+      "description": "",
+      "populationTags": [],
+      "components": {
+        "signal": "Wing Radar is about to deliver a content seed that suggests the user claim expertise, share a perspective, or take a position that is not supported by their actual behavioral evidence or SLI positioning.",
+        "detection_method": "Cross-module data check before Radar delivery. Compare the content seed against: (a) the user's SLI positioning — does the seed reinforce or contradict it? (b) the user's behavioral evidence from Foundation sessions — does the user have evidence to support the perspective the seed suggests? (c) the user's Dreyfus staging (if available from Module 8 or Executive Intelligence) — is the seed asking the user to perform at a level above their demonstrated evidence?",
+        "intervention_type": "META (system rule)",
+        "coaching_move": "The content seed must be something the user can credibly write based on their actual positioning and evidence — not something that would make them look good but that they can't back up. A content seed that says \"share your perspective on leading cross-functional transformation\" is only appropriate if the user actually has cross-functional leadership evidence. If the seed would require the user to claim expertise they haven't demonstrated → reframe it to match their actual positioning level. For an early-career user: \"share what you're learning about [industry signal]\" not \"share your expert take on [industry signal].\" For a mid-career user with strong evidence: \"your experience with [specific thing] gives you a perspective most people in this space don't have.\" The content seed should position the user to build credibility through what they actually know, not perform credibility they haven't earned.",
+        "delivery_adaptation": "**Undergraduate:** Content seeds are always framed as building a point of view, never as broadcasting expertise. **Executive:** Content seeds can claim expertise — but only in the domains where the user's evidence supports the claim. **All tracks:** The seed must match the user's evidence level, not their aspiration level.",
+        "success_criteria": "Every content seed is grounded in the user's actual positioning and evidence base. No seed suggests the user claim expertise they haven't demonstrated.",
+        "failure_path": "If Wing generates a seed above the user's evidence level → reframe to the appropriate level. A seed that doesn't match the user's evidence is worse than no seed — it coaches inauthenticity, which is the opposite of the SLI methodology."
+      },
+      "moduleMapping": null,
+      "notes": null,
+      "weight": 1,
+      "module": "module_7",
+      "heading": "Module 7 Additional Integrity Gate",
+      "line": 1929,
+      "bodyHash": "5faf778abd865ff1",
+      "interventionType": "META",
+      "cardKind": "integrity_gate",
+      "tier1": false
+    },
+    {
       "cardCode": "H-801",
       "name": "H-801 Confrontation Map Generation",
       "description": "",
@@ -2995,7 +3020,7 @@
       "heading": "Section 1: Source Integrity → Codeable Quality Gates",
       "line": 2798,
       "bodyHash": "e15bc3222644e5a5",
-      "interventionType": "COACH",
+      "interventionType": "META",
       "cardKind": "integrity_gate",
       "tier1": false
     },
@@ -4643,8 +4668,8 @@
       "tier1": false
     },
     {
-      "cardCode": "IG-U03",
-      "name": "IG-U03 User-Uploaded Data Handling Gate (Universal)",
+      "cardCode": "IG-U018",
+      "name": "IG-U018 User-Uploaded Data Handling Gate (Universal)",
       "description": "",
       "populationTags": [],
       "components": {
@@ -4668,8 +4693,8 @@
       "tier1": true
     },
     {
-      "cardCode": "IG-U04",
-      "name": "IG-U04 Behavioral Inference Disclosure Gate (Universal)",
+      "cardCode": "IG-U019",
+      "name": "IG-U019 Behavioral Inference Disclosure Gate (Universal)",
       "description": "",
       "populationTags": [],
       "components": {
@@ -4693,8 +4718,8 @@
       "tier1": true
     },
     {
-      "cardCode": "IG-U05",
-      "name": "IG-U05 Between-Session Task Follow-Up Tone Gate (Universal)",
+      "cardCode": "IG-U020",
+      "name": "IG-U020 Between-Session Task Follow-Up Tone Gate (Universal)",
       "description": "",
       "populationTags": [],
       "components": {
@@ -5124,11 +5149,6 @@
         "cardCode": "H-411",
         "line": 1477,
         "firstSeenLine": 727
-      },
-      {
-        "cardCode": "H-710",
-        "line": 1929,
-        "firstSeenLine": 1837
       }
     ],
     "duplicates": [
@@ -5153,7 +5173,7 @@
         "line": 2960
       },
       {
-        "cardCode": "H-710",
+        "cardCode": "H-711",
         "line": 4635
       },
       {
@@ -5177,7 +5197,7 @@
         "line": 4759
       },
       {
-        "cardCode": "H-710",
+        "cardCode": "H-711",
         "line": 4779
       },
       {
@@ -5197,7 +5217,7 @@
         "line": 4885
       },
       {
-        "cardCode": "H-710",
+        "cardCode": "H-711",
         "line": 4905
       },
       {
@@ -5269,9 +5289,9 @@
       "IG-1105",
       "IG-1106",
       "IG-1107",
-      "IG-U03",
-      "IG-U04",
-      "IG-U05",
+      "IG-U018",
+      "IG-U019",
+      "IG-U020",
       "EX-1101",
       "EX-1102",
       "EX-1103",
