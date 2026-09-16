@@ -53,8 +53,8 @@ let pool: ScriptDb["pool"];
 
 type Row = Record<string, unknown>;
 
-async function rows(q: unknown): Promise<Row[]> {
-  const r = await db.execute(q as never);
+async function execRows(exec: any, q: unknown): Promise<Row[]> {
+  const r = await exec.execute(q as never);
   return (r as unknown as { rows: Row[] }).rows ?? [];
 }
 
@@ -62,8 +62,18 @@ const n = (v: unknown) => Number(v ?? 0);
 const s = (v: unknown) => (v === null || v === undefined ? "—" : String(v));
 const heading = (t: string) => console.log(`\n\x1b[1m${t}\x1b[0m`);
 
-async function survey() {
-  return rows(sql`
+/**
+ * Reads the whole picture — cycle, sequence, owner, entry count, and how many
+ * cycles point at that sequence.
+ *
+ * `exec` is not optional by accident. Called inside `db.transaction` it MUST be
+ * given the transaction: the module-level `db` is a different connection and
+ * reads the state as it was before the transaction opened, so a verification
+ * step using it sees none of the repair it is verifying and rolls back a
+ * correct fix. That is exactly what happened on the first --fix run.
+ */
+async function survey(exec: any) {
+  return execRows(exec, sql`
     SELECT c."id"                           AS cycle_id,
            i."name"                         AS institution,
            c."active_heuristic_sequence_id" AS sequence_id,
@@ -89,7 +99,7 @@ async function main() {
 
   heading("Every cycle, the sequence it runs, and who owns it");
 
-  const before = await survey();
+  const before = await survey(db);
 
   type Problem = { cycleId: number; sequenceId: number; name: string; shared: boolean };
   const problems: Problem[] = [];
@@ -216,7 +226,7 @@ async function main() {
 
     /* ── 2 · re-own whatever is still filed under the wrong cycle ───────── */
 
-    const after = await survey();
+    const after = await survey(tx);
     for (const cy of after) {
       const cycleId = n(cy.cycle_id);
       const seqId = cy.sequence_id === null ? null : n(cy.sequence_id);
@@ -261,7 +271,7 @@ async function main() {
 
     /* ── 3 · verify, or roll the whole thing back ───────────────────────── */
 
-    const final = await survey();
+    const final = await survey(tx);
     const stillWrong = final.filter((cy) => {
       const seqId = cy.sequence_id === null ? null : n(cy.sequence_id);
       if (seqId === null) return false;
@@ -291,7 +301,7 @@ async function main() {
 
   heading("Verifying");
 
-  for (const cy of await survey()) {
+  for (const cy of await survey(db)) {
     console.log(
       `  cycle ${String(n(cy.cycle_id)).padEnd(3)} ${s(cy.institution).slice(0, 34).padEnd(36)} ` +
         `sequence ${String(s(cy.sequence_id)).padEnd(4)} v${String(s(cy.version_number)).padEnd(3)} ` +
