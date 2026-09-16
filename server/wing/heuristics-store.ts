@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, inArray, isNull, ne, or } from "drizzle-orm";
+import { and, asc, count, desc, eq, inArray, isNull, ne, or } from "drizzle-orm";
 import { db } from "../db";
 import {
   students,
@@ -12,6 +12,7 @@ import {
   userHeuristicApplications,
   users,
 } from "@shared/wing-schema";
+import { compareCardCodes } from "./card-annotations";
 import { codeFromName, uniqueCode } from "./card-code";
 import { cardAppliesTo, populationTagsFor } from "./population-tags";
 
@@ -446,10 +447,81 @@ export async function listApplicationsForSession(sessionId: number) {
 
 export async function listHeuristics(includeRetired = false) {
   const rows = includeRetired
-    ? await db.select().from(heuristics).orderBy(asc(heuristics.name))
-    : await db.select().from(heuristics).where(ne(heuristics.status, "retired"))
-        .orderBy(asc(heuristics.name));
-  return rows;
+    ? await db.select().from(heuristics)
+    : await db.select().from(heuristics).where(ne(heuristics.status, "retired"));
+
+  /*
+   * How many of the seven a card actually has, counted once here rather than by
+   * the panel opening 325 cards to find out. `is_current` matters: a revised
+   * component leaves its predecessor behind, and counting both would report a
+   * card as over-complete the first time anyone edits it.
+   */
+  const counts = await db
+    .select({
+      heuristicId: heuristicComponents.heuristicId,
+      componentCount: count(),
+    })
+    .from(heuristicComponents)
+    .where(eq(heuristicComponents.isCurrent, true))
+    .groupBy(heuristicComponents.heuristicId);
+
+  const byId = new Map(counts.map((c) => [c.heuristicId, Number(c.componentCount)]));
+
+  /*
+   * ORDER BY name puts H-1301 between H-130 and H-131 and scatters the fifteen
+   * reveal templates through the alphabet. Someone looking for H-209 expects it
+   * after H-208, so the sort is by prefix then number and it happens here
+   * because SQL cannot express it without a functional index nobody needs.
+   */
+  return rows
+    .map((r) => ({ ...r, componentCount: byId.get(r.id) ?? 0 }))
+    .sort((a, b) =>
+      a.cardCode && b.cardCode
+        ? compareCardCodes(a.cardCode, b.cardCode)
+        : a.name.localeCompare(b.name),
+    );
+}
+
+/**
+ * Edits the card-level fields — everything that is not a component or a status.
+ *
+ * ── WHY card_code IS NOT HERE ────────────────────────────────────────────
+ * Sequence entries, gate audit findings and every routing map bind to the code.
+ * `createHeuristic` already says it: derived once, at creation, never
+ * recomputed, because "renaming a card silently repoints everything referencing
+ * it". Renaming is a cascade, not a field edit, and it is not this route.
+ *
+ * ── WHY card_kind IS ────────────────────────────────────────────────────
+ * Because three cards in the corpus disagree with themselves about it and the
+ * methodology owner is the person who should settle that, not an engineer with
+ * a migration. The caller is required to acknowledge the consequence — moving a
+ * card to `coaching_card` puts it in the detector catalogue, where a student's
+ * turn can fire it — and the route refuses without it.
+ */
+export async function updateHeuristic(
+  heuristicId: number,
+  patch: {
+    name?: string;
+    description?: string;
+    populationTags?: string[];
+    interventionType?: string | null;
+    cardKind?: string;
+  },
+) {
+  const values: Record<string, unknown> = { modifiedAt: new Date() };
+  if (patch.name !== undefined) values.name = patch.name;
+  if (patch.description !== undefined) values.description = patch.description;
+  if (patch.populationTags !== undefined) values.populationTags = patch.populationTags;
+  if (patch.interventionType !== undefined) values.interventionType = patch.interventionType;
+  if (patch.cardKind !== undefined) values.cardKind = patch.cardKind;
+
+  const [card] = await db
+    .update(heuristics)
+    .set(values as never)
+    .where(eq(heuristics.id, heuristicId))
+    .returning();
+
+  return card;
 }
 
 export async function getHeuristic(heuristicId: number) {
@@ -474,6 +546,9 @@ export async function createHeuristic(data: {
   description: string;
   /** Optional. Derived from the name when omitted, then fixed for life. */
   cardCode?: string;
+  /** Defaults to `coaching_card`, which is wrong for a gate — see the route. */
+  cardKind?: string;
+  interventionType?: string | null;
   populationTags?: string[];
   components?: Array<{ componentType: ComponentType; content: string }>;
 }) {
@@ -512,6 +587,13 @@ export async function createHeuristic(data: {
       // New cards are always candidates. Promotion to `validated` is a separate,
       // deliberate act once the card has evidence behind it.
       status: "candidate",
+      // Passed through rather than defaulted, so a gate authored in the panel is
+      // a gate. The column's default is `coaching_card`, and a gate that lands
+      // as one enters the detector catalogue.
+      ...(data.cardKind ? { cardKind: data.cardKind as never } : {}),
+      ...(data.interventionType !== undefined
+        ? { interventionType: data.interventionType as never }
+        : {}),
     })
     .returning();
 

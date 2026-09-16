@@ -14,6 +14,7 @@ import * as store from "./wing/heuristics-store";
 import type { ComponentType } from "./wing/heuristics-store";
 import { log } from "./logger";
 import { isPlatformAdmin } from "./admin-guards";
+import { annotate } from "./wing/card-annotations";
 import { evaluationWindowState } from "./wing/evaluation-window";
 import {
   SEQUENCE_HARD_LIMIT,
@@ -41,6 +42,22 @@ const COMPONENT_TYPES: ComponentType[] = [
   // "Unknown component type", which reads as a bug in the field rather than a
   // gap in this list.
   "detection_method", "delivery_adaptation", "failure_path", "success_criteria",
+];
+
+/** The three kinds. Only `coaching_card` may enter the detector catalogue. */
+const CARD_KINDS: string[] = ["coaching_card", "integrity_gate", "exercise"];
+
+/**
+ * Every value `heuristic_intervention_type` can store.
+ *
+ * Kept in step with the enum by hand, and the seeder's preflight is what
+ * actually catches a drift — it queries pg_enum before its first insert and
+ * refuses with the ALTER TYPE that would fix it. EDUCATE and SAFETY_OVERRIDE
+ * arrived with Module 13 and the Reveal Cycle in migration 0049.
+ */
+const INTERVENTION_TYPES: string[] = [
+  "COACH", "CHALLENGE", "REDIRECT", "REFRAME", "AFFIRM", "META", "GATE",
+  "ELICIT", "OBSERVE", "EDUCATE", "SAFETY_OVERRIDE",
 ];
 
 /**
@@ -90,7 +107,14 @@ export function registerHeuristicsRoutes(app: Express) {
 
   app.get("/api/admin/heuristics", isPlatformAdmin, async (req, res, next) => {
     try {
-      res.json(await store.listHeuristics(req.query.includeRetired === "true"));
+      const cards = await store.listHeuristics(req.query.includeRetired === "true");
+      /*
+       * Module and advisory are derived from the card code, never stored. The
+       * advisory in particular must not come from the card's notes: notes are
+       * editable now, and a warning a user can delete by tidying a text field
+       * is not a warning.
+       */
+      res.json(cards.map((c) => ({ ...c, ...annotate(c.cardCode) })));
     } catch (error) {
       next(error);
     }
@@ -105,7 +129,7 @@ export function registerHeuristicsRoutes(app: Express) {
       const card = await store.getHeuristic(id);
       if (!card) return res.status(404).json({ error: "Heuristic not found" });
 
-      res.json(card);
+      res.json({ ...card, ...annotate(card.cardCode) });
     } catch (error) {
       next(error);
     }
@@ -113,7 +137,8 @@ export function registerHeuristicsRoutes(app: Express) {
 
   app.post("/api/admin/heuristics", isPlatformAdmin, async (req, res, next) => {
     try {
-      const { name, description, populationTags, components } = req.body ?? {};
+      const { name, description, populationTags, components, cardCode, cardKind, interventionType } =
+        req.body ?? {};
 
       if (typeof name !== "string" || !name.trim()) {
         return res.status(400).json({ error: "name is required" });
@@ -132,9 +157,37 @@ export function registerHeuristicsRoutes(app: Express) {
         });
       }
 
+      /*
+       * card_kind on create, and it matters more than it looks. The column
+       * defaults to `coaching_card`, so before this every gate authored in the
+       * panel entered the DETECTOR CATALOGUE as a student-turn card — a gate
+       * that fires on Wing's own output being asked to match what a student
+       * said. Nothing warned about it.
+       */
+      if (cardKind !== undefined && !CARD_KINDS.includes(cardKind)) {
+        return res.status(400).json({ error: `Unknown card kind '${cardKind}'`, allowed: CARD_KINDS });
+      }
+      if (
+        interventionType !== undefined &&
+        interventionType !== null &&
+        !INTERVENTION_TYPES.includes(interventionType)
+      ) {
+        return res.status(400).json({
+          error: `Unknown intervention type '${interventionType}'`,
+          allowed: INTERVENTION_TYPES,
+        });
+      }
+
       const card = await store.createHeuristic({
         name: name.trim(),
         description: description.trim(),
+        // The methodology owner's own number, when she supplies one. Without
+        // this the code is slugged from the name, so a card created as
+        // "Module 13 — The Experiment Framework" gets a slug rather than
+        // H-1305 and her numbering registry silently stops matching.
+        cardCode: typeof cardCode === "string" && cardCode.trim() ? cardCode.trim() : undefined,
+        cardKind,
+        interventionType: interventionType ?? null,
         populationTags: Array.isArray(populationTags) ? populationTags : [],
         components: components ?? [],
       });
@@ -203,6 +256,90 @@ export function registerHeuristicsRoutes(app: Express) {
    * excludes retired cards regardless of sequence membership — while keeping
    * it as a permanent record so past applications stay interpretable.
    */
+  /**
+   * Edits the card-level fields. Components and status have their own routes.
+   *
+   * ── WHY card_kind NEEDS AN ACKNOWLEDGEMENT ───────────────────────────────
+   * It is the only field here that changes what the engine does. A gate never
+   * enters the detector catalogue; a coaching card does. Moving a card from
+   * `integrity_gate` to `coaching_card` therefore takes a rule written about
+   * Wing's own output and starts matching it against what students type, in
+   * every session, silently. The caller must send acknowledgeKindChange: true,
+   * so the confirmation is in the request rather than only in a dialog that a
+   * future redesign could drop.
+   */
+  app.patch("/api/admin/heuristics/:id", isPlatformAdmin, async (req, res, next) => {
+    try {
+      const id = parseId(req.params.id);
+      if (!id) return res.status(400).json({ error: "Invalid heuristic id" });
+
+      const existing = await store.getHeuristic(id);
+      if (!existing) return res.status(404).json({ error: "Heuristic not found" });
+
+      const { name, description, populationTags, interventionType, cardKind } = req.body ?? {};
+      const patch: Record<string, unknown> = {};
+
+      if (name !== undefined) {
+        if (typeof name !== "string" || !name.trim()) {
+          return res.status(400).json({ error: "name cannot be empty" });
+        }
+        patch.name = name.trim();
+      }
+      if (description !== undefined) {
+        if (typeof description !== "string" || !description.trim()) {
+          return res.status(400).json({ error: "description cannot be empty" });
+        }
+        patch.description = description.trim();
+      }
+      if (populationTags !== undefined) {
+        if (!Array.isArray(populationTags)) {
+          return res.status(400).json({ error: "populationTags must be an array" });
+        }
+        patch.populationTags = populationTags;
+      }
+      if (interventionType !== undefined) {
+        if (interventionType !== null && !INTERVENTION_TYPES.includes(interventionType)) {
+          return res.status(400).json({
+            error: `Unknown intervention type '${interventionType}'`,
+            allowed: INTERVENTION_TYPES,
+          });
+        }
+        patch.interventionType = interventionType;
+      }
+      if (cardKind !== undefined && cardKind !== existing.cardKind) {
+        if (!CARD_KINDS.includes(cardKind)) {
+          return res.status(400).json({ error: `Unknown card kind '${cardKind}'`, allowed: CARD_KINDS });
+        }
+        if (req.body?.acknowledgeKindChange !== true) {
+          return res.status(409).json({
+            error:
+              `Changing card kind from '${existing.cardKind}' to '${cardKind}' changes what the ` +
+              `engine does with this card. A coaching card enters the detector catalogue and can ` +
+              `fire on a student's turn; an integrity gate never does. Re-send with ` +
+              `acknowledgeKindChange: true.`,
+            from: existing.cardKind,
+            to: cardKind,
+          });
+        }
+        patch.cardKind = cardKind;
+      }
+
+      if (Object.keys(patch).length === 0) {
+        return res.status(400).json({ error: "nothing to update" });
+      }
+
+      const card = await store.updateHeuristic(id, patch as never);
+      log(
+        `heuristic '${card.name}' #${id} fields [${Object.keys(patch).join(", ")}] updated by ` +
+          `user ${req.user!.id}`,
+        "methodology",
+      );
+      res.json({ ...card, ...annotate(card.cardCode) });
+    } catch (error) {
+      next(error);
+    }
+  });
+
   app.patch("/api/admin/heuristics/:id/status", isPlatformAdmin, async (req, res, next) => {
     try {
       const id = parseId(req.params.id);
